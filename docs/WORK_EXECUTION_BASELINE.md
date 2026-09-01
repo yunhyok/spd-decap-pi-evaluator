@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — 작업 기준
 
-- 문서 버전: **3.1**
+- 문서 버전: **3.2**
 - 기준 branch: **main only**
 - current integrated-hardening docs base: `5a270677074868fc3e10ffa26309a208bb151ac3`
 - integrated-hardening implementation commit: `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`
 - 최종 개정: **2026-09-01 (Asia/Seoul)**
 - integrated-hardening lifecycle: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G ACTIVE / COORDINATOR_IMPLEMENTATION_PENDING**
-- sole ACTIVE: **W7-ACC-SOURCE-BLOCK-ORIGINAL-SPD-V3-CONTRACT-01** — 외부 coordinator 구현·정적 검토만 허용, runtime 금지.
+- current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — V3 READY_FOR_SINGLE_V3**
+- sole ACTIVE: **W7-ACC-SOURCE-BLOCK-ORIGINAL-SPD-V3-CONTRACT-01** — hash-bound 원본 SPD census runtime 정확히 1회만 허용.
 - current numerical improvement: **0**
 
 ## 1. 압축 후 즉시 복구 카드
@@ -27,7 +27,7 @@ A2S는 그 block 14줄만 삭제하고 exact node를 한 번 실행했지만 syn
 없어 STOP했다. Sol 재평가 결과 제품 guard는 유지하고 fixture 의존 test block만
 51줄 삭제했으며 추가 runtime 없이 A2를 `ACCEPT_NARROW_CORE_EVIDENCE`로 닫았다. 수치
 개선은 아직 0이다. V3G는 기존 artifact 재사용을 거부하고 fresh original-SPD one-shot
-coordinator 구현만 허용한 상태다.
+coordinator를 동결했으며 Sol `STATIC_ACCEPT` 뒤 `READY_FOR_SINGLE_V3`가 됐다.
 
 ```mermaid
 flowchart LR
@@ -42,8 +42,8 @@ flowchart LR
     V1S -->|현재 결과| STOPV1S["DONE / STOP_V1S<br/>alias fixture target 없음"]
     STOPV1S --> V1T["A2T alias test prune<br/>DONE / STATIC_ACCEPT"]
     V1T --> AN["A2 narrow core evidence<br/>DONE / ACCEPT"]
-    AN --> V3G["별도 V3 계약<br/>ACTIVE / coordinator pending"]
-    V3G -->|별도 계약 READY일 때만| V3["원본 SPD import + source-only compile<br/>V3 once"]
+    AN --> V3G["별도 V3 계약<br/>DONE / STATIC_ACCEPT"]
+    V3G -->|hash-bound single run| V3["원본 SPD import + source-only compile<br/>READY / V3 once"]
     V3 -->|census complete / ledger disjoint| A3["A3 one-block research implementation"]
     V3 -->|missing / ambiguous| STOPSRC["DONE / STOP_NOT_READY"]
 ```
@@ -55,9 +55,10 @@ flowchart LR
 - successor 21-node invocation과 A1 V0 audit는 소모됐다. 같은 계약을 반복하지
   않는다.
 - A2 materializer는 정적으로 ACCEPT됐지만 focused V1이 launcher 단계에서
-  STOP했고 D-084 exact V1R도 test fixture 관계 오류로 소비됐다. 둘을 재실행하거나
-  원본 SPD V3를 열지 않는다. D-085에서 허용한 test block 삭제와 exact successor
-  외에는 P1 condensation, global solver/`Y_global`/`Zii`, PowerSI와
+  STOP했고 D-084 exact V1R도 test fixture 관계 오류로 소비됐다. 둘은 재실행하지
+  않는다. 원본 SPD V3는 D-087의 hash-bound parent 명령 1회만 예외로 허용한다.
+  D-085에서 허용한 test block 삭제와 exact successor 외에는 P1 condensation,
+  global solver/`Y_global`/`Zii`, PowerSI와
   package/release도 실행하지 않는다.
 - 기존 W6 report는 read-only/hash-bound evidence이며 보정 parameter 생성에 쓰지
   않는다.
@@ -270,7 +271,7 @@ predecessor hardening은 `DONE / STOP`이고 승인된 test-only successor는
 `DONE / ACCEPT / COMMITTED @ eece8ab`다. A1은 phase checkpoint 뒤 한 번 수행해
 `DONE / ACCEPT`했다. A2 candidate는 Sol `STATIC_ACCEPT`를 받았지만 V1/A2R/A2S
 실행은 각각 소비된 STOP이다. A2T는 runtime 없이 `DONE / STATIC_ACCEPT`했고 A2는 좁은
-core evidence만으로 종료됐다. 현재 ACTIVE item은 D-087 V3G coordinator contract다.
+core evidence만으로 종료됐다. 현재 ACTIVE item은 D-087의 hash-bound V3 single run이다.
 
 ### A1 — W7-ACC-ERROR-BUDGET-01 — DONE / ACCEPT
 
@@ -596,7 +597,7 @@ Sol 최종 판정은 `STATIC_ACCEPT`, P0/P1/P2 0이다. 남은 focused test는 �
 acceptance의 실행 증거로 주장하지 않는다. V1S/A2S 상태는 계속 STOP이며 focused node
 전체 PASS로 바꾸지 않는다.
 
-### D-087 — original-SPD source-block census V3 contract — ACTIVE / COORDINATOR_IMPLEMENTATION_PENDING
+### D-087 — original-SPD source-block census V3 contract — READY_FOR_SINGLE_V3
 
 목적은 A1의 단일 block `RAIL_REACHABLE_DIELECTRIC_GAP_MAXWELL_GC`에 필요한 원본-SPD
 source data와 old-Maxwell owner ledger가 production topology에서 완전한지 한 번 census하는
@@ -626,8 +627,28 @@ substrate identity를 같은 import에 결속하려면 원본 fresh import가 �
 한 파일만 허용한다. 새 product module/schema/dependency/test와 기존 script 수정은 0이다.
 Luna는 검증된 EVIDENCE-05 parent/child receipt·termination 구조만 재사용하되 P1/owner-join을
 제거하고 아래 세 API stage만 남긴다. 별도 compile, self-test, import preflight와 원본
-접근은 금지한다. coordinator SHA-256과 최종 execution HEAD는 구현 후 이 문서에 동결하고
-Sol 정적 검토를 통과해야 `READY_FOR_SINGLE_V3`가 된다.
+접근은 금지한다. 최종 coordinator는 41,601 B, SHA-256
+`DC6130ECD6F6954E49B14CBBA0D3F85B02C455B9286B5903EF89960DA772ADA7`이다. Sol 최종
+정적 검토는 `STATIC_ACCEPT`, P0/P1/P2/P3 0이며 실행·import·compile·test는 없었다.
+
+execution contract HEAD는 **이 `READY_FOR_SINGLE_V3` 계약을 포함하는 문서 커밋의 exact
+HEAD**다. 커밋 뒤 runtime 전에는 tracked 파일을 바꾸지 않는다. launcher가 시작 시
+`git rev-parse HEAD`를 한 번 읽어 `--contract-head`와 output root에 같은 값으로 결속하고,
+coordinator가 main/tracked-clean/exact-HEAD를 다시 검증한다. 이 의미적 self-reference는
+커밋 hash를 문서 안에 쓰기 위한 추가 커밋을 만들지 않으면서 실제 receipt에 exact hash를
+남긴다.
+
+허용된 parent 명령은 다음 한 번뿐이다. `$contractHead`는 위 문서 커밋 직후의 실제 HEAD다.
+
+```powershell
+$contractHead = git rev-parse HEAD
+& 'C:\Users\User\AppData\Local\Programs\Python\Python312\python.exe' -I -B `
+  'D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\a2_v3_source_block_census_once.py' `
+  --repo 'C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator' `
+  --contract-head $contractHead `
+  --coordinator-sha 'DC6130ECD6F6954E49B14CBBA0D3F85B02C455B9286B5903EF89960DA772ADA7' `
+  --root "D:\SPD-Decap-PI-Evaluator-W7\$contractHead\260729-a2-v3-source-block-census-01"
+```
 
 한 product child에서 호출 순서는 다음과 같고 각각 정확히 한 번이다.
 
@@ -649,16 +670,24 @@ clean, product source hash와 output 부재도 stage 0에서 확인한다. 하�
 새 absent output root는
 `D:\SPD-Decap-PI-Evaluator-W7\<execution-contract-head>\260729-a2-v3-source-block-census-01`
 이다. PASS 때만 canonical product report `source_block_census_report.json`을 만들고,
-PASS/STOP 모두 sibling `source_block_census_receipt.json` 하나를 남긴다. receipt는 schema,
-status/stage/contract, source/W6/block/rail/pair, call ledger, raw/ownership/substrate/query/
-report identities, row count와 rows/candidate/retained/excluded/ledger hash, wall/peak/scratch
-cap, report path/size/SHA 또는 STOP exception type/message를 포함한다. parent가 timeout/
-resource kill한 경우에도 STARTED receipt를 terminal STOP으로 종결한다.
+root 소유권을 얻고 terminalization에 성공한 PASS/STOP은 sibling
+`source_block_census_receipt.json` 하나를 남긴다. receipt는 schema, status/stage/contract,
+source/W6/block/rail/pair, call ledger, raw/ownership/substrate/query/report identities, row
+count와 rows/candidate/retained/excluded/ledger hash, wall/peak/scratch cap, report path/size/SHA
+또는 STOP exception type/message를 포함한다. parent가 timeout/resource kill하고 child 종료가
+확인된 경우에는 STARTED receipt를 terminal STOP으로 종결한다.
 
 PASS는 census `status=complete`, shadow-only true, replacement/production-ready false,
 정확한 pair, nonempty candidate, count/hash 자체일관성, owner ledger와 replaced scopes,
 1 MiB report 및 call ledger를 모두 만족할 때뿐이다. identity/resource/product guard 실패는
 `DONE / STOP_V3_<CAUSE>`이며 재실행·부분 재사용·현장 수정은 없다.
+
+잘못된 output-root binding 또는 이미 존재하는 root는 coordinator가 그 root의 소유권을
+얻기 전 stdout-only `STOP_PREFLIGHT`로 거부하며 기존 경로를 건드리지 않는다. 소유한
+STARTED receipt의 terminal 교체가 실패하면 우회 overwrite 없이 STARTED를 보존하고
+stdout `STOP_REPORT_FINALIZATION_FAILED`로 닫는다. 종료되지 않은 child가 남으면 report,
+scratch와 receipt를 건드리지 않고 즉시 STOP한다. 이 세 경우는 durable terminal receipt를
+강제로 만들기보다 외부 소유물과 실행 중 자료를 보존하는 fail-closed 경계 예외다.
 
 PASS claim은 선택 rail/pair의 원본 raw-v3, ownership IR, source-only compiled Maxwell row
 census, Dk/Df provenance와 replaced/retained ledger completeness뿐이다. G/C replacement,
@@ -678,11 +707,12 @@ compile 완료, 실제 alias-witness guard와 1 MiB report 적합성은 이 한 
 - working tree에 범위 밖 tracked 변경이 생겨 안전하게 분리할 수 없다.
 - 사용량이 사용자가 지정한 50% 남음 지점에 도달한다.
 
-현재 ACTIVE item은 D-087 V3G이며 허용 범위는 외부 coordinator 구현과 정적 검토뿐이다.
+현재 ACTIVE item은 D-087 V3 single run이며 허용 범위는 위 hash-bound parent 명령 1회뿐이다.
 A2는 `DONE / ACCEPT_NARROW_CORE_EVIDENCE`지만 focused runtime PASS는 아니며
-V1/A2R/A2S 실행은 각각 소비된 STOP이다. 제품/test 변경은 금지한다. coordinator가
-hash-bound `READY_FOR_SINGLE_V3`가 되기 전에는 원본 SPD를 열지 않는다. §11은 commit까지
-닫혔으며, 새 schema/cap 또는 계약 밖 runtime이 필요하면 즉시 STOP하고 문서를 갱신한다.
+V1/A2R/A2S 실행은 각각 소비된 STOP이다. 제품/test 변경은 금지한다. coordinator는
+hash-bound `READY_FOR_SINGLE_V3`이며 이 문서 커밋 뒤 저장소 변경 없이 한 번 실행한다.
+§11은 commit까지 닫혔으며, 새 schema/cap 또는 계약 밖 runtime이 필요하면 즉시 STOP하고
+문서를 갱신한다.
 
 ## 11. 승인된 Unicode fixture successor — DONE / ACCEPT / COMMITTED @ eece8ab
 

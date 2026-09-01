@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — 목적·기술 기준
 
-- 문서 버전: **3.1**
+- 문서 버전: **3.2**
 - 권위: **G0 — 목적, 우선순위, 합격 의미와 비주장 경계**
 - 최종 개정: **2026-09-01 (Asia/Seoul)**
 - 현재 외부 정확성: **W6-BASE 260729 retrospective numerical FAIL**
 - unseen/generalization: **unknown / not_run**
 - 현재 수치 개선: **0** — solver, `Y_global`, `Zii`와 PowerSI 비교 수치는 아직 바뀌지 않았다.
 - 현재 구현 gate: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G ACTIVE / CONTRACT_PLANNED**
+- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — V3 READY_FOR_SINGLE_V3**
 
 ## 1. 문서 역할과 권위
 
@@ -145,8 +145,8 @@ flowchart LR
     V1S -->|현재 결과| SS["DONE / STOP_V1S<br/>alias fixture target 없음"]
     SS --> V1T["A2T alias test prune<br/>DONE / STATIC_ACCEPT"]
     V1T --> AN["A2 narrow core evidence<br/>DONE / ACCEPT"]
-    AN --> V3G["별도 V3 계약<br/>ACTIVE / coordinator pending"]
-    V3G -->|별도 계약 READY일 때만| C["원본 SPD 1회<br/>source-only compile + G/C census"]
+    AN --> V3G["별도 V3 계약<br/>DONE / STATIC_ACCEPT"]
+    V3G -->|hash-bound single run| C["원본 SPD 1회<br/>READY_FOR_SINGLE_V3"]
     C -->|complete / disjoint| L["analytic/local physics gate"]
     C -->|missing / ambiguous| SSRC["DONE / STOP_NOT_READY"]
     L --> I["one-owner production integration"]
@@ -283,8 +283,9 @@ census를 각각 한 번만 호출한다. scenario 저장/reload, P1, solve, `Y_
 Touchstone와 PowerSI는 호출하지 않는다.
 
 실행은 제품 변경 없이 외부 one-shot coordinator 하나로 제한한다. 그 coordinator의
-hash, exact HEAD, 입력/W6 identity, 자원 한도, 출력과 call ledger를 작업 기준 문서에
-동결하고 Sol 정적 검토를 통과하기 전에는 원본 SPD를 열지 않는다. PASS도 원본-SPD
+hash, exact HEAD, 입력/W6 identity, 자원 한도, 출력과 call ledger는 작업 기준 문서
+3.2에 동결됐고 Sol 최종 정적 검토는 P0/P1/P2/P3 0으로 `STATIC_ACCEPT`했다. 따라서
+다음 허용 작업은 그 hash-bound 계약의 원본 SPD 실행 정확히 1회뿐이다. PASS도 원본-SPD
 raw/ownership/compiled Maxwell row census와 ledger completeness만 증명한다. G/C
 replacement, analytic accuracy와 PowerSI 수치 개선은 계속 미증명이며 현재 개선값은 0이다.
 
