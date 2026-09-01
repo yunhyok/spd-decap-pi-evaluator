@@ -350,7 +350,7 @@ def _validate_rows(data: dict[str, Any]) -> None:
         if scope_rail.casefold() != target: _fail("SOURCE_PLANE_OWNERSHIP_IR_RELATION_INVALID", "plane scope is not target rail")
         if _text(row.get("state"), "scope.state") != "declared_unconsumed": _fail("SOURCE_PLANE_OWNERSHIP_IR_REPLACEMENT_FORBIDDEN", "plane owner scope is consumed")
         if _integer(row.get("owner_count"), "scope.owner_count", 1) != 1: _fail("SOURCE_PLANE_OWNERSHIP_IR_RELATION_INVALID", "plane scope owner_count must be one")
-    terminal_ids: set[str] = set(); terminal_keys: set[tuple[str, str, str, str]] = set(); complete_roles: set[str] = set()
+    terminal_ids: set[str] = set(); terminal_keys: set[tuple[str, str, str, str]] = set(); complete_roles: set[str] = set(); terminal_triples: set[tuple[str, str, str]] = set()
     for row in data["terminal_bindings"]:
         tid = _text(row.get("terminal_id"), "terminal_id"); rail = _text(row.get("rail_id"), "terminal.rail_id"); source = _text(row.get("source_node_record_id"), "source_node_record_id"); branch = _text(row.get("branch_id"), "branch_id"); pin = _text(row.get("pin_id"), "pin_id"); role = _text(row.get("role"), "terminal.role"); assert tid and rail and source and branch and pin and role
         terminal_key = (rail.casefold(), branch.casefold(), pin.casefold(), role.casefold())
@@ -376,7 +376,7 @@ def _validate_rows(data: dict[str, Any]) -> None:
         status = _text(row.get("status"), "terminal.status"); assert status
         if status != "complete": _fail("SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE", "phase-1 terminal status must be complete")
         owner_ref = retained_lookup.get(str(row.get("via_owner_id", "")).casefold())
-        if status == "complete" and required_via == 1 and (owner_ref is None or str(owner_ref.get("edge_id", "")).casefold() != str(row.get("finite_edge_id", "")).casefold() or str(owner_ref.get("rail_id", "")).casefold() != rail.casefold() or str(owner_ref.get("island_id", "")).casefold() != str(row.get("island_id", "")).casefold()): _fail("SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE", "terminal via owner does not match retained owner")
+        if status == "complete" and required_via == 1 and (owner_ref is None or str(owner_ref.get("owner_kind", "")).casefold() != "via" or str(owner_ref.get("edge_id", "")).casefold() != str(row.get("finite_edge_id", "")).casefold() or str(owner_ref.get("rail_id", "")).casefold() != rail.casefold() or str(owner_ref.get("island_id", "")).casefold() != str(row.get("island_id", "")).casefold()): _fail("SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE", "terminal via owner does not match retained owner")
         try:
             issue = row.get("issues_json"); parsed = json.loads(issue); 
             if _canonical(parsed).decode("utf-8") != issue: raise ValueError
@@ -385,6 +385,7 @@ def _validate_rows(data: dict[str, Any]) -> None:
             required = ("endpoint_node_id", "island_id", "component_id", "layer", "padstack_id", "finite_vertex_id") + (("finite_edge_id", "via_owner_id") if required_via == 1 else ())
             if any(not row.get(key) for key in required) or row.get("raw_pad_shape_sha256") is None or row.get("raw_pad_shape_ordinal") is None or issue != "[]" or not paddef or not regular or paddef.casefold() not in records or regular.casefold() not in records or paddef != records[paddef.casefold()]["record_id"] or regular != records[regular.casefold()]["record_id"] or str(records[paddef.casefold()].get("kind", "")).casefold() != "paddef" or str(records[regular.casefold()].get("kind", "")).casefold() != "regular": _fail("SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE", "complete terminal chain is missing pad source provenance")
             complete_roles.add(role.casefold())
+            if required_via == 1: terminal_triples.add((str(row["finite_edge_id"]).casefold(), rail.casefold(), str(row["island_id"]).casefold()))
         elif not isinstance(parsed, list) or parsed != []: _fail("SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE", "complete terminal issues_json must be empty")
         if row.get("raw_pad_shape_ordinal") is not None: _integer(row.get("raw_pad_shape_ordinal"), "raw_pad_shape_ordinal")
         _sha(row.get("raw_pad_shape_sha256"), "raw_pad_shape_sha256", optional=True)
@@ -454,7 +455,8 @@ def _validate_rows(data: dict[str, Any]) -> None:
                 if _canonical(parsed).decode("utf-8") != issue or parsed != []: raise ValueError
             except (TypeError, ValueError, json.JSONDecodeError): _fail("SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID", "contact issues_json must be []")
         finite_owner_set = {owner for owner, ref in retained_lookup.items() if str(ref.get("namespace", "")).casefold() == "finite-via"}
-        if expanded_contact_owners != finite_owner_set: _fail("SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID", "contact owner coverage differs from retained finite-via owners")
+        terminal_proven_owners = {owner for owner, ref in retained_lookup.items() if str(ref.get("namespace", "")).casefold() == "finite-via" and str(ref.get("owner_kind", "")).casefold() == "via" and (str(ref.get("edge_id", "")).casefold(), str(ref.get("rail_id", "")).casefold(), str(ref.get("island_id", "")).casefold()) in terminal_triples}
+        if expanded_contact_owners | terminal_proven_owners != finite_owner_set: _fail("SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID", "contact/terminal owner coverage differs from retained finite-via owners")
 
 
 def _section_digest(connection: sqlite3.Connection, section: str, cancelled: Any = None, *, columns: Mapping[str, tuple[str, ...]] | None = None) -> tuple[int, str]:
@@ -787,8 +789,10 @@ def _validate_spooled_rows(connection: sqlite3.Connection, binding: Mapping[str,
         _fail("SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID", "contact endpoint alias/owner/edge relation is invalid")
     if connection.execute("SELECT 1 FROM _ir_contact_owners c JOIN contact_boundary b ON c.contact_fold=lower(b.contact_id) JOIN _ir_owners o ON c.owner_fold=o.owner_fold WHERE o.edge_id IS NULL OR lower(o.edge_id)<>lower(b.finite_edge_id)").fetchone() is not None or connection.execute("SELECT 1 FROM contact_boundary b WHERE NOT EXISTS (SELECT 1 FROM _ir_contact_owners c JOIN _ir_owners o ON c.owner_fold=o.owner_fold WHERE c.contact_fold=lower(b.contact_id) AND lower(o.owner_id)=lower('via:'||b.via_id))").fetchone() is not None:
         _fail("SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID", "contact owner set differs from finite edge/via membership")
-    if connection.execute("SELECT 1 FROM _ir_owners o LEFT JOIN _ir_contact_owner_unique c ON o.owner_fold=c.owner_fold WHERE lower(o.namespace)='finite-via' AND c.owner_fold IS NULL").fetchone() is not None or connection.execute("SELECT 1 FROM _ir_contact_owner_unique c JOIN _ir_owners o ON c.owner_fold=o.owner_fold WHERE lower(o.namespace)<>'finite-via'").fetchone() is not None:
-        _fail("SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID", "contact owner coverage differs from retained finite-via owners")
+    if connection.execute("SELECT 1 FROM contact_boundary b JOIN _ir_owners o ON lower(o.edge_id)=lower(b.finite_edge_id) LEFT JOIN _ir_contact_owners c ON c.contact_fold=lower(b.contact_id) AND c.owner_fold=o.owner_fold WHERE c.owner_fold IS NULL").fetchone() is not None:
+        _fail("SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID", "contact owner set omits a finite edge owner")
+    if connection.execute("SELECT 1 FROM _ir_owners o WHERE lower(o.namespace)='finite-via' AND NOT EXISTS (SELECT 1 FROM _ir_contact_owner_unique c WHERE c.owner_fold=o.owner_fold) AND NOT (lower(o.owner_kind)='via' AND EXISTS (SELECT 1 FROM terminal_bindings t WHERE t.via_record_required=1 AND t.status='complete' AND lower(o.edge_id)=lower(t.finite_edge_id) AND lower(o.rail_id)=lower(t.rail_id) AND lower(o.island_fold)=lower(t.island_id))) UNION ALL SELECT 1 FROM _ir_contact_owner_unique c JOIN _ir_owners o ON c.owner_fold=o.owner_fold WHERE lower(o.namespace)<>'finite-via'").fetchone() is not None:
+        _fail("SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID", "contact/terminal owner coverage differs from retained finite-via owners")
     if connection.execute("SELECT 1 FROM replacement_ledger WHERE status<>'prerequisite_only'").fetchone(): _fail("SOURCE_PLANE_OWNERSHIP_IR_REPLACEMENT_FORBIDDEN", "replacement_ready is forbidden")
     if connection.execute("SELECT 1 FROM replacement_ledger GROUP BY lower(ledger_id) HAVING COUNT(*)>1").fetchone() is not None:
         _fail("SOURCE_PLANE_OWNERSHIP_IR_ID_COLLISION", "ledger IDs collide")

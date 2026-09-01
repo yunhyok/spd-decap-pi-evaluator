@@ -1,4 +1,5 @@
 from __future__ import annotations
+import copy
 from hashlib import sha256
 import json, sqlite3, tempfile, zlib
 from pathlib import Path
@@ -145,6 +146,37 @@ def test_v2_mapping_and_spool_are_logically_equivalent_and_exclude_internal_tabl
     assert spool_manifest == repeat_manifest
     assert spool_asset == repeat_asset
     assert b"internal_only" not in zlib.decompress(spool_asset[1])
+
+def test_v2_contact_coverage_partitions_terminal_series_owners(tmp_path):
+    value = _contact_draft()
+    value["terminal_bindings"][0].update(via_record_id="via:via11:VDD", via_owner_id="via:via11", finite_edge_id="edge:contact")
+    value["contact_boundary"][0]["owner_ids_json"] = '["via:via11","ViaD"]'
+    value["retained_owner_refs"][1]["namespace"] = "finite-via"
+    value["retained_owner_refs"].append({"ordinal": 3, "owner_id": "ViaC", "namespace": "finite-via", "owner_kind": "via", "rail_id": "RAIL/0", "edge_id": "edge-b", "island_id": "island:g", "state": "retained"})
+    value["retained_owner_refs"].append({"ordinal": 4, "owner_id": "ViaD", "namespace": "finite-via", "owner_kind": "via", "rail_id": "RAIL/0", "edge_id": "edge:contact", "island_id": "island:p", "state": "retained"})
+    value["replacement_ledger"][0].update(retained_set_sha256=sh({"viaa", "viab", "via:via11", "viac", "viad"}), retained_count=5)
+    value["replacement_ledger_members"].extend(({"ledger_id": "ledger:0", "owner_id": owner, "action": "retained"} for owner in ("ViaC", "ViaD")))
+    mapping_manifest, _ = build_source_plane_ownership_ir(value)
+    positive_dir = tmp_path / "positive"; positive_dir.mkdir()
+    spool_manifest, _ = build_source_plane_ownership_ir_from_spool(_SourcePlaneOwnershipSpool(_spool(positive_dir, value)), _v2_binding(value))
+    assert spool_manifest["logical_rows_sha256"] == mapping_manifest["logical_rows_sha256"] and spool_manifest["counts"] == mapping_manifest["counts"]
+    assert mapping_manifest["counts"]["contact_boundary"] == 1
+
+    for index, mutate in enumerate((
+        lambda d: d["contact_boundary"][0].update(owner_ids_json='["via:via11"]'),
+        lambda d: d["retained_owner_refs"][3].update(edge_id="edge:orphan"),
+        lambda d: d["retained_owner_refs"][3].update(island_id="island:p"),
+        lambda d: d["retained_owner_refs"][3].update(rail_id="RAIL/1"),
+        lambda d: d["retained_owner_refs"][3].update(owner_kind="component"),
+        lambda d: d["terminal_bindings"][1].update(via_record_required=0, via_record_id=None, finite_edge_id=None, via_owner_id=None),
+    )):
+        bad = copy.deepcopy(value); mutate(bad)
+        with pytest.raises(SourcePlaneOwnershipIRError) as mapping_error:
+            build_source_plane_ownership_ir(bad)
+        case = tmp_path / f"negative-{index}"; case.mkdir()
+        with pytest.raises(SourcePlaneOwnershipIRError) as spool_error:
+            build_source_plane_ownership_ir_from_spool(_SourcePlaneOwnershipSpool(_spool(case, bad)), _v2_binding(bad))
+        assert mapping_error.value.code == spool_error.value.code
 
 def test_v2_spool_preserves_multibranch_terminal_cardinality(tmp_path):
     value = draft(); value["contact_boundary"] = []
