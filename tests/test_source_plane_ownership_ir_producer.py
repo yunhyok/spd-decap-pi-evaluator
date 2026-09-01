@@ -6,7 +6,10 @@ from hashlib import sha256
 from dataclasses import asdict, replace
 from copy import deepcopy
 import json
+import os
 import sqlite3
+import subprocess
+import sys
 from itertools import tee
 
 import pytest
@@ -1095,3 +1098,165 @@ def test_source_plane_ownership_projects_target_landing_identity_only(
     assert coverage == {"count": len(authority), "sha256": sha256(concrete_canonical_json_bytes(authority)).hexdigest()}
     target_edges = [row for row in snapshot["finite_via_quotient"]["edges"] if any(str(row["edge_id"]).casefold() == str(edge["finite_edge_id"]).casefold() for edge in boundary)]
     assert target_edges and all(row.get("start_vertex_id") and row.get("end_vertex_id") and row.get("owner_ids") and row.get("series_terms") and row.get("parallel_path_count") == 1 for row in target_edges)
+
+
+def test_ownership_logical_rows_hash_is_cross_process_order_invariant(
+    tmp_path: Path,
+) -> None:
+    payload = _ownership_fixture_payload()
+    source = tmp_path / "ownership-order-invariant.spd"
+    source.write_text(payload, encoding="ascii")
+    child = r'''
+import json
+import sqlite3
+import sys
+import zlib
+from copy import deepcopy
+from contextlib import closing
+from pathlib import Path
+
+from spd_decap_pi import spd_adapter
+
+source = Path(sys.argv[1])
+reverse = sys.argv[2] == "1"
+sqlite_path = Path(sys.argv[3])
+target_anchor_count = None
+if reverse:
+    original_compile = spd_adapter.compile_raw_spatial_contact_asset
+
+    def reversed_presentation(*args, **kwargs):
+        global target_anchor_count
+        request = kwargs.get("source_plane_ownership_request")
+        if isinstance(request, dict):
+            snapshot = request.get("surface_snapshot")
+            certificate = request.get("certificate_snapshot")
+            if isinstance(snapshot, dict):
+                snapshot = deepcopy(snapshot)
+                for key in ("surfaces", "primitives", "primitive_island_edges"):
+                    if isinstance(snapshot.get(key), (list, tuple)):
+                        snapshot[key] = list(reversed(snapshot[key]))
+                request["surface_snapshot"] = snapshot
+            if isinstance(certificate, dict):
+                certificate = deepcopy(certificate)
+                components = certificate.get("surface_equivalence_components")
+                if isinstance(components, (list, tuple)):
+                    certificate["surface_equivalence_components"] = list(reversed(components))
+                quotient = certificate.get("finite_via_quotient")
+                if isinstance(quotient, dict):
+                    quotient = deepcopy(quotient)
+                    for key in ("vertices", "edges", "terminal_bindings"):
+                        if isinstance(quotient.get(key), (list, tuple)):
+                            quotient[key] = list(reversed(quotient[key]))
+                    certificate["finite_via_quotient"] = quotient
+                target_anchors = [
+                    item for item in certificate.get("rail_anchor_bindings", ())
+                    if isinstance(item, dict) and str(item.get("rail_id", "")).casefold() == "vdd_core/1"
+                ]
+                assert len(target_anchors) >= 2
+                target_anchor_count = len(target_anchors)
+                certificate["rail_anchor_bindings"] = list(reversed(certificate["rail_anchor_bindings"]))
+                request["certificate_snapshot"] = certificate
+        return original_compile(*args, **kwargs)
+
+    spd_adapter.compile_raw_spatial_contact_asset = reversed_presentation
+
+imported = spd_adapter.import_spd_scenario(source, source_plane_ownership_rail_id="VDD_CORE/1")
+manifest = imported.scenario.base_project.metadata["spd_import"]["source_plane_ownership_ir"]
+payload = imported.attachments[manifest["asset_name"]]
+try:
+    sqlite_path.write_bytes(zlib.decompress(payload))
+    with closing(sqlite3.connect(sqlite_path)) as connection:
+        connection.row_factory = sqlite3.Row
+        ledger = [
+            dict(row)
+            for row in connection.execute(
+                "SELECT section_name,row_count,logical_sha256 FROM section_ledger ORDER BY section_name"
+            )
+        ]
+        surfaces = [dict(row) for row in connection.execute("SELECT * FROM surfaces ORDER BY ordinal")]
+        selected_surface_components = []
+        for row in surfaces:
+            if str(row["artwork_net"]).casefold() not in {"vdd_core/1", "dgnd"}:
+                continue
+            islands = [
+                (item["island_id"], item["component_id"])
+                for item in connection.execute(
+                    "SELECT island_id,component_id FROM islands WHERE surface_id=?",
+                    (row["surface_id"],),
+                )
+            ]
+            selected_surface_components.append({
+                "surface_id": row["surface_id"],
+                "artwork_net": row["artwork_net"],
+                "layer": row["layer"],
+                "islands": sorted(islands),
+            })
+        selected_surface_components.sort(
+            key=lambda item: (
+                str(item["artwork_net"]).casefold(),
+                str(item["layer"]).casefold(),
+                str(item["surface_id"]).casefold(),
+            )
+        )
+finally:
+    sqlite_path.unlink(missing_ok=True)
+binding_keys = (
+    "storage_schema", "payload_schema", "compiler_id", "app_version", "source_sha256", "source_size_bytes", "target_rail_id",
+    "project_binding_sha256", "certificate_evidence_sha256", "compiled_topology_identity_sha256",
+    "raw_manifest_sha256", "raw_geometry_identity_sha256", "raw_logical_rows_sha256", "raw_plane_sheet_sha256",
+)
+print(json.dumps({
+    "binding": {key: manifest[key] for key in binding_keys},
+    "logical_rows_sha256": manifest["logical_rows_sha256"],
+    "section_ledger": ledger,
+    "selected_surface_components": selected_surface_components,
+    "target_anchor_count": target_anchor_count if reverse else manifest.get("counts", {}).get("terminal_bindings"),
+}, sort_keys=True))
+'''
+    repo_root = Path(__file__).resolve().parents[1]
+    environment = os.environ.copy()
+    environment["PYTHONPATH"] = os.pathsep.join(
+        item for item in (str(repo_root / "src"), environment.get("PYTHONPATH", "")) if item
+    )
+
+    def run(seed: str, reversed_presentation: bool) -> dict[str, object]:
+        sqlite_path = tmp_path / (
+            "ownership-order-reversed.sqlite" if reversed_presentation else "ownership-order-normal.sqlite"
+        )
+        try:
+            completed = subprocess.run(
+                [sys.executable, "-B", "-c", child, str(source), "1" if reversed_presentation else "0", str(sqlite_path)],
+                cwd=repo_root,
+                env={**environment, "PYTHONHASHSEED": seed},
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+            lines = [line.strip() for line in completed.stdout.splitlines() if line.strip()]
+            assert len(lines) == 1, f"expected one JSON line; stdout={completed.stdout!r}; stderr={completed.stderr!r}"
+            try:
+                value = json.loads(lines[0])
+            except json.JSONDecodeError as exc:
+                raise AssertionError(
+                    f"invalid child JSON; stdout={completed.stdout!r}; stderr={completed.stderr!r}"
+                ) from exc
+            assert isinstance(value, dict)
+            return value
+        finally:
+            sqlite_path.unlink(missing_ok=True)
+
+    normal = run("17", False)
+    reversed_presentation = run("29", True)
+    assert normal["binding"] == reversed_presentation["binding"]
+    assert normal["selected_surface_components"] == reversed_presentation["selected_surface_components"]
+    assert normal["target_anchor_count"] == reversed_presentation["target_anchor_count"]
+    assert len(normal["selected_surface_components"]) == 2
+    assert {
+        (row["artwork_net"].casefold(), row["layer"].casefold())
+        for row in normal["selected_surface_components"]
+    } == {("vdd_core/1", "signal$pwr"), ("dgnd", "signal$gnd")}
+    assert all(str(row["surface_id"]).startswith("surface:") for row in normal["selected_surface_components"])
+    assert all(row["islands"] for row in normal["selected_surface_components"])
+    assert normal["section_ledger"] == reversed_presentation["section_ledger"]
+    assert normal["logical_rows_sha256"] == reversed_presentation["logical_rows_sha256"]

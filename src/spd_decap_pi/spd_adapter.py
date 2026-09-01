@@ -9081,7 +9081,17 @@ def import_spd_scenario(
                     if isinstance(item, Mapping) and str(item.get("pin_id", "")).casefold() == folded:
                         return item
                 return None
-            target_anchor_rows = [item for item in certificate.get("rail_anchor_bindings", ()) if isinstance(item, Mapping) and item.get("rail_id") == source_plane_ownership_rail_id]
+            target_anchor_rows = sorted(
+                (item for item in certificate.get("rail_anchor_bindings", ()) if isinstance(item, Mapping) and item.get("rail_id") == source_plane_ownership_rail_id),
+                key=lambda item: (
+                    str(item.get("branch_id", "")).strip().casefold(),
+                    str(item.get("role", "")).strip().casefold(),
+                    str(item.get("pin_id", "")).strip().casefold(),
+                    str(item.get("branch_id", "")).strip(),
+                    str(item.get("role", "")).strip(),
+                    str(item.get("pin_id", "")).strip(),
+                ),
+            )
             if not target_anchor_rows:
                 raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE: target rail anchors are absent")
             quotient = certificate.get("finite_via_quotient")
