@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — 작업 기준
 
-- 문서 버전: **3.0**
+- 문서 버전: **3.1**
 - 기준 branch: **main only**
 - current integrated-hardening docs base: `5a270677074868fc3e10ffa26309a208bb151ac3`
 - integrated-hardening implementation commit: `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`
 - 최종 개정: **2026-09-01 (Asia/Seoul)**
 - integrated-hardening lifecycle: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT**
-- sole ACTIVE: **none** — 다음 허용 작업은 별도 원본-SPD V3 계약 검토·동결뿐이다.
+- current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G ACTIVE / COORDINATOR_IMPLEMENTATION_PENDING**
+- sole ACTIVE: **W7-ACC-SOURCE-BLOCK-ORIGINAL-SPD-V3-CONTRACT-01** — 외부 coordinator 구현·정적 검토만 허용, runtime 금지.
 - current numerical improvement: **0**
 
 ## 1. 압축 후 즉시 복구 카드
@@ -26,7 +26,8 @@ pytest 9.0.3에서 collection 1 뒤 test-only invalid IR mutation으로 STOP했�
 A2S는 그 block 14줄만 삭제하고 exact node를 한 번 실행했지만 synthetic-alias target이
 없어 STOP했다. Sol 재평가 결과 제품 guard는 유지하고 fixture 의존 test block만
 51줄 삭제했으며 추가 runtime 없이 A2를 `ACCEPT_NARROW_CORE_EVIDENCE`로 닫았다. 수치
-개선은 아직 0이다.
+개선은 아직 0이다. V3G는 기존 artifact 재사용을 거부하고 fresh original-SPD one-shot
+coordinator 구현만 허용한 상태다.
 
 ```mermaid
 flowchart LR
@@ -41,7 +42,7 @@ flowchart LR
     V1S -->|현재 결과| STOPV1S["DONE / STOP_V1S<br/>alias fixture target 없음"]
     STOPV1S --> V1T["A2T alias test prune<br/>DONE / STATIC_ACCEPT"]
     V1T --> AN["A2 narrow core evidence<br/>DONE / ACCEPT"]
-    AN --> V3G["별도 V3 계약<br/>검토 · 동결 gate"]
+    AN --> V3G["별도 V3 계약<br/>ACTIVE / coordinator pending"]
     V3G -->|별도 계약 READY일 때만| V3["원본 SPD import + source-only compile<br/>V3 once"]
     V3 -->|census complete / ledger disjoint| A3["A3 one-block research implementation"]
     V3 -->|missing / ambiguous| STOPSRC["DONE / STOP_NOT_READY"]
@@ -269,7 +270,7 @@ predecessor hardening은 `DONE / STOP`이고 승인된 test-only successor는
 `DONE / ACCEPT / COMMITTED @ eece8ab`다. A1은 phase checkpoint 뒤 한 번 수행해
 `DONE / ACCEPT`했다. A2 candidate는 Sol `STATIC_ACCEPT`를 받았지만 V1/A2R/A2S
 실행은 각각 소비된 STOP이다. A2T는 runtime 없이 `DONE / STATIC_ACCEPT`했고 A2는 좁은
-core evidence만으로 종료됐다. 현재 ACTIVE item은 없다.
+core evidence만으로 종료됐다. 현재 ACTIVE item은 D-087 V3G coordinator contract다.
 
 ### A1 — W7-ACC-ERROR-BUDGET-01 — DONE / ACCEPT
 
@@ -371,11 +372,11 @@ Sol 최종 판정은 `STATIC_ACCEPT`, P0/P1/P2 0이다.
 - consumed: 이 launcher를 사용한 동일 V1 계약; 즉시 다른 Python으로 반복 금지
 - blocked: V3 original SPD import, source-only compile, materializer와 report/receipt
 
-V3는 별도 검증 환경 복구 계약이 동결되고 focused test가 PASS한 뒤에만 fresh
-process에서 import 1회, raw/ownership envelope validation,
-`compile_layerwise_substrate(..., require_plane_sheet_payload=True)` 1회, materializer
-1회, canonical JSON report/receipt 1회로 연다. P0/P1 condensation, global solve,
-`Y_global`, `Zii`, PowerSI, full suite, retry와 partial reuse는 금지한다.
+V3는 당시 focused PASS 전까지 차단됐다. 이후 A2S의 STOP은 그대로 보존하고 A2T 정적
+삭제 뒤 A2를 좁은 core evidence로 종료했다. 현재 허용 범위는 아래 D-087의 fresh
+process import 1회, `compile_layerwise_substrate(..., require_plane_sheet_payload=True)`
+1회, materializer 1회와 canonical report/receipt뿐이다. P0/P1 condensation, global
+solve, `Y_global`, `Zii`, PowerSI, full suite, retry와 partial reuse는 금지한다.
 
 ### A3 — W7-ACC-ONE-BLOCK-IMPLEMENTATION-01
 
@@ -595,6 +596,77 @@ Sol 최종 판정은 `STATIC_ACCEPT`, P0/P1/P2 0이다. 남은 focused test는 �
 acceptance의 실행 증거로 주장하지 않는다. V1S/A2S 상태는 계속 STOP이며 focused node
 전체 PASS로 바꾸지 않는다.
 
+### D-087 — original-SPD source-block census V3 contract — ACTIVE / COORDINATOR_IMPLEMENTATION_PENDING
+
+목적은 A1의 단일 block `RAIL_REACHABLE_DIELECTRIC_GAP_MAXWELL_GC`에 필요한 원본-SPD
+source data와 old-Maxwell owner ledger가 production topology에서 완전한지 한 번 census하는
+것이다. PowerSI 근접 정확도를 향한 다음 물리 단계의 입력 gate일 뿐 수치 개선 실행은
+아니다.
+
+기존 artifact는 재사용하지 않는다. W6 candidate는 raw-spatial v2이고, 17DT candidate
+`D:\SPD-Decap-PI-Evaluator-W7\2928ca73ffa0d0d1421cd393939b6fea1d025f42\260729-17dt-raw-spatial-v3\S4LB002-2Para_260729_1_injected_candidate.spdpi`
+(911,542,390 B, frozen SHA-256
+`FBE6ABEB5655918134ECB47235EDFD3B81B891ED5EC95545E03C9651937C6BCC`)는 raw v3와
+compiled topology만 가지며 target ownership IR이 없다. 현재 raw-v3, ownership-IR,
+substrate identity를 같은 import에 결속하려면 원본 fresh import가 필요하다.
+
+입력 identity:
+
+| 항목 | 동결값 |
+|---|---|
+| SPD | `D:\S4LB002-2Para_260729_1_injected.spd`; 1,116,717,287 B; SHA-256 `40CB44B2376F59D6B606EB9B4D138204FE51B2DC6B3332D3B7C0E7D4202866D2` |
+| rail / pair | `ADC_VDD_180_VQPS_SYS_1_AON/0`; `Signal$L30(OTHER_POWER1)` / `Signal$L29(DGND)` |
+| W6 manifest | `D:\SPD-Decap-PI-Evaluator-W6\fb36288781dcc0b884950ef5a486c474090ceebd\260729\run_manifest.json`; SHA-256 `2B14F90E762ABC49833518137812E8FC97FCDE0E9C145795B7384210CFD9F5DE` |
+| W6 sidecar | 같은 root의 `accuracy_sidecar.json`; SHA-256 `0D103E0AD47DF80641FAC0952A35A6EAA56CC9FDB71BE24661903E451926E932` |
+| W6 correlation | 같은 root의 `correlation\correlation_report.json`; SHA-256 `969E40046E3A099D09557BA7500693460362336D76B067962436BD3B5177ABC4` |
+| product census source | `src/spd_decap_pi/source_plane_patch_consumer.py`; SHA-256 `63BEA32E1184154539ABD7DFE6B54555131888393FC04E5E12892E9EB730C710` |
+
+외부 coordinator는
+`D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\a2_v3_source_block_census_once.py`
+한 파일만 허용한다. 새 product module/schema/dependency/test와 기존 script 수정은 0이다.
+Luna는 검증된 EVIDENCE-05 parent/child receipt·termination 구조만 재사용하되 P1/owner-join을
+제거하고 아래 세 API stage만 남긴다. 별도 compile, self-test, import preflight와 원본
+접근은 금지한다. coordinator SHA-256과 최종 execution HEAD는 구현 후 이 문서에 동결하고
+Sol 정적 검토를 통과해야 `READY_FOR_SINGLE_V3`가 된다.
+
+한 product child에서 호출 순서는 다음과 같고 각각 정확히 한 번이다.
+
+1. `import_spd_scenario(source, include_plane_sheet_payload=True, source_plane_ownership_rail_id=rail, ...)`
+2. `compile_layerwise_substrate(project, attachments, required_rail_id=rail, require_plane_sheet_payload=True, ...)`
+3. `audit_source_plane_source_block_census(ownership_manifest, attachments, raw_manifest, substrate, rail_id=rail)`
+
+call ledger는 import/compile/census `1/1/1`, P1/solve/PowerSI `0/0/0`, retry 0만 PASS다.
+scenario save/reload와 `.spdpi` 생성도 금지한다. interpreter는
+`C:\Users\User\AppData\Local\Programs\Python\Python312\python.exe -I -B`, parent launcher
+1개와 product child 1개다. parent wall 14,400 s, child peak working set 24 GiB, exclusive
+TMP/scratch 8 GiB, 시작 temp free 16 GiB, product report 1 MiB, receipt 64 KiB가 상한이다.
+
+path/size/hash 검사는 별도 preflight가 아니라 같은 V3 stage 0이다. SPD SHA는 시작 때 한
+번만 계산하고 종료 때 size/mtime 불변을 확인한다. W6 세 파일, exact main HEAD/tracked
+clean, product source hash와 output 부재도 stage 0에서 확인한다. 하나라도 다르면 V3
+예산은 소비되고 STOP이다.
+
+새 absent output root는
+`D:\SPD-Decap-PI-Evaluator-W7\<execution-contract-head>\260729-a2-v3-source-block-census-01`
+이다. PASS 때만 canonical product report `source_block_census_report.json`을 만들고,
+PASS/STOP 모두 sibling `source_block_census_receipt.json` 하나를 남긴다. receipt는 schema,
+status/stage/contract, source/W6/block/rail/pair, call ledger, raw/ownership/substrate/query/
+report identities, row count와 rows/candidate/retained/excluded/ledger hash, wall/peak/scratch
+cap, report path/size/SHA 또는 STOP exception type/message를 포함한다. parent가 timeout/
+resource kill한 경우에도 STARTED receipt를 terminal STOP으로 종결한다.
+
+PASS는 census `status=complete`, shadow-only true, replacement/production-ready false,
+정확한 pair, nonempty candidate, count/hash 자체일관성, owner ledger와 replaced scopes,
+1 MiB report 및 call ledger를 모두 만족할 때뿐이다. identity/resource/product guard 실패는
+`DONE / STOP_V3_<CAUSE>`이며 재실행·부분 재사용·현장 수정은 없다.
+
+PASS claim은 선택 rail/pair의 원본 raw-v3, ownership IR, source-only compiled Maxwell row
+census, Dk/Df provenance와 replaced/retained ledger completeness뿐이다. G/C replacement,
+analytic accuracy, solver/`Y_global`/`Zii`, PowerSI 개선, holdout/generalization과 release는
+미증명이고 현재 수치 개선은 0이다. fresh ownership import 완료 여부, 24 GiB/4시간 내
+compile 완료, 실제 alias-witness guard와 1 MiB report 적합성은 이 한 번의 결과로만
+판정한다.
+
 ## 10. 중단·사용자 검토 조건
 
 다음이면 자동 진행을 멈추고 상태와 필요한 결정을 보고한다.
@@ -606,11 +678,11 @@ acceptance의 실행 증거로 주장하지 않는다. V1S/A2S 상태는 계속 
 - working tree에 범위 밖 tracked 변경이 생겨 안전하게 분리할 수 없다.
 - 사용량이 사용자가 지정한 50% 남음 지점에 도달한다.
 
-현재 ACTIVE item은 없다. A2는 `DONE / ACCEPT_NARROW_CORE_EVIDENCE`지만 focused runtime
-PASS는 아니며 V1/A2R/A2S 실행은 각각 소비된 STOP이다. 허용 제품 변경은 0이었고 test
-변경은 D-086의 fixture-dependent block 삭제 하나뿐이다. 다음 허용 작업은 별도 원본-SPD
-V3 계약 검토·동결이다. §11은 commit까지 닫혔으며, 그 밖의 제품 변경, 새 schema/cap
-또는 계약 밖 runtime이 필요하면 즉시 STOP하고 문서를 갱신한다.
+현재 ACTIVE item은 D-087 V3G이며 허용 범위는 외부 coordinator 구현과 정적 검토뿐이다.
+A2는 `DONE / ACCEPT_NARROW_CORE_EVIDENCE`지만 focused runtime PASS는 아니며
+V1/A2R/A2S 실행은 각각 소비된 STOP이다. 제품/test 변경은 금지한다. coordinator가
+hash-bound `READY_FOR_SINGLE_V3`가 되기 전에는 원본 SPD를 열지 않는다. §11은 commit까지
+닫혔으며, 새 schema/cap 또는 계약 밖 runtime이 필요하면 즉시 STOP하고 문서를 갱신한다.
 
 ## 11. 승인된 Unicode fixture successor — DONE / ACCEPT / COMMITTED @ eece8ab
 

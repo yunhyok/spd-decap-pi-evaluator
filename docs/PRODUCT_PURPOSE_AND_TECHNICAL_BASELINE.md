@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — 목적·기술 기준
 
-- 문서 버전: **3.0**
+- 문서 버전: **3.1**
 - 권위: **G0 — 목적, 우선순위, 합격 의미와 비주장 경계**
 - 최종 개정: **2026-09-01 (Asia/Seoul)**
 - 현재 외부 정확성: **W6-BASE 260729 retrospective numerical FAIL**
 - unseen/generalization: **unknown / not_run**
 - 현재 수치 개선: **0** — solver, `Y_global`, `Zii`와 PowerSI 비교 수치는 아직 바뀌지 않았다.
 - 현재 구현 gate: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT**
+- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G ACTIVE / CONTRACT_PLANNED**
 
 ## 1. 문서 역할과 권위
 
@@ -145,7 +145,7 @@ flowchart LR
     V1S -->|현재 결과| SS["DONE / STOP_V1S<br/>alias fixture target 없음"]
     SS --> V1T["A2T alias test prune<br/>DONE / STATIC_ACCEPT"]
     V1T --> AN["A2 narrow core evidence<br/>DONE / ACCEPT"]
-    AN --> V3G["별도 V3 계약<br/>검토 · 동결 gate"]
+    AN --> V3G["별도 V3 계약<br/>ACTIVE / coordinator pending"]
     V3G -->|별도 계약 READY일 때만| C["원본 SPD 1회<br/>source-only compile + G/C census"]
     C -->|complete / disjoint| L["analytic/local physics gate"]
     C -->|missing / ambiguous| SSRC["DONE / STOP_NOT_READY"]
@@ -242,8 +242,8 @@ overlap 또는 replaced/retained row를 구분하지 못하는 scope는
 materializer와 단일 focused test는 Sol 정적 검토에서 `STATIC_ACCEPT`를 받았다.
 그러나 2026-09-01 V1은 test collection 전에 지정 launcher Python의
 `No module named pytest`로 exit 1이 되어 `STOP_V1_LAUNCHER_NO_PYTEST`다. 이는 제품
-코드 실패나 PASS 증거가 아니며, 같은 계약의 재실행과 상위 V3 원본 SPD import는
-허용하지 않는다. 정확한 명령·hash·영수증과 다음 허용 조건은 작업 기준 문서가
+코드 실패나 PASS 증거가 아니며 당시 같은 계약의 재실행과 상위 V3 원본 SPD import는
+허용하지 않았다. 정확한 명령·hash·영수증과 후속 계약은 작업 기준 문서가
 관리한다.
 
 별도 A2R은 Python 3.12.10 / pytest 9.0.3에서 collection 1까지 진입했지만,
@@ -274,6 +274,19 @@ A2T는 추가 0줄·삭제 51줄로 위 block만 제거했고 제품 source는 �
 검토는 P0/P1/P2 0으로 `STATIC_ACCEPT`했으며 추가 runtime은 없었다. 따라서 A2는
 `DONE / ACCEPT_NARROW_CORE_EVIDENCE`로 종료한다. V1S/A2S의 STOP과 미증명 경계는 그대로
 유지하며, 다음 단계는 별도 원본-SPD V3 계약의 검토·동결뿐이다.
+
+V3G 정적 경로 추적 결과 기존 W6 bundle은 raw-spatial v2이고, 17DT v3 candidate에는
+target ownership IR이 없다. 어느 것도 현재 census가 요구하는 raw v3, ownership IR과
+substrate identity의 동일-import 결속을 충족하지 못하므로 재사용하지 않는다. V3는
+원본 SPD를 현재 importer로 fresh import하고 `compile_layerwise_substrate`와 source-block
+census를 각각 한 번만 호출한다. scenario 저장/reload, P1, solve, `Y_global`, `Zii`,
+Touchstone와 PowerSI는 호출하지 않는다.
+
+실행은 제품 변경 없이 외부 one-shot coordinator 하나로 제한한다. 그 coordinator의
+hash, exact HEAD, 입력/W6 identity, 자원 한도, 출력과 call ledger를 작업 기준 문서에
+동결하고 Sol 정적 검토를 통과하기 전에는 원본 SPD를 열지 않는다. PASS도 원본-SPD
+raw/ownership/compiled Maxwell row census와 ledger completeness만 증명한다. G/C
+replacement, analytic accuracy와 PowerSI 수치 개선은 계속 미증명이며 현재 개선값은 0이다.
 
 그다음 fitting 없이 analytic/manufactured oracle에서 limiting case, passivity,
 reciprocity, conservation, conditioning과 expected error signature를 판정한다.
