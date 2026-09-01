@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — 목적·기술 기준
 
-- 문서 버전: **3.8**
+- 문서 버전: **3.9**
 - 권위: **G0 — 목적, 우선순위, 합격 의미와 비주장 경계**
 - 최종 개정: **2026-09-01 (Asia/Seoul)**
 - 현재 외부 정확성: **W6-BASE 260729 retrospective numerical FAIL**
 - unseen/generalization: **unknown / not_run**
 - 현재 수치 개선: **0** — solver, `Y_global`, `Zii`와 PowerSI 비교 수치는 아직 바뀌지 않았다.
 - 현재 구현 gate: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY — D-091 DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c` — D-092 PLANNED / NOT_STARTED**
+- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY — D-091 DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c` — D-092 READY / ONE_SHOT_NOT_CONSUMED**
 
 ## 1. 문서 역할과 권위
 
@@ -151,7 +151,7 @@ flowchart LR
     V3R --> D89["D-089 focused contract<br/>DONE / ACCEPT_FOCUSED / COMMITTED 54c87d1"]
     D89 --> D90["D-090 source-block census<br/>DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY"]
     D90 --> D91["D-091 focused cardinality contract<br/>DONE / ACCEPT_FOCUSED / COMMITTED 6b88c3c"]
-    D91 --> D92["D-092 production one-shot successor contract freeze<br/>PLANNED / NOT_STARTED"]
+    D91 --> D92["D-092 production one-shot successor contract freeze<br/>READY / ONE_SHOT_NOT_CONSUMED"]
     D92 -->|계약 동결 후| L["production one-shot consideration"]
     D89 -->|STOP| SSRC["static diagnosis/replanning"]
     L --> I["one-owner production integration"]
@@ -343,8 +343,11 @@ mapping과 같은 casefold nonempty/power≥1/ground≥1/total=p+g로 정렬하�
 ordinal gap으로 cardinality보다 먼저 `ORDER_INVALID`가 난 test-only 문제였고 positive
 4-row mapping/spool 경로는 통과했다. ordinal 재열거 후 동일 node는 `1 passed in 0.82s`였고
 Sol은 `ACCEPT_D091_FOCUSED`, P0–P3는 0이다. 원본 SPD/full suite/import/solver/P1/PowerSI는
-실행하지 않았고 수치 개선은 0이며 D-090은 재실행하지 않는다. 후속 D-092는
-`production one-shot successor contract freeze — PLANNED / NOT_STARTED`다.
+실행하지 않았고 수치 개선은 0이며 D-090은 재실행하지 않는다. D-092
+`W7-ACC-SOURCE-BLOCK-ORIGINAL-SPD-D092-01`은 `READY / ONE_SHOT_NOT_CONSUMED`로 동결된
+원본 SPD source-block census 계약이며 solver/PowerSI 개선 실행이 아니다. 지정 coordinator
+SHA는 `d204d383b8d3f6bb1edb2c9918b00e2589ed7c24f628139413ba3ddd1be378ec`이고 아직 원본
+SPD/hash/import/run은 실행하지 않았다.
 
 그다음 fitting 없이 analytic/manufactured oracle에서 limiting case, passivity,
 reciprocity, conservation, conditioning과 expected error signature를 판정한다.
