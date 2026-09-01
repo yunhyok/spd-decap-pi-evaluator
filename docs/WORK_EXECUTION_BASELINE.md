@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — 작업 기준
 
-- 문서 버전: **2.6**
+- 문서 버전: **2.7**
 - 기준 branch: **main only**
 - current integrated-hardening docs base: `5a270677074868fc3e10ffa26309a208bb151ac3`
 - integrated-hardening implementation commit: `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`
 - 최종 개정: **2026-09-01 (Asia/Seoul)**
 - integrated-hardening lifecycle: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / STOP_V1_LAUNCHER_NO_PYTEST — A2R DONE / STOP_V1R_TEST_FIXTURE_IR_RELATION — A2S ACTIVE / TEST_ONLY_SUCCESSOR_PLANNED**
-- sole ACTIVE: **W7-ACC-SOURCE-BLOCK-V1-TEST-FIXTURE-SUCCESSOR-01** — invalid mutation block 삭제만 허용.
+- current accuracy gate: **A1 DONE / ACCEPT — A2/A2R DONE / STOP — A2S ACTIVE / READY_FOR_SINGLE_V1S**
+- sole ACTIVE: **W7-ACC-SOURCE-BLOCK-V1-TEST-FIXTURE-SUCCESSOR-01** — test candidate hash 동결, runtime 미실행.
 - current numerical improvement: **0**
 
 ## 1. 압축 후 즉시 복구 카드
@@ -23,7 +23,7 @@ A1은 새 PowerSI run 없이 기존 W6 report를 한 번 읽어 development rail
 census 하나로 구현됐고 Sol `STATIC_ACCEPT`를 받았다. focused V1은 test collection
 전에 launcher Python의 pytest 부재로 STOP했다. 별도 A2R은 Python 3.12.10 /
 pytest 9.0.3에서 collection 1 뒤 test-only invalid IR mutation으로 STOP했다. 별도
-A2S는 그 block 삭제만 계획했고 수치 개선은 아직 0이다.
+A2S는 그 block 14줄만 삭제했고 Sol `STATIC_ACCEPT`를 받았으며 수치 개선은 아직 0이다.
 
 ```mermaid
 flowchart LR
@@ -34,7 +34,7 @@ flowchart LR
     V1 -->|현재 결과| STOPV1["DONE / STOP_V1_LAUNCHER_NO_PYTEST"]
     STOPV1 --> V1R["A2R launcher recovery<br/>consumed / no rerun"]
     V1R -->|현재 결과| STOPV1R["DONE / STOP_V1R_TEST_FIXTURE_IR_RELATION"]
-    STOPV1R --> V1S["A2S test-only successor<br/>PLANNED / exact once"]
+    STOPV1R --> V1S["A2S test-only successor<br/>STATIC_ACCEPT / exact once"]
     V1S -->|PASS| V3G["별도 V3 계약<br/>검토 · 동결 gate"]
     V1S -->|FAIL| STOPV1S["DONE / STOP_V1S"]
     V3G -->|별도 계약 READY일 때만| V3["원본 SPD import + source-only compile<br/>V3 once"]
@@ -521,7 +521,7 @@ PASS가 아니며 부분 통과를 재사용하지 않는다. V1R은 consumed/no
 변이의 필요성·최소 수정·새 실행 예산을 정적으로 재평가해 별도 계약으로 동결하는
 것뿐이다.
 
-### D-085 — A2S invalid mutation deletion — ACTIVE / TEST_ONLY_SUCCESSOR_PLANNED
+### D-085 — A2S invalid mutation deletion — ACTIVE / READY_FOR_SINGLE_V1S
 
 Sol 정적 재평가 결과 successor는 필요하다. `missing_witness` block은 여러 IR 관계를
 동시에 고쳐야만 builder를 통과하므로 focused product guard 하나를 위해 유지할 가치가
@@ -539,6 +539,15 @@ PASS다. preflight, retry, full suite, 제품 변경, V3는 금지한다. 실패
 `DONE / STOP_V1S_<CAUSE>`로 닫고 부분 결과를 재사용하거나 재실행하지 않는다.
 사용자의 standing preapproval은 이 별도 문서 계약에 한해 successor 실행 권한으로
 적용한다.
+
+Luna는 contract base `2ad4a6b`에서 지정된 `missing_witness` block 14줄만 삭제했다.
+추가 line, 제품/helper/다른 test 변경은 없다. source SHA-256은
+`63BEA32E1184154539ABD7DFE6B54555131888393FC04E5E12892E9EB730C710`로 유지되고,
+새 test SHA-256은
+`84AEF240893DA8906D3B1D01CD276A0BF6FD4575AC3455CEE9D76477F30C668B`다. runtime은
+`not_run`이다. Sol 최종 정적 검토는 P0/P1/P2 0으로 `STATIC_ACCEPT`했으며 제품 source
+불변, test 14줄 삭제만 포함, 남은 fail-closed 변이와 solve/P1 traps 유지를 확인했다.
+따라서 위에 동결한 exact one-node successor만 fresh process에서 한 번 실행할 수 있다.
 
 ## 10. 중단·사용자 검토 조건
 

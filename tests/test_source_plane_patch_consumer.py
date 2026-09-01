@@ -699,20 +699,6 @@ def test_source_plane_source_block_census_is_deterministic_and_fail_closed(tmp_p
     ownership_binding = {key: own[key] for key in ("app_version", "source_sha256", "source_size_bytes", "target_rail_id", "project_binding_sha256", "certificate_evidence_sha256", "compiled_topology_identity_sha256", "raw_manifest_sha256", "raw_geometry_identity_sha256", "raw_logical_rows_sha256", "raw_plane_sheet_sha256")}
     with load_source_plane_ownership_ir(own, imported.attachments, expected_app_version=own["app_version"], **{f"expected_{key}": own[key] for key in ("source_sha256", "project_binding_sha256", "certificate_evidence_sha256", "compiled_topology_identity_sha256", "raw_manifest_sha256", "raw_geometry_identity_sha256", "raw_logical_rows_sha256", "raw_plane_sheet_sha256")}) as loaded:
         ownership_data = {**ownership_binding, **{section: list(loaded.iter_section(section)) for section in ownership_sections}}
-    missing_witness = deepcopy(ownership_data)
-    power_binding = next(row for row in missing_witness["rail_bindings"] if str(row["role"]).casefold() == "power")
-    power_surface = next(row for row in missing_witness["surfaces"] if str(row["surface_id"]).casefold() == str(power_binding["surface_id"]).casefold())
-    power_surface["layer"] = power_binding["layer"] = "missing-layer"
-    for row in missing_witness["terminal_bindings"]:
-        if str(row.get("role", "")).casefold() == "power":
-            row["layer"] = "missing-layer"
-    for row in missing_witness["plane_owner_scopes"]:
-        if str(row.get("role", "")).casefold() == "power":
-            row["layer"] = "missing-layer"
-    missing_manifest, missing_asset = build_source_plane_ownership_ir(missing_witness)
-    missing_attachments = dict(imported.attachments); missing_attachments[missing_asset[0]] = missing_asset[1]
-    with pytest.raises(consumer.SourcePlanePatchError, match="selected conductor layers are absent"):
-        consumer.audit_source_plane_source_block_census(missing_manifest, missing_attachments, raw, substrate, rail_id="VDD_CORE/1")
     altered_dielectric = deepcopy(ownership_data)
     for point in altered_dielectric["dielectric_points"]:
         point["epsilon_r"] = float(point["epsilon_r"]) + 1.0
