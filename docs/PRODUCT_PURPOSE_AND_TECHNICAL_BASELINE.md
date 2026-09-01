@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — 목적·기술 기준
 
-- 문서 버전: **2.9**
+- 문서 버전: **3.0**
 - 권위: **G0 — 목적, 우선순위, 합격 의미와 비주장 경계**
 - 최종 개정: **2026-09-01 (Asia/Seoul)**
 - 현재 외부 정확성: **W6-BASE 260729 retrospective numerical FAIL**
 - unseen/generalization: **unknown / not_run**
 - 현재 수치 개선: **0** — solver, `Y_global`, `Zii`와 PowerSI 비교 수치는 아직 바뀌지 않았다.
 - 현재 구현 gate: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- 현재 정확성 gate: **A1 DONE / ACCEPT — A2/A2R/A2S execution STOP — A2T ACTIVE / TEST_PRUNE_PLANNED**
+- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT**
 
 ## 1. 문서 역할과 권위
 
@@ -143,8 +143,8 @@ flowchart LR
     V1R -->|현재 결과| SR["DONE / STOP_V1R_TEST_FIXTURE_IR_RELATION"]
     SR --> V1S["A2S test-only successor<br/>consumed / no rerun"]
     V1S -->|현재 결과| SS["DONE / STOP_V1S<br/>alias fixture target 없음"]
-    SS --> V1T["A2T alias test prune<br/>DELETE ONLY / no runtime"]
-    V1T --> AN["A2 narrow core evidence<br/>static close gate"]
+    SS --> V1T["A2T alias test prune<br/>DONE / STATIC_ACCEPT"]
+    V1T --> AN["A2 narrow core evidence<br/>DONE / ACCEPT"]
     AN --> V3G["별도 V3 계약<br/>검토 · 동결 gate"]
     V3G -->|별도 계약 READY일 때만| C["원본 SPD 1회<br/>source-only compile + G/C census"]
     C -->|complete / disjoint| L["analytic/local physics gate"]
@@ -265,10 +265,15 @@ Sol 정적 재평가에 따라 제품의 direct island→surface→layer witness
 유지한다. 다만 synthetic-alias 변이는 MINI-SPD에 우연히 비선택 topology가 있어야 하는
 fixture 의존 코드이므로 A2T에서 그 동적 탐색·class monkeypatch block만 삭제한다. 제품,
 fixture, helper, 다른 검사는 바꾸지 않고 추가 runtime도 열지 않는다. 삭제 후 Sol 정적
-검토를 통과하면 A2는 `ACCEPT_NARROW_CORE_EVIDENCE`로 닫는다. 이는 deterministic census,
+검토를 통과해 A2를 `ACCEPT_NARROW_CORE_EVIDENCE`로 닫았다. 이는 deterministic census,
 material provenance, altered-dielectric fail-closed와 no-P1/solve만 증명하며 alias guard의
 동적 branch, focused node 전체 PASS, 원본 SPD completeness와 PowerSI 수치 개선은 증명하지
 않는다.
+
+A2T는 추가 0줄·삭제 51줄로 위 block만 제거했고 제품 source는 불변이다. Sol 최종
+검토는 P0/P1/P2 0으로 `STATIC_ACCEPT`했으며 추가 runtime은 없었다. 따라서 A2는
+`DONE / ACCEPT_NARROW_CORE_EVIDENCE`로 종료한다. V1S/A2S의 STOP과 미증명 경계는 그대로
+유지하며, 다음 단계는 별도 원본-SPD V3 계약의 검토·동결뿐이다.
 
 그다음 fitting 없이 analytic/manufactured oracle에서 limiting case, passivity,
 reciprocity, conservation, conditioning과 expected error signature를 판정한다.

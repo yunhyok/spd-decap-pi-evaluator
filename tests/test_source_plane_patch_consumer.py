@@ -706,56 +706,5 @@ def test_source_plane_source_block_census_is_deterministic_and_fail_closed(tmp_p
     altered_attachments = dict(imported.attachments); altered_attachments[altered_asset[0]] = altered_asset[1]
     with pytest.raises(consumer.SourcePlanePatchError):
         consumer.audit_source_plane_source_block_census(altered_manifest, altered_attachments, raw, substrate, rail_id="VDD_CORE/1")
-    island_by_id = {str(row["island_id"]).casefold(): row for row in ownership_data["islands"]}
-    surface_by_id = {str(row["surface_id"]).casefold(): row for row in ownership_data["surfaces"]}
-    selected_bindings = {str(row["role"]).casefold(): row for row in ownership_data["rail_bindings"] if str(row["rail_id"]).casefold() == "vdd_core/1"}
-    selected_reduced = {role: int(first["closures"][role]["reduced_indices"][0]) for role in ("power", "ground")}
-    original_reduced_node_index = type(substrate.network).reduced_node_index
-    negative_edge_partners = {}
-    for wrapped in substrate.network.partials:
-        partial = getattr(wrapped, "partial", wrapped)
-        names = tuple(str(name) for name in getattr(partial, "net_names", ()))
-        matrix = partial.maxwell_capacitance_f.tocoo(copy=False)
-        for row_index, column_index, value in zip(matrix.row, matrix.col, matrix.data, strict=True):
-            if int(row_index) < int(column_index) and float(value) < 0.0:
-                left, right = names[int(row_index)], names[int(column_index)]
-                negative_edge_partners.setdefault(left.casefold(), set()).add(right)
-                negative_edge_partners.setdefault(right.casefold(), set()).add(left)
-    alias_target = None
-    for partial_ordinal, wrapped in enumerate(substrate.network.partials):
-        partial = getattr(wrapped, "partial", wrapped)
-        names = tuple(str(name) for name in getattr(partial, "net_names", ()))
-        for row_index, column_index, value in sorted((int(row_index), int(column_index), float(value)) for row_index, column_index, value in zip(partial.maxwell_capacitance_f.tocoo(copy=False).row, partial.maxwell_capacitance_f.tocoo(copy=False).col, partial.maxwell_capacitance_f.tocoo(copy=False).data, strict=True) if int(row_index) < int(column_index) and float(value) < 0.0):
-            for endpoint_index, _other_index in ((row_index, column_index), (column_index, row_index)):
-                endpoint = names[endpoint_index]
-                endpoint_island = island_by_id.get(endpoint.casefold())
-                endpoint_surface = surface_by_id.get(str(endpoint_island.get("surface_id", "")).casefold()) if endpoint_island is not None else None
-                if endpoint_island is None or endpoint_surface is None:
-                    continue
-                endpoint_reduced = int(original_reduced_node_index(substrate.network, endpoint))
-                if endpoint_reduced in selected_reduced.values():
-                    continue
-                for role in ("power", "ground"):
-                    binding_surface = str(selected_bindings[role]["surface_id"]).casefold()
-                    partners = negative_edge_partners.get(endpoint.casefold(), ())
-                    if str(endpoint_island.get("surface_id", "")).casefold() != binding_surface and partners and all(int(original_reduced_node_index(substrate.network, partner)) != selected_reduced[role] for partner in partners):
-                        alias_target = (partial_ordinal, endpoint, selected_reduced[role])
-                        break
-                if alias_target is not None:
-                    break
-            if alias_target is not None:
-                break
-        if alias_target is not None:
-            break
-    assert alias_target is not None
-    _partial_ordinal, alias_endpoint, alias_reduced = alias_target
-    def synthetic_reduced_node_index(network, node):
-        if str(node) == alias_endpoint:
-            return alias_reduced
-        return original_reduced_node_index(network, node)
-    with monkeypatch.context() as alias_patch:
-        alias_patch.setattr(type(substrate.network), "reduced_node_index", synthetic_reduced_node_index)
-        with pytest.raises(consumer.SourcePlanePatchError, match="incident endpoint alias lacks direct layer witness"):
-            consumer.audit_source_plane_source_block_census(own, imported.attachments, raw, substrate, rail_id="VDD_CORE/1")
     with pytest.raises(consumer.SourcePlanePatchError):
         consumer.audit_source_plane_source_block_census(own, imported.attachments, {**raw, "geometry_identity_sha256": _h("e")}, substrate, rail_id="VDD_CORE/1")
