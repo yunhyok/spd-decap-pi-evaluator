@@ -1,16 +1,18 @@
 from __future__ import annotations
 
+from contextlib import closing
 from pathlib import Path
 from hashlib import sha256
 from dataclasses import asdict, replace
 from copy import deepcopy
 import json
+import sqlite3
+from itertools import tee
 
 import pytest
 
 from test_io_spd import MINI_SPD
 from spd_decap_pi import spd_adapter
-from spd_decap_pi import raw_spatial_contact_compiler
 from spd_decap_pi.raw_spatial_contact_compiler import (
     RawSpatialCompilerError,
     compile_raw_spatial_contact_asset,
@@ -18,6 +20,7 @@ from spd_decap_pi.raw_spatial_contact_compiler import (
 from spd_decap_pi.source_plane_ownership_ir import (
     MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS as AUTHORITATIVE_IR_ROW_CAP,
     SourcePlaneOwnershipIRError,
+    build_source_plane_ownership_ir,
     load_source_plane_ownership_ir,
     validate_project_source_plane_ownership_ir_envelope,
 )
@@ -102,27 +105,6 @@ def test_ownership_request_and_callback_are_atomic_pair() -> None:
         )
 
 
-def test_ownership_selection_bound_is_checked_before_capture(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(raw_spatial_contact_compiler, "MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS", 1)
-    with pytest.raises(RawSpatialCompilerError, match="ownership selection exceeds"):
-        raw_spatial_contact_compiler._ownership_selection(
-            {
-                "surface_keys": [("PWR", "L1"), ("GND", "L2")],
-                "node_keys": [], "via_keys": [], "pad_keys": [],
-                "layer_keys": [], "material_keys": [],
-            }
-        )
-
-
-def test_ownership_record_append_bound_stops_before_second_row(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(raw_spatial_contact_compiler, "MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS", 1)
-    records: list[dict[str, object]] = []
-    raw_spatial_contact_compiler._ownership_record_append(records, {"record_id": "r0"})
-    with pytest.raises(RawSpatialCompilerError, match="ownership source-record bound exceeded"):
-        raw_spatial_contact_compiler._ownership_record_append(records, {"record_id": "r1"})
-    assert len(records) == 1
-
-
 def test_source_plane_ownership_component_layer_is_authoritative_for_mismatched_endpoint(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -130,7 +112,7 @@ def test_source_plane_ownership_component_layer_is_authoritative_for_mismatched_
     source.write_text(_ownership_fixture_payload(), encoding="ascii")
     original_certificate = spd_adapter._layer_surface_connectivity_certificate
     original_compile = spd_adapter.compile_raw_spatial_contact_asset
-    original_build = spd_adapter.build_source_plane_ownership_ir
+    original_build = spd_adapter.build_source_plane_ownership_ir_from_spool
     captured: dict[str, object] = {}
     compile_calls = {"count": 0}
 
@@ -163,7 +145,12 @@ def test_source_plane_ownership_component_layer_is_authoritative_for_mismatched_
         compile_calls["count"] += 1
         request = kwargs.get("source_plane_ownership_request")
         if isinstance(request, dict):
-            request = deepcopy(request)
+            request = dict(request)
+            captured_selection = {}
+            for key, iterator in request["raw_selection"].items():
+                live, saved = tee(iterator)
+                request["raw_selection"][key] = live
+                captured_selection[key] = list(saved)
             snapshot = request.get("certificate_snapshot")
             assert isinstance(snapshot, dict)
             target_pins = {
@@ -196,13 +183,18 @@ def test_source_plane_ownership_component_layer_is_authoritative_for_mismatched_
                 contact["contact_component_island_ids"] = sorted({str(island_id) for island_id in base_component["island_ids"]})
                 changed = True
             assert changed
-            captured["request"] = deepcopy(request)
+            captured["request"] = {**request, "raw_selection": captured_selection}
             kwargs = {**kwargs, "source_plane_ownership_request": request}
         return original_compile(*args, **kwargs)
 
     def capture_draft(*args: object, **kwargs: object):
-        draft = args[0] if args else kwargs.get("draft")
-        captured["draft"] = deepcopy(draft)
+        spool = args[0]
+        with closing(sqlite3.connect(spool.path)) as connection:
+            connection.row_factory = sqlite3.Row
+            captured["draft"] = {
+                "terminal_bindings": [dict(row) for row in connection.execute("SELECT * FROM terminal_bindings")],
+                "source_records": [dict(row) for row in connection.execute("SELECT * FROM source_records")],
+            }
         return original_build(*args, **kwargs)
 
     monkeypatch.setattr(
@@ -211,7 +203,7 @@ def test_source_plane_ownership_component_layer_is_authoritative_for_mismatched_
     monkeypatch.setattr(
         spd_adapter, "compile_raw_spatial_contact_asset", capture_request
     )
-    monkeypatch.setattr(spd_adapter, "build_source_plane_ownership_ir", capture_draft)
+    monkeypatch.setattr(spd_adapter, "build_source_plane_ownership_ir_from_spool", capture_draft)
 
     imported = spd_adapter.import_spd_scenario(
         source, source_plane_ownership_rail_id="VDD_CORE/1"
@@ -426,7 +418,7 @@ def test_source_plane_ownership_component_layer_is_authoritative_for_mismatched_
         assert callback is not None
 
         def tamper_node(evidence):
-            request = evidence.request
+            request = kwargs.get("source_plane_ownership_request")
             snapshot = request["certificate_snapshot"]
             target = next(
                 item
@@ -437,16 +429,15 @@ def test_source_plane_ownership_component_layer_is_authoritative_for_mismatched_
                 str(target["net"]).strip().casefold(),
                 str(target["source_node_id"]).strip().casefold(),
             )
-            for row in evidence.context["nodes"]:
-                key = (
-                    str(row.get("resolved_net", "")).strip().casefold(),
-                    str(row.get("node_id", "")).strip().casefold(),
-                )
-                if key == target_key:
-                    row["layer"] = "Signal$BOTTOM"
-                    break
-            else:
-                raise AssertionError("target raw Node is absent")
+            with closing(sqlite3.connect(evidence.spool.path)) as connection:
+                row = connection.execute(
+                    "SELECT record_id FROM ownership_source_stage WHERE kind='Node' AND lookup_a=? AND lookup_b=?",
+                    target_key,
+                ).fetchone()
+                if row is None:
+                    raise AssertionError("target raw Node is absent")
+                connection.execute("UPDATE ownership_source_stage SET layer=? WHERE record_id=?", ("Signal$BOTTOM", row[0]))
+                connection.commit()
             callback(evidence)
 
         return original_compile(
@@ -471,7 +462,7 @@ def test_source_plane_ownership_filters_global_quotient_before_selected_row_boun
     source.write_text(_ownership_fixture_payload(), encoding="ascii")
     original_certificate = spd_adapter._layer_surface_connectivity_certificate
     original_compile = spd_adapter.compile_raw_spatial_contact_asset
-    original_build = spd_adapter.build_source_plane_ownership_ir
+    original_build = spd_adapter.build_source_plane_ownership_ir_from_spool
     captured: dict[str, object] = {}
     compile_calls = {"count": 0}
     build_calls = {"count": 0}
@@ -570,7 +561,7 @@ def test_source_plane_ownership_filters_global_quotient_before_selected_row_boun
 
     monkeypatch.setattr(spd_adapter, "_layer_surface_connectivity_certificate", mutate_certificate)
     monkeypatch.setattr(spd_adapter, "compile_raw_spatial_contact_asset", capture_request)
-    monkeypatch.setattr(spd_adapter, "build_source_plane_ownership_ir", capture_build)
+    monkeypatch.setattr(spd_adapter, "build_source_plane_ownership_ir_from_spool", capture_build)
 
     if case_id == "projected_over_cap":
         with pytest.raises(
@@ -639,7 +630,7 @@ def test_source_plane_ownership_provisional_request_aggregate_does_not_consume_f
     synthetic_cap = 48
     original_analyze = spd_adapter.analyze_spd
     original_compile = spd_adapter.compile_raw_spatial_contact_asset
-    original_build = spd_adapter.build_source_plane_ownership_ir
+    original_build = spd_adapter.build_source_plane_ownership_ir_from_spool
     calls = {"raw": 0, "final": 0}
     captured: dict[str, object] = {}
 
@@ -669,7 +660,9 @@ def test_source_plane_ownership_provisional_request_aggregate_does_not_consume_f
         calls["raw"] += 1
         request = kwargs.get("source_plane_ownership_request")
         assert isinstance(request, dict)
-        captured["request"] = deepcopy(request)
+        request = dict(request)
+        captured["request"] = {**request, "raw_selection": {key: list(value) for key, value in request["raw_selection"].items()}}
+        monkeypatch.setattr(spd_adapter, "MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS", AUTHORITATIVE_IR_ROW_CAP)
         return original_compile(*args, **kwargs)
 
     def capture_build(*args: object, **kwargs: object):
@@ -679,7 +672,7 @@ def test_source_plane_ownership_provisional_request_aggregate_does_not_consume_f
     monkeypatch.setattr(spd_adapter, "analyze_spd", inflate_provisional_draft)
     monkeypatch.setattr(spd_adapter, "MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS", synthetic_cap)
     monkeypatch.setattr(spd_adapter, "compile_raw_spatial_contact_asset", capture_compile)
-    monkeypatch.setattr(spd_adapter, "build_source_plane_ownership_ir", capture_build)
+    monkeypatch.setattr(spd_adapter, "build_source_plane_ownership_ir_from_spool", capture_build)
 
     imported = spd_adapter.import_spd_scenario(
         source, source_plane_ownership_rail_id="VDD_CORE/1"
@@ -720,6 +713,109 @@ def test_source_plane_ownership_provisional_request_aggregate_does_not_consume_f
     assert sum(manifest["counts"].values()) <= AUTHORITATIVE_IR_ROW_CAP
 
 
+def test_source_plane_ownership_streamed_handoff_preserves_unicode_casefold(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    payload = _ownership_fixture_payload()
+    assert payload.count("Node2") == 3
+    source = tmp_path / "ownership-unicode.spd"
+    source.write_text(payload.replace("Node2", "NodeStraße2"), encoding="utf-8")
+    original_build = spd_adapter.build_source_plane_ownership_ir_from_spool
+    observed: dict[str, object] = {}
+
+    def capture_build(*args: object, **kwargs: object):
+        spool = args[0]
+        with closing(sqlite3.connect(spool.path)) as connection:
+            row = connection.execute(
+                "SELECT record_id,record_fold,source_offset,source_end,source_record_sha256 "
+                "FROM ownership_source_stage WHERE kind='Node' AND lookup_a=? AND lookup_b=?",
+                ("dgnd", "nodestrasse2"),
+            ).fetchone()
+            assert row is not None
+            record_id, record_fold, source_offset, source_end, source_sha = row
+            observed["record_id"] = record_id
+            assert record_fold == str(record_id).casefold()
+            assert sha256(source.read_bytes()[source_offset:source_end]).hexdigest() == source_sha
+        return original_build(*args, **kwargs)
+
+    monkeypatch.setattr(spd_adapter, "build_source_plane_ownership_ir_from_spool", capture_build)
+    imported = spd_adapter.import_spd_scenario(source, source_plane_ownership_rail_id="VDD_CORE/1")
+    assert observed["record_id"] == "node:NodeStraße2:DGND"
+    assert imported.scenario.base_project.metadata["spd_import"]
+
+
+def test_source_plane_ownership_streamed_handoff_uses_indexed_lookups(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "ownership-indexed-lookups.spd"
+    source.write_text(_ownership_fixture_payload(), encoding="ascii")
+    observed: dict[str, list[tuple[str, list[tuple[object, ...]]]]] = {}
+    original_connect = sqlite3.connect
+
+    def label_for(sql: str) -> str | None:
+        normalized = " ".join(sql.split()).casefold()
+        if (
+            "from ownership_primitive_stage p left join ownership_source_stage s on s.record_id=p.source_record_id" in normalized
+            and "where s.record_id is null or s.kind<>'shape'" in normalized
+        ):
+            return "shape_source_id_join"
+        if "from ownership_primitive_stage where primitive_id=?" in normalized:
+            return "primitive_id_lookup"
+        if "from snapshot_edge_lookup where net_fold=? and layer_fold=? and local_ordinal=?" in normalized:
+            return "snapshot_edge_local_lookup"
+        if "from snapshot_edge_lookup where net_fold=? and layer_fold=? and island_fold=? and witness_kind='positive_area_witness'" in normalized:
+            return "island_positive_witness_lookup"
+        if "from ownership_source_stage where kind='regular' and lookup_a=? and lookup_b=? and lookup_c=?" in normalized:
+            return "canonical_regular_pad_lookup"
+        return None
+
+    class InstrumentedConnection(sqlite3.Connection):
+        def execute(self, sql: str, parameters: object = ()):
+            cursor = super().execute(sql, parameters)
+            label = label_for(sql)
+            if label is not None:
+                plan = super().execute(f"EXPLAIN QUERY PLAN {sql}", parameters).fetchall()
+                observed.setdefault(label, []).append((sql, [tuple(row) for row in plan]))
+            return cursor
+
+    def instrumented_connect(database: object, *args: object, **kwargs: object):
+        kwargs.setdefault("factory", InstrumentedConnection)
+        return original_connect(database, *args, **kwargs)
+
+    monkeypatch.setattr(sqlite3, "connect", instrumented_connect)
+    imported = spd_adapter.import_spd_scenario(
+        source, source_plane_ownership_rail_id="VDD_CORE/1"
+    )
+    assert imported.scenario.base_project.metadata["spd_import"]
+
+    def assert_indexed(label: str, *fragments: str) -> None:
+        executions = observed.get(label, [])
+        assert executions, f"{label} was not executed"
+        for _sql, plan in executions:
+            details = " ".join(str(row[3]).replace("USING COVERING INDEX", "USING INDEX") for row in plan).casefold()
+            assert "search" in details
+            assert all(fragment.casefold() in details for fragment in fragments)
+
+    assert_indexed("shape_source_id_join", "search s using", "record_id=?")
+    assert_indexed("primitive_id_lookup", "search ownership_primitive_stage using", "primitive_id=?")
+    assert_indexed(
+        "snapshot_edge_local_lookup",
+        "search snapshot_edge_lookup using index snapshot_edge_lookup_primitive_idx",
+    )
+    assert_indexed(
+        "island_positive_witness_lookup",
+        "search snapshot_edge_lookup using index snapshot_edge_lookup_witness_idx",
+    )
+    assert_indexed(
+        "canonical_regular_pad_lookup",
+        "search ownership_source_stage using index",
+        "sqlite_autoindex_ownership_source_stage",
+        "lookup_a=?",
+        "lookup_b=?",
+        "lookup_c=?",
+    )
+
+
 def test_source_plane_ownership_producer_roundtrip_and_atomic_failure(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -730,7 +826,8 @@ def test_source_plane_ownership_producer_roundtrip_and_atomic_failure(
 
     ownership_capture: dict[str, object] = {}
     original_compile = spd_adapter.compile_raw_spatial_contact_asset
-    original_build = spd_adapter.build_source_plane_ownership_ir
+    original_build = spd_adapter.build_source_plane_ownership_ir_from_spool
+    legacy_build = build_source_plane_ownership_ir
 
     def capture_ownership_request(*args: object, **kwargs: object):
         request = kwargs.get("source_plane_ownership_request")
@@ -741,11 +838,23 @@ def test_source_plane_ownership_producer_roundtrip_and_atomic_failure(
     monkeypatch.setattr(spd_adapter, "compile_raw_spatial_contact_asset", capture_ownership_request)
 
     def capture_ownership_draft(*args: object, **kwargs: object):
-        draft = args[0] if args else kwargs.get("draft")
-        ownership_capture["draft"] = deepcopy(draft)
+        spool = args[0]
+        with closing(sqlite3.connect(spool.path)) as connection:
+            connection.row_factory = sqlite3.Row
+            captured_draft = {**dict(args[1])}
+            captured_draft.update({
+                table: [dict(row) for row in connection.execute(f"SELECT * FROM {table}")]
+                for table in (
+                    "source_records", "surfaces", "primitives", "islands", "primitive_island_edges",
+                    "stackup_layers", "dielectric_points", "rail_bindings", "terminal_bindings",
+                    "contact_boundary", "retained_owner_refs", "plane_owner_scopes",
+                    "replacement_ledger", "replacement_ledger_members",
+                )
+            })
+            ownership_capture["draft"] = captured_draft
         return original_build(*args, **kwargs)
 
-    monkeypatch.setattr(spd_adapter, "build_source_plane_ownership_ir", capture_ownership_draft)
+    monkeypatch.setattr(spd_adapter, "build_source_plane_ownership_ir_from_spool", capture_ownership_draft)
     imported = spd_adapter.import_spd_scenario(
         source, source_plane_ownership_rail_id="VDD_CORE/1"
     )
@@ -886,7 +995,7 @@ def test_source_plane_ownership_producer_roundtrip_and_atomic_failure(
             contact = next(row for row in candidate["contact_boundary"] if str(row["via_id"]).casefold() == "via11")
             mutate(contact)
             with pytest.raises(SourcePlaneOwnershipIRError) as failure:
-                original_build(candidate)
+                legacy_build(candidate)
             assert failure.value.code == "SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID"
 
         for mutate in (
@@ -929,7 +1038,7 @@ def test_source_plane_ownership_producer_roundtrip_and_atomic_failure(
     monkeypatch.setattr(spd_adapter, "_merge_source_plane_ownership_ir_asset", lambda *args, **kwargs: (merge_calls.__setitem__("ir", merge_calls["ir"] + 1) or original_ir_merge(*args, **kwargs)))
     monkeypatch.setattr(
         spd_adapter,
-        "build_source_plane_ownership_ir",
+        "build_source_plane_ownership_ir_from_spool",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(SpdImportError("forced IR failure")),
     )
     with pytest.raises(SpdImportError, match="forced IR failure"):

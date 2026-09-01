@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — Source-derived physical IR
 
-- 문서 버전: **1.61**
+- 문서 버전: **1.64**
 - 계약 상태: **ACCEPTED** — source-derived provenance/ownership prerequisite의 기술 기준
 - committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + v2 `contact_boundary` (`3b76af4`) + P0 (`4dc855a`) + P1 (`f823a53`) + P2 (`90f6b54`) + P3 (`b8a79f1`) + P4 base cut-set (`39fd4fa`) + P5 shadow rewire plan (`d7e7278`) + P6 scenario commutation audit (`6793bb2`) + P7 atomic recipe (`f1c2968`) + P8 topology embedding (`abf79cf`) + P9 nodal-block binding (`593e070`) + P10 component closure (`7f9c498`) + P11 supplemental solve gate (`e8d029a`) + ownership component-layer selector fix (`b0b90db`) + component-cardinality classifier (`6fc06dd`) + W7 owner-join closure (`2b27e30c6fe41f03281d3943568d0905d84d8af3`)
 - runtime acceptance: **Phase 4와 P0–P10 focused PASS / Sol ACCEPT; P3 semantic STOP, P4 structural CLOSED, P5 PLANNED, P6/P7 PASSED, P8 materialized, P9 bound, P10 component-closed; P11 focused test PASS / numerical result STOP; W7 owner-join commit `2b27e30c6fe41f03281d3943568d0905d84d8af3` DONE/ACCEPT with producer-only corrected rerun `1 passed in 1.52s` (consumer not rerun)**. This is read-only prerequisite evidence and does not claim actual production global-multi compile, original-SPD success, or PowerSI improvement.
 - production 상태: solver, owner-off, `Y_global`, `Zii` **unchanged**
 - 현재 작업 상태: **Actual-P0/R1/R2, R2-MULTI-TOPOLOGY-DIAG-01, Recovery-01과 DSU-01–05 DONE/STOP, FIX-01/FIX-02 DONE/ACCEPT**다.
-  DSU-05는 `STOP_MULTIPLE_NOT_REPRODUCED`; W7-PHYS BLOCKED다. OWNERSHIP-COUNT-DIAG-01/-02는 DONE/`STOP_RESOURCE_OR_CANCELLED`이다. STREAMED-IR-300K-FIX-01은 `STOP_TEST_COLLECTION_SYNTAX`, collection-fix successor는 `STOP_TEST_FAILURE_AND_RUNTIME_BUDGET`, validation-runtime fix는 `ACCEPT_WITH_OUTPUT_LIMITATION`, lightweight acceptance는 `STOP_TEST_ORACLE_COMPOUND_MUTATION`, oracle-fix successor는 `STOP_PRODUCT_SELECTION_VALIDATION_OMISSION`, material-selection fix는 `STOP_PRODUCT_STREAMED_HANDOFF_REGRESSION`, streamed-handoff fix는 `STOP_TEST_CAPTURE_CONNECTION_LEAK`, capture-connection fix는 `STOP_TEST_TAMPER_CONNECTION_LEAK`, tamper-connection fix는 `STOP_TEST_PROVISIONAL_CAP_SCOPE_LEAK`로 DONE이며 현재 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-STREAMED-HANDOFF-PROVISIONAL-CAP-ORACLE-FIX-01 / FROZEN / READY_FOR_IMPLEMENTATION**이다. Original-SPD EVIDENCE-01/-02/-04/-05는 retry-0 DONE/STOP, EVIDENCE-03은 `STOP_UNEXPECTED`로 DONE/STOP이고 quotient-scope FIX-01, terminal pad-layer test-oracle FIX-01과 compact-request-bound FIX-01은 DONE/ACCEPT다. P12는 NO-GO다.
-- active contract는 provisional request 포착 직후 synthetic cap 48을 authoritative final cap으로 복원하는 producer-test 한 문장만 추가한 뒤 provisional 노드 우선 18-node lightweight scope를 한 번 실행한다. 모든 product/source IR/other tests와 pressure/exact-300K는 재실행·수정하지 않는다. Production/PowerSI improvement remains unproved/0.
+  DSU-05는 `STOP_MULTIPLE_NOT_REPRODUCED`; W7-PHYS BLOCKED다. OWNERSHIP-COUNT-DIAG-01/-02는 DONE/`STOP_RESOURCE_OR_CANCELLED`이다. STREAMED-IR-300K-FIX-01은 `STOP_TEST_COLLECTION_SYNTAX`, collection-fix successor는 `STOP_TEST_FAILURE_AND_RUNTIME_BUDGET`, validation-runtime fix는 `ACCEPT_WITH_OUTPUT_LIMITATION`, lightweight acceptance는 `STOP_TEST_ORACLE_COMPOUND_MUTATION`, oracle-fix successor는 `STOP_PRODUCT_SELECTION_VALIDATION_OMISSION`, material-selection fix는 `STOP_PRODUCT_STREAMED_HANDOFF_REGRESSION`, streamed-handoff fix는 `STOP_TEST_CAPTURE_CONNECTION_LEAK`, capture-connection fix는 `STOP_TEST_TAMPER_CONNECTION_LEAK`, tamper-connection fix는 `STOP_TEST_PROVISIONAL_CAP_SCOPE_LEAK`로 DONE이며 provisional-cap oracle fix도 DONE/ACCEPT다. Integrated hardening은 Sol 최종 `STATIC_ACCEPT` 뒤 exact 21-node 단일 실행에서 Unicode fixture가 rail을 만들지 못해 **DONE / STOP_TEST_UNICODE_FIXTURE_RAIL_FORMATION**이다. 사용자가 승인한 grammar-valid test-only successor **W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-UNICODE-FIXTURE-RAIL-FORMATION-FIX-01**은 Sol `STATIC_ACCEPT`와 새 21-node PASS를 얻어 **DONE / ACCEPT / READY_FOR_EXPLICIT_STAGE_AND_COMMIT**다. Original-SPD EVIDENCE-01/-02/-04/-05는 retry-0 DONE/STOP, EVIDENCE-03은 `STOP_UNEXPECTED`로 DONE/STOP이고 quotient-scope FIX-01, terminal pad-layer test-oracle FIX-01과 compact-request-bound FIX-01은 DONE/ACCEPT다. P12는 NO-GO다.
+- PROVISIONAL-CAP-ORACLE-FIX-01은 request-only synthetic cap 48과 authoritative final cap의 단계 경계를 복원했고 exact 18-node lightweight scope를 단일 invocation에서 통과했다. 그 좁은 증거는 보존되지만 누적 candidate는 commit되지 않았다. Integrated hardening predecessor run은 21개를 수집하고 4개를 통과한 뒤 node 5에서 `SPD_NO_RAILS`로 실패했으며 consumed/no-rerun이다. 별도 Unicode successor run은 `21 passed in 15.09s`이며 역시 consumed/no-rerun이다. Production/PowerSI improvement remains unproved/0.
 - P11 closure: commit `e8d029a`, 최종 지정 node `1 passed in 1.55s`, Sol ACCEPT; pivot ratio `1.900e15`, condition-1 lower bound `1.096e17`, `SHADOW_SOLVE_NUMERICAL_FAILURE`; trusted stamp/matrix/solve/readiness false, production unchanged
 - 최종 개정: 2026-09-01 (Asia/Seoul)
 
@@ -88,7 +88,9 @@ flowchart LR
   MS --> SH[W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-STREAMED-HANDOFF-FIX-01<br/>DONE / STOP_TEST_CAPTURE_CONNECTION_LEAK]
   SH --> CC[W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-STREAMED-HANDOFF-CAPTURE-CONNECTION-FIX-01<br/>DONE / STOP_TEST_TAMPER_CONNECTION_LEAK]
   CC --> TC[W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-STREAMED-HANDOFF-TAMPER-CONNECTION-FIX-01<br/>DONE / STOP_TEST_PROVISIONAL_CAP_SCOPE_LEAK]
-  TC --> PC[W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-STREAMED-HANDOFF-PROVISIONAL-CAP-ORACLE-FIX-01<br/>FROZEN / READY_FOR_IMPLEMENTATION]
+  TC --> PC[W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-STREAMED-HANDOFF-PROVISIONAL-CAP-ORACLE-FIX-01<br/>DONE / ACCEPT<br/>18 passed in 14.80s]
+  PC --> IH[W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-INTEGRATED-HARDENING-FIX-01<br/>DONE / STOP_TEST_UNICODE_FIXTURE_RAIL_FORMATION]
+  IH --> UF[W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-UNICODE-FIXTURE-RAIL-FORMATION-FIX-01<br/>DONE / ACCEPT<br/>21 passed in 15.09s]
   I[raw-v3 geometry/material] -. hash reference .-> B
   J[compiled finite topology] -. hash/owner reference .-> D
 ```
@@ -963,7 +965,7 @@ P11 1 GHz gate만으로 이 두 anchor를 증명하지 않으므로 accuracy pro
 two-anchor checkpoint를 별도로 요구한다.
 
 Post-DSU-05 readiness는 **NOT_READY/STOP**이다. candidate old-Maxwell owner를 source-derived P1 N-port atomic replacement로 바꾸려면, 선택된 L30/L29 finite-area source footprint/P1 terminal identity를 실제 `Y_global`이 소비하는 정확한 old-Maxwell owner closed set에 hash-bound bijectively join하는 ledger가 필요하다. 이 ledger가 rail-complete scope와 replaced/retained disjoint partition을 증명해야 하지만, DSU-05의 count/SHA-only IDs, compiled-only Recovery, full certificate/ownership IR 부재와 exact join key 부재로는 구성할 수 없다. 따라서 admissible next gate, DSU-06/FIX-03/P12/production/rerun은 없고 ACTIVE NONE이며 PowerSI numerical improvement는 0이다.
-이 문장은 74d readiness audit 당시의 historical conclusion이며, 당시 §8의 W7-PHYS-OWNER-JOIN-EVIDENCE-01이 이를 supersede했다. 이후 §9 closure가 §8을 닫았고, §10/§12/§15/§17/§19 original-SPD gates와 §20 DIAG-01, §21 DIAG-02는 permanent DONE/STOP, §11 quotient-scope fix와 §14/§18 fixes는 DONE/ACCEPT다. §13 terminal pad-layer FIX-01은 test-oracle false negative로 DONE/STOP했다. §22 streamed-IR FIX-01과 §23 collection-fix는 DONE/STOP, §24 validation-runtime fix는 DONE/`ACCEPT_WITH_OUTPUT_LIMITATION`, §25 lightweight acceptance는 DONE/`STOP_TEST_ORACLE_COMPOUND_MUTATION`, §26 oracle fix는 DONE/`STOP_PRODUCT_SELECTION_VALIDATION_OMISSION`, §27 material-selection fix는 DONE/`STOP_PRODUCT_STREAMED_HANDOFF_REGRESSION`, §28 streamed-handoff fix는 DONE/`STOP_TEST_CAPTURE_CONNECTION_LEAK`, §29 capture-connection fix는 DONE/`STOP_TEST_TAMPER_CONNECTION_LEAK`, §30 tamper-connection fix는 DONE/`STOP_TEST_PROVISIONAL_CAP_SCOPE_LEAK`이며 현재 sole ACTIVE는 §31 provisional-cap oracle fix다.
+이 문장은 74d readiness audit 당시의 historical conclusion이며, 당시 §8의 W7-PHYS-OWNER-JOIN-EVIDENCE-01이 이를 supersede했다. 이후 §9 closure가 §8을 닫았고, §10/§12/§15/§17/§19 original-SPD gates와 §20 DIAG-01, §21 DIAG-02는 permanent DONE/STOP, §11 quotient-scope fix와 §14/§18 fixes는 DONE/ACCEPT다. §13 terminal pad-layer FIX-01은 test-oracle false negative로 DONE/STOP했다. §22 streamed-IR FIX-01과 §23 collection-fix는 DONE/STOP, §24 validation-runtime fix는 DONE/`ACCEPT_WITH_OUTPUT_LIMITATION`, §25 lightweight acceptance는 DONE/`STOP_TEST_ORACLE_COMPOUND_MUTATION`, §26 oracle fix는 DONE/`STOP_PRODUCT_SELECTION_VALIDATION_OMISSION`, §27 material-selection fix는 DONE/`STOP_PRODUCT_STREAMED_HANDOFF_REGRESSION`, §28 streamed-handoff fix는 DONE/`STOP_TEST_CAPTURE_CONNECTION_LEAK`, §29 capture-connection fix는 DONE/`STOP_TEST_TAMPER_CONNECTION_LEAK`, §30 tamper-connection fix는 DONE/`STOP_TEST_PROVISIONAL_CAP_SCOPE_LEAK`, §31 provisional-cap oracle fix는 DONE/ACCEPT다. §32 integrated hardening은 `DONE / STOP_TEST_UNICODE_FIXTURE_RAIL_FORMATION`이며, 그 직후에는 ACTIVE가 없었다. 이후 사용자 승인으로 연 §33은 `DONE / ACCEPT / READY_FOR_EXPLICIT_STAGE_AND_COMMIT`다.
 
 ## 7. 주장 한계
 
@@ -1434,7 +1436,7 @@ node because synthetic 48 also constrained the actual final spool count after th
 passed in 8.79s`, child exit 1, wrapper wall 9.435489 s, reusable acceptance evidence 0. The run is consumed/no-rerun.
 This is a stale test-oracle scope, not a product cap defect.
 
-## 31. W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-STREAMED-HANDOFF-PROVISIONAL-CAP-ORACLE-FIX-01 — FROZEN / READY_FOR_IMPLEMENTATION
+## 31. W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-STREAMED-HANDOFF-PROVISIONAL-CAP-ORACLE-FIX-01 — DONE / ACCEPT
 
 In the producer test's `capture_compile`, restore `MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS` to
 `AUTHORITATIVE_IR_ROW_CAP` after request capture and before real compilation. Request formation remains under 48, so
@@ -1443,3 +1445,68 @@ product/source IR/other test byte. After Sol static review, run the provisional 
 in prior relative order from work-baseline section 12.60 once. Original SPD, accepted pressure/exact-300K, full suite,
 production and PowerSI stay excluded; the claim ceiling remains the named synthetic/MINI-SPD paths and numerical
 improvement remains 0.
+
+The implementation adds only the frozen cap restoration statement in the producer test. Final SHA-256 is
+`FD9C1E698DEE0B254EB76960CC890D39C509E5926055C159DC5EF9427F87AFC9`, and deleting that statement reconstructs
+exact predecessor SHA-256 `494468358C939CA25A0FA013616DD93702CDBE4051C47DB3CD9004C757CE7193`. Sol plus an independent static review found
+no P0-P3. The sole Python312 invocation collected and passed all 18 named nodes: `18 passed in 14.80s`, child exit 0,
+wrapper wall 15.5172699 s; output 2,773 bytes, SHA-256
+`20B0444750B8D6F125F898AC120DD8FA4AEDE433F5D7004AADEFE513A88F47A6`. It is consumed/no-rerun. This is acceptance
+only for the named synthetic/MINI-SPD streamed v2/v3 transport and producer paths. Original SPD, production owner
+join, solver/`Y_global`/`Zii`, PowerSI accuracy/performance and release remain unproved; numerical improvement is 0.
+
+## 32. W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-INTEGRATED-HARDENING-FIX-01 — DONE / STOP_TEST_UNICODE_FIXTURE_RAIL_FORMATION
+
+The umbrella item implemented its two disjoint streams without changing the raw compiler product, persisted v2
+schema/caps, solver, owner-off, `Y_global` or `Zii`. Stream A now fails closed on every retained-owner NULL
+edge/rail/island field, uses literal casefold-prefix semantics and indexed temporary relations. Stream B reuses exact
+compiler/canonical lookup keys, primitive primary-key and bounded edge indexes with Python-casefold island identity;
+its 116,791-row oracle covers actual Via endpoint expansion and derive-time cap failure. No dependency or speculative
+abstraction was added.
+
+The first cumulative Sol review found one P1 and two P2 issues: general NULL provenance remained open and both index
+oracles were detached from actual product queries. Those were fixed inside the same item. The second review found two
+P2 test-oracle mismatches: an earlier general error code and SQLite `USING COVERING INDEX` spelling. After the minimal
+existing-node fixes, final Sol re-review returned `STATIC_ACCEPT`, P0/P1/P2/P3 all zero. Final code/test hashes are
+recorded in the work baseline; the raw compiler stayed
+`5B02CC51677FEB6BCBE537071C7A13342E2036C0F2D7910103118865C3A45BA2`.
+
+The sole fresh Python 3.12.10/pytest 9.0.3 invocation collected all 21 frozen nodes. Nodes 1–4 passed, then
+`test_source_plane_ownership_streamed_handoff_preserves_unicode_casefold` failed before the ownership callback because
+the `Node1`→`Straße1` MINI-SPD fixture produced an import plan with `SPD_NO_RAILS`. Result: `1 failed, 4 passed in
+8.66s`, child exit 1, wrapper wall 9.767968 s. Stdout is 7,571 bytes/SHA-256
+`6C4CE1E243D1CB19D7BB179D84D9EE689E514BB9249D1942814237ADDB352B29`; stderr is 0 bytes/SHA-256
+`E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855`. Exact paths are preserved in the work baseline.
+
+The invocation is consumed/no-rerun. Partial PASS is not reusable, the nine-file candidate is uncommitted, and no
+automatic fix successor is opened. Pressure/exact-300K, full suite, original SPD, production owner join,
+solver/`Y_global`/`Zii`, PowerSI and release remain excluded; numerical improvement remains 0.
+
+## 33. W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-UNICODE-FIXTURE-RAIL-FORMATION-FIX-01 — DONE / ACCEPT / READY_FOR_EXPLICIT_STAGE_AND_COMMIT
+
+After §32 closed, the user explicitly approved a separate test-only successor and continued autonomous work. Static
+trace shows no product defect: the failing test removed the required `Node` prefix by replacing `Node1` with
+`Straße1`, and the broad substring also changed `Node10`, `Node11` and `Node12`. Both the core `.Connect`/Node parser
+and raw compiler require the record identity to begin with `Node`, while strict UTF-8 after that prefix is supported.
+
+Only `tests/test_source_plane_ownership_ir_producer.py` may change. The existing DGND terminal identity `Node2` occurs
+at exactly three linked source locations: the Node record, SITE0 `.Connect` port and Via2 endpoint. The test must assert
+that count, replace only those identities with `NodeStraße2`, query the real spool with `(kind='Node', lookup_a='dgnd',
+lookup_b='nodestrasse2')`, and retain exact `node:NodeStraße2:DGND`, Python casefold and source-byte SHA-256 checks. It
+must still execute the real `import_spd_scenario` streamed handoff; parser, rail, analysis or callback bypasses are
+forbidden.
+
+Luna implemented only that existing test function. The producer-test SHA-256 moved from
+`0A7A09C67D13156F2AA8EBDB2E88FC287922722FB7688558B05A91935D3510DC` to
+`BD8B813C0ED5125F741E130E65ECC26088F5BD10E057C1BEA110EDFF51C06FA4`. Sol's final static
+review returned `STATIC_ACCEPT`, with P0/P1/P2/P3 all zero.
+
+After that acceptance, one fresh Python 3.12.10/pytest 9.0.3 process ran the ordered 21 nodes with
+`-x -vv --tb=long` and the 300 s wall bound. It collected 21 and returned exit 0: `21 passed in 15.09s`, wrapper
+wall 15.774693 s. Stdout is
+`C:\Users\User\AppData\Local\Temp\spd-pi-unicode-successor-21-1b4b6ce5c5474372bbdcaed23a5de443.stdout.log`,
+3,158 bytes, SHA-256 `3A1E2C821E265C34E12C39F357118B93CEED7E0F22C6624A19D73B7CF072E9A0`; stderr is the
+matching `.stderr.log`, 0 bytes, SHA-256
+`E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855`. The invocation is consumed/no-rerun, and the
+consumed §32 invocation and its partial PASS were not reused. Product files, persisted schema/caps, original SPD,
+solver/`Y_global`/`Zii`, PowerSI and release remain frozen/not_run; numerical improvement remains 0.

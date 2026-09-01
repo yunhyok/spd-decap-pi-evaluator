@@ -6,6 +6,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from hashlib import sha256
 import json
+import sqlite3
 from math import hypot, isclose, isfinite
 from pathlib import Path
 from tempfile import TemporaryFile
@@ -49,8 +50,9 @@ from .raw_spatial_contact_compiler import (
 )
 from .source_plane_ownership_ir import (
     MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS,
+    MAX_SOURCE_PLANE_OWNERSHIP_IR_SECTION_ROWS,
     SOURCE_PLANE_OWNERSHIP_IR_METADATA_KEY,
-    build_source_plane_ownership_ir,
+    build_source_plane_ownership_ir_from_spool,
     validate_project_source_plane_ownership_ir_envelope,
 )
 from .scenario import (
@@ -8040,7 +8042,13 @@ def import_spd_scenario(
         certificate_anchors = [item for item in surface_connectivity_certificate.get("rail_anchor_bindings", ()) if isinstance(item, Mapping) and str(item.get("rail_id", "")) == source_plane_ownership_rail_id]
         if not certificate_anchors:
             raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: target rail anchors are absent")
-        contacts_by_pin = {str(item.get("pin_id", "")).strip().casefold(): item for item in surface_connectivity_certificate.get("terminal_contacts", ()) if isinstance(item, Mapping)}
+        terminal_contacts = surface_connectivity_certificate.get("terminal_contacts", ())
+        def contact_for_pin(pin_id: str) -> Mapping[str, Any] | None:
+            folded = pin_id.casefold()
+            for item in terminal_contacts:
+                if isinstance(item, Mapping) and str(item.get("pin_id", "")).strip().casefold() == folded:
+                    return item
+            return None
         certificate_component_rows = [
             item
             for item in surface_connectivity_certificate.get(
@@ -8051,7 +8059,7 @@ def import_spd_scenario(
         anchor_contacts: list[tuple[Mapping[str, Any], Mapping[str, Any]]] = []
         role_identity: dict[str, tuple[str, str, str, str]] = {}
         for anchor in certificate_anchors:
-            role = str(anchor.get("role", "")).strip().casefold(); pin = str(anchor.get("pin_id", "")).strip().casefold(); contact = contacts_by_pin.get(pin)
+            role = str(anchor.get("role", "")).strip().casefold(); pin = str(anchor.get("pin_id", "")).strip().casefold(); contact = contact_for_pin(pin)
             if role not in {"power", "ground"} or contact is None:
                 raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: target anchor terminal contact is absent")
             expected_net = target_rail.net if role == "power" else ground_net
@@ -8173,8 +8181,15 @@ def import_spd_scenario(
         coverage_count = sum(len(item["owner_ids"]) for item in boundary_candidates)
         if coverage_count > MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS:
             raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_BOUND_EXCEEDED: owner-expanded coverage exceeds bound")
-        coverage_rows = [[item["component_id"].casefold(), item["island_id"].casefold(), item["finite_vertex_id"].casefold(), item["finite_edge_id"].casefold(), owner.casefold()] for item in boundary_candidates for owner in item["owner_ids"]]
-        coverage = {"count": len(coverage_rows), "sha256": sha256(concrete_canonical_json_bytes(coverage_rows)).hexdigest()}
+        coverage_hash = sha256(); coverage_hash.update(b"["); coverage_count = 0
+        for item in boundary_candidates:
+            for owner in item["owner_ids"]:
+                if coverage_count:
+                    coverage_hash.update(b",")
+                coverage_hash.update(concrete_canonical_json_bytes([item["component_id"].casefold(), item["island_id"].casefold(), item["finite_vertex_id"].casefold(), item["finite_edge_id"].casefold(), owner.casefold()]))
+                coverage_count += 1
+        coverage_hash.update(b"]")
+        coverage = {"count": coverage_count, "sha256": coverage_hash.hexdigest()}
         required_vertex_ids = selected_vertex_ids | anchor_vertex_ids
         vertices: dict[str, Mapping[str, Any]] = {}
         for item in quotient_vertices:
@@ -8204,13 +8219,8 @@ def import_spd_scenario(
             for item in certificate_anchors
             if item.get("rail_id") == source_plane_ownership_rail_id
         ]
-        contacts_by_pin = {
-            str(item.get("pin_id", "")).casefold(): item
-            for item in surface_connectivity_certificate.get("terminal_contacts", ())
-            if isinstance(item, Mapping)
-        }
         terminal_rows = [
-            (binding, contacts_by_pin.get(str(binding.get("pin_id", "")).casefold()))
+            (binding, contact_for_pin(str(binding.get("pin_id", "")).casefold()))
             for binding in target_bindings
         ]
         if not terminal_rows or any(contact is None for _binding, contact in terminal_rows):
@@ -8322,14 +8332,12 @@ def import_spd_scenario(
             )
         selected_surface_keys = {(net, layer) for net, layer, _island, _component in role_identity.values()}
         ownership_request["raw_selection"] = {
-            "surface_keys": [list(item) for item in sorted(
-                selected_surface_keys
-            )],
-            "node_keys": [list(item) for item in sorted(raw_node_keys)],
-            "via_keys": [list(item) for item in sorted(raw_via_keys)],
-            "pad_keys": [list(item) for item in sorted(raw_pad_keys)],
-            "layer_keys": sorted(raw_layer_keys),
-            "material_keys": sorted(raw_material_keys),
+            "surface_keys": selected_surface_keys,
+            "node_keys": raw_node_keys,
+            "via_keys": raw_via_keys,
+            "pad_keys": raw_pad_keys,
+            "layer_keys": raw_layer_keys,
+            "material_keys": raw_material_keys,
         }
         selected_layers = set(raw_layer_keys)
         compact_stackup_rows = [
@@ -8637,21 +8645,17 @@ def import_spd_scenario(
             raise SpdImportError(
                 "SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: analysis did not retain source ownership draft"
             )
-
-        def ownership_callback(evidence: _SourcePlaneOwnershipRawEvidence) -> None:
-            request = evidence.request
+        def _ownership_callback_body(evidence: _SourcePlaneOwnershipRawEvidence, spool_connection: sqlite3.Connection) -> None:
+            request = ownership_request
             raw_manifest = evidence.raw_manifest
             if not isinstance(request, Mapping) or not isinstance(raw_manifest, Mapping):
                 raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: raw ownership hand-off is invalid")
             snapshot = request.get("surface_snapshot")
             certificate = request.get("certificate_snapshot")
-            raw_selection = request.get("raw_selection")
-            if not isinstance(snapshot, Mapping) or not isinstance(certificate, Mapping) or not isinstance(raw_selection, Mapping):
+            if not isinstance(snapshot, Mapping) or not isinstance(certificate, Mapping):
                 raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: ownership request snapshot is incomplete")
-            if any(not isinstance(raw_selection.get(field), (list, tuple)) for field in ("surface_keys", "node_keys", "via_keys", "pad_keys", "layer_keys", "material_keys")):
-                raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: raw selection shape is invalid")
-            context = evidence.context
-            effective_selection = context.get("raw_selection") if isinstance(context.get("raw_selection"), Mapping) else raw_selection
+            for table in ("surfaces", "primitives", "islands", "primitive_island_edges", "terminal_bindings", "contact_boundary"):
+                spool_connection.execute(f"DELETE FROM {table}")
 
             def raw_int(value: Any, label: str) -> int:
                 if isinstance(value, bool):
@@ -8661,49 +8665,120 @@ def import_spd_scenario(
                 except (TypeError, ValueError, OverflowError) as exc:
                     raise SpdImportError(f"SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: raw {label} is invalid") from exc
 
-            def context_rows(name: str) -> list[Mapping[str, Any]]:
-                value = context.get(name, ())
-                if isinstance(value, (str, bytes, Mapping)):
-                    raise SpdImportError(f"SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: raw {name} lookup is invalid")
-                try:
-                    values = tuple(value)
-                except TypeError as exc:
-                    raise SpdImportError(f"SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: raw {name} lookup is invalid") from exc
-                rows = [item for item in values if isinstance(item, Mapping)]
-                if len(rows) != len(values):
-                    raise SpdImportError(f"SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: raw {name} lookup contains invalid rows")
-                return rows
+            class _SpoolRows:
+                def __init__(self, table: str, columns: tuple[str, ...]) -> None:
+                    self.table, self.columns = table, columns
 
-            surface_rows = context_rows("surfaces")
-            primitive_rows = context_rows("primitives")
-            source_rows = context_rows("source_records")
-            node_rows = context_rows("nodes")
-            via_rows = context_rows("vias")
-            pad_rows = context_rows("pad_shapes")
-            stackup_rows = context_rows("stackup_layers")
-            dielectric_rows = context_rows("dielectric_points")
+                def __iter__(self):
+                    names = ",".join(self.columns)
+                    order = "source_offset,record_id COLLATE BINARY" if self.table == "ownership_source_stage" else self.columns[0]
+                    for row in spool_connection.execute(f"SELECT {names} FROM {self.table} ORDER BY {order}"):
+                        mapped = dict(zip(self.columns, row, strict=True))
+                        yield mapped
+
+                def __bool__(self):
+                    return spool_connection.execute(f"SELECT 1 FROM {self.table} LIMIT 1").fetchone() is not None
+
+            class _StageRows(_SpoolRows):
+                def __init__(self, kind: str) -> None:
+                    super().__init__("ownership_source_stage", ("record_id", "record_fold", "kind", "source_offset", "source_end", "source_record_sha256", "logical_net", "layer", "node_id", "via_id", "net_name", "start_node_id", "end_node_id", "padstack_id", "rotation", "x_pm", "y_pm", "raw_ordinal", "local_ordinal", "shape_kind", "paddef_record_id", "pad_shape_ordinal", "pad_shape_sha", "lookup_a", "lookup_b", "lookup_c"))
+                    self.kind = kind
+
+                def __iter__(self):
+                    for row in super().__iter__():
+                        if str(row.get("kind", "")).casefold() != self.kind.casefold():
+                            continue
+                        if self.kind.casefold() == "node":
+                            row.update(resolved_net=row.get("logical_net"), node_id=row.get("node_id"), net_status="EXPLICIT", layer=row.get("layer"), source_record_id=row.get("record_id"))
+                        elif self.kind.casefold() == "via":
+                            row.update(net_name=row.get("net_name") or row.get("logical_net"), via_id=row.get("via_id"), start_node_id=row.get("start_node_id"), end_node_id=row.get("end_node_id"), padstack=row.get("padstack_id"), rotation_microdegrees=row.get("rotation"), source_record_id=row.get("record_id"))
+                        yield row
+
+            class _SurfaceRows(_SpoolRows):
+                def __iter__(self):
+                    for row in super().__iter__():
+                        row["geometry_asset_sha256"] = row.pop("geometry_asset_sha")
+                        row["island_manifest_sha256"] = row.pop("island_manifest_sha")
+                        row["source_record_sha256"] = row.pop("source_lineage_sha")
+                        yield row
+
+            class _PrimitiveRows:
+                def __bool__(self):
+                    return spool_connection.execute("SELECT 1 FROM ownership_primitive_stage LIMIT 1").fetchone() is not None
+
+                def __iter__(self):
+                    for row in spool_connection.execute("SELECT primitive_id,surface_id,local_ordinal,raw_primitive_ordinal,polarity,kind,effect_status,source_record_id,source_asset_name,source_asset_sha,primitive_sha FROM ownership_primitive_stage ORDER BY local_ordinal"):
+                        yield {"primitive_id": row[0], "surface_id": row[1], "local_ordinal": row[2], "raw_primitive_ordinal": row[3], "polarity": row[4], "kind": row[5], "effect_status": row[6], "source_record_id": row[7], "source_asset_name": row[8], "source_asset_sha256": row[9], "primitive_sha256": row[10]}
+
+            class _PadRows:
+                def __bool__(self):
+                    return spool_connection.execute("SELECT 1 FROM ownership_pad_shape_stage LIMIT 1").fetchone() is not None
+
+                def __iter__(self):
+                    for row in spool_connection.execute("SELECT padstack_id,layer, paddef_record_id,record_id,pad_shape_ordinal,pad_shape_sha FROM ownership_source_stage WHERE kind='Regular' ORDER BY source_offset,record_id"):
+                        yield {"padstack_id": row[0], "layer_id": row[1], "paddef_source_record_id": row[2], "regular_source_record_id": row[3], "raw_pad_shape_ordinal": row[4], "raw_pad_shape_sha256": row[5]}
+
+            surface_rows = _SurfaceRows("ownership_surface_stage", ("ordinal", "surface_id", "artwork_net", "layer", "geometry_asset_name", "geometry_asset_sha", "island_manifest_sha", "source_lineage_sha", "component_count"))
+            source_rows = _SpoolRows("ownership_source_stage", ("record_id", "record_fold", "kind", "source_offset", "source_end", "source_record_sha256", "logical_net", "layer", "node_id", "via_id", "net_name", "start_node_id", "end_node_id", "padstack_id", "rotation", "x_pm", "y_pm", "raw_ordinal", "local_ordinal", "shape_kind", "paddef_record_id", "pad_shape_ordinal", "pad_shape_sha", "lookup_a", "lookup_b", "lookup_c"))
+            node_rows = _StageRows("Node")
+            via_rows = _StageRows("Via")
+            pad_rows = _PadRows()
+            stackup_rows = _SpoolRows("stackup_layers", ("ordinal", "layer_name", "layer_kind", "raw_layer_ordinal", "raw_layer_sha256", "thickness_um", "thickness_origin", "thickness_source_record_id", "conductivity_s_per_m", "conductivity_origin", "conductivity_source_record_id", "material_name", "material_origin", "material_source_record_id"))
+            dielectric_rows = _SpoolRows("dielectric_points", ("ordinal", "layer_name", "point_ordinal", "raw_dielectric_ordinal", "raw_dielectric_sha256", "frequency_hz", "frequency_origin", "frequency_source_record_id", "epsilon_r", "epsilon_origin", "epsilon_source_record_id", "loss_tangent", "loss_tangent_origin", "loss_tangent_source_record_id"))
+            primitive_rows = _PrimitiveRows()
             if not surface_rows or not primitive_rows or not source_rows or not node_rows or not via_rows or not pad_rows or not stackup_rows:
                 raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: raw ownership lookups are incomplete")
-            selected_node_keys = {tuple(str(value).casefold() for value in item) for item in effective_selection.get("node_keys", ()) if isinstance(item, (list, tuple)) and len(item) == 2}
-            selected_via_keys = {tuple(str(value).casefold() for value in item) for item in effective_selection.get("via_keys", ()) if isinstance(item, (list, tuple)) and len(item) == 2}
-            selected_pad_keys = {tuple(str(value).casefold() for value in item) for item in effective_selection.get("pad_keys", ()) if isinstance(item, (list, tuple)) and len(item) == 2}
 
-            selected_surface_keys = {
-                (str(item[0]).casefold(), str(item[1]).casefold())
-                for item in raw_selection.get("surface_keys", ())
-                if isinstance(item, (list, tuple)) and len(item) == 2
-            }
-            raw_surface_by_key: dict[tuple[str, str], Mapping[str, Any]] = {}
+            class _SelectedSurfaceKeys:
+                def __iter__(self):
+                    return ((str(row[0]), str(row[1])) for row in spool_connection.execute(
+                        "SELECT key_a,key_b FROM ownership_selection WHERE kind='Surface' ORDER BY key_a COLLATE BINARY,key_b COLLATE BINARY"
+                    ))
+                def __len__(self):
+                    return int(spool_connection.execute("SELECT COUNT(*) FROM ownership_selection WHERE kind='Surface'").fetchone()[0])
+                def __contains__(self, key: object) -> bool:
+                    if not isinstance(key, tuple) or len(key) != 2:
+                        return False
+                    return spool_connection.execute(
+                        "SELECT 1 FROM ownership_selection WHERE kind='Surface' AND key_a=? AND key_b=?",
+                        key,
+                    ).fetchone() is not None
+            selected_surface_keys = _SelectedSurfaceKeys()
+            spool_connection.execute(
+                "CREATE TEMP TABLE selected_surface_lookup("
+                "net_fold TEXT NOT NULL, layer_fold TEXT NOT NULL, surface_id TEXT NOT NULL, "
+                "artwork_net TEXT NOT NULL, layer TEXT NOT NULL, geometry_asset_name TEXT NOT NULL, "
+                "geometry_asset_sha256 TEXT NOT NULL, island_manifest_sha256 TEXT NOT NULL, "
+                "source_lineage_sha256 TEXT NOT NULL, PRIMARY KEY(net_fold,layer_fold)) WITHOUT ROWID"
+            )
             for row in surface_rows:
                 key = (str(row.get("artwork_net", "")).casefold(), str(row.get("layer", "")).casefold())
-                if key in raw_surface_by_key or key not in selected_surface_keys:
-                    if key in raw_surface_by_key:
-                        raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: raw surface identity is duplicated")
+                if key not in selected_surface_keys:
                     continue
-                raw_surface_by_key[key] = row
-            if set(raw_surface_by_key) != selected_surface_keys:
+                try:
+                    spool_connection.execute(
+                        "INSERT INTO selected_surface_lookup VALUES (?,?,?,?,?,?,?,?,?)",
+                        (key[0], key[1], str(row.get("surface_id", "")), str(row.get("artwork_net", "")), str(row.get("layer", "")), str(row.get("geometry_asset_name", "")), str(row.get("geometry_asset_sha256", "")), str(row.get("island_manifest_sha256", "")), str(row.get("source_lineage_sha256", ""))),
+                    )
+                except sqlite3.IntegrityError as exc:
+                    raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: raw surface identity is duplicated") from exc
+            selected_surface_count = int(spool_connection.execute("SELECT COUNT(*) FROM selected_surface_lookup").fetchone()[0])
+            if selected_surface_count != len(selected_surface_keys):
                 raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: selected raw surfaces differ")
-            snapshot_surfaces: dict[tuple[str, str], Mapping[str, Any]] = {}
+            def raw_surface_for(key: tuple[str, str]) -> Mapping[str, Any] | None:
+                row = spool_connection.execute(
+                    "SELECT surface_id,artwork_net,layer,geometry_asset_name,geometry_asset_sha256,island_manifest_sha256,source_lineage_sha256 FROM selected_surface_lookup WHERE net_fold=? AND layer_fold=?",
+                    key,
+                ).fetchone()
+                if row is None:
+                    return None
+                return {"surface_id": row[0], "artwork_net": row[1], "layer": row[2], "geometry_asset_name": row[3], "geometry_asset_sha256": row[4], "island_manifest_sha256": row[5], "source_lineage_sha256": row[6]}
+            spool_connection.execute(
+                "CREATE TEMP TABLE snapshot_surface_keys(net_fold TEXT NOT NULL, layer_fold TEXT NOT NULL, PRIMARY KEY(net_fold,layer_fold)) WITHOUT ROWID"
+            )
+            spool_connection.execute(
+                "CREATE TEMP TABLE snapshot_surface_islands(net_fold TEXT NOT NULL, layer_fold TEXT NOT NULL, island_ordinal INTEGER NOT NULL, island_id TEXT NOT NULL, PRIMARY KEY(net_fold,layer_fold,island_ordinal)) WITHOUT ROWID"
+            )
             for row in snapshot.get("surfaces", ()):
                 if not isinstance(row, Mapping):
                     raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: surface snapshot row is invalid")
@@ -8711,182 +8786,272 @@ def import_spd_scenario(
                 if not isinstance(logical_key, (list, tuple)) or len(logical_key) != 2:
                     raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: surface snapshot key is invalid")
                 key = (str(logical_key[0]).casefold(), str(logical_key[1]).casefold())
-                if key in snapshot_surfaces:
+                try:
+                    spool_connection.execute("INSERT INTO snapshot_surface_keys VALUES (?,?)", key)
+                except sqlite3.IntegrityError as exc:
                     raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: surface snapshot identity is duplicated")
-                snapshot_surfaces[key] = row
-            if set(snapshot_surfaces) != selected_surface_keys:
+                islands = row.get("island_ids")
+                if not isinstance(islands, (list, tuple)):
+                    raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: surface island snapshot is invalid")
+                for island_ordinal, island in enumerate(islands):
+                    spool_connection.execute(
+                        "INSERT INTO snapshot_surface_islands VALUES (?,?,?,?)",
+                        (key[0], key[1], island_ordinal, str(island)),
+                    )
+            if int(spool_connection.execute("SELECT COUNT(*) FROM snapshot_surface_keys").fetchone()[0]) != len(selected_surface_keys) or spool_connection.execute(
+                "SELECT 1 FROM snapshot_surface_keys WHERE (net_fold,layer_fold) NOT IN (SELECT key_a,key_b FROM ownership_selection WHERE kind='Surface') LIMIT 1"
+            ).fetchone() is not None:
                 raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: surface snapshot differs from raw selection")
+            def snapshot_surface_for(key: tuple[str, str]) -> Mapping[str, Any] | None:
+                if spool_connection.execute("SELECT 1 FROM snapshot_surface_keys WHERE net_fold=? AND layer_fold=?", key).fetchone() is None:
+                    return None
+                return {"island_ids": [row[0] for row in spool_connection.execute("SELECT island_id FROM snapshot_surface_islands WHERE net_fold=? AND layer_fold=? ORDER BY island_ordinal", key)]}
 
-            source_by_id: dict[str, Mapping[str, Any]] = {}
-            draft_source_records = request.get("draft", {}).get("source_records", ()) if isinstance(request.get("draft", {}), Mapping) else ()
-            for row in [*draft_source_records, *source_rows]:
-                if not isinstance(row, Mapping) or not str(row.get("record_id", "")).strip():
-                    raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: source record identity is invalid")
-                row = {key: row.get(key) for key in ("ordinal", "record_id", "kind", "source_offset", "source_end", "source_record_sha256", "logical_net", "layer")}
-                key = str(row["record_id"]).casefold()
-                previous = source_by_id.get(key)
-                if previous is not None and any(previous.get(field) != row.get(field) for field in ("record_id", "kind", "source_offset", "source_end", "source_record_sha256", "logical_net", "layer")):
-                    raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: source record identity is ambiguous")
-                source_by_id[key] = row
-            source_records = [
-                {**dict(row), "ordinal": index}
-                for index, row in enumerate(
-                    sorted(source_by_id.values(), key=lambda item: (raw_int(item.get("source_offset", -1), "source offset"), str(item.get("record_id", ""))))
-                )
-            ]
-            shape_ids = {
-                str(row.get("source_record_id", "")).casefold()
-                for row in primitive_rows
-                if str(row.get("source_record_id", "")).strip()
-            }
-            if not shape_ids or any(key not in source_by_id or str(source_by_id[key].get("kind", "")).casefold() != "shape" for key in shape_ids):
+            class _SourceLookup:
+                def get(self, key: str, default: Any = None):
+                    row = spool_connection.execute("SELECT record_id,kind,source_offset,source_end,source_record_sha256,logical_net,layer FROM ownership_source_stage WHERE record_fold=?", (str(key).casefold(),)).fetchone()
+                    if row is None:
+                        return default
+                    return dict(zip(("record_id", "kind", "source_offset", "source_end", "source_record_sha256", "logical_net", "layer"), row, strict=True))
+
+                def __contains__(self, key: object) -> bool:
+                    return self.get(str(key)) is not None
+
+            source_by_id = _SourceLookup()
+            source_records = _SpoolRows("ownership_source_stage", ("record_id", "record_fold", "kind", "source_offset", "source_end", "source_record_sha256", "logical_net", "layer", "node_id", "via_id", "net_name", "start_node_id", "end_node_id", "padstack_id", "rotation", "x_pm", "y_pm", "raw_ordinal", "local_ordinal", "shape_kind", "paddef_record_id", "pad_shape_ordinal", "pad_shape_sha", "lookup_a", "lookup_b", "lookup_c"))
+            shape_count = int(spool_connection.execute("SELECT COUNT(*) FROM ownership_source_stage WHERE kind='Shape'").fetchone()[0])
+            bad_shape = spool_connection.execute("SELECT 1 FROM ownership_primitive_stage p LEFT JOIN ownership_source_stage s ON s.record_id=p.source_record_id WHERE s.record_id IS NULL OR s.kind<>'Shape' LIMIT 1").fetchone()
+            if not shape_count or bad_shape is not None:
                 raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: Shape source provenance is incomplete")
 
-            raw_primitive_by_key: dict[tuple[str, str, int], Mapping[str, Any]] = {}
-            surface_id_by_key = {
-                key: str(row.get("surface_id", "")).strip()
-                for key, row in raw_surface_by_key.items()
-            }
-            for row in primitive_rows:
-                raw_surface_id = str(row.get("surface_id", "")).strip()
-                surface_key = next((key for key, value in surface_id_by_key.items() if value.casefold() == raw_surface_id.casefold()), None)
-                if surface_key is None:
-                    continue
-                local = raw_int(row.get("local_ordinal", -1), "primitive ordinal")
-                key = (*surface_key, local)
-                if key in raw_primitive_by_key:
-                    raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: raw primitive identity is duplicated")
-                raw_primitive_by_key[key] = row
+            def raw_primitive_for(surface_id: str, local: int):
+                row = spool_connection.execute(
+                    "SELECT primitive_id,surface_id,local_ordinal,raw_primitive_ordinal,polarity,kind,effect_status,source_record_id,source_asset_name,source_asset_sha,primitive_sha FROM ownership_primitive_stage WHERE primitive_id=?",
+                    (f"{surface_id}:p{local}",),
+                ).fetchone()
+                if row is None:
+                    return None
+                return {"primitive_id": row[0], "surface_id": row[1], "local_ordinal": row[2], "raw_primitive_ordinal": row[3], "polarity": row[4], "kind": row[5], "effect_status": row[6], "source_record_id": row[7], "source_asset_name": row[8], "source_asset_sha256": row[9], "primitive_sha256": row[10]}
 
-            final_primitives: list[dict[str, Any]] = []
-            final_islands: list[dict[str, Any]] = []
-            final_edges: list[dict[str, Any]] = []
-            final_surfaces: list[dict[str, Any]] = []
-            component_by_island: dict[tuple[str, str, str], Mapping[str, Any]] = {}
+            class _SectionSink:
+                def __init__(self, table: str) -> None:
+                    self.table = table
+                    self.columns = tuple(row[1] for row in spool_connection.execute(f"PRAGMA table_info({table})"))
+                    self.count = 0
+                def append(self, row: Mapping[str, Any]) -> None:
+                    values = tuple(self.count if column == "ordinal" and column not in row else row.get(column) for column in self.columns)
+                    try:
+                        spool_connection.execute(f"INSERT INTO {self.table} ({','.join(self.columns)}) VALUES ({','.join('?' for _ in self.columns)})", values)
+                    except sqlite3.IntegrityError as exc:
+                        raise SpdImportError(f"SOURCE_PLANE_OWNERSHIP_IR_RELATION_INVALID: {self.table} row violates its uniqueness relation") from exc
+                    self.count += 1
+                def __len__(self) -> int:
+                    return self.count
+                def __iter__(self):
+                    names = ','.join(self.columns)
+                    for row in spool_connection.execute(f"SELECT {names} FROM {self.table} ORDER BY {self.columns[0]}"):
+                        yield dict(zip(self.columns, row, strict=True))
+            final_primitives = _SectionSink("primitives")
+            final_islands = _SectionSink("islands")
+            final_edges = _SectionSink("primitive_island_edges")
+            final_surfaces = _SectionSink("surfaces")
+            spool_connection.execute(
+                "CREATE TEMP TABLE component_island_lookup("
+                "net_fold TEXT NOT NULL, layer_fold TEXT NOT NULL, island_fold TEXT NOT NULL, "
+                "component_id TEXT NOT NULL, PRIMARY KEY(net_fold,layer_fold,island_fold)) WITHOUT ROWID"
+            )
             for component in certificate.get("surface_equivalence_components", ()):
                 if not isinstance(component, Mapping):
                     continue
                 ckey = (str(component.get("net", "")).casefold(), str(component.get("layer", "")).casefold())
                 for island in component.get("island_ids", ()):
-                    ikey = (*ckey, str(island).casefold())
-                    if ikey in component_by_island:
+                    try:
+                        spool_connection.execute(
+                            "INSERT INTO component_island_lookup VALUES (?,?,?,?)",
+                            (ckey[0], ckey[1], str(island).casefold(), str(component.get("component_id", "")).strip()),
+                        )
+                    except sqlite3.IntegrityError as exc:
                         raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: certificate component island identity is ambiguous")
-                    component_by_island[ikey] = component
-            snapshot_primitive_values = tuple(snapshot.get("primitives", ()))
-            snapshot_edge_values = tuple(snapshot.get("primitive_island_edges", ()))
-            if any(not isinstance(item, Mapping) for item in (*snapshot_primitive_values, *snapshot_edge_values)):
+            snapshot_primitive_values = snapshot.get("primitives", ())
+            snapshot_edge_values = snapshot.get("primitive_island_edges", ())
+            if any(not isinstance(item, Mapping) for item in snapshot_primitive_values) or any(not isinstance(item, Mapping) for item in snapshot_edge_values):
                 raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: primitive snapshot row is invalid")
-            snapshot_primitive_rows = list(snapshot_primitive_values)
-            snapshot_edge_rows = list(snapshot_edge_values)
-            for key in sorted(selected_surface_keys):
-                snap_surface = snapshot_surfaces[key]
-                raw_surface = raw_surface_by_key[key]
+            spool_connection.execute(
+                "CREATE TEMP TABLE snapshot_primitive_lookup(net_fold TEXT NOT NULL, layer_fold TEXT NOT NULL, local_ordinal INTEGER NOT NULL, PRIMARY KEY(net_fold,layer_fold,local_ordinal)) WITHOUT ROWID"
+            )
+            spool_connection.execute(
+                "CREATE TEMP TABLE snapshot_edge_lookup(edge_seq INTEGER PRIMARY KEY, net_fold TEXT NOT NULL, layer_fold TEXT NOT NULL, local_ordinal INTEGER NOT NULL, island_id TEXT NOT NULL, island_fold TEXT NOT NULL, witness_kind TEXT NOT NULL)"
+            )
+            spool_connection.execute("CREATE INDEX snapshot_edge_lookup_primitive_idx ON snapshot_edge_lookup(net_fold,layer_fold,local_ordinal,edge_seq)")
+            spool_connection.execute("CREATE INDEX snapshot_edge_lookup_witness_idx ON snapshot_edge_lookup(net_fold,layer_fold,island_fold,witness_kind)")
+            spool_connection.execute("CREATE TEMP TABLE shape_lineage_ids(surface_id TEXT NOT NULL, source_id TEXT NOT NULL, PRIMARY KEY(surface_id,source_id)) WITHOUT ROWID")
+            for item in snapshot_primitive_values:
+                logical_key = item.get("logical_key", ())
+                if not isinstance(logical_key, (list, tuple)) or len(logical_key) < 3:
+                    raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: primitive snapshot key is invalid")
+                try:
+                    spool_connection.execute(
+                        "INSERT INTO snapshot_primitive_lookup VALUES (?,?,?)",
+                        (str(logical_key[0]).casefold(), str(logical_key[1]).casefold(), raw_int(logical_key[2], "snapshot primitive ordinal")),
+                    )
+                except sqlite3.IntegrityError as exc:
+                    raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: primitive snapshot identity is duplicated") from exc
+            for edge_seq, edge in enumerate(snapshot_edge_values):
+                logical_key = edge.get("logical_key", ())
+                if not isinstance(logical_key, (list, tuple)) or len(logical_key) < 3:
+                    raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: edge snapshot key is invalid")
+                spool_connection.execute(
+                    "INSERT INTO snapshot_edge_lookup VALUES (?,?,?,?,?,?,?)",
+                    (edge_seq, str(logical_key[0]).casefold(), str(logical_key[1]).casefold(), raw_int(logical_key[2], "snapshot edge ordinal"), str(edge.get("island_id", "")), str(edge.get("island_id", "")).casefold(), str(edge.get("witness_kind", ""))),
+                )
+            del snapshot_primitive_values, snapshot_edge_values
+            def snapshot_primitives_for(key: tuple[str, str]):
+                return spool_connection.execute(
+                    "SELECT local_ordinal FROM snapshot_primitive_lookup WHERE net_fold=? AND layer_fold=? ORDER BY local_ordinal",
+                    key,
+                )
+            def snapshot_edges_for(key: tuple[str, str], local: int):
+                return spool_connection.execute(
+                    "SELECT island_id,witness_kind FROM snapshot_edge_lookup WHERE net_fold=? AND layer_fold=? AND local_ordinal=? ORDER BY edge_seq",
+                    (*key, local),
+                )
+            for key in selected_surface_keys:
+                snap_surface = snapshot_surface_for(key)
+                if snap_surface is None:
+                    raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: surface snapshot is absent")
+                raw_surface = raw_surface_for(key)
+                if raw_surface is None:
+                    raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: selected raw surface is absent")
                 raw_surface_id = str(raw_surface.get("surface_id", "")).strip()
                 if not raw_surface_id:
                     raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: raw surface ID is absent")
-                local_shape_rows = [
-                    item for item in snapshot_primitive_rows
-                    if tuple(str(value).casefold() for value in item.get("logical_key", ())[:2]) == key
-                ]
-                if not local_shape_rows:
+                local_shape_rows = snapshot_primitives_for(key)
+                if spool_connection.execute("SELECT 1 FROM snapshot_primitive_lookup WHERE net_fold=? AND layer_fold=? LIMIT 1", key).fetchone() is None:
                     raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: selected surface has no primitive snapshot")
                 if not isinstance(snap_surface.get("island_ids"), (list, tuple)):
                     raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: surface island snapshot is invalid")
                 islands_for_surface = [
                     item for item in snap_surface.get("island_ids", ()) if str(item).strip()
                 ]
-                component_rows = [component_by_island.get((*key, str(island).casefold())) for island in islands_for_surface]
-                if any(component is None for component in component_rows):
+                component_matches = [
+                    spool_connection.execute(
+                        "SELECT component_id FROM component_island_lookup WHERE net_fold=? AND layer_fold=? AND island_fold=?",
+                        (key[0], key[1], str(island).casefold()),
+                    ).fetchone()
+                    for island in islands_for_surface
+                ]
+                if any(component is None for component in component_matches):
                     raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: island/component alignment is incomplete")
-                component_ids = [str(component.get("component_id", "")).strip() for component in component_rows if component is not None]
+                component_ids = [str(component[0]).strip() for component in component_matches if component is not None]
                 if any(not value for value in component_ids):
                     raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: certificate component identity is invalid")
-                positive_counts = {str(item).casefold(): 0 for item in islands_for_surface}
-                for edge in snapshot_edge_rows:
-                    edge_key = tuple(str(value).casefold() for value in edge.get("logical_key", ())[:2])
-                    if edge_key == key and str(edge.get("island_id", "")).casefold() in positive_counts and edge.get("witness_kind") == "positive_area_witness":
-                        positive_counts[str(edge["island_id"]).casefold()] += 1
                 for island_index, island_id in enumerate(islands_for_surface):
-                    if positive_counts[island_id.casefold()] < 1:
+                    positive_count = int(spool_connection.execute(
+                        "SELECT COUNT(*) FROM snapshot_edge_lookup WHERE net_fold=? AND layer_fold=? AND island_fold=? AND witness_kind='positive_area_witness'",
+                        (*key, str(island_id).casefold()),
+                    ).fetchone()[0])
+                    if positive_count < 1:
                         raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: retained island lacks positive witness")
-                    final_islands.append({"island_id": island_id, "surface_id": raw_surface_id, "component_id": component_ids[island_index], "representative": 1 if island_index == 0 else 0, "positive_witness_count": positive_counts[island_id.casefold()]})
-                shape_lineage = set()
-                for item in sorted(local_shape_rows, key=lambda row: raw_int(row.get("logical_key", ["", "", -1])[2], "snapshot primitive ordinal")):
-                    local = raw_int(item.get("logical_key", ["", "", -1])[2], "snapshot primitive ordinal")
-                    raw_primitive = raw_primitive_by_key.get((*key, local))
+                    final_islands.append({"island_id": island_id, "surface_id": raw_surface_id, "component_id": component_ids[island_index], "representative": 1 if island_index == 0 else 0, "positive_witness_count": positive_count})
+                for item in local_shape_rows:
+                    local = int(item[0])
+                    raw_primitive = raw_primitive_for(raw_surface_id, local)
                     if raw_primitive is None:
                         raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: raw primitive join is incomplete")
                     source_id = str(raw_primitive.get("source_record_id", "")).strip()
-                    shape_lineage.add(source_id)
+                    spool_connection.execute("INSERT OR IGNORE INTO shape_lineage_ids VALUES (?,?)", (raw_surface_id, source_id))
                     primitive_id = f"{raw_surface_id}:p{local}"
-                    related_edges = [edge for edge in snapshot_edge_rows if tuple(str(value).casefold() for value in edge.get("logical_key", ())[:2]) == key and raw_int(edge.get("logical_key", ["", "", -1])[2], "snapshot edge ordinal") == local]
-                    effect = "retained" if related_edges else "no_survivor"
+                    def matching_edges():
+                        return snapshot_edges_for(key, local)
+                    effect = "retained" if spool_connection.execute("SELECT 1 FROM snapshot_edge_lookup WHERE net_fold=? AND layer_fold=? AND local_ordinal=? LIMIT 1", (*key, local)).fetchone() is not None else "no_survivor"
                     final_primitives.append({"primitive_id": primitive_id, "surface_id": raw_surface_id, "local_ordinal": local, "raw_primitive_ordinal": int(raw_primitive.get("raw_primitive_ordinal", -1)), "polarity": str(raw_primitive.get("polarity", "")), "kind": str(raw_primitive.get("kind", "")), "effect_status": effect, "source_record_id": source_id, "source_asset_name": str(raw_primitive.get("source_asset_name", "")), "source_asset_sha256": str(raw_primitive.get("source_asset_sha256", "")), "primitive_sha256": str(raw_primitive.get("primitive_sha256", ""))})
-                    for edge in related_edges:
-                        relation = {"primitive_id": primitive_id, "island_id": str(edge.get("island_id", "")), "witness_kind": str(edge.get("witness_kind", ""))}
+                    for edge in matching_edges():
+                        relation = {"primitive_id": primitive_id, "island_id": str(edge[0]), "witness_kind": str(edge[1])}
                         relation["relation_sha256"] = core_services._canonical_metadata_sha256(relation)
                         final_edges.append(relation)
-                lineage_sha = sha256(concrete_canonical_json_bytes(sorted(shape_lineage))).hexdigest()
+                lineage_hash = sha256(); lineage_hash.update(b"[")
+                for lineage_index, lineage_row in enumerate(spool_connection.execute("SELECT source_id FROM shape_lineage_ids WHERE surface_id=? ORDER BY source_id COLLATE BINARY", (raw_surface_id,))):
+                    if lineage_index:
+                        lineage_hash.update(b",")
+                    lineage_hash.update(concrete_canonical_json_bytes(lineage_row[0]))
+                lineage_hash.update(b"]")
+                lineage_sha = lineage_hash.hexdigest()
                 final_surfaces.append({"ordinal": len(final_surfaces), "surface_id": raw_surface_id, "artwork_net": str(raw_surface.get("artwork_net", "")), "layer": str(raw_surface.get("layer", "")), "geometry_asset_name": str(raw_surface.get("geometry_asset_name", "")), "geometry_asset_sha256": str(raw_surface.get("geometry_asset_sha256", "")), "island_manifest_sha256": str(raw_surface.get("island_manifest_sha256", "")), "source_lineage_sha256": lineage_sha, "component_count": len(set(value.casefold() for value in component_ids))})
 
-            node_lookup: dict[tuple[str, str], Mapping[str, Any]] = {}
-            for row in node_rows:
-                net = str(row.get("resolved_net", "")).strip()
-                node = str(row.get("node_id", "")).strip()
-                key = (net.casefold(), node.casefold())
-                if key in node_lookup:
-                    raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: raw Node identity is duplicated")
-                node_lookup[key] = row
-            via_lookup: dict[tuple[str, str], Mapping[str, Any]] = {}
-            for row in via_rows:
-                key = (str(row.get("net_name", "")).strip().casefold(), str(row.get("via_id", "")).strip().casefold())
-                if key in via_lookup:
-                    raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: raw Via identity is duplicated")
-                via_lookup[key] = row
-            pad_lookup: dict[tuple[str, str], Mapping[str, Any]] = {}
-            for row in pad_rows:
-                key = (str(row.get("padstack_id", "")).strip().casefold(), str(row.get("layer_id", "")).strip().casefold())
-                if key in pad_lookup:
-                    raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: raw pad shape identity is duplicated")
-                pad_lookup[key] = row
-            observed_node_keys = {
-                (str(row.get("resolved_net", row.get("net_name", ""))).strip().casefold(), str(row.get("node_id", "")).strip().casefold())
-                for row in node_rows
-            }
-            observed_via_keys = {
-                (str(row.get("net_name", "")).strip().casefold(), str(row.get("via_id", "")).strip().casefold())
-                for row in via_rows
-            }
-            observed_pad_keys = set(pad_lookup)
-            if observed_node_keys != selected_node_keys or observed_via_keys != selected_via_keys or observed_pad_keys != selected_pad_keys:
+            del snapshot_surface_for, snapshot_primitives_for, snapshot_edges_for, raw_primitive_for, primitive_rows
+
+            class _StageLookup:
+                def __init__(self, kind: str) -> None:
+                    self.kind = kind
+                def get(self, key: tuple[str, str]):
+                    row = spool_connection.execute("SELECT * FROM ownership_source_stage WHERE kind=? AND lookup_a=? AND lookup_b=?", (self.kind, key[0], key[1])).fetchone()
+                    if row is None:
+                        return None
+                    names = tuple(item[1] for item in spool_connection.execute("PRAGMA table_info(ownership_source_stage)"))
+                    value = dict(zip(names, row, strict=True)); value["source_record_id"] = value["record_id"]
+                    if self.kind == "Node":
+                        value.update(resolved_net=value.get("logical_net"), net_status="EXPLICIT", layer=value.get("layer"))
+                    else:
+                        value.update(net_name=value.get("net_name") or value.get("logical_net"), rotation_microdegrees=value.get("rotation"), padstack=value.get("padstack_id"))
+                    return value
+            class _PadLookup:
+                def get(self, key: tuple[str, str]):
+                    row = spool_connection.execute(
+                        "SELECT padstack_id,layer,paddef_record_id,record_id,pad_shape_ordinal,pad_shape_sha FROM ownership_source_stage WHERE kind='Regular' AND lookup_a=? AND lookup_b=? AND lookup_c=?",
+                        (*key, ""),
+                    ).fetchone()
+                    if row is None:
+                        return None
+                    return {
+                        "padstack_id": row[0],
+                        "layer_id": row[1],
+                        "paddef_source_record_id": row[2],
+                        "regular_source_record_id": row[3],
+                        "raw_pad_shape_ordinal": row[4],
+                        "raw_pad_shape_sha256": row[5],
+                    }
+            node_lookup = _StageLookup("Node")
+            via_lookup = _StageLookup("Via")
+            pad_lookup = _PadLookup()
+            selected_counts = {kind: int(spool_connection.execute("SELECT COUNT(*) FROM ownership_selection WHERE kind=?", (kind,)).fetchone()[0]) for kind in ("Node", "Via", "Pad")}
+            observed_counts = {"Node": int(spool_connection.execute("SELECT COUNT(*) FROM ownership_source_stage WHERE kind='Node'").fetchone()[0]), "Via": int(spool_connection.execute("SELECT COUNT(*) FROM ownership_source_stage WHERE kind='Via'").fetchone()[0]), "Pad": int(spool_connection.execute("SELECT COUNT(DISTINCT lookup_a||char(0)||lookup_b) FROM ownership_source_stage WHERE kind='Regular'").fetchone()[0])}
+            if observed_counts != selected_counts:
                 raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: raw selection lookup differs")
-            selected_layer_keys = {str(value[0]).casefold() if isinstance(value, (list, tuple)) and len(value) == 1 else str(value).casefold() for value in effective_selection.get("layer_keys", ()) if isinstance(value, str) or (isinstance(value, (list, tuple)) and len(value) == 1)}
-            selected_material_keys = {str(value[0]).casefold() if isinstance(value, (list, tuple)) and len(value) == 1 else str(value).casefold() for value in effective_selection.get("material_keys", ()) if isinstance(value, str) or (isinstance(value, (list, tuple)) and len(value) == 1)}
+            selected_layer_keys = {row[0] for row in spool_connection.execute("SELECT key_a FROM ownership_selection WHERE kind='Layer'")}
+            selected_material_keys = {row[0] for row in spool_connection.execute("SELECT key_a FROM ownership_selection WHERE kind='Material'")}
             observed_layer_keys = {str(row.get("layer_name", "")).strip().casefold() for row in stackup_rows}
-            observed_material_keys = {
-                str(row.get("name", "")).strip().casefold()
-                for row in source_rows
-                if str(row.get("kind", "")).casefold() == "material"
-                and str(row.get("name", "")).strip()
-            }
+            observed_material_keys = {row[0] for row in spool_connection.execute("SELECT lookup_a FROM ownership_source_stage WHERE kind='Material'")}
             if observed_layer_keys != selected_layer_keys or observed_material_keys != selected_material_keys:
                 raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: raw layer/material selection differs")
             target_rails = [rail for rail in base_project.rails if rail.rail_id == source_plane_ownership_rail_id]
             if len(target_rails) != 1:
                 raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_RAIL_INVALID: target rail disappeared")
             target_rail = target_rails[0]
-            contacts_by_pin = {str(item.get("pin_id", "")).casefold(): item for item in certificate.get("terminal_contacts", ()) if isinstance(item, Mapping)}
+            terminal_contacts = certificate.get("terminal_contacts", ())
+            def contact_for_pin(pin_id: str) -> Mapping[str, Any] | None:
+                folded = pin_id.casefold()
+                for item in terminal_contacts:
+                    if isinstance(item, Mapping) and str(item.get("pin_id", "")).casefold() == folded:
+                        return item
+                return None
             target_anchor_rows = [item for item in certificate.get("rail_anchor_bindings", ()) if isinstance(item, Mapping) and item.get("rail_id") == source_plane_ownership_rail_id]
             if not target_anchor_rows:
                 raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE: target rail anchors are absent")
             quotient = certificate.get("finite_via_quotient")
             if not isinstance(quotient, Mapping):
                 raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE: finite quotient is absent")
+            component_rows = certificate.get("surface_equivalence_components", ())
+            if not isinstance(component_rows, Sequence) or isinstance(component_rows, (str, bytes, bytearray)):
+                raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE: surface component evidence is invalid")
             # ``terminal_contacts`` carries the landing/contact topology, while
             # the finite quotient terminal rows carry the canonical Via owner
             # selected during quotient reduction.  Keep that owner provenance
             # join explicit; contacts from the graph pass do not duplicate it.
-            finite_terminal_owner_by_key: dict[tuple[str, str], str] = {}
+            spool_connection.execute(
+                "CREATE TEMP TABLE finite_terminal_owner_lookup("
+                "net_fold TEXT NOT NULL, via_fold TEXT NOT NULL, owner_id TEXT NOT NULL, "
+                "PRIMARY KEY(net_fold,via_fold)) WITHOUT ROWID"
+            )
             for terminal in quotient.get("terminal_bindings", ()):
                 if not isinstance(terminal, Mapping):
                     continue
@@ -8896,31 +9061,78 @@ def import_spd_scenario(
                 if not owner or not terminal_net or not terminal_via:
                     continue
                 owner_key = (terminal_net.casefold(), terminal_via.casefold())
-                previous_owner = finite_terminal_owner_by_key.get(owner_key)
-                if previous_owner is not None and previous_owner.casefold() != owner.casefold():
+                previous_owner = spool_connection.execute(
+                    "SELECT owner_id FROM finite_terminal_owner_lookup WHERE net_fold=? AND via_fold=?",
+                    owner_key,
+                ).fetchone()
+                if previous_owner is not None and str(previous_owner[0]).casefold() != owner.casefold():
                     raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE: finite terminal owner identity is ambiguous")
-                finite_terminal_owner_by_key[owner_key] = owner
-            edge_lookup: dict[str, Mapping[str, Any]] = {}
-            vertex_lookup: dict[str, Mapping[str, Any]] = {}
+                if previous_owner is None:
+                    spool_connection.execute("INSERT INTO finite_terminal_owner_lookup VALUES (?,?,?)", (*owner_key, owner))
+            spool_connection.execute(
+                "CREATE TEMP TABLE finite_edge_lookup("
+                "edge_fold TEXT PRIMARY KEY, start_vertex_id TEXT NOT NULL, end_vertex_id TEXT NOT NULL, owner_ids_json TEXT NOT NULL) WITHOUT ROWID"
+            )
+            spool_connection.execute(
+                "CREATE TEMP TABLE finite_vertex_lookup(vertex_fold TEXT PRIMARY KEY) WITHOUT ROWID"
+            )
             for row in quotient.get("edges", ()):
                 if not isinstance(row, Mapping) or not str(row.get("edge_id", "")).strip():
                     raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE: finite edge row is invalid")
                 edge_key = str(row["edge_id"]).strip().casefold()
-                if edge_key in edge_lookup:
+                owner_ids = [str(owner).strip() for owner in row.get("owner_ids", ()) if str(owner).strip()]
+                try:
+                    spool_connection.execute(
+                        "INSERT INTO finite_edge_lookup VALUES (?,?,?,?)",
+                        (edge_key, str(row.get("start_vertex_id", "")), str(row.get("end_vertex_id", "")), json.dumps(owner_ids, ensure_ascii=False, separators=(",", ":"))),
+                    )
+                except sqlite3.IntegrityError as exc:
                     raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE: finite edge identity is duplicated")
-                edge_lookup[edge_key] = row
             for row in quotient.get("vertices", ()):
                 if not isinstance(row, Mapping) or not str(row.get("vertex_id", "")).strip():
                     raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE: finite vertex row is invalid")
                 vertex_key = str(row["vertex_id"]).strip().casefold()
-                if vertex_key in vertex_lookup:
+                try:
+                    spool_connection.execute("INSERT INTO finite_vertex_lookup VALUES (?)", (vertex_key,))
+                except sqlite3.IntegrityError as exc:
                     raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE: finite vertex identity is duplicated")
-                vertex_lookup[vertex_key] = row
-            retained_edges: dict[str, tuple[str, str, str]] = {}
-            final_terminals: list[dict[str, Any]] = []
+            def finite_edge(edge_id: str) -> Mapping[str, Any] | None:
+                row = spool_connection.execute(
+                    "SELECT start_vertex_id,end_vertex_id,owner_ids_json FROM finite_edge_lookup WHERE edge_fold=?",
+                    (edge_id.casefold(),),
+                ).fetchone()
+                if row is None:
+                    return None
+                return {"start_vertex_id": row[0], "end_vertex_id": row[1], "owner_ids": json.loads(row[2])}
+
+            def finite_vertex_exists(vertex_id: str) -> bool:
+                return spool_connection.execute(
+                    "SELECT 1 FROM finite_vertex_lookup WHERE vertex_fold=?", (vertex_id.casefold(),)
+                ).fetchone() is not None
+            spool_connection.execute("CREATE TEMP TABLE retained_owner_inventory(owner_fold TEXT PRIMARY KEY, owner_id TEXT NOT NULL, edge_id TEXT NOT NULL, island_id TEXT NOT NULL) WITHOUT ROWID")
+            def retain_owner(owner_id: str, edge_id: str, island_id: str) -> None:
+                try:
+                    spool_connection.execute("INSERT INTO retained_owner_inventory VALUES (?,?,?,?)", (owner_id.casefold(), owner_id, edge_id, island_id))
+                except sqlite3.IntegrityError:
+                    previous = spool_connection.execute("SELECT edge_id,island_id FROM retained_owner_inventory WHERE owner_fold=?", (owner_id.casefold(),)).fetchone()
+                    if previous is None or tuple(previous) != (edge_id, island_id):
+                        raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_OWNER_COLLISION: owner is assigned to multiple finite edges")
+            class _RetainedIds:
+                def __iter__(self):
+                    cursor = spool_connection.execute(
+                        "SELECT owner_fold FROM retained_owner_inventory ORDER BY owner_fold"
+                    )
+                    try:
+                        for row in cursor:
+                            yield row[0]
+                    finally:
+                        cursor.close()
+                def __len__(self):
+                    return int(spool_connection.execute("SELECT COUNT(*) FROM retained_owner_inventory").fetchone()[0])
+            final_terminals = _SectionSink("terminal_bindings")
             for binding in target_anchor_rows:
                 pin = str(binding.get("pin_id", "")).strip()
-                contact = contacts_by_pin.get(pin.casefold())
+                contact = contact_for_pin(pin)
                 if contact is None or contact.get("status") != "complete":
                     raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE: terminal contact is incomplete")
                 role = str(binding.get("role", "")).strip().casefold()
@@ -8933,16 +9145,18 @@ def import_spd_scenario(
                     raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE: terminal Node/Via join is ambiguous")
                 edge_id = str(contact.get("first_via_quotient_edge_id", "")).strip()
                 vertex_id = str(contact.get("exposed_quotient_vertex_id", "")).strip()
-                edge = edge_lookup.get(edge_id.casefold())
-                if vertex_id.casefold() not in vertex_lookup:
+                edge = finite_edge(edge_id)
+                if not finite_vertex_exists(vertex_id):
                     raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE: finite vertex reference is unresolved")
                 if edge is None or not edge.get("owner_ids"):
                     raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE: finite edge owner set is absent")
                 via_owner_id = str(contact.get("first_via_owner_id", "")).strip()
                 if not via_owner_id:
-                    via_owner_id = finite_terminal_owner_by_key.get(
-                        (net.casefold(), via_id.casefold()), ""
-                    )
+                    owner_row = spool_connection.execute(
+                        "SELECT owner_id FROM finite_terminal_owner_lookup WHERE net_fold=? AND via_fold=?",
+                        (net.casefold(), via_id.casefold()),
+                    ).fetchone()
+                    via_owner_id = str(owner_row[0]) if owner_row is not None else ""
                 if not via_owner_id or via_owner_id.casefold() not in {str(owner).casefold() for owner in edge.get("owner_ids", ())}:
                     raise SpdImportError(
                         "SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE: terminal finite owner identity is inconsistent"
@@ -8953,11 +9167,7 @@ def import_spd_scenario(
                 expected_layer = target_rail.pwr_layer if role == "power" else target_rail.gnd_layer
                 component_row = _source_plane_contact_component(
                     contact,
-                    [
-                        item
-                        for item in certificate.get("surface_equivalence_components", ())
-                        if isinstance(item, Mapping)
-                    ],
+                    component_rows,
                     expected_net=expected_net,
                     expected_layer=expected_layer,
                     error_prefix="SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE",
@@ -8982,14 +9192,12 @@ def import_spd_scenario(
                     raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE: pad source provenance is absent")
                 owner_ids = [str(owner).strip() for owner in edge.get("owner_ids", ()) if str(owner).strip()]
                 for owner_id in owner_ids:
-                    retained_edges.setdefault(owner_id.casefold(), (owner_id, edge_id, island_id))
-                    if retained_edges[owner_id.casefold()][1:] != (edge_id, island_id):
-                        raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_OWNER_COLLISION: owner is assigned to multiple finite edges")
+                    retain_owner(owner_id, edge_id, island_id)
                 if not paddef or not regular or not str(node.get("source_record_id", "")).strip() or not str(via.get("source_record_id", "")).strip() or pad.get("raw_pad_shape_ordinal") is None or not str(pad.get("raw_pad_shape_sha256", "")).strip():
                     raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE: pad/node/via source provenance is incomplete")
                 final_terminals.append({"terminal_id": f"spd-terminal:{str(binding.get('branch_id','')).strip()}:{pin}:{role}", "owner_kind": "device", "rail_id": source_plane_ownership_rail_id, "branch_id": str(binding.get("branch_id", "")), "pin_id": pin, "role": role, "source_node_record_id": str(node.get("source_record_id", "")), "via_record_required": 1, "via_record_id": str(via.get("source_record_id", "")), "endpoint_node_id": str(contact.get("external_endpoint_node_id", node_id)), "island_id": island_id, "component_id": component_id, "layer": component_layer, "padstack_id": padstack, "paddef_source_record_id": paddef, "regular_source_record_id": regular, "raw_pad_shape_ordinal": raw_int(pad.get("raw_pad_shape_ordinal"), "pad shape ordinal"), "raw_pad_shape_sha256": str(pad.get("raw_pad_shape_sha256", "")), "finite_vertex_id": vertex_id, "finite_edge_id": edge_id, "via_owner_id": via_owner_id, "status": "complete", "issues_json": "[]"})
 
-            final_boundary: list[dict[str, Any]] = []
+            final_boundary = _SectionSink("contact_boundary")
             boundary_expected = certificate.get("contact_boundary_coverage")
             boundary_rows = certificate.get("contact_boundary", ())
             if not isinstance(boundary_expected, Mapping):
@@ -9000,8 +9208,8 @@ def import_spd_scenario(
                 net = str(contact.get("net", "")).strip(); via_id = str(contact.get("via_id", "")).strip(); endpoint_hint = str(contact.get("endpoint_node_id", "")).strip(); layer = str(contact.get("endpoint_layer", "")).strip(); padstack = str(contact.get("padstack_id", "")).strip(); edge_id = str(contact.get("finite_edge_id", "")).strip(); vertex_id = str(contact.get("finite_vertex_id", "")).strip(); island_id = str(contact.get("island_id", "")).strip(); component_id = str(contact.get("component_id", "")).strip(); boundary_owner = str(contact.get("boundary_owner_id", "")).strip()
                 if not all((net, via_id, endpoint_hint, layer, padstack, edge_id, vertex_id, island_id, component_id)):
                     raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID: boundary logical key is incomplete")
-                via = via_lookup.get((net.casefold(), via_id.casefold())); pad = pad_lookup.get((padstack.casefold(), layer.casefold())); edge = edge_lookup.get(edge_id.casefold()); vertex = vertex_lookup.get(vertex_id.casefold())
-                if via is None or pad is None or edge is None or vertex is None:
+                via = via_lookup.get((net.casefold(), via_id.casefold())); pad = pad_lookup.get((padstack.casefold(), layer.casefold())); edge = finite_edge(edge_id); vertex = finite_vertex_exists(vertex_id)
+                if via is None or pad is None or edge is None or not vertex:
                     raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID: boundary Node/Via/Pad/quotient join is ambiguous")
                 owners = [str(owner).strip() for owner in edge.get("owner_ids", ()) if str(owner).strip()]
                 candidate_owners = [str(owner).strip() for owner in contact.get("owner_ids", ()) if str(owner).strip()]
@@ -9023,9 +9231,7 @@ def import_spd_scenario(
                 if not owners or len({owner.casefold() for owner in owners}) != len(owners):
                     raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID: boundary owner set is invalid")
                 for owner_id in owners:
-                    retained_edges.setdefault(owner_id.casefold(), (owner_id, edge_id, island_id))
-                    if retained_edges[owner_id.casefold()][1:] != (edge_id, island_id):
-                        raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_OWNER_COLLISION: owner is assigned to multiple finite edges")
+                    retain_owner(owner_id, edge_id, island_id)
                 paddef = str(pad.get("paddef_source_record_id", "")).strip(); regular = str(pad.get("regular_source_record_id", "")).strip(); raw_sha = str(pad.get("raw_pad_shape_sha256", "")).strip()
                 if not paddef or not regular or not raw_sha or pad.get("raw_pad_shape_ordinal") is None:
                     raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID: boundary pad provenance is incomplete")
@@ -9035,25 +9241,29 @@ def import_spd_scenario(
                 rotation_degrees = float(raw_int(rotation_raw, "boundary Via rotation")) / 1_000_000.0
                 final_boundary.append({"ordinal": index, "contact_id": f"contact:{str(contact.get('owner_kind', 'other')).strip()}:{net}:{via_id}:{endpoint}", "owner_kind": str(contact.get("owner_kind", "other")).strip() or "other", "net": net, "via_id": via_id, "endpoint_node_id": endpoint, "opposite_endpoint_node_id": opposite_endpoint or None, "plane_endpoint_node_id": endpoint, "external_endpoint_node_id": external_endpoint, "endpoint_layer": layer, "island_id": island_id, "component_id": component_id, "padstack_id": padstack, "rotation_degrees": float(rotation_degrees), "source_node_record_id": str(plane_node.get("source_record_id", "")).strip(), "opposite_endpoint_node_record_id": str(opposite_node.get("source_record_id", "")).strip() if opposite_node is not None else None, "plane_endpoint_node_record_id": str(plane_node.get("source_record_id", "")).strip(), "external_endpoint_node_record_id": str(external_node.get("source_record_id", "")).strip(), "via_record_id": str(via.get("source_record_id", "")).strip(), "paddef_source_record_id": paddef, "regular_source_record_id": regular, "raw_pad_shape_ordinal": raw_int(pad.get("raw_pad_shape_ordinal"), "boundary pad ordinal"), "raw_pad_shape_sha256": raw_sha, "finite_vertex_id": vertex_id, "finite_edge_id": edge_id, "owner_ids_json": json.dumps(owners, ensure_ascii=False, separators=(",", ":")), "status": "complete", "issues_json": "[]"})
 
-            expanded = [[str(row.get("component_id", "")).casefold(), str(row.get("island_id", "")).casefold(), str(row.get("finite_vertex_id", "")).casefold(), str(row.get("finite_edge_id", "")).casefold(), owner.casefold()] for row in final_boundary for owner in json.loads(row["owner_ids_json"])]
-            if len(expanded) != int(boundary_expected.get("count", -1)) or sha256(concrete_canonical_json_bytes(expanded)).hexdigest() != str(boundary_expected.get("sha256", "")):
+            coverage_hash = sha256(); coverage_hash.update(b"["); coverage_count = 0
+            for row in final_boundary:
+                for owner in json.loads(row["owner_ids_json"]):
+                    if coverage_count:
+                        coverage_hash.update(b",")
+                    coverage_hash.update(concrete_canonical_json_bytes([str(row.get("component_id", "")).casefold(), str(row.get("island_id", "")).casefold(), str(row.get("finite_vertex_id", "")).casefold(), str(row.get("finite_edge_id", "")).casefold(), owner.casefold()]))
+                    coverage_count += 1
+            coverage_hash.update(b"]")
+            if coverage_count != int(boundary_expected.get("count", -1)) or coverage_hash.hexdigest() != str(boundary_expected.get("sha256", "")):
                 raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID: boundary coverage digest differs")
-
-            power_surface_keys = [key for key in selected_surface_keys if key[0] == target_rail.net.casefold() and key[1] == target_rail.pwr_layer.casefold()]
-            ground_surface_keys = [
-                key
-                for key in selected_surface_keys
-                if key == (ground_net.casefold(), target_rail.gnd_layer.casefold())
-            ]
-            if len(power_surface_keys) != 1 or len(ground_surface_keys) != 1:
+            power_surface_key = (target_rail.net.casefold(), target_rail.pwr_layer.casefold())
+            ground_surface_key = (ground_net.casefold(), target_rail.gnd_layer.casefold())
+            if power_surface_key not in selected_surface_keys or ground_surface_key not in selected_surface_keys:
                 raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: target rail surfaces are ambiguous")
             rail_rows: list[dict[str, Any]] = []
-            for role, surface_key in (("power", power_surface_keys[0]), ("ground", ground_surface_keys[0])):
+            for role, surface_key in (("power", power_surface_key), ("ground", ground_surface_key)):
                 role_terminals = [item for item in final_terminals if item["role"] == role]
                 if not role_terminals:
                     raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE: target rail role is absent")
                 contact = role_terminals[0]
-                raw_surface = raw_surface_by_key[surface_key]
+                raw_surface = raw_surface_for(surface_key)
+                if raw_surface is None:
+                    raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: selected raw surface is absent")
                 proof = next((item for item in certificate.get("surface_equivalence_components", ()) if isinstance(item, Mapping) and str(item.get("net", "")).casefold() == surface_key[0] and str(item.get("layer", "")).casefold() == surface_key[1] and contact["island_id"].casefold() in {str(value).casefold() for value in item.get("island_ids", ())}), None)
                 if proof is None:
                     raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: rail surface equivalence evidence is absent")
@@ -9061,26 +9271,144 @@ def import_spd_scenario(
                 rail_layer = target_rail.pwr_layer if role == "power" else target_rail.gnd_layer
                 pair_sha = core_services._canonical_metadata_sha256({"rail_id": source_plane_ownership_rail_id, "role": role, "net": rail_net, "layer": rail_layer, "island_id": contact["island_id"]})
                 rail_rows.append({"ordinal": len(rail_rows), "rail_id": source_plane_ownership_rail_id, "role": role, "logical_net": rail_net, "artwork_net": str(raw_surface.get("artwork_net", "")), "layer": rail_layer, "surface_id": str(raw_surface.get("surface_id", "")), "island_id": contact["island_id"], "pair_evidence_sha256": pair_sha, "state": "source_bound"})
-            retained_rows = [{"ordinal": index, "owner_id": owner_id, "namespace": "finite-via", "owner_kind": "via", "rail_id": source_plane_ownership_rail_id, "edge_id": edge_id, "island_id": island_id, "state": "retained"} for index, (_owner_key, (owner_id, edge_id, island_id)) in enumerate(sorted(retained_edges.items()))]
+            del raw_surface_for, node_lookup, via_lookup, pad_lookup, finite_edge, finite_vertex_exists, contact_for_pin, selected_surface_keys
+            def retained_rows():
+                cursor = spool_connection.execute(
+                    "SELECT owner_fold,owner_id,edge_id,island_id FROM retained_owner_inventory ORDER BY owner_fold"
+                )
+                try:
+                    for index, row in enumerate(cursor):
+                        yield {"ordinal": index, "owner_id": row[1], "namespace": "finite-via", "owner_kind": "via", "rail_id": source_plane_ownership_rail_id, "edge_id": row[2], "island_id": row[3], "state": "retained"}
+                finally:
+                    cursor.close()
             plane_rows = [{"ordinal": 0, "scope_id": f"source-plane-scope:{source_plane_ownership_rail_id}:power", "namespace": f"source-plane:{source_plane_ownership_rail_id}:power", "compiler_owner_id": f"source-plane-owner:{source_plane_ownership_rail_id}:power", "rail_id": source_plane_ownership_rail_id, "role": "power", "artwork_net": rail_rows[0]["artwork_net"], "layer": rail_rows[0]["layer"], "state": "declared_unconsumed", "owner_count": 1}, {"ordinal": 1, "scope_id": f"source-plane-scope:{source_plane_ownership_rail_id}:ground", "namespace": f"source-plane:{source_plane_ownership_rail_id}:ground", "compiler_owner_id": f"source-plane-owner:{source_plane_ownership_rail_id}:ground", "rail_id": source_plane_ownership_rail_id, "role": "ground", "artwork_net": rail_rows[1]["artwork_net"], "layer": rail_rows[1]["layer"], "state": "declared_unconsumed", "owner_count": 1}]
             replaced_ids = {row["compiler_owner_id"] for row in plane_rows}
-            retained_ids = {row["owner_id"] for row in retained_rows}
+            retained_ids = _RetainedIds()
             def owner_set_hash(values: Iterable[str]) -> str:
                 canonical = sorted({str(value).casefold() for value in values})
                 return sha256(concrete_canonical_json_bytes(canonical)).hexdigest()
 
-            if {str(value).casefold() for value in replaced_ids} & {str(value).casefold() for value in retained_ids}:
+            def retained_owner_set_hash() -> str:
+                digest = sha256()
+                digest.update(b"[")
+                for ordinal, row in enumerate(
+                    spool_connection.execute(
+                        "SELECT owner_fold FROM retained_owner_inventory ORDER BY owner_fold"
+                    )
+                ):
+                    if ordinal:
+                        digest.update(b",")
+                    digest.update(concrete_canonical_json_bytes(row[0]))
+                digest.update(b"]")
+                return digest.hexdigest()
+
+            if any(
+                spool_connection.execute(
+                    "SELECT 1 FROM retained_owner_inventory WHERE owner_fold=? LIMIT 1",
+                    (str(value).casefold(),),
+                ).fetchone()
+                is not None
+                for value in replaced_ids
+            ):
                 raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_OWNER_COLLISION: replaced and retained owner sets overlap")
             ledger_id = f"source-plane-ledger:{source_plane_ownership_rail_id}"
-            ledger_rows = [{"ordinal": 0, "ledger_id": ledger_id, "replaced_set_sha256": owner_set_hash(replaced_ids), "retained_set_sha256": owner_set_hash(retained_ids), "intersection_count": 0, "replaced_count": len(replaced_ids), "retained_count": len(retained_ids), "status": "prerequisite_only"}]
-            member_rows = [{"ledger_id": ledger_id, "owner_id": owner, "action": "replaced"} for owner in sorted(replaced_ids)] + [{"ledger_id": ledger_id, "owner_id": owner, "action": "retained"} for owner in sorted(retained_ids)]
+            ledger_rows = [{"ordinal": 0, "ledger_id": ledger_id, "replaced_set_sha256": owner_set_hash(replaced_ids), "retained_set_sha256": retained_owner_set_hash(), "intersection_count": 0, "replaced_count": len(replaced_ids), "retained_count": len(retained_ids), "status": "prerequisite_only"}]
+            def member_rows():
+                for owner in sorted(replaced_ids):
+                    yield {"ledger_id": ledger_id, "owner_id": owner, "action": "replaced"}
+                cursor = spool_connection.execute(
+                    "SELECT owner_fold,owner_id FROM retained_owner_inventory ORDER BY owner_fold"
+                )
+                try:
+                    for row in cursor:
+                        yield {"ledger_id": ledger_id, "owner_id": row[1], "action": "retained"}
+                finally:
+                    cursor.close()
+            retained_row_iter = retained_rows()
+            member_row_iter = member_rows()
             draft = dict(request.get("draft", {}))
             draft["stackup_layers"] = stackup_rows
             draft["dielectric_points"] = dielectric_rows
-            draft.update({"app_version": SCENARIO_APP_VERSION, "source_sha256": raw_manifest.get("source_sha256"), "source_size_bytes": int(analysis.source.size_bytes), "target_rail_id": source_plane_ownership_rail_id, "project_binding_sha256": raw_manifest.get("project_binding_sha256"), "certificate_evidence_sha256": raw_manifest.get("certificate_evidence_sha256"), "compiled_topology_identity_sha256": raw_manifest.get("compiled_topology_identity_sha256"), "raw_manifest_sha256": sha256(concrete_canonical_json_bytes(dict(raw_manifest))).hexdigest(), "raw_geometry_identity_sha256": raw_manifest.get("geometry_identity_sha256"), "raw_logical_rows_sha256": raw_manifest.get("logical_rows_sha256"), "raw_plane_sheet_sha256": raw_manifest.get("plane_sheet_payload_sha256"), "source_records": source_records, "surfaces": final_surfaces, "primitives": final_primitives, "islands": final_islands, "primitive_island_edges": final_edges, "rail_bindings": rail_rows, "terminal_bindings": final_terminals, "contact_boundary": final_boundary, "retained_owner_refs": retained_rows, "plane_owner_scopes": plane_rows, "replacement_ledger": ledger_rows, "replacement_ledger_members": member_rows})
+            draft.update({"app_version": SCENARIO_APP_VERSION, "source_sha256": raw_manifest.get("source_sha256"), "source_size_bytes": int(analysis.source.size_bytes), "target_rail_id": source_plane_ownership_rail_id, "project_binding_sha256": raw_manifest.get("project_binding_sha256"), "certificate_evidence_sha256": raw_manifest.get("certificate_evidence_sha256"), "compiled_topology_identity_sha256": raw_manifest.get("compiled_topology_identity_sha256"), "raw_manifest_sha256": sha256(concrete_canonical_json_bytes(dict(raw_manifest))).hexdigest(), "raw_geometry_identity_sha256": raw_manifest.get("geometry_identity_sha256"), "raw_logical_rows_sha256": raw_manifest.get("logical_rows_sha256"), "raw_plane_sheet_sha256": raw_manifest.get("plane_sheet_payload_sha256"), "source_records": source_records, "surfaces": final_surfaces, "primitives": final_primitives, "islands": final_islands, "primitive_island_edges": final_edges, "rail_bindings": rail_rows, "terminal_bindings": final_terminals, "contact_boundary": final_boundary, "retained_owner_refs": retained_row_iter, "plane_owner_scopes": plane_rows, "replacement_ledger": ledger_rows, "replacement_ledger_members": member_row_iter})
             if any(not isinstance(draft.get(key), str) or len(draft[key]) != 64 for key in ("raw_plane_sheet_sha256", "raw_geometry_identity_sha256", "raw_logical_rows_sha256")):
                 raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: required raw v3 identity fields are absent")
-            ownership_result.append(build_source_plane_ownership_ir(draft, is_cancelled=cancelled))
+            sections = {
+                "surfaces": final_surfaces,
+                "primitives": final_primitives,
+                "islands": final_islands,
+                "primitive_island_edges": final_edges,
+                "stackup_layers": stackup_rows,
+                "dielectric_points": dielectric_rows,
+                "rail_bindings": rail_rows,
+                "terminal_bindings": final_terminals,
+                "contact_boundary": final_boundary,
+                "retained_owner_refs": retained_row_iter,
+                "plane_owner_scopes": plane_rows,
+                "replacement_ledger": ledger_rows,
+                "replacement_ledger_members": member_row_iter,
+            }
+            streamed_sections = {"surfaces", "primitives", "islands", "primitive_island_edges", "stackup_layers", "dielectric_points", "terminal_bindings", "contact_boundary"}
+            for table in sections:
+                if table in streamed_sections:
+                    continue
+                spool_connection.execute(f"DELETE FROM {table}")
+            for table, rows in sections.items():
+                if table in streamed_sections:
+                    continue
+                columns = tuple(row[1] for row in spool_connection.execute(f"PRAGMA table_info({table})"))
+                placeholders = ",".join("?" for _ in columns)
+                def row_values():
+                    iterator = iter(rows)
+                    try:
+                        for row in iterator:
+                            yield tuple(row.get(column) for column in columns)
+                    finally:
+                        close = getattr(iterator, "close", None)
+                        if callable(close):
+                            close()
+                values = row_values()
+                try:
+                    spool_connection.executemany(
+                        f"INSERT INTO {table} ({','.join(columns)}) VALUES ({placeholders})",
+                        values,
+                    )
+                finally:
+                    values.close()
+            total_rows = 0
+            for table in ("source_records", *sections):
+                count = int(spool_connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0])
+                if count > MAX_SOURCE_PLANE_OWNERSHIP_IR_SECTION_ROWS:
+                    raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_BOUND_EXCEEDED: section exceeds row bound")
+                total_rows += count
+                if total_rows > MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS:
+                    raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_BOUND_EXCEEDED: total rows exceed bound")
+            spool_connection.commit()
+            spool_connection.close()
+            spool_connection = None
+            binding = {key: draft[key] for key in ("app_version", "target_rail_id", "source_sha256", "source_size_bytes", "project_binding_sha256", "certificate_evidence_sha256", "compiled_topology_identity_sha256", "raw_manifest_sha256", "raw_geometry_identity_sha256", "raw_logical_rows_sha256", "raw_plane_sheet_sha256")}
+            del sections, source_records, final_surfaces, final_primitives, final_islands, final_edges, final_terminals, final_boundary, rail_rows, retained_row_iter, plane_rows, ledger_rows, member_row_iter
+            ownership_result.append(build_source_plane_ownership_ir_from_spool(evidence.spool, binding, is_cancelled=cancelled))
+
+        def ownership_callback(evidence: _SourcePlaneOwnershipRawEvidence) -> None:
+            spool_path = evidence.spool.path
+            if not spool_path.is_file():
+                raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: ownership spool is absent")
+            connection = sqlite3.connect(spool_path)
+            try:
+                connection.execute("PRAGMA query_only=OFF")
+                connection.execute("BEGIN")
+                _ownership_callback_body(evidence, connection)
+            except BaseException:
+                try:
+                    connection.rollback()
+                except sqlite3.Error:
+                    pass
+                raise
+            finally:
+                try:
+                    connection.close()
+                except sqlite3.Error:
+                    pass
 
         raw_spatial_manifest, raw_spatial_generated = (
             compile_raw_spatial_contact_asset(
@@ -9094,6 +9422,9 @@ def import_spd_scenario(
                 source_plane_ownership_callback=ownership_callback if ownership_requested else None,
             )
         )
+        if ownership_requested and isinstance(ownership_request, dict):
+            ownership_request.pop("raw_selection", None)
+            del raw_node_keys, raw_via_keys, raw_pad_keys, boundary_node_keys, boundary_via_keys, boundary_pad_keys, expected_via_keys, selected_surface_keys
         staged_project, staged_attachments = _merge_raw_spatial_contact_asset(
             base_project,
             scenario_attachments,

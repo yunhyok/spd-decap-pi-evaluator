@@ -34,6 +34,118 @@ from spd_decap_pi.surface_certificate_asset import (
 from test_surface_certificate_asset import _full_v4_roundtrip_fixture
 
 
+def _ownership_sink_for_test(monkeypatch, cap=8):
+    monkeypatch.setattr(compiler, "MAX_SOURCE_PLANE_OWNERSHIP_SELECTION_ROWS", cap)
+    connection = sqlite3.connect(":memory:")
+    connection.executescript(compiler._SPOOL_SQL)
+    return connection, compiler._OwnershipSink(connection, 2, lambda: False)
+
+
+def test_ownership_selection_duplicate_is_sql_unique_failure(monkeypatch):
+    connection, sink = _ownership_sink_for_test(monkeypatch)
+    try:
+        with pytest.raises(compiler.RawSpatialCompilerError):
+            sink.ingest_selection({
+                "surface_keys": [], "node_keys": [("VDD", "N1"), ("vdd", "n1")],
+                "via_keys": [], "pad_keys": [], "layer_keys": [], "material_keys": [],
+            })
+    finally:
+        connection.close()
+
+
+def test_ownership_selection_cap_exact_pass_plus_one_fails(monkeypatch):
+    connection, sink = _ownership_sink_for_test(monkeypatch, cap=2)
+    sink.ingest_selection({
+        "surface_keys": [], "node_keys": [("VDD", "N1")], "via_keys": [],
+        "pad_keys": [], "layer_keys": [("L1",)], "material_keys": [],
+    })
+    assert sink.selected_count() == 2
+    connection.close()
+    connection, sink = _ownership_sink_for_test(monkeypatch, cap=2)
+    with pytest.raises(compiler.RawSpatialCompilerError):
+        sink.ingest_selection({
+            "surface_keys": [], "node_keys": [("VDD", "N1"), ("VSS", "N2"), ("VIO", "N3")],
+            "via_keys": [], "pad_keys": [], "layer_keys": [], "material_keys": [],
+        })
+    connection.close()
+
+
+def test_ownership_source_staging_keeps_original_spelling_and_canonical_lookup(monkeypatch):
+    connection, sink = _ownership_sink_for_test(monkeypatch)
+    sink.stage_source(record_id="node:N1:VDD", kind="Node", source_offset=4,
+                      source_end=12, source_record_sha="a" * 64, logical_net="VDD",
+                      node_id="N1", lookup=("VDD", "N1"))
+    sink._source.flush()
+    row = connection.execute(
+        "SELECT record_id,logical_net,lookup_a,lookup_b FROM ownership_source_stage"
+    ).fetchone()
+    assert row == ("node:N1:VDD", "VDD", "vdd", "n1")
+    connection.close()
+
+
+def test_ownership_evidence_is_callback_scoped_spool_only():
+    names = {field.name for field in compiler._SourcePlaneOwnershipRawEvidence.__dataclass_fields__.values()}
+    assert names == {"raw_manifest", "raw_generated", "spool"}
+
+
+def test_ownership_expanded_selection_116791_and_global_cap(monkeypatch):
+    monkeypatch.setattr(compiler, "MAX_SOURCE_PLANE_OWNERSHIP_SELECTION_ROWS", 150_000)
+    connection = sqlite3.connect(":memory:")
+    try:
+        connection.executescript(compiler._SPOOL_SQL)
+        sink = compiler._OwnershipSink(connection, 1024, lambda: False)
+        node_count, via_count = 77_852, 38_926
+        raw_selection = {
+            "surface_keys": ((f"SURFACE{i}", "L1") for i in range(3)),
+            "node_keys": (),
+            "via_keys": (("N", f"Via{i}") for i in range(via_count)),
+            "pad_keys": ((f"PS{i}", "L1") for i in range(4)),
+            "layer_keys": ((f"L{i}",) for i in range(3)),
+            "material_keys": ((f"M{i}",) for i in range(3)),
+        }
+        sink.ingest_selection(raw_selection)
+        assert sink.selected_count() == 38_939
+        connection.executemany(
+            "INSERT INTO vias (ordinal,via_id,via_fold,net_name,net_fold,start_node_id,start_node_fold,end_node_id,end_node_fold,padstack_id,padstack_fold,rotation,source_sha) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            ((i, f"Via{i}", f"via{i}", "N", "n", f"Node{(2 * i) % node_count}", f"node{(2 * i) % node_count}", f"Node{(2 * i + 1) % node_count}", f"node{(2 * i + 1) % node_count}", "PS", "ps", 0, "a" * 64) for i in range(via_count)),
+        )
+        sink.derive_via_endpoint_selection()
+        assert sink.selected_count() == 116_791
+    finally:
+        connection.close()
+
+    monkeypatch.setattr(compiler, "MAX_SOURCE_PLANE_OWNERSHIP_SELECTION_ROWS", 2)
+    connection = sqlite3.connect(":memory:")
+    try:
+        connection.executescript(compiler._SPOOL_SQL)
+        sink = compiler._OwnershipSink(connection, 1024, lambda: False)
+        sink.ingest_selection({
+            "surface_keys": (), "node_keys": (), "via_keys": (("N", "Via0"),),
+            "pad_keys": (), "layer_keys": (), "material_keys": (),
+        })
+        connection.execute(
+            "INSERT INTO vias (ordinal,via_id,via_fold,net_name,net_fold,start_node_id,start_node_fold,end_node_id,end_node_fold,padstack_id,padstack_fold,rotation,source_sha) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (0, "Via0", "via0", "N", "n", "Node0", "node0", "Node1", "node1", "PS", "ps", 0, "a" * 64),
+        )
+        with pytest.raises(compiler.RawSpatialCompilerError):
+            sink.derive_via_endpoint_selection()
+    finally:
+        connection.close()
+
+    monkeypatch.setattr(compiler, "MAX_SOURCE_PLANE_OWNERSHIP_SELECTION_ROWS", 150_000)
+    connection = sqlite3.connect(":memory:")
+    try:
+        connection.executescript(compiler._SPOOL_SQL)
+        sink = compiler._OwnershipSink(connection, 1024, lambda: False)
+        with pytest.raises(compiler.RawSpatialCompilerError):
+            sink.ingest_selection({
+                "surface_keys": (), "node_keys": (("N", f"Node{i}") for i in range(150_001)),
+                "via_keys": (), "pad_keys": (), "layer_keys": (), "material_keys": (),
+            })
+    finally:
+        connection.close()
+
+
 def _raw_source(newline: bytes = b"\n") -> bytes:
     lines = (
         b".Shape L1PkgShape",

@@ -54,7 +54,10 @@ from .surface_certificate_asset import (
     SurfaceCertificateAssetError,
     validate_project_topology_storage_envelope,
 )
-from .source_plane_ownership_ir import MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS
+from .source_plane_ownership_ir import (
+    _SourcePlaneOwnershipSpool,
+    _create_source_plane_ownership_v2_tables,
+)
 
 if TYPE_CHECKING:
     from ._core.domain import ProjectSpec
@@ -145,37 +148,7 @@ _SHAPE_PRIMITIVE_RE = re.compile(
 _SHAPE_CONTINUATION_KINDS: Final = frozenset({b"Polygon", b"PolygonTrace"})
 
 
-def _ownership_selection(value: Mapping[str, Any] | None) -> dict[str, set[tuple[Any, ...]]] | None:
-    if value is None:
-        return None
-    if not isinstance(value, Mapping) or set(value) != {"surface_keys", "node_keys", "via_keys", "pad_keys", "layer_keys", "material_keys"}:
-        _fail("RAW_SPATIAL_OWNERSHIP_SELECTION_INVALID", "raw_selection keys differ")
-    result: dict[str, set[tuple[Any, ...]]] = {}
-    widths = {"surface_keys": 2, "node_keys": 2, "via_keys": 2, "pad_keys": 2, "layer_keys": 1, "material_keys": 1}
-    for name, width in widths.items():
-        rows = value[name]
-        if not isinstance(rows, (set, frozenset, list, tuple)):
-            _fail("RAW_SPATIAL_OWNERSHIP_SELECTION_INVALID", f"{name} is not a bounded key sequence")
-        keys: set[tuple[Any, ...]] = set()
-        for item in rows:
-            if width == 1 and isinstance(item, str):
-                item = (item,)
-            if not isinstance(item, (tuple, list)) or len(item) != width:
-                _fail("RAW_SPATIAL_OWNERSHIP_SELECTION_INVALID", f"{name} key width differs")
-            key = tuple(str(part).strip().casefold() for part in item)
-            if any(not part for part in key) or key in keys:
-                _fail("RAW_SPATIAL_OWNERSHIP_SELECTION_INVALID", f"{name} contains duplicate/empty key")
-            keys.add(key)
-        result[name] = keys
-    if sum(len(keys) for keys in result.values()) > MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS:
-        _fail("RAW_SPATIAL_BOUND_EXCEEDED", "ownership selection exceeds its row bound")
-    return result
-
-
-def _ownership_record_append(records: list[Mapping[str, Any]], row: Mapping[str, Any]) -> None:
-    if len(records) >= MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS:
-        _fail("RAW_SPATIAL_BOUND_EXCEEDED", "ownership source-record bound exceeded")
-    records.append(dict(row))
+MAX_SOURCE_PLANE_OWNERSHIP_SELECTION_ROWS: Final = 150_000
 
 
 class RawSpatialCompilerError(ValueError):
@@ -195,10 +168,9 @@ def _fail(code: str, message: str, *, offset: int | None = None) -> None:
 class _SourcePlaneOwnershipRawEvidence:
     """Bounded hand-off from the raw pass to the ownership IR producer."""
 
-    request: Mapping[str, Any]
     raw_manifest: Mapping[str, Any]
     raw_generated: tuple[str, bytes]
-    context: Mapping[str, Any]
+    spool: _SourcePlaneOwnershipSpool
 
 
 @dataclass(frozen=True, slots=True)
@@ -981,8 +953,7 @@ def _parse_layers(
     end: int,
     analysis: Any,
     cancelled: Callable[[], bool],
-    ownership_records: list[Mapping[str, Any]] | None = None,
-    selected_layer_keys: set[str] | None = None,
+    ownership_sink: _OwnershipSink | None = None,
 ) -> tuple[list[RawSpatialLayerRow], dict[str, str]]:
     analysis_layers = tuple(getattr(analysis, "stackup_layers", ()))
     expected: list[str] = []
@@ -1030,8 +1001,10 @@ def _parse_layers(
                 sha256(bytes(exact)).hexdigest(),
             )
         )
-        if ownership_records is not None and (selected_layer_keys is None or layer.casefold() in selected_layer_keys):
-            _ownership_record_append(ownership_records, {"record_id": f"layer:{layer}", "kind": "Layer", "logical_net": None, "layer": layer, "lookup_key": (layer.casefold(),), "source_offset": _offset, "source_end": _offset + len(exact), "source_record_sha256": sha256(bytes(exact)).hexdigest(), "raw_ordinal": len(rows) - 1})
+        if ownership_sink is not None and ownership_sink.selected("Layer", layer):
+            ownership_sink.stage_source(record_id=f"layer:{layer}", kind="Layer", logical_net=None,
+                layer=layer, lookup=(layer,), source_offset=_offset, source_end=_offset + len(exact),
+                source_record_sha=sha256(bytes(exact)).hexdigest(), raw_ordinal=len(rows) - 1)
         pending = None
 
     with path.open("rb") as handle:
@@ -1187,8 +1160,7 @@ def _parse_padstacks(
     analysis: Any,
     layer_by_fold: Mapping[str, str],
     cancelled: Callable[[], bool],
-    ownership_records: list[Mapping[str, Any]] | None = None,
-    selected_pad_keys: set[tuple[Any, ...]] | None = None,
+    ownership_sink: _OwnershipSink | None = None,
 ) -> tuple[
     list[RawSpatialPadstackRow], list[RawSpatialPadShapeRow], dict[str, str], set[tuple[str, str]]
 ]:
@@ -1261,27 +1233,14 @@ def _parse_padstacks(
         else:
             shape_ordinal = None
             digest = None
-        if ownership_records is not None and (selected_pad_keys is None or key in selected_pad_keys):
+        if ownership_sink is not None and ownership_sink.selected("Pad", *key):
             regular_id = f"regular:{padstack}:{layer}:{regular_offset}"
-            if any(item.get("record_id") == regular_id for item in ownership_records):
-                _fail("RAW_SPATIAL_OWNERSHIP_EVIDENCE_COLLISION", "duplicate Regular source record")
             regular_bytes = bytes(exact_regular)
-            _ownership_record_append(ownership_records, {
-                "record_id": regular_id,
-                "kind": "Regular",
-                "logical_net": None,
-                "layer": layer,
-                "lookup_key": (padstack.casefold(), layer.casefold()),
-                "source_offset": regular_offset,
-                "source_end": regular_offset + len(regular_bytes),
-                "source_record_sha256": sha256(regular_bytes).hexdigest(),
-                "padstack_id": padstack,
-                "paddef_record_id": paddef_id,
-                "pad_shape_ordinal": shape_ordinal,
-                "pad_shape_sha256": (shapes[-1].source_record_sha256 if shape_ordinal is not None else None),
-                "raw_shape_ordinal": shape_ordinal,
-                "raw_shape_sha256": (shapes[-1].source_record_sha256 if shape_ordinal is not None else None),
-            })
+            ownership_sink.stage_source(record_id=regular_id, kind="Regular", layer=layer,
+                lookup=key, source_offset=regular_offset, source_end=regular_offset + len(regular_bytes),
+                source_record_sha=sha256(regular_bytes).hexdigest(), padstack_id=padstack,
+                paddef_record_id=paddef_id, pad_shape_ordinal=shape_ordinal,
+                pad_shape_sha=(shapes[-1].source_record_sha256 if shape_ordinal is not None else None))
         regular = None
 
     def finish_padstack(*, offset: int) -> None:
@@ -1473,8 +1432,10 @@ def _parse_padstacks(
                 current_core_layers.append(raw_layer)
                 active_paddef = raw
                 active_paddef_id = f"paddef:{current_name}:{raw_layer}:{offset}"
-                if ownership_records is not None and (selected_pad_keys is None or (current_name.casefold(), raw_layer.casefold()) in selected_pad_keys):
-                    _ownership_record_append(ownership_records, {"record_id": active_paddef_id, "kind": "PadDef", "logical_net": None, "layer": raw_layer, "lookup_key": (current_name.casefold(), raw_layer.casefold()), "source_offset": offset, "source_end": offset + len(raw), "source_record_sha256": sha256(raw).hexdigest(), "padstack_id": current_name})
+                if ownership_sink is not None and ownership_sink.selected("Pad", current_name, raw_layer):
+                    ownership_sink.stage_source(record_id=active_paddef_id, kind="PadDef", layer=raw_layer,
+                        lookup=(current_name, raw_layer), source_offset=offset, source_end=offset + len(raw),
+                        source_record_sha=sha256(raw).hexdigest(), padstack_id=current_name)
                 continue
             regular_match = _REGULAR_RE.fullmatch(stripped)
             if regular_match is None:
@@ -2085,8 +2046,7 @@ def _surface_source_hashes(
     surface_keys: set[tuple[str, str]],
     analysis_geometry: Mapping[tuple[str, str], Any],
     cancelled: Callable[[], bool],
-    ownership_records: list[Mapping[str, Any]] | None = None,
-    selected_surface_keys: set[tuple[Any, ...]] | None = None,
+    ownership_sink: _OwnershipSink | None = None,
 ) -> tuple[
     dict[tuple[str, str], str],
     dict[tuple[str, str], tuple[Fraction, Fraction, Fraction, Fraction]],
@@ -2180,10 +2140,13 @@ def _surface_source_hashes(
                 record,
                 offset=offset,
             )
-            if ownership_records is not None and (selected_surface_keys is None or key in selected_surface_keys):
+            if ownership_sink is not None and ownership_sink.selected("Surface", *key):
                 local_ordinal = counts[key]
                 shape_hash = sha256(record).hexdigest()
-                _ownership_record_append(ownership_records, {"record_id": f"shape:{net}:{active_layer}:{local_ordinal}:{shape_hash}", "kind": "Shape", "logical_net": net, "layer": active_layer, "lookup_key": (net.casefold(), active_layer.casefold(), local_ordinal), "source_offset": offset, "source_end": offset + len(record), "source_record_sha256": shape_hash, "surface_key": key, "local_ordinal": local_ordinal, "shape_kind": primitive.group("kind").decode("ascii")})
+                ownership_sink.stage_source(record_id=f"shape:{net}:{active_layer}:{local_ordinal}:{shape_hash}", kind="Shape",
+                    logical_net=net, layer=active_layer, lookup=(net, active_layer, str(local_ordinal)),
+                    source_offset=offset, source_end=offset + len(record), source_record_sha=shape_hash,
+                    local_ordinal=local_ordinal, shape_kind=primitive.group("kind").decode("ascii"))
             counts[key] += 1
     missing = [key for key, count in counts.items() if count == 0]
     if missing:
@@ -2515,8 +2478,7 @@ def _parse_surfaces(
     attachments: Mapping[str, bytes],
     layer_by_fold: Mapping[str, str],
     cancelled: Callable[[], bool],
-    ownership_records: list[Mapping[str, Any]] | None = None,
-    selected_surface_keys: set[tuple[Any, ...]] | None = None,
+    ownership_sink: _OwnershipSink | None = None,
 ) -> tuple[list[RawSpatialSurfaceRow], set[tuple[str, str]]]:
     spd_import = _project_spd_import(project)
     raw_records = spd_import.get("plane_geometries")
@@ -2659,8 +2621,7 @@ def _parse_surfaces(
     if analysis_keys != keys:
         _fail("RAW_SPATIAL_ANALYSIS_SURFACE_MISMATCH", "surface inventory differs from SpdAnalysis")
     source_hashes, exact_source_bounds = _surface_source_hashes(
-        path, shape_end, keys, analysis_geometry, cancelled, ownership_records,
-        selected_surface_keys,
+        path, shape_end, keys, analysis_geometry, cancelled, ownership_sink,
     )
     for item in parsed:
         geometry = analysis_geometry[item["key"]]
@@ -2742,7 +2703,7 @@ CREATE TABLE nodes (
  explicit_net TEXT, explicit_net_fold TEXT, x_pm INTEGER NOT NULL, y_pm INTEGER NOT NULL,
  layer_id TEXT NOT NULL, layer_fold TEXT NOT NULL, padstack_id TEXT,
  rotation INTEGER, source_sha TEXT NOT NULL, resolved_net TEXT, resolved_net_fold TEXT,
- net_status TEXT,
+ net_status TEXT, source_offset INTEGER NOT NULL DEFAULT 0, source_end INTEGER NOT NULL DEFAULT 0,
  UNIQUE(node_fold)
 );
 CREATE TABLE incidence (
@@ -2762,9 +2723,40 @@ CREATE TABLE vias (
  net_name TEXT NOT NULL, net_fold TEXT NOT NULL, start_node_id TEXT NOT NULL,
  start_node_fold TEXT NOT NULL, end_node_id TEXT NOT NULL, end_node_fold TEXT NOT NULL,
  padstack_id TEXT NOT NULL, padstack_fold TEXT NOT NULL, rotation INTEGER NOT NULL,
- source_sha TEXT NOT NULL, status TEXT,
+ source_sha TEXT NOT NULL, status TEXT, source_offset INTEGER NOT NULL DEFAULT 0, source_end INTEGER NOT NULL DEFAULT 0,
  UNIQUE(via_fold)
 );
+CREATE TABLE ownership_selection (
+ kind TEXT NOT NULL, key_a TEXT NOT NULL, key_b TEXT NOT NULL DEFAULT '',
+ PRIMARY KEY(kind,key_a,key_b)
+) WITHOUT ROWID;
+CREATE TABLE ownership_source_stage (
+ record_id TEXT NOT NULL, record_fold TEXT NOT NULL DEFAULT '', kind TEXT NOT NULL, source_offset INTEGER NOT NULL,
+ source_end INTEGER NOT NULL, source_record_sha256 TEXT NOT NULL,
+ logical_net TEXT, layer TEXT, node_id TEXT, via_id TEXT, net_name TEXT,
+ start_node_id TEXT, end_node_id TEXT, padstack_id TEXT, rotation INTEGER,
+ x_pm INTEGER, y_pm INTEGER, raw_ordinal INTEGER, local_ordinal INTEGER,
+ shape_kind TEXT, paddef_record_id TEXT, pad_shape_ordinal INTEGER,
+ pad_shape_sha TEXT, lookup_a TEXT NOT NULL, lookup_b TEXT NOT NULL DEFAULT '',
+ lookup_c TEXT NOT NULL DEFAULT '', PRIMARY KEY(record_id), UNIQUE(record_fold),
+ UNIQUE(kind,lookup_a,lookup_b,lookup_c)
+) WITHOUT ROWID;
+CREATE TABLE ownership_surface_stage (
+ ordinal INTEGER PRIMARY KEY, surface_id TEXT NOT NULL, artwork_net TEXT NOT NULL,
+ layer TEXT NOT NULL, geometry_asset_name TEXT NOT NULL, geometry_asset_sha TEXT NOT NULL,
+ island_manifest_sha TEXT NOT NULL, source_lineage_sha TEXT NOT NULL, component_count INTEGER NOT NULL
+) WITHOUT ROWID;
+CREATE TABLE ownership_primitive_stage (
+ primitive_id TEXT PRIMARY KEY, surface_id TEXT NOT NULL, local_ordinal INTEGER NOT NULL,
+ raw_primitive_ordinal INTEGER NOT NULL, polarity TEXT NOT NULL, kind TEXT NOT NULL,
+ effect_status TEXT NOT NULL, source_record_id TEXT NOT NULL, source_asset_name TEXT NOT NULL,
+ source_asset_sha TEXT NOT NULL, primitive_sha TEXT NOT NULL
+) WITHOUT ROWID;
+CREATE TABLE ownership_pad_shape_stage (
+ ordinal INTEGER PRIMARY KEY, padstack_id TEXT NOT NULL, layer TEXT NOT NULL,
+ paddef_source_record_id TEXT NOT NULL, regular_source_record_id TEXT NOT NULL,
+ raw_pad_shape_ordinal INTEGER, raw_pad_shape_sha TEXT
+) WITHOUT ROWID;
 """
 
 
@@ -2822,6 +2814,184 @@ def _configure_spool(
     connection.set_progress_handler(lambda: 1 if cancelled() else 0, 10_000)
 
 
+class _OwnershipSink:
+    """SQLite-only ownership handoff; no input-sized Python ownership graph."""
+
+    def __init__(self, connection: sqlite3.Connection, batch_rows: int, cancelled: Callable[[], bool]) -> None:
+        self.connection = connection
+        self.cancelled = cancelled
+        self._source = _Batch(
+            connection,
+            "INSERT INTO ownership_source_stage VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            batch_rows,
+            cancelled,
+            "RAW_SPATIAL_OWNERSHIP_EVIDENCE_COLLISION",
+        )
+        self._selection_rows = 0
+
+    def ingest_selection(self, raw_selection: Mapping[str, Any]) -> None:
+        if not isinstance(raw_selection, Mapping) or set(raw_selection) != {
+            "surface_keys", "node_keys", "via_keys", "pad_keys", "layer_keys", "material_keys"
+        }:
+            _fail("RAW_SPATIAL_OWNERSHIP_SELECTION_INVALID", "raw_selection keys differ")
+        widths = {"surface_keys": 2, "node_keys": 2, "via_keys": 2, "pad_keys": 2, "layer_keys": 1, "material_keys": 1}
+        for kind, width in widths.items():
+            rows = raw_selection[kind]
+            if isinstance(rows, (str, bytes, Mapping)):
+                _fail("RAW_SPATIAL_OWNERSHIP_SELECTION_INVALID", f"{kind} is not an iterable")
+            try:
+                iterator = iter(rows)
+            except TypeError:
+                _fail("RAW_SPATIAL_OWNERSHIP_SELECTION_INVALID", f"{kind} is not an iterable")
+            for item in iterator:
+                if width == 1 and isinstance(item, str):
+                    item = (item,)
+                if not isinstance(item, (tuple, list)) or len(item) != width:
+                    _fail("RAW_SPATIAL_OWNERSHIP_SELECTION_INVALID", f"{kind} key width differs")
+                values = tuple(str(part).strip().casefold() for part in item)
+                if any(not value for value in values):
+                    _fail("RAW_SPATIAL_OWNERSHIP_SELECTION_INVALID", f"{kind} contains empty key")
+                self._selection_rows += 1
+                if self._selection_rows > MAX_SOURCE_PLANE_OWNERSHIP_SELECTION_ROWS:
+                    _fail("RAW_SPATIAL_BOUND_EXCEEDED", "ownership selection exceeds its row bound")
+                try:
+                    self.connection.execute(
+                        "INSERT INTO ownership_selection(kind,key_a,key_b) VALUES (?,?,?)",
+                        (kind[:-5].title() if kind.endswith("_keys") else kind, values[0], values[1] if width == 2 else ""),
+                    )
+                except sqlite3.IntegrityError as exc:
+                    _fail("RAW_SPATIAL_OWNERSHIP_SELECTION_DUPLICATE", f"duplicate ownership selection: {exc}")
+
+    def selected(self, kind: str, key_a: str, key_b: str = "") -> bool:
+        return self.connection.execute(
+            "SELECT 1 FROM ownership_selection WHERE kind=? AND key_a=? AND key_b=?",
+            (kind, key_a.casefold(), key_b.casefold()),
+        ).fetchone() is not None
+
+    def _insert(self, sql: str, params: tuple[Any, ...], code: str) -> None:
+        try:
+            self.connection.execute(sql, params)
+        except sqlite3.IntegrityError as exc:
+            _fail(code, f"ownership staging identity is duplicated: {exc}")
+
+    def stage_source(self, *, record_id: str, kind: str, source_offset: int, source_end: int,
+                     source_record_sha: str, logical_net: str | None = None, layer: str | None = None,
+                     node_id: str | None = None, via_id: str | None = None, net_name: str | None = None,
+                     start_node_id: str | None = None, end_node_id: str | None = None,
+                     padstack_id: str | None = None, rotation: int | None = None,
+                     x_pm: int | None = None, y_pm: int | None = None, raw_ordinal: int | None = None,
+                     local_ordinal: int | None = None, shape_kind: str | None = None,
+                     paddef_record_id: str | None = None, pad_shape_ordinal: int | None = None,
+                     pad_shape_sha: str | None = None, lookup: tuple[str, ...] = ()) -> None:
+        lookup_values = tuple(value.casefold() for value in lookup) + ("", "", "")
+        self._source.add((record_id, record_id.casefold(), kind, source_offset, source_end, source_record_sha,
+                          logical_net, layer, node_id, via_id, net_name, start_node_id,
+                          end_node_id, padstack_id, rotation, x_pm, y_pm, raw_ordinal,
+                          local_ordinal, shape_kind, paddef_record_id, pad_shape_ordinal,
+                          pad_shape_sha, lookup_values[0], lookup_values[1], lookup_values[2]))
+        if kind == "Regular" and paddef_record_id is not None:
+            self._insert(
+                "INSERT INTO ownership_pad_shape_stage VALUES ((SELECT COALESCE(MAX(ordinal),-1)+1 FROM ownership_pad_shape_stage),?,?,?,?,?,?)",
+                (padstack_id or "", layer or "", paddef_record_id, record_id, pad_shape_ordinal, pad_shape_sha),
+                "RAW_SPATIAL_OWNERSHIP_EVIDENCE_COLLISION",
+            )
+
+    def derive_via_endpoint_selection(self) -> None:
+        self._source.flush()
+        self.connection.execute(
+            "INSERT OR IGNORE INTO ownership_selection(kind,key_a,key_b) "
+            "SELECT 'Node', v.net_fold, v.start_node_fold FROM vias v "
+            "JOIN ownership_selection s ON s.kind='Via' AND s.key_a=v.net_fold AND s.key_b=v.via_fold "
+            "UNION SELECT 'Node', v.net_fold, v.end_node_fold FROM vias v "
+            "JOIN ownership_selection s ON s.kind='Via' AND s.key_a=v.net_fold AND s.key_b=v.via_fold"
+        )
+        count = int(self.connection.execute("SELECT COUNT(*) FROM ownership_selection").fetchone()[0])
+        if count > MAX_SOURCE_PLANE_OWNERSHIP_SELECTION_ROWS:
+            _fail("RAW_SPATIAL_BOUND_EXCEEDED", "expanded ownership selection exceeds its row bound")
+
+    def finalize_contact_sources(self) -> None:
+        self._source.flush()
+        for row in self.connection.execute(
+            "SELECT n.node_id,n.resolved_net,n.layer_id,n.source_offset,n.source_end,n.source_sha,n.padstack_id,n.rotation,n.x_pm,n.y_pm,n.ordinal,n.resolved_net_fold,n.node_fold "
+            "FROM nodes n JOIN ownership_selection s ON s.kind='Node' AND s.key_a=n.resolved_net_fold AND s.key_b=n.node_fold"
+        ):
+            node_id, net, layer, source_offset, source_end, source_sha, padstack, rotation, x_pm, y_pm, ordinal, net_fold, node_fold = row
+            self.stage_source(record_id=f"node:{node_id}:{net}", kind="Node", source_offset=source_offset,
+                source_end=source_end, source_record_sha=source_sha, logical_net=net, layer=layer,
+                node_id=node_id, net_name=net, padstack_id=padstack, rotation=rotation, x_pm=x_pm,
+                y_pm=y_pm, raw_ordinal=ordinal, lookup=(net_fold, node_fold))
+        self._source.flush()
+
+    def stage_material_draft(self, draft: Any) -> None:
+        if not isinstance(draft, Mapping):
+            return
+        for item in draft.get("source_records", ()):
+            if not isinstance(item, Mapping) or item.get("kind") != "Material":
+                continue
+            name = str(item.get("name", "")).strip()
+            if name and self.selected("Material", name):
+                self.stage_source(
+                    record_id=str(item.get("record_id", f"material:{name}")), kind="Material",
+                    source_offset=int(item.get("source_offset", 0)), source_end=int(item.get("source_end", 0)),
+                    source_record_sha=str(item.get("source_record_sha256", "")), logical_net=None,
+                    lookup=(name,)
+                )
+    def selected_count(self) -> int:
+        return int(self.connection.execute("SELECT COUNT(*) FROM ownership_selection").fetchone()[0])
+
+    def stage_surfaces(self, rows: Sequence[RawSpatialSurfaceRow], project: Any) -> None:
+        geometry = {
+            (str(item.get("net", "")).casefold(), str(item.get("layer", "")).casefold()): item
+            for item in _project_spd_import(project).get("plane_geometries", ())
+            if isinstance(item, Mapping)
+        }
+        for ordinal, row in enumerate(rows):
+            if not self.selected("Surface", row.net_name, row.layer_id):
+                continue
+            source = geometry.get((row.net_name.casefold(), row.layer_id.casefold()), {})
+            self._insert(
+                "INSERT INTO ownership_surface_stage VALUES (?,?,?,?,?,?,?,?,?)",
+                (ordinal, row.surface_id, row.net_name, row.layer_id,
+                 str(source.get("asset", "")), str(source.get("asset_sha256", row.artwork_asset_sha256)),
+                 row.island_manifest_sha256, row.source_record_sha256, 0),
+                "RAW_SPATIAL_OWNERSHIP_EVIDENCE_COLLISION",
+            )
+
+    def stage_primitives(self, payload: Mapping[str, Any] | None) -> None:
+        if payload is None:
+            return
+        self._source.flush()
+        primitives = payload.get("plane_primitives") if isinstance(payload, Mapping) else None
+        if not isinstance(primitives, (list, tuple)):
+            _fail("RAW_SPATIAL_OWNERSHIP_EVIDENCE_INCOMPLETE", "plane primitive context is absent")
+        local: dict[tuple[str, str], int] = {}
+        for raw in primitives:
+            key = (str(raw.get("net_name", "")).casefold(), str(raw.get("layer_name", "")).casefold())
+            if not self.selected("Surface", *key):
+                continue
+            ordinal = local.get(key, 0)
+            local[key] = ordinal + 1
+            source = self.connection.execute(
+                "SELECT record_id,shape_kind FROM ownership_source_stage WHERE kind='Shape' AND lookup_a=? AND lookup_b=? AND lookup_c=?",
+                (key[0], key[1], str(ordinal)),
+            ).fetchone()
+            if source is None:
+                _fail("RAW_SPATIAL_OWNERSHIP_EVIDENCE_INCOMPLETE", "selected Shape source record is absent")
+            surface = next((item for item in self.connection.execute(
+                "SELECT surface_id,artwork_net,layer FROM ownership_surface_stage"
+            ) if item[1].casefold() == key[0] and item[2].casefold() == key[1]), None)
+            if surface is None:
+                _fail("RAW_SPATIAL_OWNERSHIP_EVIDENCE_INCOMPLETE", "selected surface context is absent")
+            self._insert(
+                "INSERT INTO ownership_primitive_stage VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                (f"{surface[0]}:p{ordinal}", surface[0], ordinal, int(raw.get("primitive_ordinal", ordinal)),
+                 str(raw.get("polarity", "")), source[1] or "Polygon", "retained", source[0],
+                 str(raw.get("source_asset_name", "")), str(raw.get("source_asset_sha256", "")),
+                 str(raw.get("primitive_sha256", ""))),
+                "RAW_SPATIAL_OWNERSHIP_EVIDENCE_COLLISION",
+            )
+
+
 def _parse_contacts(
     path: Path,
     spans: tuple[_SourceSpan, ...],
@@ -2830,27 +3000,12 @@ def _parse_contacts(
     padstack_by_fold: Mapping[str, str],
     batch_rows: int,
     cancelled: Callable[[], bool],
-    ownership_records: list[Mapping[str, Any]] | None = None,
-    selected_node_keys: set[tuple[Any, ...]] | None = None,
-    selected_via_keys: set[tuple[Any, ...]] | None = None,
+    ownership_sink: _OwnershipSink | None = None,
 ) -> tuple[int, int, int]:
     node_span, trace_span, via_span = spans
-    if selected_node_keys is not None and selected_via_keys:
-        # Ownership-only bounded pre-scan: selected Via endpoint Nodes are
-        # required even when the request did not enumerate both endpoints.
-        with path.open("rb") as handle:
-            for record in _frame_section(handle, via_span, b"Via"):
-                parsed_via = _parse_via(record, padstack_by_fold, layer_by_fold)
-                via_key = (str(parsed_via[3]).casefold(), str(parsed_via[1]).casefold())
-                if via_key in selected_via_keys:
-                    derived = {(str(parsed_via[3]).casefold(), str(parsed_via[5]).casefold()), (str(parsed_via[3]).casefold(), str(parsed_via[7]).casefold())}
-                    missing = derived - selected_node_keys
-                    if sum(len(value) for value in (selected_node_keys, selected_via_keys)) + len(missing) > MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS:
-                        _fail("RAW_SPATIAL_BOUND_EXCEEDED", "selected Via endpoint Node keys exceed ownership bound")
-                    selected_node_keys.update(missing)
     node_batch = _Batch(
         connection,
-        "INSERT INTO nodes VALUES (?,?,?,?,?,?,?,?,?,?,?,?,NULL,NULL,NULL)",
+        "INSERT INTO nodes (ordinal,node_id,node_fold,explicit_net,explicit_net_fold,x_pm,y_pm,layer_id,layer_fold,padstack_id,rotation,source_sha,source_offset,source_end) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         batch_rows,
         cancelled,
         "RAW_SPATIAL_NODE_DUPLICATE",
@@ -2860,12 +3015,7 @@ def _parse_contacts(
             if record.ordinal >= _MAX_ROWS:
                 _fail("RAW_SPATIAL_BOUND_EXCEEDED", "Node section exceeds its row bound")
             parsed_node = _parse_node(record, layer_by_fold, padstack_by_fold)
-            node_batch.add(parsed_node)
-            node_key = (str(parsed_node[3] or "").casefold(), str(parsed_node[1]).casefold())
-            selected_node = selected_node_keys is None or node_key in selected_node_keys or (parsed_node[3] is None and any(key[1] == node_key[1] for key in selected_node_keys))
-            if ownership_records is not None and selected_node:
-                node_id = f"node:{parsed_node[1]}:{parsed_node[3] or ''}"
-                _ownership_record_append(ownership_records, {"record_id": node_id, "source_record_id": node_id, "kind": "Node", "node_id": parsed_node[1], "logical_net": parsed_node[3], "resolved_net": parsed_node[3], "layer": parsed_node[7], "x_pm": parsed_node[5], "y_pm": parsed_node[6], "padstack": parsed_node[9], "rotation_microdegrees": parsed_node[10], "lookup_key": node_key, "source_offset": record.source_offset, "source_end": record.source_offset + len(record.exact_bytes), "source_record_sha256": parsed_node[11], "raw_ordinal": record.ordinal})
+            node_batch.add(parsed_node + (record.source_offset, record.source_offset + len(record.exact_bytes)))
     node_batch.flush()
 
     trace_batch = _Batch(
@@ -2966,7 +3116,7 @@ def _parse_contacts(
 
     via_batch = _Batch(
         connection,
-        "INSERT INTO vias VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,NULL)",
+        "INSERT INTO vias (ordinal,via_id,via_fold,net_name,net_fold,start_node_id,start_node_fold,end_node_id,end_node_fold,padstack_id,padstack_fold,rotation,source_sha,source_offset,source_end) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         batch_rows,
         cancelled,
         "RAW_SPATIAL_VIA_DUPLICATE",
@@ -2977,11 +3127,16 @@ def _parse_contacts(
             if record.ordinal >= _MAX_ROWS:
                 _fail("RAW_SPATIAL_BOUND_EXCEEDED", "Via section exceeds its row bound")
             parsed_via = _parse_via(record, padstack_by_fold, layer_by_fold)
-            via_batch.add(parsed_via)
+            via_batch.add(parsed_via + (record.source_offset, record.source_offset + len(record.exact_bytes)))
             via_key = (str(parsed_via[3]).casefold(), str(parsed_via[1]).casefold())
-            if ownership_records is not None and (selected_via_keys is None or via_key in selected_via_keys):
+            if ownership_sink is not None and ownership_sink.selected("Via", *via_key):
                 via_id = f"via:{parsed_via[1]}:{parsed_via[3]}"
-                _ownership_record_append(ownership_records, {"record_id": via_id, "source_record_id": via_id, "kind": "Via", "via_id": parsed_via[1], "net_name": parsed_via[3], "logical_net": parsed_via[3], "layer": None, "start_node_id": parsed_via[5], "end_node_id": parsed_via[7], "padstack": parsed_via[9], "rotation_microdegrees": parsed_via[11], "lookup_key": via_key, "source_offset": record.source_offset, "source_end": record.source_offset + len(record.exact_bytes), "source_record_sha256": parsed_via[12], "raw_ordinal": record.ordinal})
+                ownership_sink.stage_source(record_id=via_id, kind="Via", logical_net=parsed_via[3],
+                    net_name=parsed_via[3], via_id=parsed_via[1], start_node_id=parsed_via[5],
+                    end_node_id=parsed_via[7], padstack_id=parsed_via[9], rotation=parsed_via[11],
+                    lookup=via_key, source_offset=record.source_offset,
+                    source_end=record.source_offset + len(record.exact_bytes),
+                    source_record_sha=parsed_via[12], raw_ordinal=record.ordinal)
             net, net_fold = parsed_via[3], parsed_via[4]
             for node_id, node_fold in (
                 (parsed_via[5], parsed_via[6]),
@@ -2991,6 +3146,8 @@ def _parse_contacts(
             via_count += 1
     via_batch.flush()
     incidence_batch.flush()
+    if ownership_sink is not None:
+        ownership_sink.derive_via_endpoint_selection()
     node_count = connection.execute("SELECT COUNT(*) FROM nodes").fetchone()[0]
     if (
         node_count == 0
@@ -3225,44 +3382,51 @@ def _compile_snapshot(
     cancelled: Callable[[], bool],
     temp_dir: Path,
     plane_sheet_payload: Mapping[str, Any] | None = None,
-    ownership_context: dict[str, Any] | None = None,
-    ownership_selection: Mapping[str, set[tuple[Any, ...]]] | None = None,
+    ownership_request: Mapping[str, Any] | None = None,
 ) -> tuple[dict[str, Any], tuple[str, bytes]]:
     offsets = _index_markers(path, size, cancelled)
     spans = _section_spans(path, size, offsets, cancelled)
-    ownership_records: list[Mapping[str, Any]] | None = [] if ownership_context is not None else None
-    layer_rows, layer_by_fold = _parse_layers(
-        path, offsets[_LAYER_MARKER], offsets[_NODE_MARKER], analysis, cancelled,
-        ownership_records,
-        {str(item[0]).casefold() for item in (ownership_selection or {}).get("layer_keys", set())},
-    )
-    conductor_layer_order = {
+    spool_path = temp_dir / "raw-spatial-spool.sqlite"
+    connection = sqlite3.connect(spool_path)
+    def run_or_close(operation: Callable[[], Any]) -> Any:
+        try:
+            return operation()
+        except BaseException:
+            connection.close()
+            raise
+    run_or_close(lambda: (_configure_spool(connection, cancelled), connection.executescript("PRAGMA journal_mode=OFF; PRAGMA synchronous=OFF;" + _SPOOL_SQL)))
+    ownership_sink = run_or_close(lambda: _OwnershipSink(connection, batch_rows, cancelled) if ownership_request is not None else None)
+    if ownership_sink is not None:
+        run_or_close(lambda: ownership_sink.ingest_selection(ownership_request.get("raw_selection")))
+        run_or_close(lambda: _create_source_plane_ownership_v2_tables(connection))
+    layer_rows, layer_by_fold = run_or_close(lambda: _parse_layers(
+        path, offsets[_LAYER_MARKER], offsets[_NODE_MARKER], analysis, cancelled, ownership_sink,
+    ))
+    conductor_layer_order = run_or_close(lambda: {
         row.layer_id.casefold(): row.ordinal
         for row in layer_rows
         if row.is_conductor
-    }
-    pad_end = min(
+    })
+    pad_end = run_or_close(lambda: min(
         (
             offset
             for marker, offset in offsets.items()
             if marker in {_MATERIAL_MARKER, _CIRCUIT_MARKER} and offset > offsets[_PAD_MARKER]
         ),
         default=size,
-    )
-    padstack_rows, pad_shape_rows, padstack_by_fold, pad_shape_keys = _parse_padstacks(
-        path, offsets[_PAD_MARKER], pad_end, analysis, layer_by_fold, cancelled, ownership_records,
-        (ownership_selection or {}).get("pad_keys"),
-    )
-    surface_rows, surface_keys = _parse_surfaces(
-        path, offsets[_LAYER_MARKER], analysis, project, attachments, layer_by_fold, cancelled, ownership_records,
-        (ownership_selection or {}).get("surface_keys"),
-    )
-
-    spool_path = temp_dir / "raw-spatial-spool.sqlite"
-    connection = sqlite3.connect(spool_path)
+    ))
+    padstack_rows, pad_shape_rows, padstack_by_fold, pad_shape_keys = run_or_close(lambda: _parse_padstacks(
+        path, offsets[_PAD_MARKER], pad_end, analysis, layer_by_fold, cancelled, ownership_sink,
+    ))
+    surface_rows, surface_keys = run_or_close(lambda: _parse_surfaces(
+        path, offsets[_LAYER_MARKER], analysis, project, attachments, layer_by_fold, cancelled, ownership_sink,
+    ))
+    if ownership_sink is not None:
+        run_or_close(lambda: (
+            ownership_sink.stage_surfaces(surface_rows, project),
+            ownership_sink.stage_primitives(plane_sheet_payload),
+        ))
     try:
-        _configure_spool(connection, cancelled)
-        connection.executescript("PRAGMA journal_mode=OFF; PRAGMA synchronous=OFF;" + _SPOOL_SQL)
         node_count, trace_count, via_count = _parse_contacts(
             path,
             spans,
@@ -3271,12 +3435,8 @@ def _compile_snapshot(
             padstack_by_fold,
             batch_rows,
             cancelled,
-            ownership_records,
-            (ownership_selection or {}).get("node_keys"),
-            (ownership_selection or {}).get("via_keys"),
+            ownership_sink,
         )
-        if ownership_selection is not None and sum(len(values) for values in ownership_selection.values()) > MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS:
-            _fail("RAW_SPATIAL_BOUND_EXCEEDED", "expanded ownership selection exceeds its row bound")
         _resolve_contacts(
             connection,
             surface_keys,
@@ -3290,20 +3450,118 @@ def _compile_snapshot(
             batch_rows,
             cancelled,
         )
-        if ownership_records is not None:
-            for item in ownership_records:
-                if item.get("kind") != "Node" or item.get("logical_net") is not None:
-                    continue
-                node_fold = str(item.get("lookup_key", ("", ""))[1])
-                row = connection.execute("SELECT resolved_net FROM nodes WHERE node_fold=?", (node_fold,)).fetchone()
-                net = None if row is None else row[0]
-                if not isinstance(net, str) or not net:
-                    _fail("RAW_SPATIAL_OWNERSHIP_EVIDENCE_INCOMPLETE", "selected Node net cannot be resolved uniquely")
-                item["resolved_net"] = net
-                item["logical_net"] = net
-                item["lookup_key"] = (net.casefold(), node_fold)
-                item["record_id"] = f"node:{item.get('node_id', '')}:{net}"
-                item["source_record_id"] = item["record_id"]
+        if ownership_sink is not None:
+            ownership_sink.stage_material_draft(getattr(analysis, "source_plane_ownership_draft", None))
+            ownership_sink.finalize_contact_sources()
+            connection.execute(
+                "INSERT INTO source_records(ordinal,record_id,kind,source_offset,source_end,source_record_sha256,logical_net,layer) "
+                "SELECT ROW_NUMBER() OVER (ORDER BY source_offset,record_id COLLATE BINARY)-1,record_id,kind,source_offset,source_end,source_record_sha256,logical_net,layer "
+                "FROM ownership_source_stage ORDER BY source_offset,record_id COLLATE BINARY"
+            )
+            if plane_sheet_payload is not None:
+                sheet_rows, _ = _plane_sheet_rows(plane_sheet_payload)
+                draft = getattr(analysis, "source_plane_ownership_draft", None)
+                draft_stack = {
+                    str(row.get("layer_name", "")).casefold(): dict(row)
+                    for row in (draft.get("stackup_layers", ()) if isinstance(draft, Mapping) else ())
+                    if isinstance(row, Mapping)
+                }
+                draft_points = {
+                    (str(row.get("layer_name", "")).casefold(), int(row.get("point_ordinal", -1))): dict(row)
+                    for row in (draft.get("dielectric_points", ()) if isinstance(draft, Mapping) else ())
+                    if isinstance(row, Mapping)
+                }
+                selected_layers = {
+                    str(row[0]).casefold()
+                    for row in connection.execute(
+                        "SELECT key_a FROM ownership_selection WHERE kind='Layer'"
+                    )
+                }
+                actual_record_ids = {
+                    str(row[0]).casefold()
+                    for row in connection.execute("SELECT record_id FROM ownership_source_stage")
+                }
+
+                def canonical_row_hash(row: Mapping[str, Any]) -> str:
+                    encoded = json.dumps(
+                        dict(row), sort_keys=True, separators=(",", ":"), ensure_ascii=False
+                    ).encode("utf-8")
+                    return sha256(encoded).hexdigest()
+
+                stackup_columns = (
+                    "ordinal", "layer_name", "layer_kind", "raw_layer_ordinal",
+                    "raw_layer_sha256", "thickness_um", "thickness_origin",
+                    "thickness_source_record_id", "conductivity_s_per_m",
+                    "conductivity_origin", "conductivity_source_record_id",
+                    "material_name", "material_origin", "material_source_record_id",
+                )
+                stackup_ordinal = 0
+                for raw_row in sheet_rows.get("stackup_layers", ()):
+                    layer_key = str(raw_row.get("layer_name", "")).casefold()
+                    if layer_key not in selected_layers:
+                        continue
+                    base = draft_stack.get(layer_key)
+                    if base is None:
+                        _fail("RAW_SPATIAL_OWNERSHIP_EVIDENCE_INCOMPLETE", "stackup provenance is absent")
+                    merged = {
+                        **base,
+                        **dict(raw_row),
+                        "ordinal": stackup_ordinal,
+                        "raw_layer_ordinal": raw_row.get("layer_ordinal"),
+                        "raw_layer_sha256": canonical_row_hash(raw_row),
+                    }
+                    for field in (
+                        "thickness_source_record_id", "conductivity_source_record_id",
+                        "material_source_record_id",
+                    ):
+                        value = merged.get(field)
+                        if value is not None and (not isinstance(value, str) or value.casefold() not in actual_record_ids):
+                            _fail("RAW_SPATIAL_OWNERSHIP_EVIDENCE_INCOMPLETE", f"{field} source record is absent")
+                    connection.execute(
+                        f"INSERT INTO stackup_layers ({','.join(stackup_columns)}) VALUES ({','.join('?' for _ in stackup_columns)})",
+                        tuple(merged.get(column) for column in stackup_columns),
+                    )
+                    stackup_ordinal += 1
+
+                dielectric_columns = (
+                    "ordinal", "layer_name", "point_ordinal", "raw_dielectric_ordinal",
+                    "raw_dielectric_sha256", "frequency_hz", "frequency_origin",
+                    "frequency_source_record_id", "epsilon_r", "epsilon_origin",
+                    "epsilon_source_record_id", "loss_tangent", "loss_tangent_origin",
+                    "loss_tangent_source_record_id",
+                )
+                dielectric_ordinal = 0
+                raw_layer_names = {
+                    int(row.get("layer_ordinal", -1)): str(row.get("layer_name", "")).casefold()
+                    for row in sheet_rows.get("stackup_layers", ())
+                }
+                for global_point_index, raw_row in enumerate(sheet_rows.get("dielectric_points", ())):
+                    layer_key = raw_layer_names.get(int(raw_row.get("layer_ordinal", -1)), "")
+                    if layer_key not in selected_layers:
+                        continue
+                    point_key = (layer_key, int(raw_row.get("point_ordinal", -1)))
+                    base = draft_points.get(point_key)
+                    if base is None:
+                        _fail("RAW_SPATIAL_OWNERSHIP_EVIDENCE_INCOMPLETE", "dielectric provenance is absent")
+                    merged = {
+                        **base,
+                        **dict(raw_row),
+                        "ordinal": dielectric_ordinal,
+                        "raw_dielectric_ordinal": global_point_index,
+                        "raw_dielectric_sha256": canonical_row_hash(raw_row),
+                    }
+                    for field in (
+                        "frequency_source_record_id", "epsilon_source_record_id",
+                        "loss_tangent_source_record_id",
+                    ):
+                        value = merged.get(field)
+                        if value is not None and (not isinstance(value, str) or value.casefold() not in actual_record_ids):
+                            _fail("RAW_SPATIAL_OWNERSHIP_EVIDENCE_INCOMPLETE", f"{field} source record is absent")
+                    connection.execute(
+                        f"INSERT INTO dielectric_points ({','.join(dielectric_columns)}) VALUES ({','.join('?' for _ in dielectric_columns)})",
+                        tuple(merged.get(column) for column in dielectric_columns),
+                    )
+                    dielectric_ordinal += 1
         connection.commit()
         if spool_path.stat().st_size > _MAX_SPOOL_BYTES:
             _fail(
@@ -3411,168 +3669,34 @@ def _compile_snapshot(
             _fail("RAW_SPATIAL_SOURCE_MUTATED", "raw SPD bytes changed during asset build")
         if _source_state(original_path) != initial_state:
             _fail("RAW_SPATIAL_SOURCE_MUTATED", "raw SPD changed during final source hash")
-        if ownership_context is not None:
-            records: list[dict[str, Any]] = [dict(item) for item in (ownership_records or ())]
-            material_selection = (ownership_selection or {}).get("material_keys")
-            analysis_provenance = getattr(analysis, "source_plane_ownership_draft", None)
-            if isinstance(analysis_provenance, Mapping):
-                for item in analysis_provenance.get("source_records", ()):
-                    if isinstance(item, Mapping) and item.get("kind") == "Material":
-                        name = str(item.get("name", ""))
-                        if material_selection is None or (name.casefold(),) in material_selection:
-                            material_record = dict(item)
-                            material_record.setdefault("lookup_key", (name.casefold(),))
-                            _ownership_record_append(records, material_record)
-            if not records:
-                _fail("RAW_SPATIAL_OWNERSHIP_EVIDENCE_INCOMPLETE", "selected ownership source records are absent")
-            for item in records:
-                if item.get("kind") == "Node" and not item.get("resolved_net"):
-                    resolved = connection.execute("SELECT resolved_net FROM nodes WHERE node_fold=?", (str(item.get("node_id", "")).casefold(),)).fetchone()
-                    if resolved is not None and resolved[0]:
-                        item["resolved_net"] = resolved[0]
-                        item["logical_net"] = resolved[0]
-                        item["lookup_key"] = (str(resolved[0]).casefold(), str(item.get("node_id", "")).casefold())
-            seen_ids: set[str] = set()
-            lookup: dict[str, dict[tuple[Any, ...], str]] = {}
-            for item in records:
-                record_id = item.get("record_id")
-                if not isinstance(record_id, str) or not record_id or record_id.casefold() in seen_ids:
-                    _fail("RAW_SPATIAL_OWNERSHIP_EVIDENCE_COLLISION", "source record ids are duplicated")
-                seen_ids.add(record_id.casefold())
-                kind = str(item.get("kind", ""))
-                key = item.get("lookup_key")
-                if isinstance(key, tuple):
-                    bucket = lookup.setdefault(kind, {})
-                    if key in bucket:
-                        _fail("RAW_SPATIAL_OWNERSHIP_EVIDENCE_COLLISION", "source lookup keys are duplicated")
-                    bucket[key] = record_id
-            selection = ownership_selection or {}
-            required = {
-                "Layer": {key for key in selection.get("layer_keys", set())},
-                "Material": {key for key in selection.get("material_keys", set())},
-                "Node": {key for key in selection.get("node_keys", set())},
-                "Via": {key for key in selection.get("via_keys", set())},
-                "PadDef": {key for key in selection.get("pad_keys", set())},
-                "Regular": {key for key in selection.get("pad_keys", set())},
-            }
-            for kind, keys in required.items():
-                observed = set(lookup.get(kind, {}))
-                if not keys.issubset(observed):
-                    _fail("RAW_SPATIAL_OWNERSHIP_EVIDENCE_INCOMPLETE", f"selected {kind} source record is absent")
-            primitive_rows: list[dict[str, Any]] = []
-            context_total = len(records)
-            def context_append(target: list[dict[str, Any]], row: Mapping[str, Any]) -> None:
-                nonlocal context_total
-                if context_total >= MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS:
-                    _fail("RAW_SPATIAL_BOUND_EXCEEDED", "ownership context row bound exceeded")
-                target.append(dict(row)); context_total += 1
-            sheet_rows: Mapping[str, Any] | None = None
-            if plane_sheet_payload is not None:
-                sheet_rows, _ = _plane_sheet_rows(plane_sheet_payload)
-                surface_by_key = {(row.net_name.casefold(), row.layer_id.casefold()): row for row in surface_rows}
-                shape_lookup = {(str(item.get("logical_net", "")).casefold(), str(item.get("layer", "")).casefold(), int(item.get("local_ordinal", -1))): item for item in records if item.get("kind") == "Shape"}
-                local_by_surface: dict[tuple[str, str], int] = {}
-                for raw in sheet_rows["plane_primitives"]:
-                    key = (str(raw["net_name"]).casefold(), str(raw["layer_name"]).casefold())
-                    selected_surfaces = (ownership_selection or {}).get("surface_keys")
-                    if selected_surfaces is not None and key not in selected_surfaces:
-                        continue
-                    surface = surface_by_key.get(key)
-                    if surface is None:
-                        _fail("RAW_SPATIAL_OWNERSHIP_EVIDENCE_INCOMPLETE", "plane primitive surface is absent")
-                    local = local_by_surface.get(key, 0)
-                    local_by_surface[key] = local + 1
-                    shape_source = shape_lookup.get((key[0], key[1], local))
-                    if shape_source is None:
-                        _fail("RAW_SPATIAL_OWNERSHIP_EVIDENCE_INCOMPLETE", "plane-sheet primitive has no exact Shape source record")
-                    context_append(primitive_rows, {"primitive_id": f"{surface.surface_id}:p{local}", "surface_id": surface.surface_id, "local_ordinal": local, "raw_primitive_ordinal": raw["primitive_ordinal"], "polarity": raw["polarity"], "kind": shape_source.get("shape_kind", "Polygon"), "effect_status": "retained", "source_record_id": shape_source["record_id"], "source_record_sha256": shape_source["source_record_sha256"], "source_asset_name": raw["source_asset_name"], "source_asset_sha256": raw["source_asset_sha256"], "primitive_sha256": raw["primitive_sha256"]})
-            ownership_context["source_records"] = records
-            project_geometry = {
-                (str(item.get("net", "")).casefold(), str(item.get("layer", "")).casefold()): str(item.get("asset", ""))
-                for item in _project_spd_import(project).get("plane_geometries", ())
-                if isinstance(item, Mapping)
-            }
-            selected_surfaces = (ownership_selection or {}).get("surface_keys")
-            surface_context: list[dict[str, Any]] = []
-            for row in surface_rows:
-                if selected_surfaces is not None and (row.net_name.casefold(), row.layer_id.casefold()) not in selected_surfaces:
-                    continue
-                context_append(surface_context, {"ordinal": len(surface_context), "surface_id": row.surface_id, "artwork_net": row.net_name, "layer": row.layer_id, "geometry_asset_name": project_geometry.get((row.net_name.casefold(), row.layer_id.casefold()), ""), "geometry_asset_sha256": row.artwork_asset_sha256, "island_manifest_sha256": row.island_manifest_sha256, "source_record_sha256": row.source_record_sha256})
-            ownership_context["surfaces"] = surface_context
-            ownership_context["primitives"] = primitive_rows
-            nodes_context: list[dict[str, Any]] = []
-            vias_context: list[dict[str, Any]] = []
-            for item in records:
-                if item.get("kind") == "Node":
-                    enriched = dict(item)
-                    if not enriched.get("resolved_net"):
-                        resolved = connection.execute("SELECT resolved_net,net_status,layer_id,x_pm,y_pm,padstack_id,rotation,source_sha FROM nodes WHERE source_sha=?", (item.get("source_record_sha256"),)).fetchone()
-                        if resolved is not None:
-                            enriched.update({"resolved_net": resolved[0], "net_status": resolved[1], "layer": resolved[2], "x_pm": resolved[3], "y_pm": resolved[4], "padstack": resolved[5], "rotation_microdegrees": resolved[6], "source_sha256": resolved[7]})
-                            enriched["lookup_key"] = (str(resolved[0] or "").casefold(), str(item.get("node_id", "")).casefold())
-                    context_append(nodes_context, enriched)
-                elif item.get("kind") == "Via":
-                    enriched = dict(item)
-                    context_append(vias_context, enriched)
-            ownership_context["nodes"] = nodes_context
-            ownership_context["vias"] = vias_context
-            ownership_context["raw_selection"] = {
-                key: [list(value) if isinstance(value, tuple) else value for value in sorted(values)]
-                if isinstance(values, set) else values
-                for key, values in (ownership_selection or {}).items()
-            }
-            pad_shapes: list[dict[str, Any]] = []
-            for item in records:
-                if item.get("kind") != "Regular":
-                    continue
-                if item.get("pad_shape_ordinal") is None:
-                    _fail("RAW_SPATIAL_OWNERSHIP_EVIDENCE_INCOMPLETE", "selected pad shape is unsupported")
-                context_append(pad_shapes, {
-                    "padstack_id": item.get("padstack_id"),
-                    "layer_id": item.get("layer"),
-                    "paddef_source_record_id": item.get("paddef_record_id"),
-                    "regular_source_record_id": item.get("record_id"),
-                    "raw_pad_shape_ordinal": item.get("pad_shape_ordinal"),
-                    "raw_pad_shape_sha256": item.get("pad_shape_sha256"),
-                })
-            ownership_context["pad_shapes"] = pad_shapes
-            def canonical_row_hash(row: Mapping[str, Any]) -> str:
-                encoded = json.dumps(dict(row), sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
-                return sha256(encoded).hexdigest()
-            selected_layers = (ownership_selection or {}).get("layer_keys")
-            draft = getattr(analysis, "source_plane_ownership_draft", None)
-            actual_record_ids = {str(item.get("record_id")).casefold(): str(item.get("record_id")) for item in records if isinstance(item.get("record_id"), str)}
-            def validate_refs(row: Mapping[str, Any]) -> None:
-                for field in ("thickness_source_record_id", "conductivity_source_record_id", "material_source_record_id", "frequency_source_record_id", "epsilon_source_record_id", "loss_tangent_source_record_id"):
-                    value = row.get(field)
-                    if value is not None and (not isinstance(value, str) or value.casefold() not in actual_record_ids):
-                        _fail("RAW_SPATIAL_OWNERSHIP_EVIDENCE_INCOMPLETE", f"{field} source record is absent")
-            draft_stack = {str(row.get("layer_name", "")).casefold(): dict(row) for row in (draft.get("stackup_layers", ()) if isinstance(draft, Mapping) else ()) if isinstance(row, Mapping)}
-            draft_points = {(str(row.get("layer_name", "")).casefold(), int(row.get("point_ordinal", -1))): dict(row) for row in (draft.get("dielectric_points", ()) if isinstance(draft, Mapping) else ()) if isinstance(row, Mapping)}
-            ownership_context["stackup_layers"] = []
-            for row in (sheet_rows.get("stackup_layers", ()) if sheet_rows is not None else ()):
-                layer_key = str(row.get("layer_name", "")).casefold()
-                if selected_layers is not None and (layer_key,) not in selected_layers:
-                    continue
-                base = draft_stack.get(layer_key)
-                if base is None:
-                    _fail("RAW_SPATIAL_OWNERSHIP_EVIDENCE_INCOMPLETE", "stackup provenance is absent")
-                merged = {**base, **dict(row), "ordinal": len(ownership_context["stackup_layers"]), "raw_layer_ordinal": row.get("layer_ordinal"), "raw_layer_sha256": canonical_row_hash(row)}
-                validate_refs(merged)
-                context_append(ownership_context["stackup_layers"], merged)
-            ownership_context["dielectric_points"] = []
-            raw_layer_names = {int(row.get("layer_ordinal", -1)): str(row.get("layer_name", "")).casefold() for row in (sheet_rows.get("stackup_layers", ()) if sheet_rows is not None else ())}
-            for global_point_index, row in enumerate((sheet_rows.get("dielectric_points", ()) if sheet_rows is not None else ())):
-                layer_key = raw_layer_names.get(int(row.get("layer_ordinal", -1)), "")
-                point_key = (layer_key, int(row.get("point_ordinal", -1)))
-                if selected_layers is not None and (layer_key,) not in selected_layers:
-                    continue
-                base = draft_points.get(point_key)
-                if base is None:
-                    _fail("RAW_SPATIAL_OWNERSHIP_EVIDENCE_INCOMPLETE", "dielectric provenance is absent")
-                merged = {**base, **dict(row), "ordinal": len(ownership_context["dielectric_points"]), "raw_dielectric_ordinal": global_point_index, "raw_dielectric_sha256": canonical_row_hash(row)}
-                validate_refs(merged)
-                context_append(ownership_context["dielectric_points"], merged)
+        if ownership_sink is not None:
+            # Final source records are selected and ordered entirely in SQLite.
+            missing = connection.execute(
+                "SELECT 1 FROM ownership_selection s WHERE NOT EXISTS (SELECT 1 FROM ownership_source_stage r WHERE r.lookup_a=s.key_a AND r.lookup_b=s.key_b AND ((s.kind='Layer' AND r.kind='Layer') OR (s.kind='Node' AND r.kind='Node') OR (s.kind='Via' AND r.kind='Via') OR (s.kind='Pad' AND r.kind IN ('PadDef','Regular')) OR (s.kind='Surface' AND r.kind='Shape') OR (s.kind='Material' AND r.kind='Material'))) LIMIT 1"
+            ).fetchone()
+            if missing is not None:
+                _fail("RAW_SPATIAL_OWNERSHIP_EVIDENCE_INCOMPLETE", "selected ownership source record is absent")
+            missing_pad = connection.execute(
+                "SELECT 1 FROM ownership_selection s WHERE s.kind='Pad' AND "
+                "(SELECT COUNT(*) FROM ownership_source_stage r WHERE r.kind IN ('PadDef','Regular') "
+                "AND r.lookup_a=s.key_a AND r.lookup_b=s.key_b) < 2 LIMIT 1"
+            ).fetchone()
+            if missing_pad is not None:
+                _fail("RAW_SPATIAL_OWNERSHIP_EVIDENCE_INCOMPLETE", "selected PadDef/Regular source records are incomplete")
+            checks = (
+                ("Material", "r.kind='Material' AND r.lookup_a=s.key_a"),
+                ("PadDef", "r.kind='PadDef' AND r.lookup_a=s.key_a AND r.lookup_b=s.key_b"),
+                ("Regular", "r.kind='Regular' AND r.lookup_a=s.key_a AND r.lookup_b=s.key_b"),
+            )
+            for kind, predicate in checks:
+                selection_kind = "Material" if kind == "Material" else "Pad"
+                if connection.execute(
+                    f"SELECT 1 FROM ownership_selection s WHERE s.kind=? "
+                    f"AND (SELECT COUNT(*) FROM ownership_source_stage r WHERE {predicate}) <> 1 LIMIT 1",
+                    (selection_kind,),
+                ).fetchone() is not None:
+                    _fail("RAW_SPATIAL_OWNERSHIP_EVIDENCE_INCOMPLETE", f"selected {kind} source record is not exact-one")
+            connection.commit()
         return result
     except sqlite3.OperationalError as exc:
         _translate_spool_error(exc, cancelled)
@@ -3608,8 +3732,7 @@ def compile_raw_spatial_contact_asset(
         _fail("RAW_SPATIAL_OWNERSHIP_CALLBACK_INVALID", "ownership request and callback must be supplied together")
     if source_plane_ownership_request is not None and not isinstance(source_plane_ownership_request, Mapping):
         _fail("RAW_SPATIAL_OWNERSHIP_CALLBACK_INVALID", "ownership request must be a mapping")
-    ownership_selection = _ownership_selection(source_plane_ownership_request.get("raw_selection") if source_plane_ownership_request is not None else None)
-    if source_plane_ownership_request is not None and ownership_selection is None:
+    if source_plane_ownership_request is not None and "raw_selection" not in source_plane_ownership_request:
         _fail("RAW_SPATIAL_OWNERSHIP_SELECTION_INVALID", "raw_selection is required")
     if source_plane_ownership_request is not None and not include_plane_sheet_payload:
         _fail("RAW_SPATIAL_PLANE_SHEET_REQUIRED", "ownership compilation requires plane-sheet payload")
@@ -3678,7 +3801,6 @@ def compile_raw_spatial_contact_asset(
         snapshot_sha = _snapshot_source(path, snapshot_path, size, cancelled)
         if snapshot_sha != observed_sha or _source_state(path) != initial_state:
             _fail("RAW_SPATIAL_SOURCE_MUTATED", "raw SPD changed while snapshotting")
-        ownership_context: dict[str, Any] | None = {} if source_plane_ownership_request is not None else None
         result = _compile_snapshot(
             snapshot_path,
             original_path=path,
@@ -3693,15 +3815,14 @@ def compile_raw_spatial_contact_asset(
             cancelled=cancelled,
             temp_dir=temp_path,
             plane_sheet_payload=plane_sheet_payload,
-            ownership_context=ownership_context,
-            ownership_selection=ownership_selection,
+            ownership_request=source_plane_ownership_request,
         )
         if source_plane_ownership_callback is not None:
             if cancelled():
                 _fail("RAW_SPATIAL_CANCELLED", "raw spatial compilation was cancelled")
             source_plane_ownership_callback(
                 _SourcePlaneOwnershipRawEvidence(
-                    source_plane_ownership_request, result[0], result[1], ownership_context or {}
+                    result[0], result[1], _SourcePlaneOwnershipSpool(temp_path / "raw-spatial-spool.sqlite")
                 )
             )
         return result
