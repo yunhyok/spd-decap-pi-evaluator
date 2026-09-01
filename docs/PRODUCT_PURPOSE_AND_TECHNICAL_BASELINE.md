@@ -6,7 +6,7 @@
 - 현재 외부 정확성: **W6-BASE 260729 retrospective numerical FAIL**
 - unseen/generalization: **unknown / not_run**
 - 현재 수치 개선: **0** — solver, `Y_global`, `Zii`와 PowerSI 비교 수치는 아직 바뀌지 않았다.
-- 현재 구현 gate: **DONE / ACCEPT / READY_FOR_EXPLICIT_STAGE_AND_COMMIT**
+- 현재 구현 gate: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
 
 ## 1. 문서 역할과 권위
 
@@ -108,7 +108,7 @@ DRC, 제조 또는 sign-off 도구를 대체한다고 주장하지 않는다.
 | W7 prospective P0–P10 | contact admissibility, shadow N-port, owner/cut-set/assembly prerequisite를 닫았다. | production replacement와 broadband 정확성 |
 | P11 | exact 1 GHz shadow factor gate에서 forward-reliability STOP했다. 작은 backward residual은 forward accuracy가 아니다. | trusted solve |
 | 원본 SPD/streamed IR | production-scale data handoff의 cap, memory, provenance와 validator 결함을 찾아 spool/index 경로를 구현했다. | 원본 SPD end-to-end 성공, PowerSI 개선 |
-| 통합 hardening 후보 | predecessor는 node 5 `SPD_NO_RAILS`로 DONE/STOP했다. 승인된 grammar-valid test-only successor는 Sol `STATIC_ACCEPT` 뒤 새 21-node 실행에서 `21 passed in 15.09s`로 닫혔다. | commit, production owner join, `Y_global`/`Zii`, PowerSI 개선 |
+| 통합 hardening 후보 | predecessor는 node 5 `SPD_NO_RAILS`로 DONE/STOP했다. 승인된 grammar-valid test-only successor는 Sol `STATIC_ACCEPT`, `21 passed in 15.09s` 뒤 commit `eece8ab`로 닫혔다. | production owner join, `Y_global`/`Zii`, PowerSI 개선 |
 
 따라서 현재 product risk는 여전히 **외부 정확성 미달**이며 PowerSI 수치 격차
 개선은 0이다. parser/IR/test PASS는 계산 정확도 개선의 대리 지표가 아니다.
@@ -119,7 +119,7 @@ DRC, 제조 또는 sign-off 도구를 대체한다고 주장하지 않는다.
    이후 Sol `STATIC_ACCEPT`와 단일 runtime 실패를 반영해 predecessor의 당시 최종 상태를
    **`DONE / STOP_TEST_UNICODE_FIXTURE_RAIL_FORMATION`**으로 닫는다.
 2. predecessor와 별도 successor의 SHA·실행 identity를 구분한다. successor는
-   Sol `STATIC_ACCEPT`와 단일 PASS를 얻었지만 아직 commit 전이며, exact receipt는
+   Sol `STATIC_ACCEPT`, 단일 PASS와 commit `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`를 얻었고, exact receipt는
    작업 기준 문서만 관리한다.
 3. 목적 문서에 누적됐던 micro-successor 실행 이력을 제거한다. 그 이력은 Git와
    [Source-derived physical IR](SOURCE_DERIVED_PHYSICAL_IR.md)에 남아 있다.
@@ -133,8 +133,8 @@ DRC, 제조 또는 sign-off 도구를 대체한다고 주장하지 않는다.
 
 ```mermaid
 flowchart LR
-    H["통합 hardening<br/>DONE / STOP<br/>invalid Unicode fixture"] --> X["test-only successor<br/>DONE / ACCEPT<br/>21 PASS"]
-    X -->|"explicit commit"| E["기존 W6 증거로<br/>오차 성분 분해"]
+    H["통합 hardening<br/>DONE / STOP<br/>invalid Unicode fixture"] --> X["test-only successor<br/>DONE / ACCEPT<br/>COMMITTED eece8ab"]
+    X -->|"next: A1"| E["기존 W6 증거로<br/>오차 성분 분해"]
     E --> D["원본 SPD source DB에서<br/>한 owning block 고정"]
     D --> L["analytic/local physics gate"]
     L --> I["one-owner production integration"]
@@ -157,8 +157,8 @@ consumed/no-rerun이며 partial PASS를 재사용하지 않는다. 사용자는 
 grammar-valid test-only successor와 후속 자동 진행을 승인했다. 새 candidate는
 제품 코드를 바꾸지 않고 `NodeStraße2`로 실제 DGND terminal source chain과
 Python casefold/source-byte hash를 검증했고, 별도 candidate identity의 21-node
-계약을 한 번 통과했다. 실행은 consumed/no-rerun이다. explicit commit 전에는 G2를
-열지 않는다.
+계약을 한 번 통과했다. 실행은 consumed/no-rerun이며 implementation commit은
+`eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`다. G2는 별도 phase checkpoint 뒤 A1부터 한 item씩 연다.
 
 ### G2 — 기존 증거로 오차 분해와 단일 후보 선택
 

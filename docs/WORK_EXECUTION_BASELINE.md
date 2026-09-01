@@ -3,11 +3,12 @@
 - 문서 버전: **2.1**
 - 기준 branch: **main only**
 - current integrated-hardening docs base: `5a270677074868fc3e10ffa26309a208bb151ac3`
+- integrated-hardening implementation commit: `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`
 - 최종 개정: **2026-09-01 (Asia/Seoul)**
 - sole ACTIVE: **NONE** — A1은 hardening commit 뒤에만 연다.
-- lifecycle: **DONE / ACCEPT / READY_FOR_EXPLICIT_STAGE_AND_COMMIT**
+- lifecycle: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
 - runtime: **successor 21 passed in 15.09s / consumed-no-rerun**
-- stage/commit: **ready / not_started**
+- stage/commit: **complete @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
 
 ## 1. 압축 후 즉시 복구 카드
 
@@ -22,7 +23,8 @@ P0–P3 없음 판정을 받았다. 첫 exact 21-node 단일 실행은 5번째 U
 test-only successor와 후속 자동 진행을 승인했다. 제품 코드는 동결했고 Luna가
 producer test 한 함수만 고쳤다. Sol은 `STATIC_ACCEPT`, P0–P3 0을 확정했고 새
 candidate identity의 21 nodes는 한 process에서 `21 passed in 15.09s`로 통과했다.
-현재는 명시적 nine-path stage/commit만 남았다.
+exact nine-path candidate는 `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`로 commit됐고, 다음 단계는 A1의
+read-only error-budget audit다.
 
 ```mermaid
 flowchart LR
@@ -31,7 +33,7 @@ flowchart LR
     L --> S["Sol 누적 diff 정적 검토<br/>STATIC_ACCEPT"]
     S -->|P0-P3 없음| T["21 nodes / one process<br/>DONE / 21 PASS"]
     S -->|finding| F["같은 item 안에서 수정<br/>Python 금지"]
-    T -->|PASS| A["DONE / ACCEPT<br/>explicit stage+commit current"]
+    T -->|PASS| A["DONE / ACCEPT<br/>COMMITTED eece8ab"]
     T -->|FAIL/timeout/interrupt| X["DONE / STOP<br/>rerun·자동 successor 금지"]
     A -->|commit 뒤| ACC["한 physical block accuracy plan"]
 ```
@@ -74,9 +76,9 @@ flowchart LR
 
 ## 3. 현재 working tree와 candidate receipt
 
-branch는 `main`, base HEAD는
-`5a270677074868fc3e10ffa26309a208bb151ac3`이다. 현재 tracked candidate는 다음
-아홉 파일로 제한한다.
+branch는 `main`이다. base HEAD
+`5a270677074868fc3e10ffa26309a208bb151ac3`에서 만든 implementation commit
+`eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`은 다음 아홉 파일로 제한된다.
 
 - `docs/PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md`
 - `docs/SOURCE_DERIVED_PHYSICAL_IR.md`
@@ -89,8 +91,8 @@ branch는 `main`, base HEAD는
 - `tests/test_source_plane_ownership_ir_producer.py`
 
 Implementation stream의 predecessor와 final **accepted** candidate SHA-256은
-다음과 같다. final identity는 Sol `STATIC_ACCEPT`와 successor 21-node PASS를 얻었고
-아직 commit 전이다.
+다음과 같다. final identity는 Sol `STATIC_ACCEPT`와 successor 21-node PASS를 얻은
+뒤 `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`로 commit됐다.
 
 | 파일 | predecessor SHA-256 | final candidate SHA-256 | 상태 |
 |---|---|---|---|
@@ -230,7 +232,7 @@ transport뿐이다. 실제 invocation은 STOP이며 production owner join, `Y_gl
 | streamed-IR chain | DONE / mixed STOP/ACCEPT | disk-backed handoff와 validator/index 경로 구현; 수치 개선 0 |
 | provisional-cap oracle fix | DONE / ACCEPT | sole run `18 passed in 14.80s`; narrow synthetic/MINI scope |
 | integrated hardening | DONE / STOP_TEST_UNICODE_FIXTURE_RAIL_FORMATION | Sol static P0–P3 없음; single run은 21 collected, node 5 실패; uncommitted/no-rerun |
-| Unicode fixture successor | DONE / ACCEPT / READY_FOR_EXPLICIT_STAGE_AND_COMMIT | Sol `STATIC_ACCEPT`, P0–P3 0; grammar-valid `NodeStraße2`; new-candidate `21 passed in 15.09s`; product frozen |
+| Unicode fixture successor | DONE / ACCEPT / COMMITTED @ `eece8ab` | Sol `STATIC_ACCEPT`, P0–P3 0; grammar-valid `NodeStraße2`; new-candidate `21 passed in 15.09s`; product frozen |
 | W8 release | BLOCKED | accuracy와 product gate 뒤에만 진행 |
 
 §12.60 historical run의 log는
@@ -252,8 +254,8 @@ integrated-review 결정의 핵심 사실은 위 표와
 각 단계는 한 번에 하나만 ACTIVE다.
 
 predecessor hardening은 `DONE / STOP`이고 승인된 test-only successor는
-`DONE / ACCEPT / READY_FOR_EXPLICIT_STAGE_AND_COMMIT`다. successor가
-`DONE / ACCEPT / COMMITTED`되기 전까지 아래 항목은 모두 pending이다.
+`DONE / ACCEPT / COMMITTED @ eece8ab`다. 아래 항목 중 A1만 다음 PLANNED item이며
+phase checkpoint 뒤 하나만 ACTIVE로 전환한다.
 
 ### A1 — W7-ACC-ERROR-BUDGET-01
 
@@ -355,8 +357,8 @@ A1, 원본 SPD, solver와 PowerSI는 진행하지 않는다.
 사용자 승인 별도 successor는 제품 코드를 동결하고 producer test 한 함수의
 fixture grammar만 복원했다. Sol 최종 판정은 `STATIC_ACCEPT`, P0/P1/P2/P3 모두
 0이고, 새 candidate의 exact 21-node invocation은 `21 passed in 15.09s`, exit 0으로
-끝났다. 상태는 `DONE / ACCEPT / READY_FOR_EXPLICIT_STAGE_AND_COMMIT`이며 동일
-계약을 재실행하지 않는다.
+끝났다. 상태는 `DONE / ACCEPT / COMMITTED @ eece8ab`이며 동일 계약을
+재실행하지 않는다.
 
 ### D-080 — 정확성 우선 pivot
 
@@ -377,16 +379,15 @@ limiting-case gate를 통과한 candidate만 bounded development comparison으�
 - working tree에 범위 밖 tracked 변경이 생겨 안전하게 분리할 수 없다.
 - 사용량이 사용자가 지정한 50% 남음 지점에 도달한다.
 
-현재 ACTIVE item은 없다. §11은 explicit stage/commit만 남았으며 whitelist 밖
-제품 변경, 새 schema/cap 또는 추가 runtime이 필요하면 즉시 STOP하고 문서를
-갱신한다.
+현재 ACTIVE item은 없다. §11은 commit까지 닫혔으며 whitelist 밖 제품 변경, 새
+schema/cap 또는 추가 runtime이 필요하면 즉시 STOP하고 문서를 갱신한다.
 
-## 11. 승인된 Unicode fixture successor — DONE / ACCEPT
+## 11. 승인된 Unicode fixture successor — DONE / ACCEPT / COMMITTED @ eece8ab
 
 ### 11.1 항목과 원인
 
 `W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-UNICODE-FIXTURE-RAIL-FORMATION-FIX-01`
-은 `DONE / ACCEPT / READY_FOR_EXPLICIT_STAGE_AND_COMMIT`다. predecessor의 broad
+은 `DONE / ACCEPT / COMMITTED @ eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`다. predecessor의 broad
 `Node1`→`Straße1` 치환은 Node 레코드와
 `.Connect` port에 필수인 `Node` 접두사를 없애고 `Node10`/`Node11`/`Node12`까지
 바꿨다. 따라서 ownership callback 전 rail formation이 실패했다. core parser와
@@ -446,3 +447,5 @@ predecessor partial PASS 재사용, full suite, 원본 SPD, solver, PowerSI와 r
 invocation은 consumed/no-rerun이다. PASS와 commit 뒤에만 A1을 연다. 이 successor는 test fixture와 named
 synthetic/MINI-SPD transport acceptance만 닫으며 production owner join,
 `Y_global`, `Zii`, PowerSI 정확성/성능과 수치 개선을 증명하지 않는다.
+
+명시적 nine-path implementation commit은 `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`다.
