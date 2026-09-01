@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — 작업 기준
 
-- 문서 버전: **3.2**
+- 문서 버전: **3.3**
 - 기준 branch: **main only**
 - current integrated-hardening docs base: `5a270677074868fc3e10ffa26309a208bb151ac3`
 - integrated-hardening implementation commit: `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`
 - 최종 개정: **2026-09-01 (Asia/Seoul)**
 - integrated-hardening lifecycle: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — V3 READY_FOR_SINGLE_V3**
-- sole ACTIVE: **W7-ACC-SOURCE-BLOCK-ORIGINAL-SPD-V3-CONTRACT-01** — hash-bound 원본 SPD census runtime 정확히 1회만 허용.
+- current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 V3R READY_FOR_SINGLE_V3R**
+- sole ACTIVE: **W7-ACC-SOURCE-BLOCK-ORIGINAL-SPD-V3R-01** — lowercase SHA로 동결한 별도 recovery runtime 정확히 1회만 허용.
 - current numerical improvement: **0**
 
 ## 1. 압축 후 즉시 복구 카드
@@ -26,8 +26,9 @@ pytest 9.0.3에서 collection 1 뒤 test-only invalid IR mutation으로 STOP했�
 A2S는 그 block 14줄만 삭제하고 exact node를 한 번 실행했지만 synthetic-alias target이
 없어 STOP했다. Sol 재평가 결과 제품 guard는 유지하고 fixture 의존 test block만
 51줄 삭제했으며 추가 runtime 없이 A2를 `ACCEPT_NARROW_CORE_EVIDENCE`로 닫았다. 수치
-개선은 아직 0이다. V3G는 기존 artifact 재사용을 거부하고 fresh original-SPD one-shot
-coordinator를 동결했으며 Sol `STATIC_ACCEPT` 뒤 `READY_FOR_SINGLE_V3`가 됐다.
+개선은 아직 0이다. D-087은 대문자 SHA가 lowercase-only launcher gate에서 거부되어
+source 접근 전 STOP했다. 동일 D-087은 재실행하지 않고, coordinator/code 불변의 별도
+D-088/V3R만 lowercase SHA와 새 HEAD/root로 한 번 허용한다.
 
 ```mermaid
 flowchart LR
@@ -43,9 +44,10 @@ flowchart LR
     STOPV1S --> V1T["A2T alias test prune<br/>DONE / STATIC_ACCEPT"]
     V1T --> AN["A2 narrow core evidence<br/>DONE / ACCEPT"]
     AN --> V3G["별도 V3 계약<br/>DONE / STATIC_ACCEPT"]
-    V3G -->|hash-bound single run| V3["원본 SPD import + source-only compile<br/>READY / V3 once"]
-    V3 -->|census complete / ledger disjoint| A3["A3 one-block research implementation"]
-    V3 -->|missing / ambiguous| STOPSRC["DONE / STOP_NOT_READY"]
+    V3G --> V3["D-087 single run<br/>STOP: SHA case gate"]
+    V3 --> V3R["D-088 recovery<br/>READY / lowercase SHA"]
+    V3R -->|census complete / ledger disjoint| A3["A3 one-block research implementation"]
+    V3R -->|missing / ambiguous| STOPSRC["DONE / STOP_NOT_READY"]
 ```
 
 현재 금지 사항:
@@ -56,7 +58,7 @@ flowchart LR
   않는다.
 - A2 materializer는 정적으로 ACCEPT됐지만 focused V1이 launcher 단계에서
   STOP했고 D-084 exact V1R도 test fixture 관계 오류로 소비됐다. 둘은 재실행하지
-  않는다. 원본 SPD V3는 D-087의 hash-bound parent 명령 1회만 예외로 허용한다.
+  않는다. 원본 SPD V3R은 D-088의 hash-bound parent 명령 1회만 예외로 허용한다.
   D-085에서 허용한 test block 삭제와 exact successor 외에는 P1 condensation,
   global solver/`Y_global`/`Zii`, PowerSI와
   package/release도 실행하지 않는다.
@@ -271,7 +273,8 @@ predecessor hardening은 `DONE / STOP`이고 승인된 test-only successor는
 `DONE / ACCEPT / COMMITTED @ eece8ab`다. A1은 phase checkpoint 뒤 한 번 수행해
 `DONE / ACCEPT`했다. A2 candidate는 Sol `STATIC_ACCEPT`를 받았지만 V1/A2R/A2S
 실행은 각각 소비된 STOP이다. A2T는 runtime 없이 `DONE / STATIC_ACCEPT`했고 A2는 좁은
-core evidence만으로 종료됐다. 현재 ACTIVE item은 D-087의 hash-bound V3 single run이다.
+core evidence만으로 종료됐다. D-087은 launcher-only STOP으로 닫혔고 현재 ACTIVE item은
+D-088의 별도 hash-bound V3R single run이다.
 
 ### A1 — W7-ACC-ERROR-BUDGET-01 — DONE / ACCEPT
 
@@ -374,7 +377,7 @@ Sol 최종 판정은 `STATIC_ACCEPT`, P0/P1/P2 0이다.
 - blocked: V3 original SPD import, source-only compile, materializer와 report/receipt
 
 V3는 당시 focused PASS 전까지 차단됐다. 이후 A2S의 STOP은 그대로 보존하고 A2T 정적
-삭제 뒤 A2를 좁은 core evidence로 종료했다. 현재 허용 범위는 아래 D-087의 fresh
+삭제 뒤 A2를 좁은 core evidence로 종료했다. 현재 허용 범위는 아래 D-088의 fresh
 process import 1회, `compile_layerwise_substrate(..., require_plane_sheet_payload=True)`
 1회, materializer 1회와 canonical report/receipt뿐이다. P0/P1 condensation, global
 solve, `Y_global`, `Zii`, PowerSI, full suite, retry와 partial reuse는 금지한다.
@@ -597,7 +600,7 @@ Sol 최종 판정은 `STATIC_ACCEPT`, P0/P1/P2 0이다. 남은 focused test는 �
 acceptance의 실행 증거로 주장하지 않는다. V1S/A2S 상태는 계속 STOP이며 focused node
 전체 PASS로 바꾸지 않는다.
 
-### D-087 — original-SPD source-block census V3 contract — READY_FOR_SINGLE_V3
+### D-087 — original-SPD source-block census V3 contract — DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE
 
 목적은 A1의 단일 block `RAIL_REACHABLE_DIELECTRIC_GAP_MAXWELL_GC`에 필요한 원본-SPD
 source data와 old-Maxwell owner ledger가 production topology에서 완전한지 한 번 census하는
@@ -631,14 +634,11 @@ Luna는 검증된 EVIDENCE-05 parent/child receipt·termination 구조만 재사
 `DC6130ECD6F6954E49B14CBBA0D3F85B02C455B9286B5903EF89960DA772ADA7`이다. Sol 최종
 정적 검토는 `STATIC_ACCEPT`, P0/P1/P2/P3 0이며 실행·import·compile·test는 없었다.
 
-execution contract HEAD는 **이 `READY_FOR_SINGLE_V3` 계약을 포함하는 문서 커밋의 exact
-HEAD**다. 커밋 뒤 runtime 전에는 tracked 파일을 바꾸지 않는다. launcher가 시작 시
-`git rev-parse HEAD`를 한 번 읽어 `--contract-head`와 output root에 같은 값으로 결속하고,
-coordinator가 main/tracked-clean/exact-HEAD를 다시 검증한다. 이 의미적 self-reference는
-커밋 hash를 문서 안에 쓰기 위한 추가 커밋을 만들지 않으면서 실제 receipt에 exact hash를
-남긴다.
+D-087 execution contract HEAD는 문서 3.2 커밋
+`0652f81924d1c4df1da1c9f21f190e7f0086ae3e`였다. launcher가 시작 시 같은 값을
+`--contract-head`와 output root에 결속했고 coordinator terminal도 이 contract를 기록했다.
 
-허용된 parent 명령은 다음 한 번뿐이다. `$contractHead`는 위 문서 커밋 직후의 실제 HEAD다.
+D-087에 허용됐던 parent 명령은 다음 한 번뿐이었고 이미 소비됐다.
 
 ```powershell
 $contractHead = git rev-parse HEAD
@@ -696,6 +696,49 @@ analytic accuracy, solver/`Y_global`/`Zii`, PowerSI 개선, holdout/generalizati
 compile 완료, 실제 alias-witness guard와 1 MiB report 적합성은 이 한 번의 결과로만
 판정한다.
 
+D-087 exact execution HEAD는 `0652f81924d1c4df1da1c9f21f190e7f0086ae3e`였다. parent
+invocation 1회는 약 0.70 s 뒤 exit 1, stdout `STOP_PREFLIGHT`로 끝났다. exception은
+`ArgumentError: --contract-head and --coordinator-sha are required`였지만 terminal의 contract는
+정확한 HEAD였다. 실제 원인은 문서 명령의 대문자
+`DC6130ECD6F6954E49B14CBBA0D3F85B02C455B9286B5903EF89960DA772ADA7`가 coordinator
+`_hex64`의 lowercase-only 검사를 통과하지 못한 것이다.
+
+관측 call ledger는 import/compile/census/P1/solve/PowerSI/report 모두 0이다. parent argument
+gate에서 끝났으므로 source 접근, output-root 소유권 획득, receipt/report 생성은 없었고 exact
+root도 absent다. 따라서 제품/source-census FAIL이 아니며 raw/ownership/substrate/ledger,
+성능과 수치 정확성에 관한 새 증거는 0이다. 동일 D-087 명령과 동일 execution budget은
+소비됐고 재실행하지 않는다.
+
+### D-088 — V3R lowercase-SHA launcher recovery — READY_FOR_SINGLE_V3R
+
+`W7-ACC-SOURCE-BLOCK-ORIGINAL-SPD-V3R-01`은 D-087을 되살리는 retry가 아니라, source
+미접근 launcher 문자열 case 한 개만 바로잡은 별도 one-shot 계약이다. coordinator, 제품,
+test, schema와 dependency 변경은 0이다. coordinator identity는 같은 41,601 B / SHA-256
+`DC6130ECD6F6954E49B14CBBA0D3F85B02C455B9286B5903EF89960DA772ADA7`이고 CLI 표현만
+lowercase `dc6130ecd6f6954e49b14cbba0d3f85b02c455b9286b5903ef89960da772ada7`로 고정한다.
+
+D-088 execution contract HEAD는 **이 D-087 closure와 D-088 계약을 포함하는 문서 커밋의
+exact HEAD**다. 새 output root는
+`D:\SPD-Decap-PI-Evaluator-W7\<d-088-contract-head>\260729-a2-v3-source-block-census-01`
+이며 새 HEAD 때문에 D-087 경로와 분리된다. coordinator 내부 gate 이름
+`W7-A2-V3-SOURCE-BLOCK-CENSUS-01`은 제품 코드 불변의 일부로 유지하고, D-088 identity는
+exact contract HEAD/root로 구분한다.
+
+허용된 parent 명령은 아래 한 번뿐이다. D-087의 입력/W6/product SHA, exact 세 API 순서,
+call ledger, 4시간/24 GiB/8 GiB/16 GiB/1 MiB/64 KiB cap, no P1/solve/PowerSI, receipt와
+PASS/STOP claim을 모두 그대로 상속한다. 별도 preflight/self-test/import rehearsal, retry와
+partial reuse는 금지한다.
+
+```powershell
+$contractHead = git rev-parse HEAD
+& 'C:\Users\User\AppData\Local\Programs\Python\Python312\python.exe' -I -B `
+  'D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\a2_v3_source_block_census_once.py' `
+  --repo 'C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator' `
+  --contract-head $contractHead `
+  --coordinator-sha 'dc6130ecd6f6954e49b14cbba0d3f85b02c455b9286b5903ef89960da772ada7' `
+  --root "D:\SPD-Decap-PI-Evaluator-W7\$contractHead\260729-a2-v3-source-block-census-01"
+```
+
 ## 10. 중단·사용자 검토 조건
 
 다음이면 자동 진행을 멈추고 상태와 필요한 결정을 보고한다.
@@ -707,12 +750,13 @@ compile 완료, 실제 alias-witness guard와 1 MiB report 적합성은 이 한 
 - working tree에 범위 밖 tracked 변경이 생겨 안전하게 분리할 수 없다.
 - 사용량이 사용자가 지정한 50% 남음 지점에 도달한다.
 
-현재 ACTIVE item은 D-087 V3 single run이며 허용 범위는 위 hash-bound parent 명령 1회뿐이다.
+현재 ACTIVE item은 D-088 V3R single run이며 허용 범위는 위 lowercase-SHA parent 명령
+1회뿐이다.
 A2는 `DONE / ACCEPT_NARROW_CORE_EVIDENCE`지만 focused runtime PASS는 아니며
-V1/A2R/A2S 실행은 각각 소비된 STOP이다. 제품/test 변경은 금지한다. coordinator는
-hash-bound `READY_FOR_SINGLE_V3`이며 이 문서 커밋 뒤 저장소 변경 없이 한 번 실행한다.
-§11은 commit까지 닫혔으며, 새 schema/cap 또는 계약 밖 runtime이 필요하면 즉시 STOP하고
-문서를 갱신한다.
+V1/A2R/A2S와 D-087 실행은 각각 소비된 STOP이다. 제품/test/coordinator 변경은 금지한다.
+D-088은 hash-bound `READY_FOR_SINGLE_V3R`이며 이 문서 커밋 뒤 저장소 변경 없이 한 번
+실행한다. §11은 commit까지 닫혔으며, 새 schema/cap 또는 계약 밖 runtime이 필요하면 즉시
+STOP하고 문서를 갱신한다.
 
 ## 11. 승인된 Unicode fixture successor — DONE / ACCEPT / COMMITTED @ eece8ab
 

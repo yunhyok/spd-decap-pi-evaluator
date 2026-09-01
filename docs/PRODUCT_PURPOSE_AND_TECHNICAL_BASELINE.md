@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — 목적·기술 기준
 
-- 문서 버전: **3.2**
+- 문서 버전: **3.3**
 - 권위: **G0 — 목적, 우선순위, 합격 의미와 비주장 경계**
 - 최종 개정: **2026-09-01 (Asia/Seoul)**
 - 현재 외부 정확성: **W6-BASE 260729 retrospective numerical FAIL**
 - unseen/generalization: **unknown / not_run**
 - 현재 수치 개선: **0** — solver, `Y_global`, `Zii`와 PowerSI 비교 수치는 아직 바뀌지 않았다.
 - 현재 구현 gate: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — V3 READY_FOR_SINGLE_V3**
+- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 V3R READY_FOR_SINGLE_V3R**
 
 ## 1. 문서 역할과 권위
 
@@ -146,9 +146,10 @@ flowchart LR
     SS --> V1T["A2T alias test prune<br/>DONE / STATIC_ACCEPT"]
     V1T --> AN["A2 narrow core evidence<br/>DONE / ACCEPT"]
     AN --> V3G["별도 V3 계약<br/>DONE / STATIC_ACCEPT"]
-    V3G -->|hash-bound single run| C["원본 SPD 1회<br/>READY_FOR_SINGLE_V3"]
-    C -->|complete / disjoint| L["analytic/local physics gate"]
-    C -->|missing / ambiguous| SSRC["DONE / STOP_NOT_READY"]
+    V3G --> C["D-087 single run<br/>STOP: SHA case gate"]
+    C --> V3R["D-088 V3R<br/>READY / lowercase SHA"]
+    V3R -->|complete / disjoint| L["analytic/local physics gate"]
+    V3R -->|missing / ambiguous| SSRC["DONE / STOP_NOT_READY"]
     L --> I["one-owner production integration"]
     I --> A["동결 260729 development A/B 1회"]
     A -->|PASS| R["260804 retrospective holdout"]
@@ -282,10 +283,13 @@ substrate identity의 동일-import 결속을 충족하지 못하므로 재사�
 census를 각각 한 번만 호출한다. scenario 저장/reload, P1, solve, `Y_global`, `Zii`,
 Touchstone와 PowerSI는 호출하지 않는다.
 
-실행은 제품 변경 없이 외부 one-shot coordinator 하나로 제한한다. 그 coordinator의
-hash, exact HEAD, 입력/W6 identity, 자원 한도, 출력과 call ledger는 작업 기준 문서
-3.2에 동결됐고 Sol 최종 정적 검토는 P0/P1/P2/P3 0으로 `STATIC_ACCEPT`했다. 따라서
-다음 허용 작업은 그 hash-bound 계약의 원본 SPD 실행 정확히 1회뿐이다. PASS도 원본-SPD
+실행은 제품 변경 없이 외부 one-shot coordinator 하나로 제한한다. D-087은 문서 명령의
+대문자 coordinator SHA가 lowercase-only launcher gate에서 거부되어 source 접근 전에
+`STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE`로 끝났다. import/compile/census/P1/solve/PowerSI/
+report는 모두 0이고 수치·제품·데이터 증거는 늘지 않았다. 동일 D-087은 재실행하지 않는다.
+
+다음 허용 작업은 coordinator와 제품을 바꾸지 않고 lowercase SHA, 새 exact HEAD/root를
+동결한 별도 D-088/V3R 실행 정확히 1회뿐이다. PASS도 원본-SPD
 raw/ownership/compiled Maxwell row census와 ledger completeness만 증명한다. G/C
 replacement, analytic accuracy와 PowerSI 수치 개선은 계속 미증명이며 현재 개선값은 0이다.
 
