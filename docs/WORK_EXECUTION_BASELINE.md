@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — 작업 기준
 
-- 문서 버전: **2.1**
+- 문서 버전: **2.2**
 - 기준 branch: **main only**
 - current integrated-hardening docs base: `5a270677074868fc3e10ffa26309a208bb151ac3`
 - integrated-hardening implementation commit: `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`
 - 최종 개정: **2026-09-01 (Asia/Seoul)**
 - integrated-hardening lifecycle: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- current accuracy gate: **A1 DONE / ACCEPT — A2 PLANNED**
-- sole ACTIVE: **NONE** — A1 V0 audit는 소모됐고 A2 contract 전이다.
+- current accuracy gate: **A1 DONE / ACCEPT — A2 CONTRACT ACCEPT / MINIMAL MATERIALIZER ACTIVE**
+- sole ACTIVE: **W7-ACC-SOURCE-BLOCK-CONTRACT-01** — compile-only census materializer 구현 전이다.
 - current numerical improvement: **0**
 
 ## 1. 압축 후 즉시 복구 카드
@@ -19,15 +19,17 @@ closure `caf505d`로 끝났다. 동일 21-node 계약은 재실행하지 않는�
 A1은 새 PowerSI run 없이 기존 W6 report를 한 번 읽어 development rail
 `ADC_VDD_180_VQPS_SYS_1_AON/0`, no-decap low-band `C_eff` deficit,
 `RAIL_REACHABLE_DIELECTRIC_GAP_MAXWELL_GC` 한 block으로 가설을 고정해
-`DONE / ACCEPT`했다. 다음은 A2 source-block contract이며 수치 개선은 아직 0이다.
+`DONE / ACCEPT`했다. A2 정적 계약은 기존 raw v3/ownership IR을 재사용하고
+compile-only census 하나만 추가하는 것으로 ACCEPT했으며 수치 개선은 아직 0이다.
 
 ```mermaid
 flowchart LR
     H["source-IR hardening<br/>DONE / COMMITTED eece8ab"] --> A1["A1 W6 read-only error budget<br/>DONE / ACCEPT"]
-    A1 --> A2["A2 source-block contract<br/>PLANNED"]
-    A2 -->|contract ACCEPT| V3["원본 SPD source import<br/>V3 once"]
-    A2 -->|provenance/owner ambiguity| STOP["DONE / STOP_NOT_READY"]
-    V3 --> A3["A3 one-block research implementation"]
+    A1 --> A2["A2 source-block contract<br/>ACCEPT"]
+    A2 --> M["minimal read-only materializer<br/>no new DB/schema"]
+    M --> V3["원본 SPD import + source-only compile<br/>V3 once"]
+    V3 -->|census complete / ledger disjoint| A3["A3 one-block research implementation"]
+    V3 -->|missing / ambiguous| STOP["DONE / STOP_NOT_READY"]
 ```
 
 현재 금지 사항:
@@ -36,8 +38,10 @@ flowchart LR
 - `git status`는 `--untracked-files=no`를 사용한다.
 - successor 21-node invocation과 A1 V0 audit는 소모됐다. 같은 계약을 반복하지
   않는다.
-- A2 contract ACCEPT 전에는 원본 SPD import를 실행하지 않는다. A2에서도 solver,
-  PowerSI, package/release는 실행하지 않는다.
+- A2 contract는 정적으로 ACCEPT됐지만 materializer와 one-run receipt가 동결되기
+  전에는 원본 SPD import를 실행하지 않는다. A2에서는 source-only compile만
+  허용하며 P1 condensation, global solver/`Y_global`/`Zii`, PowerSI와
+  package/release는 실행하지 않는다.
 - 기존 W6 report는 read-only/hash-bound evidence이며 보정 parameter 생성에 쓰지
   않는다.
 - stage와 commit은 explicit path로만 수행한다.
@@ -247,7 +251,8 @@ integrated-review 결정의 핵심 사실은 위 표와
 
 predecessor hardening은 `DONE / STOP`이고 승인된 test-only successor는
 `DONE / ACCEPT / COMMITTED @ eece8ab`다. A1은 phase checkpoint 뒤 한 번 수행해
-`DONE / ACCEPT`했고, 아래 항목 중 A2만 다음 PLANNED item이다.
+`DONE / ACCEPT`했다. A2 contract도 Sol 정적 판정으로 ACCEPT됐고, 그 계약의 최소
+materializer 구현만 ACTIVE다.
 
 ### A1 — W7-ACC-ERROR-BUDGET-01 — DONE / ACCEPT
 
@@ -291,21 +296,49 @@ bare rail에서 N/A이므로, loaded error는 decap/termination/loss interaction
 one-rail hypothesis만 확정하며 production replacement, holdout/unseen 또는 PowerSI
 수치 개선을 증명하지 않는다.
 
-### A2 — W7-ACC-SOURCE-BLOCK-CONTRACT-01 — PLANNED
+### A2 — W7-ACC-SOURCE-BLOCK-CONTRACT-01 — CONTRACT ACCEPT / MINIMAL MATERIALIZER ACTIVE
 
 목적: 선택 block에 필요한 geometry, stack-up, dielectric, Trace, Via,
 pad/anti-pad, plane artwork와 port/owner relation을 원본 SPD에서 source-derived DB로
 한 번 materialize할 계약을 고정한다.
 
-Acceptance: selected rail/pair와 위 세 evidence hash를 동결하고, original byte/hash
-provenance, rail-complete `G/C` contribution census, deterministic query key, exact
-old-owner bijection, replaced/retained disjoint ledger, expected error 방향과 analytic
-limiting case를 정의한다. contribution은 adjacent, source-proven nonlocal 또는
-missing-source excluded 중 하나여야 한다. 하나라도 없거나 fitted magnitude가
-필요하면 `STOP_NOT_READY`다.
+Sol 판정은 `A2_CONTRACT_ACCEPT_MINIMAL_MATERIALIZER`다. raw-spatial v3와
+source-plane ownership IR v2는 필요한 geometry/material/source byte provenance와
+owner ledger를 이미 가진다. 새 DB/table/schema/dependency는 만들지 않는다. 실제
+production Maxwell partial과 reduced-node mapping만 compile 뒤에 존재하므로
+source-only compile은 필요하지만, 약 38,920-contact P1 condensation은 A2에
+불필요하므로 금지한다.
 
-검증 rung: contract V0 후, 승인된 경우에만 **production source import V3 한 번**.
-PowerSI/solve는 실행하지 않는다.
+Acceptance: selected rail/pair와 위 세 evidence hash를 동결하고 다음 V0 contract를
+모두 만족한다.
+
+| 계약 항목 | 고정 기준 |
+|---|---|
+| generic product materializer | `audit_source_plane_source_block_census(...)` 한 함수; report-returning/read-only |
+| persisted data | 기존 raw v3 + ownership IR v2만 사용; 새 asset/schema 0 |
+| query-key identity | block, rail, L30/L29 pair, 세 W6 hash, source/raw geometry/logical/plane-sheet, ownership/certificate/compiled-topology/substrate hash, P/G surface/component/island/reduced closure, policy version |
+| rail-complete scan | selected P/G reduced closure 중 하나에 incident한 모든 negative off-diagonal production Maxwell row |
+| stable identity | 기존 `SHA256(substrate_identity, upper_layer, lower_layer, upper_island_id, lower_island_id, capacitance_f_hex)` fingerprint를 유지하고 partial ordinal/reduced coordinates/classification을 별도 row hash에 결속 |
+| classification | 각 row가 `adjacent`, `source-proven-nonlocal`, `missing-source-excluded` 중 정확히 하나 |
+| G/C source law | source Dk/Df record를 보존하고 `G(f)=2*pi*f*C(f)*Df(f)`만 기록; A2에서 수치 평가·fitting 금지 |
+| owner partition | selected P↔G candidate fingerprints와 retained/excluded fingerprints를 분리하고 IR replaced/retained ledger와 disjoint hash 결속 |
+| output flags | `shadow_only=true`, `replacement_ready=false`, `production_ready=false` |
+
+duplicate/casefold collision, nonfinite/asymmetric/non-Laplacian matrix, source-record
+누락, unclassified row, raw/collapsed aggregation 불일치, ledger overlap 또는 owner
+scope가 candidate/retained를 구분하지 못하면 `STOP_NOT_READY`다. 외부 전자기 효과가
+원본에 없는데 magnitude를 발명하거나 PowerSI로 보정해서도 안 된다.
+
+구현 whitelist는 `src/spd_decap_pi/source_plane_patch_consumer.py`와
+`tests/test_source_plane_patch_consumer.py` 한 node뿐이다. 새 module/abstraction은
+금지한다. focused test는 P1/solve API를 호출하면 즉시 실패하도록 하고 deterministic
+census와 fail-closed tamper를 함께 확인한다.
+
+검증 rung은 Luna 구현 뒤 Sol static review, exact focused **V1 한 번**, 그 뒤
+production **V3 한 번**이다. V3는 fresh process에서 import 1회, raw/ownership envelope
+validation, `compile_layerwise_substrate(..., require_plane_sheet_payload=True)` 1회,
+materializer 1회, canonical JSON report/receipt 1회를 수행한다. P0/P1 condensation,
+global solve, `Y_global`, `Zii`, PowerSI, full suite, retry와 partial reuse는 금지한다.
 
 ### A3 — W7-ACC-ONE-BLOCK-IMPLEMENTATION-01
 
@@ -393,6 +426,15 @@ source-derived physical-model accuracy다. 기존 W6 증거로 하나의 error c
 source provenance, deterministic replacement stamp, disjoint owner ledger와 no-fit
 limiting-case gate를 통과한 candidate만 bounded development comparison으로 보낸다.
 
+### D-082 — A2는 기존 DB를 유지하고 compile-only census만 추가
+
+정적 schema/flow 감사에서 raw v3와 ownership IR v2의 source data 결손은 발견되지
+않았다. actual production old-Maxwell row는 source-only compile 뒤에만 존재하므로
+compile을 생략할 수 없지만, source contract를 위해 P1 N-port를 만들 이유도 없다.
+따라서 persistence redesign 대신 기존 consumer에 read-only report 함수 하나와 test
+node 하나만 추가한다. 이 결정은 G/C completeness 증거의 수집 방법만 고정하며
+solver/PowerSI 수치 개선은 계속 0이다.
+
 ## 10. 중단·사용자 검토 조건
 
 다음이면 자동 진행을 멈추고 상태와 필요한 결정을 보고한다.
@@ -404,8 +446,9 @@ limiting-case gate를 통과한 candidate만 bounded development comparison으�
 - working tree에 범위 밖 tracked 변경이 생겨 안전하게 분리할 수 없다.
 - 사용량이 사용자가 지정한 50% 남음 지점에 도달한다.
 
-현재 ACTIVE item은 없다. §11은 commit까지 닫혔으며 whitelist 밖 제품 변경, 새
-schema/cap 또는 추가 runtime이 필요하면 즉시 STOP하고 문서를 갱신한다.
+현재 ACTIVE item은 A2 minimal materializer 하나다. §11은 commit까지 닫혔으며
+위 두 code/test 경로 밖 제품 변경, 새 schema/cap 또는 계약 밖 runtime이 필요하면
+즉시 STOP하고 문서를 갱신한다.
 
 ## 11. 승인된 Unicode fixture successor — DONE / ACCEPT / COMMITTED @ eece8ab
 

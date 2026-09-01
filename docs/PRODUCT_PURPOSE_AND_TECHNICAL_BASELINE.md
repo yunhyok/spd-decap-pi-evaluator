@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — 목적·기술 기준
 
-- 문서 버전: **2.1**
+- 문서 버전: **2.2**
 - 권위: **G0 — 목적, 우선순위, 합격 의미와 비주장 경계**
 - 최종 개정: **2026-09-01 (Asia/Seoul)**
 - 현재 외부 정확성: **W6-BASE 260729 retrospective numerical FAIL**
 - unseen/generalization: **unknown / not_run**
 - 현재 수치 개선: **0** — solver, `Y_global`, `Zii`와 PowerSI 비교 수치는 아직 바뀌지 않았다.
 - 현재 구현 gate: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 PLANNED**
+- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 CONTRACT ACCEPT / MINIMAL MATERIALIZER ACTIVE**
 
 ## 1. 문서 역할과 권위
 
@@ -136,8 +136,10 @@ DRC, 제조 또는 sign-off 도구를 대체한다고 주장하지 않는다.
 flowchart LR
     H["통합 hardening<br/>DONE / STOP<br/>invalid Unicode fixture"] --> X["test-only successor<br/>DONE / ACCEPT<br/>COMMITTED eece8ab"]
     X --> E["A1 error budget<br/>DONE / ACCEPT<br/>one rail · one component · one block"]
-    E --> D["A2 source-block contract<br/>PLANNED<br/>원본 SPD DB + owner ledger"]
-    D --> L["analytic/local physics gate"]
+    E --> D["A2 source-block contract<br/>ACCEPT<br/>기존 raw v3 + ownership IR"]
+    D --> C["원본 SPD 1회<br/>source-only compile + G/C census"]
+    C -->|complete / disjoint| L["analytic/local physics gate"]
+    C -->|missing / ambiguous| S
     L --> I["one-owner production integration"]
     I --> A["동결 260729 development A/B 1회"]
     A -->|PASS| R["260804 retrospective holdout"]
@@ -197,6 +199,33 @@ exact old-owner bijection을 증명하기 전에는 구현하지 않는다.
 선택 block에 필요한 geometry, stack-up, dielectric, Trace, Via, pad/anti-pad,
 plane artwork와 port/owner relation을 원본 SPD에서 source-derived DB로 한 번
 materialize한다. DB는 원본 byte span/hash와 query key를 보존해야 한다.
+
+A2 정적 계약 감사 결과, 새 DB/table/schema는 필요하지 않다. canonical raw-spatial
+v3가 stack-up, Dk/Df와 artwork를, source-plane ownership IR v2가 원본 byte
+span/hash, rail/terminal binding과 replaced/retained ledger를 이미 보존한다. 실제
+production `AdjacentGapMaxwellPartial`과 reduced-node mapping은 source geometry를
+compile한 뒤에만 생기므로 원본 SPD import와
+`compile_layerwise_substrate(..., require_plane_sheet_payload=True)`를 각각 한 번
+허용한다. 이 compile은 source topology와 Maxwell G/C inventory를 만드는 단계이며
+`Y_global`, `Zii` 또는 PowerSI 계산이 아니다.
+
+A2에서는 P1 finite-port condensation을 실행하지 않는다. frozen production
+diagnostic의 contact boundary가 약 38,920개이므로 거대 N-port를 만드는 것은 source
+contract 증명에 필요하지 않다. 대신 selected P/G reduced-node closure에 incident한
+모든 production Maxwell off-diagonal row를 compile 결과에서 read-only census한다.
+각 row는 `adjacent`, `source-proven-nonlocal`, `missing-source-excluded` 중 정확히
+하나로 분류하고, 기존 old-edge fingerprint와 source Dk/Df provenance 및
+`G(f)=2*pi*f*C(f)*Df(f)` 법칙을 결속한다. PowerSI fitting이나 A2에서의 수치 G
+평가는 금지한다.
+
+query key는 선택 block/rail/L30-L29 pair, A1의 세 frozen W6 hash, 원본 SPD와
+raw/ownership/certificate/compiled-topology/substrate identity, exact P/G
+surface/component/island/reduced-node closure 및 classification-policy version을
+포함한다. duplicate/casefold collision, nonfinite/asymmetric/non-Laplacian C,
+source-record 누락, unclassified row, raw/collapsed aggregation 불일치, owner ledger
+overlap 또는 replaced/retained row를 구분하지 못하는 scope는
+`STOP_NOT_READY`다. report는 항상 `shadow_only=true`,
+`replacement_ready=false`, `production_ready=false`이며 정확성 개선 증거가 아니다.
 
 그다음 fitting 없이 analytic/manufactured oracle에서 limiting case, passivity,
 reciprocity, conservation, conditioning과 expected error signature를 판정한다.
