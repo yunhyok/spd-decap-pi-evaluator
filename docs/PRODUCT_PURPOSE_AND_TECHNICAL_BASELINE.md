@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — 목적·기술 기준
 
-- 문서 버전: **3.17**
+- 문서 버전: **3.18**
 - 권위: **G0 — 목적, 우선순위, 합격 의미와 비주장 경계**
 - 최종 개정: **2026-09-02 (Asia/Seoul)**
 - 현재 외부 정확성: **W6-BASE 260729 retrospective numerical FAIL**
 - unseen/generalization: **unknown / not_run**
 - 현재 수치 개선: **0** — solver, `Y_global`, `Zii`와 PowerSI 비교 수치는 아직 바뀌지 않았다.
 - 현재 구현 gate: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY — D-091 DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c` — D-092 DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION — D-093 DONE / ACCEPT_FOCUSED / COMMITTED @ `bebbb80` — D-094 DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION — D-095 DONE / ACCEPT_FOCUSED — D-096 DONE / ACCEPT — D-097 DONE / STOP_D097_RAW_STACKUP_PROVENANCE_SCOPE / CONSUMED_NO_RERUN — D-097R DONE / STOP_D097R_TERMINAL_ENDPOINT_LAYER_SEMANTICS / CONSUMED_NO_RERUN — D-097S DONE / STOP_D097S_INVALID_DETACHED_FIXTURE_COMPONENT_COVERAGE / CONSUMED_NO_RERUN — D-097T ACTIVE / not_run**
+- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY — D-091 DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c` — D-092 DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION — D-093 DONE / ACCEPT_FOCUSED / COMMITTED @ `bebbb80` — D-094 DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION — D-095 DONE / ACCEPT_FOCUSED — D-096 DONE / ACCEPT — D-097 DONE / STOP_D097_RAW_STACKUP_PROVENANCE_SCOPE / CONSUMED_NO_RERUN — D-097R DONE / STOP_D097R_TERMINAL_ENDPOINT_LAYER_SEMANTICS / CONSUMED_NO_RERUN — D-097S DONE / STOP_D097S_INVALID_DETACHED_FIXTURE_COMPONENT_COVERAGE / CONSUMED_NO_RERUN — D-097T DONE / PASS_FOCUSED / COMMITTED @ `6bdd8a1` — D-098 ACTIVE / not_run**
 
 ## 1. 문서 역할과 권위
 
@@ -159,8 +159,8 @@ flowchart LR
     D96 --> D97["D-097 source-bound geometry manifest<br/>DONE / STOP_D097_RAW_STACKUP_PROVENANCE_SCOPE"]
     D97 --> D97R["D-097R selected-stackup provenance scope<br/>DONE / STOP_D097R_TERMINAL_ENDPOINT_LAYER_SEMANTICS"]
     D97R --> D97S["D-097S terminal endpoint provenance<br/>DONE / STOP_D097S_INVALID_DETACHED_FIXTURE_COMPONENT_COVERAGE"]
-    D97S --> D97T["D-097T selected-island multicomponent provenance<br/>ACTIVE / not_run"]
-    D97T -->|focused acceptance 후| D98["D-098 original-SPD geometry manifest one-shot<br/>separate one-shot"]
+    D97S --> D97T["D-097T selected-island multicomponent provenance<br/>DONE / PASS_FOCUSED"]
+    D97T --> D98["D-098 original-SPD source-bound geometry manifest<br/>ACTIVE / not_run"]
     D98 -->|manifest PASS 후| OC["manufactured/source-bound nonzero deltaC oracle gate<br/>number/scope TBD"]
     OC -->|oracle PASS 후| L["production one-shot consideration"]
     D89 -->|STOP| SSRC["static diagnosis/replanning"]
@@ -495,17 +495,52 @@ anchor-filtered certificate component에는 없어 `spd_adapter` line 8991
 `island/component alignment is incomplete`가 발생했다. Windows SQLite PermissionError는 2차
 cleanup 증상이며 solver/P1/PowerSI 실행은 0이다. 기존 D-097S는 consumed/no-rerun으로 동결한다.
 
-### D-097T — W7-ACC-D097T-MULTICOMPONENT-SELECTED-ISLAND-UNIT-01 — ACTIVE / not_run
+### D-097T — W7-ACC-D097T-MULTICOMPONENT-SELECTED-ISLAND-UNIT-01 — DONE / PASS_FOCUSED / COMMITTED @ `6bdd8a1`
 
-동일 두 code/test 파일 whitelist만 유지한다. audit의 core island ID-set/selected geometry 부분만
-D-097 전용 최소 helper로 추출하고, 새 unit node
-`tests/test_source_plane_patch_consumer.py::test_source_plane_fringe_multicomponent_surface_selects_exact_island_without_solver`
-는 SPD import 없이 분리된 두 polygon으로 exact IDs, selected single component, deterministic
-normalized WKB/hash 및 missing/extra/unknown/duplicate fail-closed를 검증한다. 기존 D-097S node와
-`_v2_import(detached=True)`, SPD import/substrate/compiler, original SPD/full suite/P1/solver/oracle/
-PowerSI, spd_adapter/core/schema/loader/deps/cap 변경은 금지한다. Static accept 후 D-097T node만
-fresh process 1회 실행하고 D-097T PASS/commit 뒤에만 D-098 one-shot을 연다. 사용량 30% threshold와
-long-wait 정책을 유지한다.
+Exact node 1회가 1.09초에 통과했다. SPD import/substrate/compiler/P1/solver/oracle/PowerSI 실행은
+0이며 D-097T 계약을 닫고 D-098을 연다.
+
+### D-098 — W7-ACC-D098-ORIGINAL-SPD-SOURCE-BOUND-GEOMETRY-MANIFEST-01 — ACTIVE / not_run
+
+이 gate는 source-bound geometry/provenance manifest만 다룬다. 원본 source는
+`D:\S4LB002-2Para_260729_1_injected.spd` (1,116,717,287 B,
+SHA-256 `40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2`)이며, D-096의 frozen
+receipt(3,895 B, `4ab8562d9c307b3aaedd54c2839f232dea492467f9fd44bd0b7881975bc9840e`)와 report
+(17,236 B, `bb2ad70bbbb5e39af6a673d29adb2e5543675e680d68491cf906aabc2c16f473`)를 그대로 load한다.
+Rail은 `ADC_VDD_180_VQPS_SYS_1_AON/0`, candidate는
+`a96399ee2022af38d4060b5b66a1d1c246c4a9fead3ff35737857055a832a41d`, selected islands는 L30
+power `spd-surface-island:cb8510a79529b7f6f4f4afd4`와 L29 ground
+`spd-surface-island:2db099ba622781734a17c3e0`로 고정한다. D-096 raw manifest/geometry/logical/
+plane-sheet/ownership/certificate/compiled identities도 각각
+`01822ff4e5814ebd9fa1982ccec7e4496f9ceb012e358cce99faf2c7a9fc430a`,
+`1593dcbe3e59c1eac48173a348a9b893862e99bcd3e66b14e69057197660cb4e`,
+`a49f447e34a48b220bfa5107ac8a520a5a4906745f1b715c91d584c0752b09bf`,
+`8124951c18011994e480fbd5a0d2ea78f7018d8e4cabe5dd4b12e7dc62fda800`,
+`7bea5522fe5a32af64ecede674eaf8394a63ce678af49ef21d4612e87ec018ef`,
+`a149542975eb237456dddb8ac78d1bed8d8121545a037600500a16b2a5edb7d1`,
+`0e242c069a55707b554eb632ea7a0747a29b6ad1451453c6496e8dd4cc1ac8cf`로 bind한다.
+
+최종 report의 다섯 WKB attachment는 relative prefix
+`source-plane-fringe/a96399ee2022af38d4060b5b66a1d1c246c4a9fead3ff35737857055a832a41d/` 아래
+`island_p.wkb`, `island_g.wkb`, `overlap.wkb`, `p_only.wkb`, `g_only.wkb`로만 publish한다. 각 파일은
+1 MiB 이하, aggregate는 4 MiB 이하이며 little-endian fixed-2D WKB여야 한다. descriptor/name,
+SHA-256/size, aggregate SHA와 final report SHA를 함께 검증한다.
+
+외부 coordinator는 repo 밖 `D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\d098_source_plane_fringe_manifest_once.py`이며
+launch 전에 size/SHA-256을 freeze한다. no-clobber root는
+`D:\SPD-Decap-PI-Evaluator-W7\<D098_HEAD>\260729-d098-source-plane-fringe-geometry-manifest-01`이다.
+실행 순서는 source hash와 D-096 receipt/report load, original-SPD import 1회, raw/ownership frozen
+reproduction gate, census frozen load(재실행 없음), fringe audit 1회, report+5 WKB+terminal receipt
+atomic publish다. PASS ledger는 source_hash `1`, D-096 receipt load `1`, D-096 report load `1`,
+import `1`, fringe audit `1`, report `1`, terminal receipt `1`, attachments `5`, substrate compile/
+census/P1/oracle/solve/PowerSI/retry 각각 `0`이어야
+하며, 24 GiB working-set/8 GiB scratch/16 GiB start-free-space/1 MiB report/64 KiB receipt/14,400 s
+wall caps와 2–3 h budget, 4 h hard stop, one blocking wait, no polling/no retry를 지킨다.
+Postflight exact main HEAD·coordinator/source stat이 preflight와 같지 않거나 contract/cap이 깨지면
+consumed STOP/no-rerun이다. STOP 범주는 D-096 evidence identity, import/ownership, manifest reproduction,
+fringe geometry, forbidden path, artifact finalization, unexpected와 input/preflight/resource/report finalization을
+포함한다. 이 gate는 수치 개선, oracle accuracy, production readiness, release를
+주장하지 않으며 현재 numerical improvement는 0이다. tracked whitelist는 이 두 문서뿐이다.
 
 그다음 fitting 없이 analytic/manufactured oracle에서 limiting case, passivity,
 reciprocity, conservation, conditioning과 expected error signature를 판정한다.
