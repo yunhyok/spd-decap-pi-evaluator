@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — 목적·기술 기준
 
-- 문서 버전: **2.7**
+- 문서 버전: **2.8**
 - 권위: **G0 — 목적, 우선순위, 합격 의미와 비주장 경계**
 - 최종 개정: **2026-09-01 (Asia/Seoul)**
 - 현재 외부 정확성: **W6-BASE 260729 retrospective numerical FAIL**
 - unseen/generalization: **unknown / not_run**
 - 현재 수치 개선: **0** — solver, `Y_global`, `Zii`와 PowerSI 비교 수치는 아직 바뀌지 않았다.
 - 현재 구현 gate: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- 현재 정확성 gate: **A1 DONE / ACCEPT — A2/A2R DONE / STOP — A2S ACTIVE / READY_FOR_SINGLE_V1S**
+- 현재 정확성 gate: **A1 DONE / ACCEPT — A2/A2R DONE / STOP — A2S DONE / STOP_V1S_ALIAS_FIXTURE_NO_TARGET**
 
 ## 1. 문서 역할과 권위
 
@@ -141,9 +141,9 @@ flowchart LR
     V1 -->|현재 결과| SV1["DONE / STOP_V1_LAUNCHER_NO_PYTEST"]
     SV1 --> V1R["A2R launcher recovery<br/>consumed / no rerun"]
     V1R -->|현재 결과| SR["DONE / STOP_V1R_TEST_FIXTURE_IR_RELATION"]
-    SR --> V1S["A2S test-only successor<br/>STATIC_ACCEPT / exact once"]
+    SR --> V1S["A2S test-only successor<br/>consumed / no rerun"]
     V1S -->|PASS| V3G["별도 V3 계약<br/>검토 · 동결 gate"]
-    V1S -->|FAIL| SS["DONE / STOP_V1S"]
+    V1S -->|현재 결과| SS["DONE / STOP_V1S<br/>alias fixture target 없음"]
     V3G -->|별도 계약 READY일 때만| C["원본 SPD 1회<br/>source-only compile + G/C census"]
     C -->|complete / disjoint| L["analytic/local physics gate"]
     C -->|missing / ambiguous| SSRC["DONE / STOP_NOT_READY"]
@@ -253,7 +253,11 @@ test-only `missing_witness` draft가 contact-layer relation을 깨뜨려 IR buil
 별도 A2S는 invalid `missing_witness` test block 14줄만 삭제했다. 제품 코드, helper,
 새 test와 대체 IR 변이는 추가하지 않았고 나머지 focused node는 유지됐다. Sol 최종
 정적 검토는 P0/P1/P2 0으로 `STATIC_ACCEPT`했다. 새 test hash와 exact one-node 예산은
-작업 기준 문서에 동결됐으며 이제 그 node를 fresh process에서 정확히 한 번만 실행한다.
+작업 기준 문서에 동결한 뒤 그 node를 fresh process에서 정확히 한 번 실행했다.
+제품 census 두 번과 앞선 불변·dielectric fail-closed 검사는 통과했지만 test-only
+synthetic-alias 대상을 찾지 못해 `assert alias_target is not None`에서 실패했다. 부분
+통과는 acceptance로 재사용하지 않는다. A2S는
+`DONE / STOP_V1S_ALIAS_FIXTURE_NO_TARGET`이며 재실행하지 않고 V3도 열지 않는다.
 
 그다음 fitting 없이 analytic/manufactured oracle에서 limiting case, passivity,
 reciprocity, conservation, conditioning과 expected error signature를 판정한다.
