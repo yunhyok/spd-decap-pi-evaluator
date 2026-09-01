@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — 작업 기준
 
-- 문서 버전: **2.8**
+- 문서 버전: **2.9**
 - 기준 branch: **main only**
 - current integrated-hardening docs base: `5a270677074868fc3e10ffa26309a208bb151ac3`
 - integrated-hardening implementation commit: `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`
 - 최종 개정: **2026-09-01 (Asia/Seoul)**
 - integrated-hardening lifecycle: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- current accuracy gate: **A1 DONE / ACCEPT — A2/A2R DONE / STOP — A2S DONE / STOP_V1S_ALIAS_FIXTURE_NO_TARGET**
-- sole ACTIVE: **none** — 다음 허용 작업은 alias test 필요성·최소성의 read-only 정적 재평가뿐이다.
+- current accuracy gate: **A1 DONE / ACCEPT — A2/A2R/A2S execution STOP — A2T ACTIVE / TEST_PRUNE_PLANNED**
+- sole ACTIVE: **W7-ACC-SOURCE-BLOCK-ALIAS-TEST-PRUNE-01** — fixture 의존 test block 삭제만 허용, runtime 금지.
 - current numerical improvement: **0**
 
 ## 1. 압축 후 즉시 복구 카드
@@ -24,7 +24,8 @@ census 하나로 구현됐고 Sol `STATIC_ACCEPT`를 받았다. focused V1은 te
 전에 launcher Python의 pytest 부재로 STOP했다. 별도 A2R은 Python 3.12.10 /
 pytest 9.0.3에서 collection 1 뒤 test-only invalid IR mutation으로 STOP했다. 별도
 A2S는 그 block 14줄만 삭제하고 exact node를 한 번 실행했지만 synthetic-alias target이
-없어 STOP했다. 부분 통과를 acceptance로 재사용하지 않으며 수치 개선은 아직 0이다.
+없어 STOP했다. Sol 재평가 결과 제품 guard는 유지하고 fixture 의존 test block만
+삭제하며 추가 runtime 없이 A2 claim을 좁혀 닫는다. 수치 개선은 아직 0이다.
 
 ```mermaid
 flowchart LR
@@ -36,8 +37,10 @@ flowchart LR
     STOPV1 --> V1R["A2R launcher recovery<br/>consumed / no rerun"]
     V1R -->|현재 결과| STOPV1R["DONE / STOP_V1R_TEST_FIXTURE_IR_RELATION"]
     STOPV1R --> V1S["A2S test-only successor<br/>consumed / no rerun"]
-    V1S -->|PASS| V3G["별도 V3 계약<br/>검토 · 동결 gate"]
     V1S -->|현재 결과| STOPV1S["DONE / STOP_V1S<br/>alias fixture target 없음"]
+    STOPV1S --> V1T["A2T alias test prune<br/>DELETE ONLY / no runtime"]
+    V1T --> AN["A2 narrow core evidence<br/>static close gate"]
+    AN --> V3G["별도 V3 계약<br/>검토 · 동결 gate"]
     V3G -->|별도 계약 READY일 때만| V3["원본 SPD import + source-only compile<br/>V3 once"]
     V3 -->|census complete / ledger disjoint| A3["A3 one-block research implementation"]
     V3 -->|missing / ambiguous| STOPSRC["DONE / STOP_NOT_READY"]
@@ -263,8 +266,9 @@ integrated-review 결정의 핵심 사실은 위 표와
 
 predecessor hardening은 `DONE / STOP`이고 승인된 test-only successor는
 `DONE / ACCEPT / COMMITTED @ eece8ab`다. A1은 phase checkpoint 뒤 한 번 수행해
-`DONE / ACCEPT`했다. A2 candidate는 Sol `STATIC_ACCEPT`를 받았지만 focused V1
-launcher 실패로 `DONE / STOP_V1_LAUNCHER_NO_PYTEST`다. 현재 ACTIVE item은 없다.
+`DONE / ACCEPT`했다. A2 candidate는 Sol `STATIC_ACCEPT`를 받았지만 V1/A2R/A2S
+실행은 각각 소비된 STOP이다. 현재 ACTIVE item은 runtime 없는 D-086 delete-only
+A2T다.
 
 ### A1 — W7-ACC-ERROR-BUDGET-01 — DONE / ACCEPT
 
@@ -558,7 +562,29 @@ Sol 최종 정적 검토 전까지 `not_run`이었다. 정적 검토는 P0/P1/P2
 `assert alias_target is not None`에서 실패했다. 제품 guard 실패가 아니며 제품 변경도
 없다. 계약대로 재실행하지 않고 V3를 열지 않으며 부분 통과도 acceptance로 재사용하지
 않는다. 다음 허용 작업은 이 alias 변이의 필요성과 더 작은 검증 경로를 정적으로
-재평가해 별도 계약으로 동결하는 것뿐이다.
+재평가해 별도 계약으로 동결하는 것뿐이며, 그 재평가는 아래 D-086으로 완료됐다.
+
+### D-086 — A2T fixture-dependent alias test prune — ACTIVE / TEST_PRUNE_PLANNED
+
+Sol caller 추적 결과 census의 현재 직접 호출자는 focused test 하나이고 함수는 향후
+V3용 공개 seam이다. `incident endpoint alias lacks direct layer witness` guard는 reduced
+closure의 alias를 다른 physical surface의 selected rail row로 오분류하지 않게 하는
+trust-boundary이므로 제품에 유지한다. 현재 synthetic mutation은 MINI-SPD에 특정
+비선택 topology가 우연히 존재해야 하므로 적절한 단위 검증이 아니다. helper 추출,
+복합 fixture와 새 direct unit은 이 단계의 증명 범위를 넘는다.
+
+허용 diff는 `tests/test_source_plane_patch_consumer.py`에서 `island_by_id`로 시작해
+synthetic alias-error `pytest.raises`로 끝나는 동적 탐색·class monkeypatch block 전체
+삭제뿐이다. 예상 diff는 추가 0줄, 삭제 51줄이다. 제품 guard/source, fixture, helper,
+altered-dielectric 검사, 마지막 raw-manifest tamper와 solve/P1 traps는 바꾸지 않는다.
+Luna가 삭제하고 Sol이 제품 source 불변과 exact deletion을 정적으로 확인한다. 이 단계는
+test/import/build를 실행하지 않으며 successor runtime도 만들지 않는다.
+
+Sol `STATIC_ACCEPT` 뒤 A2는 `DONE / ACCEPT_NARROW_CORE_EVIDENCE`로 닫는다. claim은 이미
+V1S에서 실행된 synthetic MINI-SPD deterministic census, material provenance,
+altered-dielectric fail-closed와 no-P1/solve뿐이다. alias guard의 동적 branch, focused
+node 전체 PASS, 원본 SPD completeness와 PowerSI 수치 개선은 명시적으로 미증명이다.
+그 뒤에만 원본 SPD 1회 source-only compile/census용 별도 V3 계약을 검토·동결한다.
 
 ## 10. 중단·사용자 검토 조건
 
@@ -571,11 +597,11 @@ Sol 최종 정적 검토 전까지 `not_run`이었다. 정적 검토는 P0/P1/P2
 - working tree에 범위 밖 tracked 변경이 생겨 안전하게 분리할 수 없다.
 - 사용량이 사용자가 지정한 50% 남음 지점에 도달한다.
 
-현재 ACTIVE runtime item은 없다. A2 materializer candidate는 Sol `STATIC_ACCEPT`지만
-runtime PASS는 아니며 A2/A2R/A2S는 각각 소비된 STOP이다. 허용 제품 변경은 0이고
-다음 허용 작업은 alias test의 필요성·최소성을 정적으로 재평가하는 것뿐이다. §11은
-commit까지 닫혔으며, 그 밖의 제품 변경, 새 schema/cap 또는 계약 밖 runtime이
-필요하면 즉시 STOP하고 문서를 갱신한다.
+현재 ACTIVE item은 D-086의 delete-only A2T이며 ACTIVE runtime item은 없다. A2
+materializer candidate는 Sol `STATIC_ACCEPT`지만 focused runtime PASS는 아니며
+A2/A2R/A2S 실행은 각각 소비된 STOP이다. 허용 제품 변경은 0이고 test 변경은 D-086의
+fixture-dependent block 삭제 하나뿐이다. §11은 commit까지 닫혔으며, 그 밖의 제품
+변경, 새 schema/cap 또는 계약 밖 runtime이 필요하면 즉시 STOP하고 문서를 갱신한다.
 
 ## 11. 승인된 Unicode fixture successor — DONE / ACCEPT / COMMITTED @ eece8ab
 
