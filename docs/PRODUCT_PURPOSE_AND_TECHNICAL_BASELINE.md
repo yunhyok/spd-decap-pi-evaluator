@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — 목적·기술 기준
 
-- 문서 버전: **3.9**
+- 문서 버전: **3.10**
 - 권위: **G0 — 목적, 우선순위, 합격 의미와 비주장 경계**
 - 최종 개정: **2026-09-01 (Asia/Seoul)**
 - 현재 외부 정확성: **W6-BASE 260729 retrospective numerical FAIL**
 - unseen/generalization: **unknown / not_run**
 - 현재 수치 개선: **0** — solver, `Y_global`, `Zii`와 PowerSI 비교 수치는 아직 바뀌지 않았다.
 - 현재 구현 gate: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY — D-091 DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c` — D-092 READY / ONE_SHOT_NOT_CONSUMED**
+- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY — D-091 DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c` — D-092 DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION — D-093 ACTIVE / NOT_IMPLEMENTED**
 
 ## 1. 문서 역할과 권위
 
@@ -151,8 +151,9 @@ flowchart LR
     V3R --> D89["D-089 focused contract<br/>DONE / ACCEPT_FOCUSED / COMMITTED 54c87d1"]
     D89 --> D90["D-090 source-block census<br/>DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY"]
     D90 --> D91["D-091 focused cardinality contract<br/>DONE / ACCEPT_FOCUSED / COMMITTED 6b88c3c"]
-    D91 --> D92["D-092 production one-shot successor contract freeze<br/>READY / ONE_SHOT_NOT_CONSUMED"]
-    D92 -->|계약 동결 후| L["production one-shot consideration"]
+    D91 --> D92["D-092 source-block census<br/>DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION"]
+    D92 --> D93["D-093 contact terminal owner coverage partition<br/>ACTIVE / NOT_IMPLEMENTED"]
+    D93 -->|focused ACCEPT 후| L["production one-shot consideration"]
     D89 -->|STOP| SSRC["static diagnosis/replanning"]
     L --> I["one-owner production integration"]
     I --> A["동결 260729 development A/B 1회"]
@@ -343,11 +344,40 @@ mapping과 같은 casefold nonempty/power≥1/ground≥1/total=p+g로 정렬하�
 ordinal gap으로 cardinality보다 먼저 `ORDER_INVALID`가 난 test-only 문제였고 positive
 4-row mapping/spool 경로는 통과했다. ordinal 재열거 후 동일 node는 `1 passed in 0.82s`였고
 Sol은 `ACCEPT_D091_FOCUSED`, P0–P3는 0이다. 원본 SPD/full suite/import/solver/P1/PowerSI는
-실행하지 않았고 수치 개선은 0이며 D-090은 재실행하지 않는다. D-092
-`W7-ACC-SOURCE-BLOCK-ORIGINAL-SPD-D092-01`은 `READY / ONE_SHOT_NOT_CONSUMED`로 동결된
-원본 SPD source-block census 계약이며 solver/PowerSI 개선 실행이 아니다. 지정 coordinator
-SHA는 `d204d383b8d3f6bb1edb2c9918b00e2589ed7c24f628139413ba3ddd1be378ec`이고 아직 원본
-SPD/hash/import/run은 실행하지 않았다.
+실행하지 않았고 수치 개선은 0이며 D-090은 재실행하지 않는다.
+
+D-092 `W7-ACC-SOURCE-BLOCK-ORIGINAL-SPD-D092-01`은
+`DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION`으로 정확히 한 번
+소비되어 재실행하지 않는다. exact contract HEAD는
+`ebd143b13a80056d15701b536ea7e4993176229a`, root는
+`D:\SPD-Decap-PI-Evaluator-W7\ebd143b13a80056d15701b536ea7e4993176229a\260729-a2-d092-source-block-census-01`이다.
+`source_block_census_receipt.json`은 2,688 bytes, SHA-256
+`c5fe8e22abc079d059eaf8f232cce650083a91b2be0dd3032f93d6de4899427e`이며
+status/stage/disposition은 `STOP`/`STOP_UNEXPECTED`/`STOP_UNEXPECTED`다. 예외는
+`SourcePlaneOwnershipIRError: contact owner coverage differs from retained finite-via owners`이고,
+call ledger는 import=1/report=1, compile/census/P1/solve/PowerSI=0, retry=0,
+`report.present=false`, elapsed는 약 4993.576 s다. Acceptance는 REJECT지만 유효한
+fail-closed receipt이며 실제 owner ID/count, 원본 data 부재, coordinator 문제를 주장하지
+않는다. 원인은 producer retained set `R = actual contact-owner set B ∪ terminal-only
+first-edge owner series T`를 보존했지만 mapping+spool은 `R==B`를 요구한
+representation mismatch다. Contact row는 실제 physical port이므로 synthetic 추가는 금지되며 naive
+subset은 fail-open이다. 수치 개선은 0이다.
+
+D-093 `W7-ACC-CONTACT-TERMINAL-OWNER-COVERAGE-PARTITION-01`은
+`ACTIVE / NOT_IMPLEMENTED`로 연다. whitelist는
+`src/spd_decap_pi/source_plane_ownership_ir.py`와
+`tests/test_source_plane_ownership_ir.py`뿐이다. invariant는
+`R = B union terminal-edge-proven retained owners`이며 terminal proof는 persisted
+`terminal_bindings.via_record_required=1`, persisted casefold
+`terminal_bindings.(finite_edge_id, rail_id, island_id) == retained_owner_refs.(edge_id, rail_id, island_id)`,
+retained `retained_owner_refs.owner_kind=via`에 bound된 경우만 인정한다. direct trace는 증거가 아니며 contact checks,
+uniqueness/schema/adapter/consumer/caps/deps/version은 불변이다. 기존 schema는
+persisted owner accounting만 증명하고 ordered upstream quotient series는 증명하지
+않는다. focused node는
+`tests/test_source_plane_ownership_ir.py::test_v2_contact_coverage_partitions_terminal_series_owners`이며
+positive overlap/contact와 별도 2-owner terminal edge, negative orphan 및
+edge/island/rail/kind mismatch와 direct-trace를 포함한다. 원본 SPD/full suite/P1/
+solver/PowerSI는 실행하지 않는다.
 
 그다음 fitting 없이 analytic/manufactured oracle에서 limiting case, passivity,
 reciprocity, conservation, conditioning과 expected error signature를 판정한다.
