@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — 작업 기준
 
-- 문서 버전: **2.5**
+- 문서 버전: **2.6**
 - 기준 branch: **main only**
 - current integrated-hardening docs base: `5a270677074868fc3e10ffa26309a208bb151ac3`
 - integrated-hardening implementation commit: `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`
 - 최종 개정: **2026-09-01 (Asia/Seoul)**
 - integrated-hardening lifecycle: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / STOP_V1_LAUNCHER_NO_PYTEST — A2R DONE / STOP_V1R_TEST_FIXTURE_IR_RELATION**
-- sole ACTIVE: **none** — test-only successor는 아직 동결·개시되지 않았다.
+- current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / STOP_V1_LAUNCHER_NO_PYTEST — A2R DONE / STOP_V1R_TEST_FIXTURE_IR_RELATION — A2S ACTIVE / TEST_ONLY_SUCCESSOR_PLANNED**
+- sole ACTIVE: **W7-ACC-SOURCE-BLOCK-V1-TEST-FIXTURE-SUCCESSOR-01** — invalid mutation block 삭제만 허용.
 - current numerical improvement: **0**
 
 ## 1. 압축 후 즉시 복구 카드
@@ -22,8 +22,8 @@ A1은 새 PowerSI run 없이 기존 W6 report를 한 번 읽어 development rail
 `DONE / ACCEPT`했다. A2는 기존 raw v3/ownership IR을 재사용하는 compile-only
 census 하나로 구현됐고 Sol `STATIC_ACCEPT`를 받았다. focused V1은 test collection
 전에 launcher Python의 pytest 부재로 STOP했다. 별도 A2R은 Python 3.12.10 /
-pytest 9.0.3에서 collection 1 뒤 test-only invalid IR mutation으로 STOP했으며 수치
-개선은 아직 0이다.
+pytest 9.0.3에서 collection 1 뒤 test-only invalid IR mutation으로 STOP했다. 별도
+A2S는 그 block 삭제만 계획했고 수치 개선은 아직 0이다.
 
 ```mermaid
 flowchart LR
@@ -34,7 +34,10 @@ flowchart LR
     V1 -->|현재 결과| STOPV1["DONE / STOP_V1_LAUNCHER_NO_PYTEST"]
     STOPV1 --> V1R["A2R launcher recovery<br/>consumed / no rerun"]
     V1R -->|현재 결과| STOPV1R["DONE / STOP_V1R_TEST_FIXTURE_IR_RELATION"]
-    STOPV1R -. "별도 successor PASS 전 차단" .-> V3["원본 SPD import + source-only compile<br/>V3 once"]
+    STOPV1R --> V1S["A2S test-only successor<br/>PLANNED / exact once"]
+    V1S -->|PASS| V3G["별도 V3 계약<br/>검토 · 동결 gate"]
+    V1S -->|FAIL| STOPV1S["DONE / STOP_V1S"]
+    V3G -->|별도 계약 READY일 때만| V3["원본 SPD import + source-only compile<br/>V3 once"]
     V3 -->|census complete / ledger disjoint| A3["A3 one-block research implementation"]
     V3 -->|missing / ambiguous| STOPSRC["DONE / STOP_NOT_READY"]
 ```
@@ -47,8 +50,9 @@ flowchart LR
   않는다.
 - A2 materializer는 정적으로 ACCEPT됐지만 focused V1이 launcher 단계에서
   STOP했고 D-084 exact V1R도 test fixture 관계 오류로 소비됐다. 둘을 재실행하거나
-  원본 SPD V3를 열지 않는다. P1 condensation, global solver/`Y_global`/`Zii`,
-  PowerSI와 package/release도 실행하지 않는다.
+  원본 SPD V3를 열지 않는다. D-085에서 허용한 test block 삭제와 exact successor
+  외에는 P1 condensation, global solver/`Y_global`/`Zii`, PowerSI와
+  package/release도 실행하지 않는다.
 - 기존 W6 report는 read-only/hash-bound evidence이며 보정 parameter 생성에 쓰지
   않는다.
 - stage와 commit은 explicit path로만 수행한다.
@@ -517,6 +521,25 @@ PASS가 아니며 부분 통과를 재사용하지 않는다. V1R은 consumed/no
 변이의 필요성·최소 수정·새 실행 예산을 정적으로 재평가해 별도 계약으로 동결하는
 것뿐이다.
 
+### D-085 — A2S invalid mutation deletion — ACTIVE / TEST_ONLY_SUCCESSOR_PLANNED
+
+Sol 정적 재평가 결과 successor는 필요하다. `missing_witness` block은 여러 IR 관계를
+동시에 고쳐야만 builder를 통과하므로 focused product guard 하나를 위해 유지할 가치가
+없다. `selected conductor layers are absent` guard는 defense-in-depth로 제품에 그대로
+남긴다.
+
+허용 diff는 `tests/test_source_plane_patch_consumer.py`의 해당 block 전체 삭제뿐이다.
+제품 코드, `ownership_data`/`deepcopy`, altered-dielectric와 synthetic-alias 검사,
+helper, fixture, 새 test node는 바꾸지 않는다. Luna 수정 뒤 새 test SHA-256을 이
+문서에 기록하고 Sol `STATIC_ACCEPT`를 받은 뒤 별도 exact successor를 한 번만 연다.
+
+successor는 D-084와 같은 Python 3.12.10 / pytest 9.0.3 및 exact one-node command,
+fresh process 1회, external wall 120 s를 사용한다. collection 1, exit 0, `1 passed`만
+PASS다. preflight, retry, full suite, 제품 변경, V3는 금지한다. 실패하면
+`DONE / STOP_V1S_<CAUSE>`로 닫고 부분 결과를 재사용하거나 재실행하지 않는다.
+사용자의 standing preapproval은 이 별도 문서 계약에 한해 successor 실행 권한으로
+적용한다.
+
 ## 10. 중단·사용자 검토 조건
 
 다음이면 자동 진행을 멈추고 상태와 필요한 결정을 보고한다.
@@ -528,11 +551,11 @@ PASS가 아니며 부분 통과를 재사용하지 않는다. V1R은 consumed/no
 - working tree에 범위 밖 tracked 변경이 생겨 안전하게 분리할 수 없다.
 - 사용량이 사용자가 지정한 50% 남음 지점에 도달한다.
 
-현재 ACTIVE item은 없다. A2 materializer candidate는 Sol `STATIC_ACCEPT`지만
-runtime PASS는 아니며 A2/A2R lifecycle은 각각 `DONE / STOP_V1_LAUNCHER_NO_PYTEST`,
-`DONE / STOP_V1R_TEST_FIXTURE_IR_RELATION`이다. 다음 허용 작업은 test-only successor
-필요성의 정적 재평가다. §11은 commit까지 닫혔으며, 위 두 code/test 경로 밖 제품
-변경, 새 schema/cap 또는 계약 밖 runtime이 필요하면 즉시 STOP하고 문서를 갱신한다.
+현재 ACTIVE item은 D-085의 A2S 하나다. A2 materializer candidate는 Sol
+`STATIC_ACCEPT`지만 runtime PASS는 아니며 A2/A2R은 각각 소비된 STOP이다. 허용
+제품 변경은 0이고 test 변경은 invalid block 삭제 하나뿐이다. §11은 commit까지
+닫혔으며, 그 밖의 제품 변경, 새 schema/cap 또는 계약 밖 runtime이 필요하면 즉시
+STOP하고 문서를 갱신한다.
 
 ## 11. 승인된 Unicode fixture successor — DONE / ACCEPT / COMMITTED @ eece8ab
 

@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — 목적·기술 기준
 
-- 문서 버전: **2.5**
+- 문서 버전: **2.6**
 - 권위: **G0 — 목적, 우선순위, 합격 의미와 비주장 경계**
 - 최종 개정: **2026-09-01 (Asia/Seoul)**
 - 현재 외부 정확성: **W6-BASE 260729 retrospective numerical FAIL**
 - unseen/generalization: **unknown / not_run**
 - 현재 수치 개선: **0** — solver, `Y_global`, `Zii`와 PowerSI 비교 수치는 아직 바뀌지 않았다.
 - 현재 구현 gate: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 DONE / STOP_V1_LAUNCHER_NO_PYTEST — A2R DONE / STOP_V1R_TEST_FIXTURE_IR_RELATION**
+- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 DONE / STOP_V1_LAUNCHER_NO_PYTEST — A2R DONE / STOP_V1R_TEST_FIXTURE_IR_RELATION — A2S ACTIVE / TEST_ONLY_SUCCESSOR_PLANNED**
 
 ## 1. 문서 역할과 권위
 
@@ -141,7 +141,10 @@ flowchart LR
     V1 -->|현재 결과| SV1["DONE / STOP_V1_LAUNCHER_NO_PYTEST"]
     SV1 --> V1R["A2R launcher recovery<br/>consumed / no rerun"]
     V1R -->|현재 결과| SR["DONE / STOP_V1R_TEST_FIXTURE_IR_RELATION"]
-    SR -. "별도 successor PASS 전 차단" .-> C["원본 SPD 1회<br/>source-only compile + G/C census"]
+    SR --> V1S["A2S test-only successor<br/>PLANNED / exact once"]
+    V1S -->|PASS| V3G["별도 V3 계약<br/>검토 · 동결 gate"]
+    V1S -->|FAIL| SS["DONE / STOP_V1S"]
+    V3G -->|별도 계약 READY일 때만| C["원본 SPD 1회<br/>source-only compile + G/C census"]
     C -->|complete / disjoint| L["analytic/local physics gate"]
     C -->|missing / ambiguous| SSRC["DONE / STOP_NOT_READY"]
     L --> I["one-owner production integration"]
@@ -246,6 +249,11 @@ test-only `missing_witness` draft가 contact-layer relation을 깨뜨려 IR buil
 실패했다. census 자체는 두 번 실행되어 앞선 deterministic assertions를 통과했지만
 부분 통과를 acceptance로 재사용하지 않는다. A2R은
 `DONE / STOP_V1R_TEST_FIXTURE_IR_RELATION`이며 재실행하지 않고 V3도 열지 않는다.
+
+별도 A2S는 invalid `missing_witness` test block만 삭제하고 나머지 focused node를
+한 번 실행하는 test-only successor다. 제품 코드, helper, 새 test와 대체 IR 변이는
+추가하지 않는다. 새 test hash와 exact one-node 예산을 작업 기준 문서에 동결하고
+Sol 정적 검토를 통과한 뒤에만 실행한다.
 
 그다음 fitting 없이 analytic/manufactured oracle에서 limiting case, passivity,
 reciprocity, conservation, conditioning과 expected error signature를 판정한다.
