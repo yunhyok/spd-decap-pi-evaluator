@@ -1,15 +1,16 @@
 # SPD Decap PI Evaluator v0.23.1 — 작업 기준
 
-- 문서 버전: **3.7**
+- 문서 버전: **3.8**
 - 기준 branch: **main only**
 - current integrated-hardening docs base: `5a270677074868fc3e10ffa26309a208bb151ac3`
 - integrated-hardening implementation commit: `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`
 - 최종 개정: **2026-09-01 (Asia/Seoul)**
 - integrated-hardening lifecycle: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY — D-091 ACTIVE**
+- current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY — D-091 DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c` — D-092 PLANNED / NOT_STARTED**
 - D-089: **DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1`** — `W7-ACC-TERMINAL-PATH-KIND-OWNERSHIP-IR-01` / `TERMINAL_PATH_KIND_OWNERSHIP_IR_CONTRACT`.
 - D-090: **DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY** — consumed, no-rerun.
-- D-091: **ACTIVE** — `W7-ACC-OWNERSHIP-TERMINAL-MULTIBRANCH-CARDINALITY-01` focused contract.
+- D-091: **DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c`** — `W7-ACC-OWNERSHIP-TERMINAL-MULTIBRANCH-CARDINALITY-01`.
+- D-092: **PLANNED / NOT_STARTED** — production one-shot successor contract freeze.
 - current numerical improvement: **0**
 
 ## 1. 압축 후 즉시 복구 카드
@@ -32,8 +33,9 @@ A2S는 그 block 14줄만 삭제하고 exact node를 한 번 실행했지만 syn
 source 접근 전 STOP했다. 동일 D-087은 재실행하지 않았다. D-088/V3R도 새 HEAD/root에서
 정확히 한 번 소비된 STOP이며, 동일 실행은 재실행하지 않는다. D-089 focused terminal
 path-kind ownership IR contract는 완료됐고 D-090은
-`DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY`로 소비된 STOP이다. 다음은
-D-091 focused ownership-terminal multibranch cardinality contract다.
+`DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY`로 소비된 STOP이다. D-091
+focused ownership-terminal multibranch cardinality contract는 완료됐고 다음은 D-092
+production one-shot successor contract freeze 계획이다.
 
 ```mermaid
 flowchart LR
@@ -53,8 +55,9 @@ flowchart LR
     V3 --> V3R["D-088 recovery<br/>DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT"]
     V3R --> D89["D-089 focused contract<br/>DONE / ACCEPT_FOCUSED / COMMITTED 54c87d1"]
     D89 --> D90["D-090 source-block census<br/>DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY"]
-    D90 --> D91["D-091 focused cardinality contract<br/>ACTIVE"]
-    D91 -->|focused PASS 후| A3["production one-shot consideration"]
+    D90 --> D91["D-091 focused cardinality contract<br/>DONE / ACCEPT_FOCUSED / COMMITTED 6b88c3c"]
+    D91 --> D92["D-092 production one-shot successor contract freeze<br/>PLANNED / NOT_STARTED"]
+    D92 -->|계약 동결 후| A3["production one-shot consideration"]
     D89 -->|STOP| STOPSRC["static diagnosis/replanning"]
 ```
 
@@ -285,7 +288,8 @@ core evidence만으로 종료됐다. D-087은 launcher-only STOP으로 닫혔고
 별도 hash-bound single run을 소비한 STOP으로 닫혔다. D-089 focused terminal path-kind
 ownership IR contract는 완료됐고 D-090은
 `DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY`로 소비된 STOP이다. D-091
-focused ownership-terminal multibranch cardinality contract만 ACTIVE다.
+focused ownership-terminal multibranch cardinality contract는
+`DONE / ACCEPT_FOCUSED / COMMITTED @ 6b88c3c`로 닫혔고 D-092는 PLANNED / NOT_STARTED다.
 
 ### A1 — W7-ACC-ERROR-BUDGET-01 — DONE / ACCEPT
 
@@ -770,16 +774,18 @@ validator는 복수를 허용하지만 spool line 753–755가 exact `(2,1,1)`�
 representation/validator mismatch이며 원본 SPD data 부재가 아니다. receipt에 actual N은
 없으므로 주장하지 않는다. 동일 D-090은 재실행하지 않는다.
 
-### D-091 — W7-ACC-OWNERSHIP-TERMINAL-MULTIBRANCH-CARDINALITY-01 — ACTIVE
+### D-091 — W7-ACC-OWNERSHIP-TERMINAL-MULTIBRANCH-CARDINALITY-01 — DONE / ACCEPT_FOCUSED / COMMITTED @ 6b88c3c
 
 whitelist는 `src/spd_decap_pi/source_plane_ownership_ir.py`와
-`tests/test_source_plane_ownership_ir.py`뿐이다. 목표는 spool cardinality를 mapping의
-casefold global role-set 의미와 맞춰 nonempty, power≥1, ground≥1을 허용하고 모든 rows/order를
-보존하는 것이다. 기존 duplicate logical key/per-row required0/1/source/pad/island/owner
-fail-closed는 유지하며 terminal 임의 2개 축소, adapter/consumer/schema/version/cap/helper/
-dependency 변경은 금지한다. focused synthetic 1 node는 4-row two-branch mapping+spool
-roundtrip PASS, missing role FAIL 및 witness strict를 검증한다. 원본 SPD/full suite/import/
-solver/P1/PowerSI와 D-090 rerun은 금지한다.
+`tests/test_source_plane_ownership_ir.py`뿐이었다. streamed spool exact-two를 mapping과
+같은 casefold nonempty/power≥1/ground≥1/total=p+g로 정렬하고 rows/order를 보존했으며
+기존 fail-closed/schema/adapter/consumer는 불변이다. product 1개와 test 1개 파일만
+변경했다. 첫 exact node는 `1 failed in 0.67s`였는데 negative fixture role 삭제 뒤 ordinal
+gap으로 spool `ORDER_INVALID`가 cardinality보다 먼저 발생한 test-only 문제였고 positive
+4-row mapping/spool 경로는 해당 지점까지 통과했다. ordinal 재열거만 수정한 뒤 동일 node는
+`1 passed in 0.82s`였고 Sol은 `ACCEPT_D091_FOCUSED`, P0–P3는 0이다. 원본 SPD/full
+suite/import/solver/P1/PowerSI는 실행하지 않았고 수치 개선은 0이며 D-090은 no-rerun이다.
+후속 D-092는 `production one-shot successor contract freeze — PLANNED / NOT_STARTED`다.
 
 ## 10. 중단·사용자 검토 조건
 
@@ -799,8 +805,10 @@ V1/A2R/A2S와 D-087 실행은 각각 소비된 STOP이다. D-091 whitelist 밖 p
 coordinator 변경은 금지한다.
 D-088은 hash-bound one-shot으로 소비됐고 동일 계약은 재실행하지 않는다. D-090은
 `DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY`로 소비된 STOP이며 동일
-계약은 재실행하지 않는다. D-091 `W7-ACC-OWNERSHIP-TERMINAL-MULTIBRANCH-CARDINALITY-01`만
-`ACTIVE`이고, focused PASS 전에는 production one-shot을 고려하지 않는다.
+계약은 재실행하지 않는다. D-091 `W7-ACC-OWNERSHIP-TERMINAL-MULTIBRANCH-CARDINALITY-01`은
+`DONE / ACCEPT_FOCUSED / COMMITTED @ 6b88c3c`이고, D-092
+`production one-shot successor contract freeze — PLANNED / NOT_STARTED`는 아직 실행되지
+않았다.
 새 schema/cap 또는 계약 밖 runtime이 필요하면 즉시 STOP하고 문서를 갱신한다.
 
 ## 11. 승인된 Unicode fixture successor — DONE / ACCEPT / COMMITTED @ eece8ab
