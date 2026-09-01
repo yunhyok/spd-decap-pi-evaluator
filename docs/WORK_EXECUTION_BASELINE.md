@@ -6,7 +6,7 @@
 - integrated-hardening implementation commit: `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`
 - 최종 개정: **2026-09-02 (Asia/Seoul)**
 - integrated-hardening lifecycle: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY — D-091 DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c` — D-092 DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION — D-093 DONE / ACCEPT_FOCUSED / COMMITTED @ `bebbb80` — D-094 DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION — D-095 DONE / ACCEPT_FOCUSED — D-096 DONE / ACCEPT — D-097 DONE / STOP_D097_RAW_STACKUP_PROVENANCE_SCOPE / CONSUMED_NO_RERUN — D-097R DONE / STOP_D097R_TERMINAL_ENDPOINT_LAYER_SEMANTICS / CONSUMED_NO_RERUN — D-097S DONE / STOP_D097S_INVALID_DETACHED_FIXTURE_COMPONENT_COVERAGE / CONSUMED_NO_RERUN — D-097T DONE / PASS_FOCUSED / COMMITTED @ `6bdd8a1` — D-098 ACTIVE / not_run**
+- current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY — D-091 DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c` — D-092 DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION — D-093 DONE / ACCEPT_FOCUSED / COMMITTED @ `bebbb80` — D-094 DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION — D-095 DONE / ACCEPT_FOCUSED — D-096 DONE / ACCEPT — D-097 DONE / STOP_D097_RAW_STACKUP_PROVENANCE_SCOPE / CONSUMED_NO_RERUN — D-097R DONE / STOP_D097R_TERMINAL_ENDPOINT_LAYER_SEMANTICS / CONSUMED_NO_RERUN — D-097S DONE / STOP_D097S_INVALID_DETACHED_FIXTURE_COMPONENT_COVERAGE / CONSUMED_NO_RERUN — D-097T DONE / PASS_FOCUSED / COMMITTED @ `6bdd8a1` — D-098 DONE / STOP_MANIFEST_REPRODUCTION / CONSUMED / NO_RERUN — D-099 ACTIVE / not_run**
 - D-089: **DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1`** — `W7-ACC-TERMINAL-PATH-KIND-OWNERSHIP-IR-01` / `TERMINAL_PATH_KIND_OWNERSHIP_IR_CONTRACT`.
 - D-090: **DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY** — consumed, no-rerun.
 - D-091: **DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c`** — `W7-ACC-OWNERSHIP-TERMINAL-MULTIBRANCH-CARDINALITY-01`.
@@ -15,10 +15,10 @@
 - D-094: **DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION** — consumed, no-rerun.
 - D-095: **DONE / ACCEPT_FOCUSED** — synthetic-only coordinator rows-hash projection check; consumed/no-rerun.
 - D-096: **DONE / ACCEPT** — source-block census complete; `PASS_SOURCE_BLOCK_CENSUS_COMPLETE / CONSUMED_NO_RERUN`.
-- D-097: **DONE / STOP_D097_RAW_STACKUP_PROVENANCE_SCOPE / CONSUMED_NO_RERUN** — source-bound candidate geometry manifest; D-097R, D-097S, and D-097T are consumed and D-098 is active.
-- D-097S: **DONE / STOP_D097S_INVALID_DETACHED_FIXTURE_COMPONENT_COVERAGE / CONSUMED_NO_RERUN** — source-internal terminal endpoint provenance; D-097T is consumed and D-098 is active.
-- D-097T: **DONE / PASS_FOCUSED / COMMITTED @ `6bdd8a1`** — selected-island multicomponent unit provenance; D-098 is active.
-- D-098: **ACTIVE / not_run** — original-SPD source-bound geometry manifest one-shot.
+- D-097: **DONE / STOP_D097_RAW_STACKUP_PROVENANCE_SCOPE / CONSUMED_NO_RERUN** — source-bound candidate geometry manifest; D-097R, D-097S, D-097T, and D-098 are consumed.
+- D-097S: **DONE / STOP_D097S_INVALID_DETACHED_FIXTURE_COMPONENT_COVERAGE / CONSUMED_NO_RERUN** — source-internal terminal endpoint provenance; D-097T and D-098 are consumed.
+- D-097T: **DONE / PASS_FOCUSED / COMMITTED @ `6bdd8a1`** — selected-island multicomponent unit provenance; D-098 is consumed.
+- D-098: **DONE / STOP_MANIFEST_REPRODUCTION / CONSUMED / NO_RERUN** — original-SPD source-bound geometry manifest one-shot; ownership logical hash reproduction failed.
 - current numerical improvement: **0**
 
 ## 1. 압축 후 즉시 복구 카드
@@ -48,7 +48,7 @@ contract는 `DONE / ACCEPT_FOCUSED / COMMITTED @ bebbb80`로 닫혔다. D-094 so
 census는 `DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION`으로 소비됐고, D-095 focused
 successor는 `DONE / ACCEPT_FOCUSED`로 닫혔다. D-096 original-SPD one-shot은
 `DONE / ACCEPT` 및 `PASS_SOURCE_BLOCK_CENSUS_COMPLETE / CONSUMED_NO_RERUN`이며, D-097~D-097T는
-consumed/no-rerun이고 현재 D-098이 `ACTIVE / not_run`이다.
+consumed/no-rerun이고 D-098도 `DONE / STOP_MANIFEST_REPRODUCTION / CONSUMED / NO_RERUN`이다.
 
 ```mermaid
 flowchart LR
@@ -78,8 +78,10 @@ flowchart LR
     D97 --> D97R["D-097R selected-stackup provenance scope<br/>DONE / STOP_D097R_TERMINAL_ENDPOINT_LAYER_SEMANTICS"]
     D97R --> D97S["D-097S terminal endpoint provenance<br/>DONE / STOP_D097S_INVALID_DETACHED_FIXTURE_COMPONENT_COVERAGE"]
     D97S --> D97T["D-097T selected-island multicomponent provenance<br/>DONE / PASS_FOCUSED"]
-    D97T --> D98["D-098 original-SPD source-bound geometry manifest<br/>ACTIVE / not_run"]
-    D98 -->|manifest PASS 후| OC["manufactured/source-bound nonzero deltaC oracle gate<br/>number/scope TBD"]
+    D97T --> D98["D-098 original-SPD source-bound geometry manifest<br/>DONE / STOP_MANIFEST_REPRODUCTION / CONSUMED"]
+    D98 --> D99["D-099 ownership logical rows cross-process determinism<br/>ACTIVE / not_run"]
+    D99 -->|focused PASS 후| D98S["original-SPD diagnostic successor<br/>number/scope TBD"]
+    D98S -->|diagnostic completion 후| OC["manufactured/source-bound nonzero deltaC oracle gate<br/>number/scope TBD"]
     OC -->|oracle PASS 후| A3["production one-shot consideration"]
     D89 -->|STOP| STOPSRC["static diagnosis/replanning"]
 ```
@@ -320,7 +322,7 @@ focused ownership-terminal multibranch cardinality contract는
 `DONE / STOP_D097_RAW_STACKUP_PROVENANCE_SCOPE / CONSUMED_NO_RERUN`, D-097R은
 `DONE / STOP_D097R_TERMINAL_ENDPOINT_LAYER_SEMANTICS / CONSUMED_NO_RERUN`, D-097S는
 `DONE / STOP_D097S_INVALID_DETACHED_FIXTURE_COMPONENT_COVERAGE / CONSUMED_NO_RERUN`, D-097T는
-`DONE / PASS_FOCUSED / COMMITTED @ 6bdd8a1`, D-098이 `ACTIVE / not_run`다.
+`DONE / PASS_FOCUSED / COMMITTED @ 6bdd8a1`, D-098이 `DONE / STOP_MANIFEST_REPRODUCTION / CONSUMED / NO_RERUN`다.
 
 ### A1 — W7-ACC-ERROR-BUDGET-01 — DONE / ACCEPT
 
@@ -825,7 +827,8 @@ successor는 `DONE / ACCEPT_FOCUSED`로 닫혔다. D-096 source-block census는
 `DONE / ACCEPT`로 완료됐고 D-097은 `DONE / STOP_D097_RAW_STACKUP_PROVENANCE_SCOPE / CONSUMED_NO_RERUN`,
 D-097R은 `DONE / STOP_D097R_TERMINAL_ENDPOINT_LAYER_SEMANTICS / CONSUMED_NO_RERUN`, D-097S는
 `DONE / STOP_D097S_INVALID_DETACHED_FIXTURE_COMPONENT_COVERAGE / CONSUMED_NO_RERUN`, D-097T selected-island
-multicomponent unit provenance는 `DONE / PASS_FOCUSED / COMMITTED @ 6bdd8a1`, D-098이 `ACTIVE / not_run`으로 열렸다.
+multicomponent unit provenance는 `DONE / PASS_FOCUSED / COMMITTED @ 6bdd8a1`, D-098은
+`DONE / STOP_MANIFEST_REPRODUCTION / CONSUMED / NO_RERUN`으로 닫혔다.
 
 ### D-092 — W7-ACC-SOURCE-BLOCK-ORIGINAL-SPD-D092-01 — DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION
 
@@ -1003,55 +1006,44 @@ cleanup 증상이며 solver/P1/PowerSI 실행은 0이다. 기존 D-097S는 consu
 Exact node 1회가 1.09초에 통과했다. SPD import/substrate/compiler/P1/solver/oracle/PowerSI 실행은
 0이며 D-097T 계약을 닫고 D-098을 연다.
 
-### D-098 — W7-ACC-D098-ORIGINAL-SPD-SOURCE-BOUND-GEOMETRY-MANIFEST-01 — ACTIVE / not_run
+### D-098 — W7-ACC-D098-ORIGINAL-SPD-SOURCE-BOUND-GEOMETRY-MANIFEST-01 — DONE / STOP_MANIFEST_REPRODUCTION / CONSUMED / NO_RERUN
 
-다섯 path binding은 source `D:\S4LB002-2Para_260729_1_injected.spd` (1,116,717,287 B,
-SHA-256 `40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2`), frozen D-096
-receipt `D:\SPD-Decap-PI-Evaluator-W7\23e5d3c6b43064b8fd805c234da5f0ccc86b6d4f\260729-a2-d096-source-block-census-01\source_block_census_receipt.json`
-(3,895 B, `4ab8562d9c307b3aaedd54c2839f232dea492467f9fd44bd0b7881975bc9840e`), frozen D-096
-report 같은 root의 `source_block_census_report.json` (17,236 B,
-`bb2ad70bbbb5e39af6a673d29adb2e5543675e680d68491cf906aabc2c16f473`), 외부 coordinator
-`D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\d098_source_plane_fringe_manifest_once.py`
-(launch 전에 size와 SHA-256을 계산해 freeze), no-clobber output root
-`D:\SPD-Decap-PI-Evaluator-W7\<D098_HEAD>\260729-d098-source-plane-fringe-geometry-manifest-01`다.
-D-096 receipt/report의 핵심 binding은 rail `ADC_VDD_180_VQPS_SYS_1_AON/0`, candidate
-`a96399ee2022af38d4060b5b66a1d1c246c4a9fead3ff35737857055a832a41d`, selected L30 power
-`spd-surface-island:cb8510a79529b7f6f4f4afd4`, L29 ground
-`spd-surface-island:2db099ba622781734a17c3e0`, final/query/rows/candidate/retained/excluded/ledger
-hashes `e09f7e20b50c993cc9e540589cc543ec5a651469e0240ff1cb4f1852c7ce42d7` /
-`9fd6c843765ff80789e293958b0ac5a3d7ccaa24c7144b9fcfba3c538e8f9d31` /
-`eebfdb29b2586d77f7486eb77d8c42880e5c93d9bf87b1d134f39ea24425e5f2` /
-`d00b6f92ec064224030e77cd50bd763502ca2caf0def862f0149655d784c7fb4` /
-`53d5171dc735c40cb1b17e2bb47cc3993a41fece5e0d129bd5d11586b5e5dec7` /
-`4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945` /
-`425777101d113e8d66dffc9f423a50641ab6536bd8b4792981464a7cbca9f54e`.
-Raw/source identities are manifest `01822ff4e5814ebd9fa1982ccec7e4496f9ceb012e358cce99faf2c7a9fc430a`,
-geometry `1593dcbe3e59c1eac48173a348a9b893862e99bcd3e66b14e69057197660cb4e`, logical
-`a49f447e34a48b220bfa5107ac8a520a5a4906745f1b715c91d584c0752b09bf`, plane-sheet
-`8124951c18011994e480fbd5a0d2ea78f7018d8e4cabe5dd4b12e7dc62fda800`, ownership logical
-`7bea5522fe5a32af64ecede674eaf8394a63ce678af49ef21d4612e87ec018ef`, certificate
-`a149542975eb237456dddb8ac78d1bed8d8121545a037600500a16b2a5edb7d1`, compiled
-`0e242c069a55707b554eb632ea7a0747a29b6ad1451453c6496e8dd4cc1ac8cf`.
+Contract HEAD는 `62c49524b862d0903d59e790c911a1ebb109baac`이다. 외부 coordinator는
+`D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\d098_source_plane_fringe_manifest_once.py`이며
+60,943 B, SHA-256 `3370051060b55ec080051c954f34dc9e634c2a52a57655b7730f2911178347ed`로 고정했다.
+Output root는
+`D:\SPD-Decap-PI-Evaluator-W7\62c49524b862d0903d59e790c911a1ebb109baac\260729-d098-source-plane-fringe-geometry-manifest-01`이다.
+D-096 frozen receipt는
+`D:\SPD-Decap-PI-Evaluator-W7\23e5d3c6b43064b8fd805c234da5f0ccc86b6d4f\260729-a2-d096-source-block-census-01\source_block_census_receipt.json`
+(3,895 B, `4ab8562d9c307b3aaedd54c2839f232dea492467f9fd44bd0b7881975bc9840e`), report는 같은
+root의 `source_block_census_report.json` (17,236 B,
+`bb2ad70bbbb5e39af6a673d29adb2e5543675e680d68491cf906aabc2c16f473`)이며, expected frozen
+`ownership_logical_rows_sha256`는 `7bea5522fe5a32af64ecede674eaf8394a63ce678af49ef21d4612e87ec018ef`였다.
 
-The five exact attachment paths are relative to
-`source-plane-fringe/a96399ee2022af38d4060b5b66a1d1c246c4a9fead3ff35737857055a832a41d/`:
-`island_p.wkb`, `island_g.wkb`, `overlap.wkb`, `p_only.wkb`, and `g_only.wkb`. Each is at most
-1 MiB and their aggregate is at most 4 MiB; all are little-endian fixed-2D WKB. Acceptance binds
-each descriptor/name/SHA-256/size, the aggregate SHA-256, and the final report SHA-256.
+남은 terminal receipt는 `source_plane_fringe_geometry_receipt.json` 하나이며 2,385 B,
+SHA-256 `cb702e755c9d359fc8d5f1cb0be6944662d66f2364972ae52848fda015925240`이다. 시작은
+2026-09-02 05:47:42 KST, 종료는 07:28:26 KST, elapsed 6043.738 s였다. source hash,
+D-096 receipt/report load, original-SPD import은 각 1회였고 fringe audit/report/attachments/
+substrate_compile/census/P1/oracle/solve/PowerSI/retry는 모두 0회였다. Child receipt는 0회이고,
+parent가 terminal receipt 정확히 1개를 최종화했다. Scratch는 정리됐고 report/WKB attachment는 publish하지 않았으며
+tracked checkout은 clean이다.
 
-Execution ledger is source_hash `1`, D-096 receipt load `1`, D-096 report load `1`, original-SPD import `1`,
-fringe audit `1`, report `1`, terminal receipt `1`, and exactly five WKB attachments; substrate compile,
-census rerun, P1, oracle, solve, PowerSI, and retry are each `0`. The frozen reproduction gate precedes a frozen census
-load (never rerun), then one fringe audit, then atomic report+five-WKB+terminal-receipt publish. PASS
-requires the zero-call ledger and `PASS` disposition, with parent wall 14,400 s, child peak working set
-24 GiB, exclusive scratch 8 GiB, start free space 16 GiB, report 1 MiB and receipt 64 KiB caps, and a
-2–3 h budget with a hard 4 h stop. Postflight must match frozen exact main HEAD, coordinator size/SHA,
-and source size/SHA/stat. STOP categories include D-096 evidence identity, import/ownership,
-manifest reproduction, fringe geometry, forbidden path, artifact finalization, unexpected,
-STOP_INPUT_IDENTITY, STOP_PREFLIGHT, STOP_RESOURCE_OR_CANCELLED, and STOP_REPORT_FINALIZATION_FAILED;
-any census/manifest contract failure is consumed with no rerun, polling or retry. This is provenance/geometry evidence only: numerical improvement, oracle accuracy,
-production readiness and release claims remain false. Tracked whitelist is these two docs; coordinator
-is an outside-repo generated file; stop at the 30% usage threshold.
+실패는 `ownership_logical_rows_sha256` reproduction mismatch에서 발생했다. Raw manifest/geometry/logical/
+plane checks는 그 전에 통과했으나 frozen D-096 ownership logical hash가 재현되지 않았다. 이는
+physical drift를 의미한다고 주장하지 않는다. D-098은 `STOP_MANIFEST_REPRODUCTION`으로 소비하며
+동일 계약을 재실행하지 않는다. 수치 개선은 0이고 oracle/solver/P1/PowerSI 및 production/release
+readiness 주장은 없다.
+
+D-099는 gate `W7-ACC-D099-OWNERSHIP-LOGICAL-ROWS-CROSS-PROCESS-DETERMINISM-01`이며, 정확한 node
+`tests/test_source_plane_ownership_ir_producer.py::test_ownership_logical_rows_hash_is_cross_process_order_invariant`를
+static review 뒤 정확히 1회 실행한다. 두 fresh process를 distinct `PYTHONHASHSEED`로 실행하고
+valid two-component/anchor/quotient presentation을 정방향/역방향으로 제시하여 per-section count/SHA와
+최종 ownership logical hash가 일치하는지 검증한다. RED이면 canonical island-id ordering,
+primitive-island relation sort, terminal/contact ordinal stable semantic key assignment만 최소 수정 후보로
+삼는다. D-099는 whole suite/original SPD/census/fringe/P1/oracle/solver/PowerSI/new dependency를 허용하지
+않으며, PASS 전에는 새 original-SPD diagnostic successor를 열지 않는다. 후속 실행은 equality gate 전에
+observed ownership manifest와 section ledger를 먼저 보존한다.
+Tracked whitelist는 실제로 필요한 ownership producer/IR source, 위 focused test와 이 두 문서로만 제한한다.
 
 ## 10. 중단·사용자 검토 조건
 
@@ -1080,7 +1072,7 @@ no-rerun STOP이다. D-093은 `DONE / ACCEPT_FOCUSED / COMMITTED @ bebbb80`이�
 `DONE / STOP_D097_RAW_STACKUP_PROVENANCE_SCOPE / CONSUMED_NO_RERUN`, D-097R은
 `DONE / STOP_D097R_TERMINAL_ENDPOINT_LAYER_SEMANTICS / CONSUMED_NO_RERUN`, D-097S는
 `DONE / STOP_D097S_INVALID_DETACHED_FIXTURE_COMPONENT_COVERAGE / CONSUMED_NO_RERUN`, D-097T는
-`DONE / PASS_FOCUSED / COMMITTED @ 6bdd8a1`, D-098는 `ACTIVE / not_run`이다.
+`DONE / PASS_FOCUSED / COMMITTED @ 6bdd8a1`, D-098는 `DONE / STOP_MANIFEST_REPRODUCTION / CONSUMED / NO_RERUN`이다.
 whitelist 밖 변경과 원본 SPD/full suite/P1/solver/
 PowerSI 실행은 금지한다.
 새 schema/cap 또는 계약 밖 runtime이 필요하면 즉시 STOP하고 문서를 갱신한다.
