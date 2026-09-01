@@ -5,49 +5,41 @@
 - current integrated-hardening docs base: `5a270677074868fc3e10ffa26309a208bb151ac3`
 - integrated-hardening implementation commit: `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`
 - 최종 개정: **2026-09-01 (Asia/Seoul)**
-- sole ACTIVE: **NONE** — A1은 hardening commit 뒤에만 연다.
-- lifecycle: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- runtime: **successor 21 passed in 15.09s / consumed-no-rerun**
-- stage/commit: **complete @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
+- integrated-hardening lifecycle: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
+- current accuracy gate: **A1 DONE / ACCEPT — A2 PLANNED**
+- sole ACTIVE: **NONE** — A1 V0 audit는 소모됐고 A2 contract 전이다.
+- current numerical improvement: **0**
 
 ## 1. 압축 후 즉시 복구 카드
 
 최초 목적은 원본 SPD의 source-derived physics로 PowerSI에 근접한 `Zii` 정확도를
-얻는 것이다. 현재 작업은 그 정확도를 개선하는 물리 모델이 아니라, 원본 SPD
-규모의 source ownership IR을 안전하게 전달하기 위한 마지막 통합 hardening이다.
+얻는 것이다. source ownership IR 통합 hardening은 implementation `eece8ab`, docs
+closure `caf505d`로 끝났다. 동일 21-node 계약은 재실행하지 않는다.
 
-두 Luna 구현 stream은 tracked working tree에 존재하고 Sol 정적 검토에서
-P0–P3 없음 판정을 받았다. 첫 exact 21-node 단일 실행은 5번째 Unicode fixture의
-`SPD_NO_RAILS`로 중단됐고 소모됐다. 정적 원인은 test가 `Node1`을 `Straße1`로
-바꾸며 필수 `Node` source grammar를 제거한 것이다. 사용자는 grammar-valid
-test-only successor와 후속 자동 진행을 승인했다. 제품 코드는 동결했고 Luna가
-producer test 한 함수만 고쳤다. Sol은 `STATIC_ACCEPT`, P0–P3 0을 확정했고 새
-candidate identity의 21 nodes는 한 process에서 `21 passed in 15.09s`로 통과했다.
-exact nine-path candidate는 `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`로 commit됐고, 다음 단계는 A1의
-read-only error-budget audit다.
+A1은 새 PowerSI run 없이 기존 W6 report를 한 번 읽어 development rail
+`ADC_VDD_180_VQPS_SYS_1_AON/0`, no-decap low-band `C_eff` deficit,
+`RAIL_REACHABLE_DIELECTRIC_GAP_MAXWELL_GC` 한 block으로 가설을 고정해
+`DONE / ACCEPT`했다. 다음은 A2 source-block contract이며 수치 개선은 아직 0이다.
 
 ```mermaid
 flowchart LR
-    P["predecessor<br/>DONE / STOP"] --> C["승인된 successor 계약"]
-    C --> L["Luna<br/>producer test 1-function 수정<br/>DONE"]
-    L --> S["Sol 누적 diff 정적 검토<br/>STATIC_ACCEPT"]
-    S -->|P0-P3 없음| T["21 nodes / one process<br/>DONE / 21 PASS"]
-    S -->|finding| F["같은 item 안에서 수정<br/>Python 금지"]
-    T -->|PASS| A["DONE / ACCEPT<br/>COMMITTED eece8ab"]
-    T -->|FAIL/timeout/interrupt| X["DONE / STOP<br/>rerun·자동 successor 금지"]
-    A -->|commit 뒤| ACC["한 physical block accuracy plan"]
+    H["source-IR hardening<br/>DONE / COMMITTED eece8ab"] --> A1["A1 W6 read-only error budget<br/>DONE / ACCEPT"]
+    A1 --> A2["A2 source-block contract<br/>PLANNED"]
+    A2 -->|contract ACCEPT| V3["원본 SPD source import<br/>V3 once"]
+    A2 -->|provenance/owner ambiguity| STOP["DONE / STOP_NOT_READY"]
+    V3 --> A3["A3 one-block research implementation"]
 ```
 
 현재 금지 사항:
 
 - untracked `accuracy_parse.py`를 읽거나 수정하거나 stage하지 않는다.
 - `git status`는 `--untracked-files=no`를 사용한다.
-- successor 21-node invocation은 소모됐다. 같은 계약의 Python/pytest/build를
-  다시 실행하지 않는다.
-- pressure/exact-300K, full suite, 원본 SPD, solver, PowerSI, package/release를
-  현재 hardening 검증에 섞지 않는다.
-- predecessor 실패 계약과 partial PASS를 재사용하지 않는다. 현재 successor는
-  2026-09-01 사용자 승인으로 연 별도 candidate/hash 계약이다.
+- successor 21-node invocation과 A1 V0 audit는 소모됐다. 같은 계약을 반복하지
+  않는다.
+- A2 contract ACCEPT 전에는 원본 SPD import를 실행하지 않는다. A2에서도 solver,
+  PowerSI, package/release는 실행하지 않는다.
+- 기존 W6 report는 read-only/hash-bound evidence이며 보정 parameter 생성에 쓰지
+  않는다.
 - stage와 commit은 explicit path로만 수행한다.
 
 사용량은 Codex Usage Guard v0.1.1로 phase 전환과 delegation/build 전에 확인한다.
@@ -254,10 +246,10 @@ integrated-review 결정의 핵심 사실은 위 표와
 각 단계는 한 번에 하나만 ACTIVE다.
 
 predecessor hardening은 `DONE / STOP`이고 승인된 test-only successor는
-`DONE / ACCEPT / COMMITTED @ eece8ab`다. 아래 항목 중 A1만 다음 PLANNED item이며
-phase checkpoint 뒤 하나만 ACTIVE로 전환한다.
+`DONE / ACCEPT / COMMITTED @ eece8ab`다. A1은 phase checkpoint 뒤 한 번 수행해
+`DONE / ACCEPT`했고, 아래 항목 중 A2만 다음 PLANNED item이다.
 
-### A1 — W7-ACC-ERROR-BUDGET-01
+### A1 — W7-ACC-ERROR-BUDGET-01 — DONE / ACCEPT
 
 목적: 새 PowerSI run 없이 기존 hash-bound W6 report로 저주파 offset, resistance
 floor, inductive slope, resonance 위치·진폭/Q, phase/complex error와 bare-loaded
@@ -269,15 +261,48 @@ physical block을 연결한 no-fit 가설이 있어야 한다. 연결이 모호�
 
 검증 rung: **V0/read-only evidence audit 한 번**.
 
-### A2 — W7-ACC-SOURCE-BLOCK-CONTRACT-01
+실제 audit는 다음 immutable evidence를 읽었고 파일을 변경하지 않았다.
+
+- `D:\SPD-Decap-PI-Evaluator-W6\fb36288781dcc0b884950ef5a486c474090ceebd\260729\run_manifest.json` — SHA-256 `2B14F90E762ABC49833518137812E8FC97FCDE0E9C145795B7384210CFD9F5DE`
+- 같은 root의 `accuracy_sidecar.json` — SHA-256 `0D103E0AD47DF80641FAC0952A35A6EAA56CC9FDB71BE24661903E451926E932`
+- `correlation\correlation_report.json` — SHA-256 `969E40046E3A099D09557BA7500693460362336D76B067962436BD3B5177ABC4`
+
+선택 규칙은 approved `vqps_development` 5 rails 중 frozen low-frequency offset이
+가장 큰 rail이며 manifest order로 tie-break한다. 결과는
+`ADC_VDD_180_VQPS_SYS_1_AON/0`이다. mode-12 report의 0.1/1 MHz error는
+`+1.5552251578/+1.5542171886 dB`, low offset은 `1.5547211732 dB`; phase error는
+`+0.013004/+0.010752 deg`다. model/reference equivalent `C_eff`는 약
+`0.5381/0.6436 nF`, ratio는 약 `0.8361`이다. frequency/modal convergence는 true,
+global-Y maximum relative residual은 `1.4816082829448757e-15`다.
+
+| 고정 항목 | A1 결정 |
+|---|---|
+| error component | no-decap low-band `C_eff` deficit |
+| source-owned block | `RAIL_REACHABLE_DIELECTRIC_GAP_MAXWELL_GC` |
+| selected pair | `Signal$L30(OTHER_POWER1)` / `Signal$L29(DGND)` |
+| expected direction | source-only transverse `G/C`가 low-band capacitive admittance를 늘리고 model `|Zii|`를 낮춤 |
+| existing owner seam | source/P1 contact와 old-Maxwell row fingerprint, per-rail exact-one projection, replaced/retained ledger |
+| analytic limit | uniform two-plate `C=eps0*epsr*A/d`, `[[C,-C],[-C,C]]`, row sum 0, passive energy, `G=omega*C*Df >= 0` |
+
+`0.8361`은 보정계수가 아니다. Dk, Df, area, thickness, fringe나 scale을 PowerSI에
+맞추지 않는다. R/L은 거의 `1/f`인 magnitude와 약 0° phase error 때문에, resonance/Q는
+bare rail에서 N/A이므로, loaded error는 decap/termination/loss interaction을 섞으므로
+선택하지 않았다. 100 MHz와 broadband error도 A1 claim 밖이다. A1은 retrospective
+one-rail hypothesis만 확정하며 production replacement, holdout/unseen 또는 PowerSI
+수치 개선을 증명하지 않는다.
+
+### A2 — W7-ACC-SOURCE-BLOCK-CONTRACT-01 — PLANNED
 
 목적: 선택 block에 필요한 geometry, stack-up, dielectric, Trace, Via,
 pad/anti-pad, plane artwork와 port/owner relation을 원본 SPD에서 source-derived DB로
 한 번 materialize할 계약을 고정한다.
 
-Acceptance: original byte/hash provenance, rail-complete scope, deterministic query
-key, exact old-owner bijection, replaced/retained disjoint ledger, expected error 방향과
-analytic limiting case가 모두 정의된다. 하나라도 없으면 `STOP_NOT_READY`다.
+Acceptance: selected rail/pair와 위 세 evidence hash를 동결하고, original byte/hash
+provenance, rail-complete `G/C` contribution census, deterministic query key, exact
+old-owner bijection, replaced/retained disjoint ledger, expected error 방향과 analytic
+limiting case를 정의한다. contribution은 adjacent, source-proven nonlocal 또는
+missing-source excluded 중 하나여야 한다. 하나라도 없거나 fitted magnitude가
+필요하면 `STOP_NOT_READY`다.
 
 검증 rung: contract V0 후, 승인된 경우에만 **production source import V3 한 번**.
 PowerSI/solve는 실행하지 않는다.

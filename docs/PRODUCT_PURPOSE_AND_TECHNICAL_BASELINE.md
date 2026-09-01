@@ -7,6 +7,7 @@
 - unseen/generalization: **unknown / not_run**
 - 현재 수치 개선: **0** — solver, `Y_global`, `Zii`와 PowerSI 비교 수치는 아직 바뀌지 않았다.
 - 현재 구현 gate: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
+- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 PLANNED**
 
 ## 1. 문서 역할과 권위
 
@@ -134,8 +135,8 @@ DRC, 제조 또는 sign-off 도구를 대체한다고 주장하지 않는다.
 ```mermaid
 flowchart LR
     H["통합 hardening<br/>DONE / STOP<br/>invalid Unicode fixture"] --> X["test-only successor<br/>DONE / ACCEPT<br/>COMMITTED eece8ab"]
-    X -->|"next: A1"| E["기존 W6 증거로<br/>오차 성분 분해"]
-    E --> D["원본 SPD source DB에서<br/>한 owning block 고정"]
+    X --> E["A1 error budget<br/>DONE / ACCEPT<br/>one rail · one component · one block"]
+    E --> D["A2 source-block contract<br/>PLANNED<br/>원본 SPD DB + owner ledger"]
     D --> L["analytic/local physics gate"]
     L --> I["one-owner production integration"]
     I --> A["동결 260729 development A/B 1회"]
@@ -158,9 +159,10 @@ grammar-valid test-only successor와 후속 자동 진행을 승인했다. 새 c
 제품 코드를 바꾸지 않고 `NodeStraße2`로 실제 DGND terminal source chain과
 Python casefold/source-byte hash를 검증했고, 별도 candidate identity의 21-node
 계약을 한 번 통과했다. 실행은 consumed/no-rerun이며 implementation commit은
-`eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`다. G2는 별도 phase checkpoint 뒤 A1부터 한 item씩 연다.
+`eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`다. 후속 phase checkpoint에서 G2의
+A1을 열었고 아래와 같이 `DONE / ACCEPT`했다.
 
-### G2 — 기존 증거로 오차 분해와 단일 후보 선택
+### G2 — 기존 증거로 오차 분해와 단일 후보 선택 — DONE / ACCEPT
 
 새 full correlation을 실행하지 않고 hash-bound W6 evidence로 다음을 rail/strata별
 분리한다.
@@ -174,6 +176,21 @@ Python casefold/source-byte hash를 검증했고, 별도 candidate identity의 2
 
 예상 error 방향과 source-owned block을 하나로 연결하지 못하면
 `STOP_NOT_READY`다. 여러 후보를 동시에 구현하지 않는다.
+
+A1의 단일 read-only audit은 hash-bound W6 260729 report에서 development rail
+`ADC_VDD_180_VQPS_SYS_1_AON/0`을 고정했다. 0.1/1 MHz magnitude error는 각각
+`+1.555225/+1.554217 dB`, low-frequency offset은 `1.554721 dB`이고 phase error는
+`+0.0130/+0.01075 deg`다. anchor-derived equivalent `C_eff`는 model 약
+`0.5381 nF`, reference 약 `0.6436 nF`로 model/reference가 약 `0.8361`이다.
+이 비율은 진단값이며 보정계수가 아니다.
+
+사전 지정 error component는 **no-decap low-band `C_eff` deficit**, 단일 owning
+block은 **`RAIL_REACHABLE_DIELECTRIC_GAP_MAXWELL_GC`**다. 예상 방향은 원본 SPD
+근거가 자연스럽게 선택 rail의 transverse capacitive admittance를 늘려 low-band
+`|Zii|`를 낮추는 것이다. PowerSI로 Dk, area, thickness, fringe 또는 scale을 맞추지
+않는다. R/L, resonance/Q, loaded-rail error와 100 MHz broadband error는 이 A1
+가설 범위 밖이다. 따라서 현재 수치 개선은 계속 0이며 A2가 source provenance와
+exact old-owner bijection을 증명하기 전에는 구현하지 않는다.
 
 ### G3 — 원본 SPD source package와 local physics gate
 
