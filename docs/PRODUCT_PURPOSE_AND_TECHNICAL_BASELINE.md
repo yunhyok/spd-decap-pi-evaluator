@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — 목적·기술 기준
 
-- 문서 버전: **2.2**
+- 문서 버전: **2.3**
 - 권위: **G0 — 목적, 우선순위, 합격 의미와 비주장 경계**
 - 최종 개정: **2026-09-01 (Asia/Seoul)**
 - 현재 외부 정확성: **W6-BASE 260729 retrospective numerical FAIL**
 - unseen/generalization: **unknown / not_run**
 - 현재 수치 개선: **0** — solver, `Y_global`, `Zii`와 PowerSI 비교 수치는 아직 바뀌지 않았다.
 - 현재 구현 gate: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 CONTRACT ACCEPT / MINIMAL MATERIALIZER ACTIVE**
+- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 DONE / STOP_V1_LAUNCHER_NO_PYTEST (candidate STATIC_ACCEPT)**
 
 ## 1. 문서 역할과 권위
 
@@ -136,10 +136,12 @@ DRC, 제조 또는 sign-off 도구를 대체한다고 주장하지 않는다.
 flowchart LR
     H["통합 hardening<br/>DONE / STOP<br/>invalid Unicode fixture"] --> X["test-only successor<br/>DONE / ACCEPT<br/>COMMITTED eece8ab"]
     X --> E["A1 error budget<br/>DONE / ACCEPT<br/>one rail · one component · one block"]
-    E --> D["A2 source-block contract<br/>ACCEPT<br/>기존 raw v3 + ownership IR"]
-    D --> C["원본 SPD 1회<br/>source-only compile + G/C census"]
+    E --> D["A2 source-block materializer<br/>STATIC_ACCEPT<br/>기존 raw v3 + ownership IR"]
+    D --> V1["focused V1<br/>STOP: launcher Python에 pytest 없음"]
+    V1 -->|새 검증 계약에서 PASS할 때만| C["원본 SPD 1회<br/>source-only compile + G/C census"]
+    V1 -->|현재 결과| SV1["DONE / STOP_V1_LAUNCHER_NO_PYTEST"]
     C -->|complete / disjoint| L["analytic/local physics gate"]
-    C -->|missing / ambiguous| S
+    C -->|missing / ambiguous| SSRC["DONE / STOP_NOT_READY"]
     L --> I["one-owner production integration"]
     I --> A["동결 260729 development A/B 1회"]
     A -->|PASS| R["260804 retrospective holdout"]
@@ -197,8 +199,9 @@ exact old-owner bijection을 증명하기 전에는 구현하지 않는다.
 ### G3 — 원본 SPD source package와 local physics gate
 
 선택 block에 필요한 geometry, stack-up, dielectric, Trace, Via, pad/anti-pad,
-plane artwork와 port/owner relation을 원본 SPD에서 source-derived DB로 한 번
-materialize한다. DB는 원본 byte span/hash와 query key를 보존해야 한다.
+plane artwork와 port/owner relation은 원본 SPD에서 만든 기존 source-derived DB를
+재사용한다. 새 DB를 만들지 않고, compile 결과의 G/C row census만 한 번
+materialize한다. 기존 DB와 census는 원본 byte span/hash 및 query key를 보존해야 한다.
 
 A2 정적 계약 감사 결과, 새 DB/table/schema는 필요하지 않다. canonical raw-spatial
 v3가 stack-up, Dk/Df와 artwork를, source-plane ownership IR v2가 원본 byte
@@ -218,14 +221,23 @@ contract 증명에 필요하지 않다. 대신 selected P/G reduced-node closure
 `G(f)=2*pi*f*C(f)*Df(f)` 법칙을 결속한다. PowerSI fitting이나 A2에서의 수치 G
 평가는 금지한다.
 
-query key는 선택 block/rail/L30-L29 pair, A1의 세 frozen W6 hash, 원본 SPD와
+generic product query key는 선택 block/rail/L30-L29 pair, 원본 SPD와
 raw/ownership/certificate/compiled-topology/substrate identity, exact P/G
 surface/component/island/reduced-node closure 및 classification-policy version을
-포함한다. duplicate/casefold collision, nonfinite/asymmetric/non-Laplacian C,
+포함한다. production one-run receipt가 이 query hash와 L30/L29 선택을 A1의 세
+frozen W6 hash에 결속한다. product 함수에 W6 경로나 hash를 하드코딩하지 않는다.
+duplicate/casefold collision, nonfinite/asymmetric/non-Laplacian C,
 source-record 누락, unclassified row, raw/collapsed aggregation 불일치, owner ledger
 overlap 또는 replaced/retained row를 구분하지 못하는 scope는
 `STOP_NOT_READY`다. report는 항상 `shadow_only=true`,
 `replacement_ready=false`, `production_ready=false`이며 정확성 개선 증거가 아니다.
+
+materializer와 단일 focused test는 Sol 정적 검토에서 `STATIC_ACCEPT`를 받았다.
+그러나 2026-09-01 V1은 test collection 전에 지정 launcher Python의
+`No module named pytest`로 exit 1이 되어 `STOP_V1_LAUNCHER_NO_PYTEST`다. 이는 제품
+코드 실패나 PASS 증거가 아니며, 같은 계약의 재실행과 상위 V3 원본 SPD import는
+허용하지 않는다. 정확한 명령·hash·영수증과 다음 허용 조건은 작업 기준 문서가
+관리한다.
 
 그다음 fitting 없이 analytic/manufactured oracle에서 limiting case, passivity,
 reciprocity, conservation, conditioning과 expected error signature를 판정한다.

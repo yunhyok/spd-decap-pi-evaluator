@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — 작업 기준
 
-- 문서 버전: **2.2**
+- 문서 버전: **2.3**
 - 기준 branch: **main only**
 - current integrated-hardening docs base: `5a270677074868fc3e10ffa26309a208bb151ac3`
 - integrated-hardening implementation commit: `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`
 - 최종 개정: **2026-09-01 (Asia/Seoul)**
 - integrated-hardening lifecycle: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- current accuracy gate: **A1 DONE / ACCEPT — A2 CONTRACT ACCEPT / MINIMAL MATERIALIZER ACTIVE**
-- sole ACTIVE: **W7-ACC-SOURCE-BLOCK-CONTRACT-01** — compile-only census materializer 구현 전이다.
+- current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / STOP_V1_LAUNCHER_NO_PYTEST (candidate STATIC_ACCEPT)**
+- sole ACTIVE: **none** — 별도 V1 recovery 계약은 아직 동결·개시되지 않았다.
 - current numerical improvement: **0**
 
 ## 1. 압축 후 즉시 복구 카드
@@ -19,17 +19,20 @@ closure `caf505d`로 끝났다. 동일 21-node 계약은 재실행하지 않는�
 A1은 새 PowerSI run 없이 기존 W6 report를 한 번 읽어 development rail
 `ADC_VDD_180_VQPS_SYS_1_AON/0`, no-decap low-band `C_eff` deficit,
 `RAIL_REACHABLE_DIELECTRIC_GAP_MAXWELL_GC` 한 block으로 가설을 고정해
-`DONE / ACCEPT`했다. A2 정적 계약은 기존 raw v3/ownership IR을 재사용하고
-compile-only census 하나만 추가하는 것으로 ACCEPT했으며 수치 개선은 아직 0이다.
+`DONE / ACCEPT`했다. A2는 기존 raw v3/ownership IR을 재사용하는 compile-only
+census 하나로 구현됐고 Sol `STATIC_ACCEPT`를 받았다. focused V1은 test collection
+전에 launcher Python의 pytest 부재로 STOP했으며 수치 개선은 아직 0이다.
 
 ```mermaid
 flowchart LR
     H["source-IR hardening<br/>DONE / COMMITTED eece8ab"] --> A1["A1 W6 read-only error budget<br/>DONE / ACCEPT"]
-    A1 --> A2["A2 source-block contract<br/>ACCEPT"]
+    A1 --> A2["A2 source-block materializer<br/>STATIC_ACCEPT"]
     A2 --> M["minimal read-only materializer<br/>no new DB/schema"]
-    M --> V3["원본 SPD import + source-only compile<br/>V3 once"]
+    M --> V1["focused V1<br/>STOP: launcher Python에 pytest 없음"]
+    V1 -->|새 검증 계약에서 PASS할 때만| V3["원본 SPD import + source-only compile<br/>V3 once"]
+    V1 -->|현재 결과| STOPV1["DONE / STOP_V1_LAUNCHER_NO_PYTEST"]
     V3 -->|census complete / ledger disjoint| A3["A3 one-block research implementation"]
-    V3 -->|missing / ambiguous| STOP["DONE / STOP_NOT_READY"]
+    V3 -->|missing / ambiguous| STOPSRC["DONE / STOP_NOT_READY"]
 ```
 
 현재 금지 사항:
@@ -38,10 +41,10 @@ flowchart LR
 - `git status`는 `--untracked-files=no`를 사용한다.
 - successor 21-node invocation과 A1 V0 audit는 소모됐다. 같은 계약을 반복하지
   않는다.
-- A2 contract는 정적으로 ACCEPT됐지만 materializer와 one-run receipt가 동결되기
-  전에는 원본 SPD import를 실행하지 않는다. A2에서는 source-only compile만
-  허용하며 P1 condensation, global solver/`Y_global`/`Zii`, PowerSI와
-  package/release는 실행하지 않는다.
+- A2 materializer는 정적으로 ACCEPT됐지만 focused V1이 launcher 단계에서
+  STOP했다. 같은 V1 계약을 재실행하거나 원본 SPD V3를 열지 않는다. 별도 복구
+  계약이 승인·동결되기 전에는 P1 condensation, global solver/`Y_global`/`Zii`,
+  PowerSI와 package/release도 실행하지 않는다.
 - 기존 W6 report는 read-only/hash-bound evidence이며 보정 parameter 생성에 쓰지
   않는다.
 - stage와 commit은 explicit path로만 수행한다.
@@ -251,8 +254,8 @@ integrated-review 결정의 핵심 사실은 위 표와
 
 predecessor hardening은 `DONE / STOP`이고 승인된 test-only successor는
 `DONE / ACCEPT / COMMITTED @ eece8ab`다. A1은 phase checkpoint 뒤 한 번 수행해
-`DONE / ACCEPT`했다. A2 contract도 Sol 정적 판정으로 ACCEPT됐고, 그 계약의 최소
-materializer 구현만 ACTIVE다.
+`DONE / ACCEPT`했다. A2 candidate는 Sol `STATIC_ACCEPT`를 받았지만 focused V1
+launcher 실패로 `DONE / STOP_V1_LAUNCHER_NO_PYTEST`다. 현재 ACTIVE item은 없다.
 
 ### A1 — W7-ACC-ERROR-BUDGET-01 — DONE / ACCEPT
 
@@ -296,11 +299,11 @@ bare rail에서 N/A이므로, loaded error는 decap/termination/loss interaction
 one-rail hypothesis만 확정하며 production replacement, holdout/unseen 또는 PowerSI
 수치 개선을 증명하지 않는다.
 
-### A2 — W7-ACC-SOURCE-BLOCK-CONTRACT-01 — CONTRACT ACCEPT / MINIMAL MATERIALIZER ACTIVE
+### A2 — W7-ACC-SOURCE-BLOCK-CONTRACT-01 — DONE / STOP_V1_LAUNCHER_NO_PYTEST
 
 목적: 선택 block에 필요한 geometry, stack-up, dielectric, Trace, Via,
-pad/anti-pad, plane artwork와 port/owner relation을 원본 SPD에서 source-derived DB로
-한 번 materialize할 계약을 고정한다.
+pad/anti-pad, plane artwork와 port/owner relation은 기존 raw v3/ownership IR DB에서
+재사용하고, compile 결과의 G/C census만 한 번 materialize할 계약을 고정한다.
 
 Sol 판정은 `A2_CONTRACT_ACCEPT_MINIMAL_MATERIALIZER`다. raw-spatial v3와
 source-plane ownership IR v2는 필요한 geometry/material/source byte provenance와
@@ -316,7 +319,8 @@ Acceptance: selected rail/pair와 위 세 evidence hash를 동결하고 다음 V
 |---|---|
 | generic product materializer | `audit_source_plane_source_block_census(...)` 한 함수; report-returning/read-only |
 | persisted data | 기존 raw v3 + ownership IR v2만 사용; 새 asset/schema 0 |
-| query-key identity | block, rail, L30/L29 pair, 세 W6 hash, source/raw geometry/logical/plane-sheet, ownership/certificate/compiled-topology/substrate hash, P/G surface/component/island/reduced closure, policy version |
+| generic query-key identity | block, rail, L30/L29 pair, source/raw geometry/logical/plane-sheet, ownership/certificate/compiled-topology/substrate hash, P/G surface/component/island/reduced closure, policy version |
+| one-run receipt identity | generic query hash와 L30/L29 선택을 manifest/sidecar/correlation의 세 frozen W6 hash에 결속; product 함수에 W6 hardcode 금지 |
 | rail-complete scan | selected P/G reduced closure 중 하나에 incident한 모든 negative off-diagonal production Maxwell row |
 | stable identity | 기존 `SHA256(substrate_identity, upper_layer, lower_layer, upper_island_id, lower_island_id, capacitance_f_hex)` fingerprint를 유지하고 partial ordinal/reduced coordinates/classification을 별도 row hash에 결속 |
 | classification | 각 row가 `adjacent`, `source-proven-nonlocal`, `missing-source-excluded` 중 정확히 하나 |
@@ -335,10 +339,29 @@ scope가 candidate/retained를 구분하지 못하면 `STOP_NOT_READY`다. 외�
 census와 fail-closed tamper를 함께 확인한다.
 
 검증 rung은 Luna 구현 뒤 Sol static review, exact focused **V1 한 번**, 그 뒤
-production **V3 한 번**이다. V3는 fresh process에서 import 1회, raw/ownership envelope
-validation, `compile_layerwise_substrate(..., require_plane_sheet_payload=True)` 1회,
-materializer 1회, canonical JSON report/receipt 1회를 수행한다. P0/P1 condensation,
-global solve, `Y_global`, `Zii`, PowerSI, full suite, retry와 partial reuse는 금지한다.
+production **V3 한 번**이다. Luna candidate는 source
+`63BEA32E1184154539ABD7DFE6B54555131888393FC04E5E12892E9EB730C710`, test
+`69449B7FB5FF96A507F1A56C615680DACCDD8247E10201ACFD16D615C6416B79`로 동결됐고,
+Sol 최종 판정은 `STATIC_ACCEPT`, P0/P1/P2 0이다.
+
+2026-09-01T13:12:32+09:00 V1 영수증:
+
+```powershell
+& 'C:\Users\User\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' -m pytest -x -vv --tb=long 'tests/test_source_plane_patch_consumer.py::test_source_plane_source_block_census_is_deterministic_and_fail_closed'
+```
+
+- fresh process / wall time `0.496 s` / exit `1`
+- stdout/stderr: `No module named pytest`
+- pytest collection과 제품 import: **not_started**
+- 판정: **STOP_V1_LAUNCHER_NO_PYTEST** — code FAIL도 PASS도 아님
+- consumed: 이 launcher를 사용한 동일 V1 계약; 즉시 다른 Python으로 반복 금지
+- blocked: V3 original SPD import, source-only compile, materializer와 report/receipt
+
+V3는 별도 검증 환경 복구 계약이 동결되고 focused test가 PASS한 뒤에만 fresh
+process에서 import 1회, raw/ownership envelope validation,
+`compile_layerwise_substrate(..., require_plane_sheet_payload=True)` 1회, materializer
+1회, canonical JSON report/receipt 1회로 연다. P0/P1 condensation, global solve,
+`Y_global`, `Zii`, PowerSI, full suite, retry와 partial reuse는 금지한다.
 
 ### A3 — W7-ACC-ONE-BLOCK-IMPLEMENTATION-01
 
@@ -435,6 +458,17 @@ compile을 생략할 수 없지만, source contract를 위해 P1 N-port를 만�
 node 하나만 추가한다. 이 결정은 G/C completeness 증거의 수집 방법만 고정하며
 solver/PowerSI 수치 개선은 계속 0이다.
 
+### D-083 — A2 V1 launcher failure와 V3 차단
+
+A2 source/test candidate는 Sol `STATIC_ACCEPT`를 받았지만, 지정된 번들 Python에는
+pytest가 없어 focused V1이 collection 전에 exit 1로 종료됐다. 제품 코드는 실행되지
+않았으므로 이를 code FAIL 또는 PASS로 해석하지 않는다. 동일 V1을 다른 interpreter로
+즉시 반복하지 않고 `STOP_V1_LAUNCHER_NO_PYTEST`로 닫으며, V3는 열지 않는다.
+
+다음 허용 작업은 read-only로 기존 pytest-capable interpreter와 dependency identity를
+확인하고, command/interpreter/version을 포함한 별도 V1 recovery 계약을 이 문서에
+먼저 동결하는 것이다. 그 계약의 PASS 전에는 원본 SPD import를 시작하지 않는다.
+
 ## 10. 중단·사용자 검토 조건
 
 다음이면 자동 진행을 멈추고 상태와 필요한 결정을 보고한다.
@@ -446,9 +480,11 @@ solver/PowerSI 수치 개선은 계속 0이다.
 - working tree에 범위 밖 tracked 변경이 생겨 안전하게 분리할 수 없다.
 - 사용량이 사용자가 지정한 50% 남음 지점에 도달한다.
 
-현재 ACTIVE item은 A2 minimal materializer 하나다. §11은 commit까지 닫혔으며
-위 두 code/test 경로 밖 제품 변경, 새 schema/cap 또는 계약 밖 runtime이 필요하면
-즉시 STOP하고 문서를 갱신한다.
+현재 ACTIVE item은 없다. A2 materializer candidate는 Sol `STATIC_ACCEPT`지만
+runtime PASS는 아니며 lifecycle은 `DONE / STOP_V1_LAUNCHER_NO_PYTEST`다. 다음 허용
+작업은 read-only 환경 확인과 별도 recovery 계약의 사전 동결이다. §11은 commit까지
+닫혔으며, 위 두 code/test 경로 밖 제품 변경, 새 schema/cap 또는 계약 밖 runtime이
+필요하면 즉시 STOP하고 문서를 갱신한다.
 
 ## 11. 승인된 Unicode fixture successor — DONE / ACCEPT / COMMITTED @ eece8ab
 

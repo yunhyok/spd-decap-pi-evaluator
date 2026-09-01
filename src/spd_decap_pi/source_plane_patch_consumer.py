@@ -3011,4 +3011,356 @@ def audit_source_plane_patch_shadow_one_frequency_solve(
     return {**common, "audit_sha256": sha256(concrete_canonical_json_bytes(common)).hexdigest()}
 
 
-__all__ = ["SourcePlanePatchError", "consume_source_plane_patch", "evaluate_source_plane_contact_admissibility", "evaluate_source_plane_contact_condensation", "audit_source_plane_patch_owner_off", "audit_source_plane_patch_contact_quotient_representability", "audit_source_plane_patch_selected_base_cutset", "audit_source_plane_patch_production_owner_join", "plan_source_plane_patch_shadow_contact_rewire", "audit_source_plane_patch_shadow_rewire_commutation", "audit_source_plane_patch_shadow_local_replacement_recipe", "materialize_source_plane_patch_shadow_topology_embedding", "bind_source_plane_patch_shadow_nport_block", "audit_source_plane_patch_shadow_augmented_component_closure", "audit_source_plane_patch_shadow_one_frequency_solve"]
+def audit_source_plane_source_block_census(
+    ownership_manifest: Mapping[str, Any],
+    ownership_attachments: Mapping[str, bytes],
+    raw_manifest: Mapping[str, Any],
+    substrate: Any,
+    *,
+    rail_id: str,
+) -> Mapping[str, Any]:
+    """Materialize a deterministic, source-only Maxwell row census."""
+    try:
+        rail_id = _text(rail_id, "rail_id")
+        if not isinstance(ownership_manifest, Mapping) or not isinstance(raw_manifest, Mapping):
+            _fail("SOURCE_BLOCK_CENSUS_INVALID: asset manifests are not mappings")
+        if not isinstance(ownership_attachments, Mapping):
+            _fail("SOURCE_BLOCK_CENSUS_INVALID: attachments are not a mapping")
+        network = getattr(substrate, "network", None)
+        provenance = getattr(substrate, "provenance", None)
+        if network is None or not isinstance(provenance, Mapping):
+            _fail("SOURCE_BLOCK_CENSUS_INVALID: substrate identity is absent")
+        substrate_identity = _text(getattr(substrate, "substrate_identity_sha256", ""), "substrate identity")
+        if len(substrate_identity) != 64 or substrate_identity != substrate_identity.casefold() or any(ch not in "0123456789abcdef" for ch in substrate_identity):
+            _fail("SOURCE_BLOCK_CENSUS_INVALID: substrate identity is not SHA-256")
+        raw_sha = sha256(concrete_canonical_json_bytes(dict(raw_manifest))).hexdigest()
+        _binding_check(ownership_manifest, raw_manifest)
+        if (str(ownership_manifest.get("raw_manifest_sha256", "")) != raw_sha
+                or str(provenance.get("source_sha256", "")) != str(raw_manifest.get("source_sha256", ""))
+                or str(provenance.get("raw_spatial_v3_manifest_sha256", "")) != raw_sha
+                or str(provenance.get("substrate_identity_sha256", "")) != substrate_identity):
+            _fail("SOURCE_BLOCK_CENSUS_INVALID: source/raw/substrate identity differs")
+
+        total = [0]
+        sections = ("source_records", "surfaces", "islands", "primitives", "primitive_island_edges", "stackup_layers", "dielectric_points", "rail_bindings", "terminal_bindings", "retained_owner_refs", "plane_owner_scopes", "replacement_ledger", "replacement_ledger_members")
+        with load_source_plane_ownership_ir(
+            ownership_manifest, ownership_attachments,
+            expected_source_sha256=str(raw_manifest["source_sha256"]),
+            expected_project_binding_sha256=str(raw_manifest["project_binding_sha256"]),
+            expected_certificate_evidence_sha256=str(raw_manifest["certificate_evidence_sha256"]),
+            expected_compiled_topology_identity_sha256=str(raw_manifest["compiled_topology_identity_sha256"]),
+            expected_raw_manifest_sha256=str(ownership_manifest["raw_manifest_sha256"]),
+            expected_raw_geometry_identity_sha256=str(raw_manifest["geometry_identity_sha256"]),
+            expected_raw_logical_rows_sha256=str(raw_manifest["logical_rows_sha256"]),
+            expected_raw_plane_sheet_sha256=str(raw_manifest["plane_sheet_payload_sha256"]),
+            expected_app_version=str(ownership_manifest.get("app_version", "")),
+        ) as loaded:
+            ir = {section: _rows(loaded, section, MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS, total) for section in sections}
+        _owner_gate(ir, rail_id)
+        rail_rows = [row for row in ir["rail_bindings"] if str(row.get("rail_id", "")).casefold() == rail_id.casefold()]
+        if len(rail_rows) != 2 or {str(row.get("role", "")).casefold() for row in rail_rows} != {"power", "ground"}:
+            _fail("SOURCE_BLOCK_CENSUS_INVALID: selected rail bindings are not exact")
+        bindings = {str(row.get("role", "")).casefold(): row for row in rail_rows}
+        power, ground = bindings["power"], bindings["ground"]
+        surfaces = {str(row.get("surface_id", "")).casefold(): row for row in ir["surfaces"]}
+        islands = {str(row.get("island_id", "")).casefold(): row for row in ir["islands"]}
+        if len(surfaces) != len(ir["surfaces"]) or len(islands) != len(ir["islands"]):
+            _fail("SOURCE_BLOCK_CENSUS_INVALID: source identity is ambiguous")
+        closures: dict[str, set[str]] = {}
+        reduced_closures: dict[str, set[int]] = {}
+        role_layers = {role: str(binding.get("layer", "")).strip() for role, binding in bindings.items()}
+        for role, binding in bindings.items():
+            surface_id = str(binding.get("surface_id", "")).strip().casefold()
+            anchor_id = str(binding.get("island_id", "")).strip().casefold()
+            anchor = islands.get(anchor_id)
+            surface = surfaces.get(surface_id)
+            if surface is None or anchor is None or str(anchor.get("surface_id", "")).casefold() != surface_id:
+                _fail("SOURCE_BLOCK_CENSUS_INVALID: selected P/G closure is absent")
+            if str(surface.get("layer", "")).casefold() != role_layers[role].casefold():
+                _fail("SOURCE_BLOCK_CENSUS_INVALID: selected P/G layer witness differs")
+            component = str(anchor.get("component_id", "")).casefold()
+            closure = {key for key, row in islands.items() if str(row.get("surface_id", "")).casefold() == surface_id and str(row.get("component_id", "")).casefold() == component}
+            if not closure:
+                _fail("SOURCE_BLOCK_CENSUS_INVALID: selected P/G closure is empty")
+            try:
+                reduced = {int(network.reduced_node_index(str(islands[key].get("island_id", "")))) for key in closure}
+            except Exception as exc:
+                _fail(f"SOURCE_BLOCK_CENSUS_INVALID: reduced closure is absent: {exc}")
+            if len(reduced) != 1:
+                _fail("SOURCE_BLOCK_CENSUS_INVALID: selected P/G closure must have one reduced node")
+            closures[role] = closure
+            reduced_closures[role] = reduced
+        if closures["power"] & closures["ground"] or reduced_closures["power"] & reduced_closures["ground"]:
+            _fail("SOURCE_BLOCK_CENSUS_INVALID: P/G closure overlaps")
+
+        source_records = ir["source_records"]
+        source_by_id = {str(row.get("record_id", "")).casefold(): row for row in source_records}
+        if len(source_by_id) != len(source_records) or any(not str(row.get("source_record_sha256", "")).strip() for row in source_records):
+            _fail("SOURCE_BLOCK_CENSUS_INVALID: source-record provenance is incomplete")
+        with load_raw_spatial_contact_asset(
+            raw_manifest, ownership_attachments,
+            expected_source_sha256=str(raw_manifest["source_sha256"]),
+            expected_project_binding_sha256=str(raw_manifest["project_binding_sha256"]),
+            expected_certificate_evidence_sha256=str(raw_manifest["certificate_evidence_sha256"]),
+            expected_compiled_topology_identity_sha256=str(raw_manifest["compiled_topology_identity_sha256"]),
+            expected_geometry_identity_sha256=str(raw_manifest["geometry_identity_sha256"]),
+            require_plane_sheet_payload=True,
+        ) as raw:
+            raw_stackup = _raw_rows(raw, "stackup_layers", MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS, total)
+            raw_dielectric = _raw_rows(raw, "dielectric_points", MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS, total)
+        layer_by_key = {str(row.layer_name).casefold(): row for row in raw_stackup}
+        pwr_layer = str(power.get("layer", "")).strip()
+        gnd_layer = str(ground.get("layer", "")).strip()
+        if pwr_layer.casefold() not in layer_by_key or gnd_layer.casefold() not in layer_by_key or pwr_layer.casefold() == gnd_layer.casefold():
+            _fail("SOURCE_BLOCK_CENSUS_INVALID: selected conductor layers are absent")
+        pwr_ord, gnd_ord = layer_by_key[pwr_layer.casefold()].layer_ordinal, layer_by_key[gnd_layer.casefold()].layer_ordinal
+        lo, hi = sorted((int(pwr_ord), int(gnd_ord)))
+        between = [row for row in raw_stackup if lo < int(row.layer_ordinal) < hi]
+        if len(between) != 1 or str(between[0].layer_kind).casefold() != "dielectric":
+            _fail("SOURCE_BLOCK_CENSUS_INVALID: selected dielectric gap is not exact")
+        ir_stackup = {str(row.get("layer_name", "")).casefold(): row for row in ir["stackup_layers"]}
+        selected_layer_names = {pwr_layer.casefold(), gnd_layer.casefold(), str(between[0].layer_name).casefold()}
+        selected_raw_stackup = [row for row in raw_stackup if str(row.layer_name).casefold() in selected_layer_names]
+        selected_ir_stackup = {key: row for key, row in ir_stackup.items() if key in selected_layer_names}
+        if len(selected_raw_stackup) != 3 or {str(row.layer_name).casefold() for row in selected_raw_stackup} != selected_layer_names or set(selected_ir_stackup) != selected_layer_names:
+            _fail("SOURCE_BLOCK_CENSUS_INVALID: selected stackup key set is not exact")
+        for raw_row in raw_stackup:
+            if str(raw_row.layer_name).casefold() not in selected_layer_names:
+                continue
+            row = ir_stackup.get(str(raw_row.layer_name).casefold())
+            if row is None or int(row.get("raw_layer_ordinal", -1)) != int(raw_row.layer_ordinal) or str(row.get("raw_layer_sha256", "")) != _row_hash(raw_row):
+                _fail("SOURCE_BLOCK_CENSUS_INVALID: stackup provenance differs")
+            try:
+                equal_material = (str(row.get("layer_kind", "")) == str(raw_row.layer_kind)
+                    and float(row.get("thickness_um")) == float(raw_row.thickness_um)
+                    and row.get("conductivity_s_per_m") == raw_row.conductivity_s_per_m
+                    and str(row.get("material_name", "")) == str(raw_row.material_name))
+            except (TypeError, ValueError):
+                equal_material = False
+            if not equal_material:
+                _fail("SOURCE_BLOCK_CENSUS_INVALID: selected stackup material differs")
+            conductor = str(raw_row.layer_kind).casefold() == "conductor"
+            conductivity_value = row.get("conductivity_s_per_m")
+            conductivity_source = row.get("conductivity_source_record_id")
+            if (conductivity_value is None) != (conductivity_source is None):
+                _fail("SOURCE_BLOCK_CENSUS_INVALID: conductivity provenance is malformed")
+            if not conductor and (conductivity_value is not None or conductivity_source is not None):
+                _fail("SOURCE_BLOCK_CENSUS_INVALID: dielectric conductivity must be unavailable")
+            for field in ("thickness_source_record_id", "conductivity_source_record_id", "material_source_record_id"):
+                if field in row and row.get(field) is not None and str(row.get(field, "")).casefold() not in source_by_id:
+                    _fail("SOURCE_BLOCK_CENSUS_INVALID: stackup source record is absent")
+        dielectric = between[0]
+        dielectric_rows = [(global_index, row) for global_index, row in enumerate(raw_dielectric) if int(row.layer_ordinal) == int(dielectric.layer_ordinal)]
+        if not dielectric_rows:
+            _fail("SOURCE_BLOCK_CENSUS_INVALID: dielectric source rows are absent")
+        ir_points = {(str(row.get("layer_name", "")).casefold(), int(row.get("point_ordinal", -1))): row for row in ir["dielectric_points"]}
+        raw_dielectric_keys = {(str(dielectric.layer_name).casefold(), int(point.point_ordinal)) for _global_index, point in dielectric_rows}
+        ir_dielectric_keys = {key for key in ir_points if key[0] == str(dielectric.layer_name).casefold()}
+        if ir_dielectric_keys != raw_dielectric_keys:
+            _fail("SOURCE_BLOCK_CENSUS_INVALID: selected dielectric key set differs")
+        for global_index, point in dielectric_rows:
+            row = ir_points.get((str(dielectric.layer_name).casefold(), int(point.point_ordinal)))
+            if row is None or str(row.get("raw_dielectric_sha256", "")) != _row_hash(point):
+                _fail("SOURCE_BLOCK_CENSUS_INVALID: dielectric provenance differs")
+            try:
+                equal_dielectric = (int(row.get("raw_dielectric_ordinal", -1)) == global_index
+                    and int(row.get("point_ordinal", -1)) == int(point.point_ordinal)
+                    and float(row.get("frequency_hz")) == float(point.frequency_hz)
+                    and float(row.get("epsilon_r")) == float(point.epsilon_r)
+                    and float(row.get("loss_tangent")) == float(point.loss_tangent))
+            except (TypeError, ValueError):
+                equal_dielectric = False
+            if not equal_dielectric:
+                _fail("SOURCE_BLOCK_CENSUS_INVALID: selected dielectric material differs")
+            for field in ("frequency_source_record_id", "epsilon_source_record_id", "loss_tangent_source_record_id"):
+                if field in row and row.get(field) is not None and str(row.get(field, "")).casefold() not in source_by_id:
+                    _fail("SOURCE_BLOCK_CENSUS_INVALID: dielectric source record is absent")
+
+        reduced_ids = tuple(getattr(network, "_reduced_node_ids", ()))
+        partials = tuple(getattr(network, "partials", ()))
+        collapsed = tuple(getattr(network, "_collapsed_partials", ()))
+        if not reduced_ids or not partials or len(collapsed) != len(partials):
+            _fail("SOURCE_BLOCK_CENSUS_INVALID: production partial inventory is incomplete")
+        reduced_count = len(reduced_ids)
+        raw_groups: dict[tuple[int, int, int], float] = {}
+        raw_counts: dict[tuple[int, int, int], int] = {}
+        rows: list[dict[str, Any]] = []
+        fingerprints: set[str] = set()
+        def matrix_gate(matrix: Any, expected: int, label: str) -> Any:
+            if not issparse(matrix) or matrix.ndim != 2 or matrix.shape != (expected, expected):
+                _fail(f"SOURCE_BLOCK_CENSUS_INVALID: {label} matrix is malformed")
+            coo = matrix.tocoo(copy=False)
+            if not np.all(np.isfinite(coo.data)):
+                _fail(f"SOURCE_BLOCK_CENSUS_INVALID: {label} matrix is nonfinite")
+            csr = coo.tocsr()
+            scale = max(float(np.max(np.abs(coo.data), initial=0.0)), 1.0e-30)
+            tol = max(1.0e-24, scale * 1.0e-10)
+            diff = csr - csr.T
+            if diff.nnz and float(np.max(np.abs(diff.data))) > tol:
+                _fail(f"SOURCE_BLOCK_CENSUS_INVALID: {label} matrix is asymmetric")
+            for row_index, column_index, value in zip(coo.row, coo.col, coo.data, strict=True):
+                if int(row_index) != int(column_index) and value > 0.0:
+                    _fail(f"SOURCE_BLOCK_CENSUS_INVALID: {label} has positive off-diagonal")
+            diagonal = np.asarray(csr.diagonal(), dtype=float)
+            offdiag = np.zeros(expected, dtype=float)
+            for row_index, column_index, value in zip(coo.row, coo.col, coo.data, strict=True):
+                if int(row_index) != int(column_index):
+                    offdiag[int(row_index)] += float(value)
+            if np.any(diagonal < -tol) or float(np.max(np.abs(np.asarray(csr.sum(axis=1)).ravel()))) > tol or not np.allclose(diagonal, -offdiag, rtol=1.0e-12, atol=tol):
+                _fail(f"SOURCE_BLOCK_CENSUS_INVALID: {label} is not Laplacian")
+            return csr
+
+        for partial_ordinal, wrapped in enumerate(partials):
+            partial = getattr(wrapped, "partial", wrapped)
+            if type(partial).__name__ != "AdjacentGapMaxwellPartial":
+                _fail("SOURCE_BLOCK_CENSUS_INVALID: unsupported production partial type")
+            names = tuple(getattr(partial, "net_names", ()))
+            if not names or len({str(name).casefold() for name in names}) != len(names):
+                _fail("SOURCE_BLOCK_CENSUS_INVALID: partial node identity is ambiguous")
+            matrix = matrix_gate(getattr(partial, "maxwell_capacitance_f", None), len(names), f"partial {partial_ordinal}")
+            collapsed_csr = matrix_gate(collapsed[partial_ordinal], reduced_count, f"collapsed partial {partial_ordinal}")
+            upper_layer, lower_layer = str(getattr(partial, "upper_layer", "")), str(getattr(partial, "lower_layer", ""))
+            if not upper_layer.strip() or not lower_layer.strip():
+                _fail("SOURCE_BLOCK_CENSUS_INVALID: adjacent source identity is incomplete")
+            coo = matrix.tocoo(copy=False)
+            for row_index, column_index, value in zip(coo.row, coo.col, coo.data, strict=True):
+                if int(row_index) >= int(column_index) or float(value) >= 0.0:
+                    continue
+                first, second = str(names[int(row_index)]), str(names[int(column_index)])
+                try:
+                    first_reduced, second_reduced = int(network.reduced_node_index(first)), int(network.reduced_node_index(second))
+                except Exception as exc:
+                    _fail(f"SOURCE_BLOCK_CENSUS_INVALID: reduced edge mapping is absent: {exc}")
+                if first_reduced == second_reduced:
+                    _fail("SOURCE_BLOCK_CENSUS_INVALID: edge collapses to one reduced node")
+                canonical_reduced = (min(first_reduced, second_reduced), max(first_reduced, second_reduced))
+                group = (partial_ordinal, *canonical_reduced)
+                raw_groups[group] = raw_groups.get(group, 0.0) + float(-value)
+                raw_counts[group] = raw_counts.get(group, 0) + 1
+                endpoint_role_sets = [{role for role in ("power", "ground") if reduced in reduced_closures[role]} for reduced in (first_reduced, second_reduced)]
+                if not any(endpoint_role_sets):
+                    continue
+                endpoint_layers = []
+                for endpoint_index, endpoint_roles in enumerate(endpoint_role_sets):
+                    if len(endpoint_roles) > 1:
+                        _fail("SOURCE_BLOCK_CENSUS_INVALID: incident endpoint role is ambiguous")
+                    if not endpoint_roles:
+                        endpoint_layers.append(None)
+                        continue
+                    endpoint_name = (first, second)[endpoint_index]
+                    endpoint_island = islands.get(endpoint_name.casefold())
+                    endpoint_role = next(iter(endpoint_roles))
+                    expected_surface = str(bindings[endpoint_role].get("surface_id", "")).casefold()
+                    witness_surface = surfaces.get(str(endpoint_island.get("surface_id", "")).casefold()) if endpoint_island is not None else None
+                    if endpoint_island is None or witness_surface is None or str(endpoint_island.get("surface_id", "")).casefold() != expected_surface or str(witness_surface.get("layer", "")).casefold() != role_layers[endpoint_role].casefold():
+                        _fail("SOURCE_BLOCK_CENSUS_INVALID: incident endpoint alias lacks direct layer witness")
+                    endpoint_layers.append(role_layers[endpoint_role])
+                known_layers = [layer for layer in endpoint_layers if layer is not None]
+                if not known_layers or any(layer.casefold() not in {upper_layer.casefold(), lower_layer.casefold()} for layer in known_layers) or len(known_layers) == 2 and known_layers[0].casefold() == known_layers[1].casefold():
+                    _fail("SOURCE_BLOCK_CENSUS_INVALID: incident endpoint orientation is ambiguous")
+                if len(known_layers) == 2 and {layer.casefold() for layer in known_layers} != {upper_layer.casefold(), lower_layer.casefold()}:
+                    _fail("SOURCE_BLOCK_CENSUS_INVALID: incident endpoint layers differ")
+                if endpoint_layers[0] is not None and endpoint_layers[0].casefold() == upper_layer.casefold():
+                    upper_index = 0
+                elif endpoint_layers[1] is not None and endpoint_layers[1].casefold() == upper_layer.casefold():
+                    upper_index = 1
+                elif endpoint_layers[0] is not None and endpoint_layers[0].casefold() == lower_layer.casefold() and endpoint_layers[1] is None:
+                    upper_index = 1
+                elif endpoint_layers[1] is not None and endpoint_layers[1].casefold() == lower_layer.casefold() and endpoint_layers[0] is None:
+                    upper_index = 0
+                else:
+                    _fail("SOURCE_BLOCK_CENSUS_INVALID: incident endpoint orientation is unresolved")
+                if upper_index == 0:
+                    upper_id, lower_id, upper_reduced, lower_reduced = first, second, first_reduced, second_reduced
+                else:
+                    upper_id, lower_id, upper_reduced, lower_reduced = second, first, second_reduced, first_reduced
+                candidate_roles = {next(iter(role_set)) for role_set in endpoint_role_sets if role_set}
+                action = "candidate" if candidate_roles == {"power", "ground"} else "retained"
+                cap_hex = float(-value).hex()
+                fingerprint_payload = {"substrate_identity_sha256": substrate_identity, "upper_layer": upper_layer, "lower_layer": lower_layer, "upper_island_id": upper_id, "lower_island_id": lower_id, "capacitance_f_hex": cap_hex}
+                fingerprint = sha256(concrete_canonical_json_bytes(fingerprint_payload)).hexdigest()
+                if fingerprint in fingerprints:
+                    _fail("SOURCE_BLOCK_CENSUS_INVALID: old edge fingerprint is duplicated")
+                fingerprints.add(fingerprint)
+                rows.append({**fingerprint_payload, "fingerprint": fingerprint, "partial_ordinal": partial_ordinal, "upper_reduced_index": upper_reduced, "lower_reduced_index": lower_reduced, "classification": "adjacent", "action": action, "aggregation_count": 0})
+            partial_groups = {key: value for key, value in raw_groups.items() if key[0] == partial_ordinal}
+            for group, expected_sum in partial_groups.items():
+                actual = float(collapsed_csr[group[1], group[2]])
+                if not math.isfinite(actual) or not math.isclose(actual, -expected_sum, rel_tol=1.0e-12, abs_tol=max(1.0e-24, abs(expected_sum) * 1.0e-10)):
+                    _fail("SOURCE_BLOCK_CENSUS_INVALID: raw/collapsed aggregation differs")
+            collapsed_groups = {(partial_ordinal, min(int(row_index), int(column_index)), max(int(row_index), int(column_index))) for row_index, column_index, value in zip(collapsed_csr.tocoo().row, collapsed_csr.tocoo().col, collapsed_csr.tocoo().data, strict=True) if int(row_index) < int(column_index) and float(value) < 0.0}
+            if collapsed_groups != set(partial_groups):
+                _fail("SOURCE_BLOCK_CENSUS_INVALID: collapsed edge lacks raw aggregation")
+        if not rows:
+            _fail("SOURCE_BLOCK_CENSUS_INVALID: selected P/G incident rows are absent")
+        counts = {key: sum(row["classification"] == key for row in rows) for key in ("adjacent", "source-proven-nonlocal", "missing-source-excluded")}
+        actions = {key: sum(row["action"] == key for row in rows) for key in ("candidate", "retained", "excluded")}
+        for row in rows:
+            row["aggregation_count"] = raw_counts[(row["partial_ordinal"], min(row["upper_reduced_index"], row["lower_reduced_index"]), max(row["upper_reduced_index"], row["lower_reduced_index"]))]
+        rows.sort(key=lambda row: (row["partial_ordinal"], row["upper_reduced_index"], row["lower_reduced_index"], row["fingerprint"]))
+        row_hash_payload = [{key: row[key] for key in ("fingerprint", "partial_ordinal", "upper_reduced_index", "lower_reduced_index", "classification", "action", "aggregation_count")} for row in rows]
+        row_hash = sha256(concrete_canonical_json_bytes(row_hash_payload)).hexdigest()
+        class_hash = sha256(concrete_canonical_json_bytes(counts)).hexdigest()
+        action_hash = sha256(concrete_canonical_json_bytes(actions)).hexdigest()
+        candidate_fingerprints = sorted(row["fingerprint"] for row in rows if row["action"] == "candidate")
+        retained_fingerprints = sorted(row["fingerprint"] for row in rows if row["action"] == "retained")
+        excluded_fingerprints = sorted(row["fingerprint"] for row in rows if row["action"] == "excluded")
+        if not candidate_fingerprints:
+            _fail("SOURCE_BLOCK_CENSUS_INVALID: candidate row set is empty")
+        if set(candidate_fingerprints) & (set(retained_fingerprints) | set(excluded_fingerprints)):
+            _fail("SOURCE_BLOCK_CENSUS_INVALID: row action partition overlaps")
+        ledger = ir["replacement_ledger"]
+        members = ir["replacement_ledger_members"]
+        if len(ledger) != 1:
+            _fail("SOURCE_BLOCK_CENSUS_INVALID: replacement ledger is ambiguous")
+        ledger_id = str(ledger[0].get("ledger_id", "")).casefold()
+        if not ledger_id or any(str(row.get("ledger_id", "")).casefold() != ledger_id for row in members):
+            _fail("SOURCE_BLOCK_CENSUS_INVALID: replacement ledger identity differs")
+        replaced = sorted({str(row.get("owner_id", "")) for row in members if row.get("action") == "replaced"}, key=lambda value: (value.casefold(), value))
+        retained = sorted({str(row.get("owner_id", "")) for row in members if row.get("action") == "retained"}, key=lambda value: (value.casefold(), value))
+        if not replaced or not retained or {item.casefold() for item in replaced} & {item.casefold() for item in retained}:
+            _fail("SOURCE_BLOCK_CENSUS_INVALID: replacement ledger partition is invalid")
+        replaced_sha = sha256(concrete_canonical_json_bytes([item.casefold() for item in replaced])).hexdigest()
+        retained_sha = sha256(concrete_canonical_json_bytes([item.casefold() for item in retained])).hexdigest()
+        if (ledger[0].get("replaced_count") != len(replaced)
+                or ledger[0].get("retained_count") != len(retained)
+                or str(ledger[0].get("replaced_set_sha256", "")).casefold() != replaced_sha
+                or str(ledger[0].get("retained_set_sha256", "")).casefold() != retained_sha):
+            _fail("SOURCE_BLOCK_CENSUS_INVALID: replacement ledger counts or hashes differ")
+        ledger_view = [{"owner_id": owner, "action": action} for owner, action in ((owner, "replaced") for owner in replaced)] + [{"owner_id": owner, "action": "retained"} for owner in retained]
+        ledger_view.sort(key=lambda row: (row["owner_id"].casefold(), row["owner_id"], row["action"]))
+        ledger_sha = sha256(concrete_canonical_json_bytes(ledger_view)).hexdigest()
+        scope_rows = sorted((row for row in ir["plane_owner_scopes"] if str(row.get("rail_id", "")).casefold() == rail_id.casefold() and row.get("state") == "declared_unconsumed" and int(row.get("owner_count", 0)) == 1), key=lambda row: str(row.get("role", "")).casefold())
+        if len(scope_rows) != 2 or {str(row.get("role", "")).casefold() for row in scope_rows} != {"power", "ground"}:
+            _fail("SOURCE_BLOCK_CENSUS_INVALID: selected plane scopes are not exact")
+        scope_ids = [str(row.get("compiler_owner_id", "")) for row in scope_rows]
+        if any(not value.strip() for value in scope_ids):
+            _fail("SOURCE_BLOCK_CENSUS_INVALID: selected plane scope identity is incomplete")
+        if {value.casefold() for value in scope_ids} != {value.casefold() for value in replaced}:
+            _fail("SOURCE_BLOCK_CENSUS_INVALID: replaced ledger scopes differ")
+        scope_sha = sha256(concrete_canonical_json_bytes([value.casefold() for value in scope_ids])).hexdigest()
+        known_exclusions = [{"mechanism": "nonadjacent opening", "classification": "missing-source-excluded", "reason_code": "SOURCE_UNPROVEN_NONADJACENT_OPENING", "reason": "source evidence unavailable for nonadjacent opening"}, {"mechanism": "fringing/coplanar", "classification": "missing-source-excluded", "reason_code": "FRINGING_COPLANAR_UNSUPPORTED", "reason": "source evidence unavailable for fringing/coplanar field"}]
+        query_key = {
+            "block": "RAIL_REACHABLE_DIELECTRIC_GAP_MAXWELL_GC",
+            "rail_id": rail_id,
+            "selected_pair": [pwr_layer, gnd_layer],
+            "source_sha256": raw_manifest["source_sha256"], "raw_manifest_sha256": raw_sha, "raw_geometry_identity_sha256": raw_manifest["geometry_identity_sha256"], "raw_logical_rows_sha256": raw_manifest["logical_rows_sha256"], "raw_plane_sheet_sha256": raw_manifest["plane_sheet_payload_sha256"], "ownership_logical_rows_sha256": ownership_manifest["logical_rows_sha256"], "ownership_certificate_evidence_sha256": ownership_manifest["certificate_evidence_sha256"], "compiled_topology_identity_sha256": ownership_manifest["compiled_topology_identity_sha256"], "substrate_identity_sha256": substrate_identity,
+            "closures": {role: sorted(closures[role]) for role in ("power", "ground")}, "reduced_closures": {role: sorted(reduced_closures[role]) for role in ("power", "ground")}, "policy_version": "source-plane-source-block-census-v1",
+        }
+        material_ids = {str(row.get(field, "")).casefold() for row in ir_stackup.values() if str(row.get("layer_name", "")).casefold() in selected_layer_names for field in ("thickness_source_record_id", "conductivity_source_record_id", "material_source_record_id") if row.get(field) is not None}
+        material_ids.update(str(row.get(field, "")).casefold() for row in ir_points.values() if str(row.get("layer_name", "")).casefold() == str(dielectric.layer_name).casefold() for field in ("frequency_source_record_id", "epsilon_source_record_id", "loss_tangent_source_record_id") if row.get(field) is not None)
+        if any(key not in source_by_id for key in material_ids):
+            _fail("SOURCE_BLOCK_CENSUS_INVALID: material source record is absent")
+        material_source_records = [dict(source_by_id[key]) for key in sorted(material_ids)]
+        report: dict[str, Any] = {"schema_version": "source-plane-source-block-census-v1", "status": "complete", "shadow_only": True, "replacement_ready": False, "production_ready": False, "rail_id": rail_id, "source_sha256": raw_manifest["source_sha256"], "raw_manifest_sha256": raw_sha, "substrate_identity_sha256": substrate_identity, "query_key": query_key, "query_key_sha256": sha256(concrete_canonical_json_bytes(query_key)).hexdigest(), "selected_pair": [pwr_layer, gnd_layer], "closures": {role: {"islands": sorted(closures[role]), "reduced_indices": sorted(reduced_closures[role])} for role in ("power", "ground")}, "rows": rows, "numeric_row_count": len(rows), "rows_sha256": row_hash, "numeric_row_classification_counts": counts, "numeric_row_classification_counts_sha256": class_hash, "numeric_row_action_counts": actions, "numeric_row_action_counts_sha256": action_hash, "candidate_fingerprints": candidate_fingerprints, "candidate_fingerprints_sha256": sha256(concrete_canonical_json_bytes(candidate_fingerprints)).hexdigest(), "retained_fingerprints": retained_fingerprints, "retained_fingerprints_sha256": sha256(concrete_canonical_json_bytes(retained_fingerprints)).hexdigest(), "excluded_fingerprints": excluded_fingerprints, "excluded_fingerprints_sha256": sha256(concrete_canonical_json_bytes(excluded_fingerprints)).hexdigest(), "known_exclusions": known_exclusions, "known_exclusions_count": len(known_exclusions), "known_exclusions_sha256": sha256(concrete_canonical_json_bytes(known_exclusions)).hexdigest(), "selected_stackup_rows": [dict(ir_stackup[key]) for key in sorted(selected_layer_names)], "dielectric_source_rows": [dict(row) for row in ir["dielectric_points"] if str(row.get("layer_name", "")).casefold() == str(dielectric.layer_name).casefold()], "material_source_records": material_source_records, "symbolic_conductance_law": "G(f)=2*pi*f*C(f)*Df(f)", "owner_ledger": {"ledger_id": ledger[0]["ledger_id"], "retained_owner_count": len(retained), "retained_owner_ids_sha256": retained_sha, "replaced_scope_ids": scope_ids, "replaced_scope_ids_sha256": scope_sha, "ledger_sha256": ledger_sha}, "candidate_scope_ids": scope_ids, "candidate_scope_ids_sha256": scope_sha, "replacement_ledger_sha256": ledger_sha}
+        report["final_report_sha256"] = sha256(concrete_canonical_json_bytes(report)).hexdigest()
+        if len(concrete_canonical_json_bytes(report)) > 1_048_576:
+            _fail("SOURCE_BLOCK_CENSUS_INVALID: report exceeds 1 MiB")
+        return report
+    except SourcePlanePatchError:
+        raise
+    except Exception as exc:
+        _fail(f"SOURCE_BLOCK_CENSUS_INVALID: {exc}")
+
+
+__all__ = ["SourcePlanePatchError", "consume_source_plane_patch", "evaluate_source_plane_contact_admissibility", "evaluate_source_plane_contact_condensation", "audit_source_plane_patch_owner_off", "audit_source_plane_patch_contact_quotient_representability", "audit_source_plane_patch_selected_base_cutset", "audit_source_plane_patch_production_owner_join", "plan_source_plane_patch_shadow_contact_rewire", "audit_source_plane_patch_shadow_rewire_commutation", "audit_source_plane_patch_shadow_local_replacement_recipe", "materialize_source_plane_patch_shadow_topology_embedding", "bind_source_plane_patch_shadow_nport_block", "audit_source_plane_patch_shadow_augmented_component_closure", "audit_source_plane_patch_shadow_one_frequency_solve", "audit_source_plane_source_block_census"]

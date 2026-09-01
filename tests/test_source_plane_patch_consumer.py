@@ -658,3 +658,118 @@ def test_source_plane_patch_shadow_one_frequency_augmented_solve(tmp_path: Path,
     monkeypatch.setattr(consumer, "bind_source_plane_patch_shadow_nport_block", unexpected_p9)
     stopped = consumer.audit_source_plane_patch_shadow_one_frequency_solve(patch, commutation, recipe, tampered, binding, rail_id="VDD_CORE/1")
     assert stopped["status"] == "stopped" and stopped["code"] == "SHADOW_SOLVE_IDENTITY_MISMATCH" and stopped["p1_stamp_applied"] is False and stopped["global_matrix_assembled"] is False and "solve_identity_sha256" not in stopped and "port_admittance" not in stopped and len(stopped["audit_sha256"]) == 64
+
+
+def test_source_plane_source_block_census_is_deterministic_and_fail_closed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    imported = _v2_import(tmp_path)
+    project = imported.scenario.base_project
+    own = project.metadata["spd_import"]["source_plane_ownership_ir"]
+    raw = project.metadata["spd_import"]["raw_spatial_contact_asset"]
+    substrate = compile_layerwise_substrate(project, imported.attachments, required_rail_id="VDD_CORE/1", require_plane_sheet_payload=True)
+
+    def forbidden(*_args, **_kwargs):
+        raise AssertionError("A2 census must not invoke P1 condensation, owner join, or solve")
+
+    for name in ("evaluate_source_plane_contact_condensation", "audit_source_plane_patch_production_owner_join", "audit_source_plane_patch_shadow_one_frequency_solve", "evaluate_nodal_admittance_block"):
+        monkeypatch.setattr(consumer, name, forbidden, raising=False)
+    monkeypatch.setattr(type(substrate.network), "solve", forbidden, raising=False)
+    first = consumer.audit_source_plane_source_block_census(own, imported.attachments, raw, substrate, rail_id="VDD_CORE/1")
+    second = consumer.audit_source_plane_source_block_census(own, imported.attachments, raw, substrate, rail_id="VDD_CORE/1")
+    assert first == second
+    report_without_sha = dict(first); report_without_sha.pop("final_report_sha256")
+    assert first["final_report_sha256"] == sha256(consumer.concrete_canonical_json_bytes(report_without_sha)).hexdigest() and first["status"] == "complete" and first["shadow_only"] is True and first["replacement_ready"] is False and first["production_ready"] is False
+    assert set(first["numeric_row_classification_counts"]) == {"adjacent", "source-proven-nonlocal", "missing-source-excluded"}
+    assert set(first["numeric_row_action_counts"]) == {"candidate", "retained", "excluded"}
+    assert sum(first["numeric_row_classification_counts"].values()) == first["numeric_row_count"] == len(first["rows"])
+    assert sum(first["numeric_row_action_counts"].values()) == first["numeric_row_count"]
+    row_hash_payload = [{key: row[key] for key in ("fingerprint", "partial_ordinal", "upper_reduced_index", "lower_reduced_index", "classification", "action", "aggregation_count")} for row in first["rows"]]
+    assert first["rows"] == sorted(first["rows"], key=lambda row: (row["partial_ordinal"], row["upper_reduced_index"], row["lower_reduced_index"], row["fingerprint"])) and first["rows_sha256"] == sha256(consumer.concrete_canonical_json_bytes(row_hash_payload)).hexdigest()
+    assert all(first[f"{action}_fingerprints"] == sorted(row["fingerprint"] for row in first["rows"] if row["action"] == action) and first[f"{action}_fingerprints_sha256"] == sha256(consumer.concrete_canonical_json_bytes(first[f"{action}_fingerprints"])).hexdigest() for action in ("candidate", "retained", "excluded"))
+    assert all(row["classification"] == "adjacent" for row in first["rows"] if row["action"] == "candidate")
+    assert not ({row["fingerprint"] for row in first["rows"] if row["action"] == "candidate"} & {row["fingerprint"] for row in first["rows"] if row["action"] != "candidate"})
+    assert first["symbolic_conductance_law"] == "G(f)=2*pi*f*C(f)*Df(f)"
+    assert len(first["candidate_scope_ids"]) == 2 and first["candidate_scope_ids_sha256"] == sha256(consumer.concrete_canonical_json_bytes([item.casefold() for item in first["candidate_scope_ids"]])).hexdigest()
+    assert first["known_exclusions_count"] == len(first["known_exclusions"]) == 2 and first["known_exclusions_sha256"] == sha256(consumer.concrete_canonical_json_bytes(first["known_exclusions"])).hexdigest() and all(set(item) == {"mechanism", "classification", "reason_code", "reason"} and item["mechanism"] and item["classification"] == "missing-source-excluded" and item["reason_code"] and item["reason"] and "capacitance" not in item and "magnitude" not in item for item in first["known_exclusions"])
+    assert all(row.get("source_record_sha256") for row in first["material_source_records"])
+    assert "w6" not in json.dumps(first["query_key"], ensure_ascii=False).casefold()
+    assert len(consumer.concrete_canonical_json_bytes(first)) <= 1_048_576
+    assert len(first["query_key_sha256"]) == len(first["rows_sha256"]) == len(first["final_report_sha256"]) == 64
+    assert first["owner_ledger"]["retained_owner_count"] > 0 and len(first["owner_ledger"]["replaced_scope_ids"]) == 2
+    ownership_sections = tuple(own["counts"])
+    ownership_binding = {key: own[key] for key in ("app_version", "source_sha256", "source_size_bytes", "target_rail_id", "project_binding_sha256", "certificate_evidence_sha256", "compiled_topology_identity_sha256", "raw_manifest_sha256", "raw_geometry_identity_sha256", "raw_logical_rows_sha256", "raw_plane_sheet_sha256")}
+    with load_source_plane_ownership_ir(own, imported.attachments, expected_app_version=own["app_version"], **{f"expected_{key}": own[key] for key in ("source_sha256", "project_binding_sha256", "certificate_evidence_sha256", "compiled_topology_identity_sha256", "raw_manifest_sha256", "raw_geometry_identity_sha256", "raw_logical_rows_sha256", "raw_plane_sheet_sha256")}) as loaded:
+        ownership_data = {**ownership_binding, **{section: list(loaded.iter_section(section)) for section in ownership_sections}}
+    missing_witness = deepcopy(ownership_data)
+    power_binding = next(row for row in missing_witness["rail_bindings"] if str(row["role"]).casefold() == "power")
+    power_surface = next(row for row in missing_witness["surfaces"] if str(row["surface_id"]).casefold() == str(power_binding["surface_id"]).casefold())
+    power_surface["layer"] = power_binding["layer"] = "missing-layer"
+    for row in missing_witness["terminal_bindings"]:
+        if str(row.get("role", "")).casefold() == "power":
+            row["layer"] = "missing-layer"
+    for row in missing_witness["plane_owner_scopes"]:
+        if str(row.get("role", "")).casefold() == "power":
+            row["layer"] = "missing-layer"
+    missing_manifest, missing_asset = build_source_plane_ownership_ir(missing_witness)
+    missing_attachments = dict(imported.attachments); missing_attachments[missing_asset[0]] = missing_asset[1]
+    with pytest.raises(consumer.SourcePlanePatchError, match="selected conductor layers are absent"):
+        consumer.audit_source_plane_source_block_census(missing_manifest, missing_attachments, raw, substrate, rail_id="VDD_CORE/1")
+    altered_dielectric = deepcopy(ownership_data)
+    for point in altered_dielectric["dielectric_points"]:
+        point["epsilon_r"] = float(point["epsilon_r"]) + 1.0
+    altered_manifest, altered_asset = build_source_plane_ownership_ir(altered_dielectric)
+    altered_attachments = dict(imported.attachments); altered_attachments[altered_asset[0]] = altered_asset[1]
+    with pytest.raises(consumer.SourcePlanePatchError):
+        consumer.audit_source_plane_source_block_census(altered_manifest, altered_attachments, raw, substrate, rail_id="VDD_CORE/1")
+    island_by_id = {str(row["island_id"]).casefold(): row for row in ownership_data["islands"]}
+    surface_by_id = {str(row["surface_id"]).casefold(): row for row in ownership_data["surfaces"]}
+    selected_bindings = {str(row["role"]).casefold(): row for row in ownership_data["rail_bindings"] if str(row["rail_id"]).casefold() == "vdd_core/1"}
+    selected_reduced = {role: int(first["closures"][role]["reduced_indices"][0]) for role in ("power", "ground")}
+    original_reduced_node_index = type(substrate.network).reduced_node_index
+    negative_edge_partners = {}
+    for wrapped in substrate.network.partials:
+        partial = getattr(wrapped, "partial", wrapped)
+        names = tuple(str(name) for name in getattr(partial, "net_names", ()))
+        matrix = partial.maxwell_capacitance_f.tocoo(copy=False)
+        for row_index, column_index, value in zip(matrix.row, matrix.col, matrix.data, strict=True):
+            if int(row_index) < int(column_index) and float(value) < 0.0:
+                left, right = names[int(row_index)], names[int(column_index)]
+                negative_edge_partners.setdefault(left.casefold(), set()).add(right)
+                negative_edge_partners.setdefault(right.casefold(), set()).add(left)
+    alias_target = None
+    for partial_ordinal, wrapped in enumerate(substrate.network.partials):
+        partial = getattr(wrapped, "partial", wrapped)
+        names = tuple(str(name) for name in getattr(partial, "net_names", ()))
+        for row_index, column_index, value in sorted((int(row_index), int(column_index), float(value)) for row_index, column_index, value in zip(partial.maxwell_capacitance_f.tocoo(copy=False).row, partial.maxwell_capacitance_f.tocoo(copy=False).col, partial.maxwell_capacitance_f.tocoo(copy=False).data, strict=True) if int(row_index) < int(column_index) and float(value) < 0.0):
+            for endpoint_index, _other_index in ((row_index, column_index), (column_index, row_index)):
+                endpoint = names[endpoint_index]
+                endpoint_island = island_by_id.get(endpoint.casefold())
+                endpoint_surface = surface_by_id.get(str(endpoint_island.get("surface_id", "")).casefold()) if endpoint_island is not None else None
+                if endpoint_island is None or endpoint_surface is None:
+                    continue
+                endpoint_reduced = int(original_reduced_node_index(substrate.network, endpoint))
+                if endpoint_reduced in selected_reduced.values():
+                    continue
+                for role in ("power", "ground"):
+                    binding_surface = str(selected_bindings[role]["surface_id"]).casefold()
+                    partners = negative_edge_partners.get(endpoint.casefold(), ())
+                    if str(endpoint_island.get("surface_id", "")).casefold() != binding_surface and partners and all(int(original_reduced_node_index(substrate.network, partner)) != selected_reduced[role] for partner in partners):
+                        alias_target = (partial_ordinal, endpoint, selected_reduced[role])
+                        break
+                if alias_target is not None:
+                    break
+            if alias_target is not None:
+                break
+        if alias_target is not None:
+            break
+    assert alias_target is not None
+    _partial_ordinal, alias_endpoint, alias_reduced = alias_target
+    def synthetic_reduced_node_index(network, node):
+        if str(node) == alias_endpoint:
+            return alias_reduced
+        return original_reduced_node_index(network, node)
+    with monkeypatch.context() as alias_patch:
+        alias_patch.setattr(type(substrate.network), "reduced_node_index", synthetic_reduced_node_index)
+        with pytest.raises(consumer.SourcePlanePatchError, match="incident endpoint alias lacks direct layer witness"):
+            consumer.audit_source_plane_source_block_census(own, imported.attachments, raw, substrate, rail_id="VDD_CORE/1")
+    with pytest.raises(consumer.SourcePlanePatchError):
+        consumer.audit_source_plane_source_block_census(own, imported.attachments, {**raw, "geometry_identity_sha256": _h("e")}, substrate, rail_id="VDD_CORE/1")
