@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — 작업 기준
 
-- 문서 버전: **2.4**
+- 문서 버전: **2.5**
 - 기준 branch: **main only**
 - current integrated-hardening docs base: `5a270677074868fc3e10ffa26309a208bb151ac3`
 - integrated-hardening implementation commit: `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`
 - 최종 개정: **2026-09-01 (Asia/Seoul)**
 - integrated-hardening lifecycle: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / STOP_V1_LAUNCHER_NO_PYTEST — A2R ACTIVE / READY_FOR_SINGLE_V1R**
-- sole ACTIVE: **W7-ACC-SOURCE-BLOCK-V1-LAUNCHER-RECOVERY-01** — interpreter identity와 exact one-node command 동결 완료.
+- current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / STOP_V1_LAUNCHER_NO_PYTEST — A2R DONE / STOP_V1R_TEST_FIXTURE_IR_RELATION**
+- sole ACTIVE: **none** — test-only successor는 아직 동결·개시되지 않았다.
 - current numerical improvement: **0**
 
 ## 1. 압축 후 즉시 복구 카드
@@ -22,7 +22,8 @@ A1은 새 PowerSI run 없이 기존 W6 report를 한 번 읽어 development rail
 `DONE / ACCEPT`했다. A2는 기존 raw v3/ownership IR을 재사용하는 compile-only
 census 하나로 구현됐고 Sol `STATIC_ACCEPT`를 받았다. focused V1은 test collection
 전에 launcher Python의 pytest 부재로 STOP했다. 별도 A2R은 Python 3.12.10 /
-pytest 9.0.3 identity와 exact one-node command를 동결했고 수치 개선은 아직 0이다.
+pytest 9.0.3에서 collection 1 뒤 test-only invalid IR mutation으로 STOP했으며 수치
+개선은 아직 0이다.
 
 ```mermaid
 flowchart LR
@@ -31,9 +32,9 @@ flowchart LR
     A2 --> M["minimal read-only materializer<br/>no new DB/schema"]
     M --> V1["focused V1<br/>STOP: launcher Python에 pytest 없음"]
     V1 -->|현재 결과| STOPV1["DONE / STOP_V1_LAUNCHER_NO_PYTEST"]
-    STOPV1 --> V1R["A2R launcher recovery<br/>READY / exact once"]
-    V1R -->|PASS일 때만| V3["원본 SPD import + source-only compile<br/>V3 once"]
-    V1R -->|FAIL| STOPV1R["DONE / STOP_V1R"]
+    STOPV1 --> V1R["A2R launcher recovery<br/>consumed / no rerun"]
+    V1R -->|현재 결과| STOPV1R["DONE / STOP_V1R_TEST_FIXTURE_IR_RELATION"]
+    STOPV1R -. "별도 successor PASS 전 차단" .-> V3["원본 SPD import + source-only compile<br/>V3 once"]
     V3 -->|census complete / ledger disjoint| A3["A3 one-block research implementation"]
     V3 -->|missing / ambiguous| STOPSRC["DONE / STOP_NOT_READY"]
 ```
@@ -45,9 +46,9 @@ flowchart LR
 - successor 21-node invocation과 A1 V0 audit는 소모됐다. 같은 계약을 반복하지
   않는다.
 - A2 materializer는 정적으로 ACCEPT됐지만 focused V1이 launcher 단계에서
-  STOP했다. 같은 V1 계약을 재실행하거나 원본 SPD V3를 열지 않는다. 동결된 D-084
-  exact V1R 외에는 P1 condensation, global solver/`Y_global`/`Zii`, PowerSI와
-  package/release도 실행하지 않는다.
+  STOP했고 D-084 exact V1R도 test fixture 관계 오류로 소비됐다. 둘을 재실행하거나
+  원본 SPD V3를 열지 않는다. P1 condensation, global solver/`Y_global`/`Zii`,
+  PowerSI와 package/release도 실행하지 않는다.
 - 기존 W6 report는 read-only/hash-bound evidence이며 보정 parameter 생성에 쓰지
   않는다.
 - stage와 commit은 explicit path로만 수행한다.
@@ -472,7 +473,7 @@ pytest가 없어 focused V1이 collection 전에 exit 1로 종료됐다. 제품 
 확인하고, command/interpreter/version을 포함한 별도 V1 recovery 계약을 이 문서에
 먼저 동결하는 것이다. 그 계약의 PASS 전에는 원본 SPD import를 시작하지 않는다.
 
-### D-084 — A2R pytest-capable launcher recovery — ACTIVE / READY_FOR_SINGLE_V1R
+### D-084 — A2R pytest-capable launcher recovery — DONE / STOP_V1R_TEST_FIXTURE_IR_RELATION
 
 read-only filesystem 확인으로 과거 21-node PASS와 같은 Python/pytest 버전의 기존
 설치를 찾았다. Python이나 pytest를 실행해 예행하지 않았으며 다음 identity만
@@ -501,6 +502,21 @@ exact V1R command:
 collection/failure/timeout/interrupt면 `DONE / STOP_V1R_<CAUSE>`로 닫고 재실행하지
 않는다.
 
+실제 V1R은 contract commit `8668bece9230227105d5f526e6048fd4adbcf023`의
+깨끗한 main에서 실행됐다. Python 3.12.10 / pytest 9.0.3, collection 1, exit 1,
+pytest wall `1.78 s`, process wall `2.669 s`다. 제품 census 두 번과 그 앞의
+deterministic/report assertions는 통과했지만, 이후
+`build_source_plane_ownership_ir(missing_witness)`가
+`SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID: contact island/component/layer relation is invalid`
+로 실패했다. 이 builder 호출은 의도한 `pytest.raises` 밖에 있어 product
+`selected conductor layers are absent` guard에는 도달하지 않았다.
+
+판정은 `DONE / STOP_V1R_TEST_FIXTURE_IR_RELATION`이다. 이것은 제품 census FAIL이나
+PASS가 아니며 부분 통과를 재사용하지 않는다. V1R은 consumed/no-rerun이고 V3는
+계속 blocked다. test-only successor를 자동 생성하지 않으며, 다음 허용 작업은 해당
+변이의 필요성·최소 수정·새 실행 예산을 정적으로 재평가해 별도 계약으로 동결하는
+것뿐이다.
+
 ## 10. 중단·사용자 검토 조건
 
 다음이면 자동 진행을 멈추고 상태와 필요한 결정을 보고한다.
@@ -512,11 +528,11 @@ collection/failure/timeout/interrupt면 `DONE / STOP_V1R_<CAUSE>`로 닫고 재�
 - working tree에 범위 밖 tracked 변경이 생겨 안전하게 분리할 수 없다.
 - 사용량이 사용자가 지정한 50% 남음 지점에 도달한다.
 
-현재 ACTIVE item은 D-084의 A2R 하나다. A2 materializer candidate는 Sol
-`STATIC_ACCEPT`지만 runtime PASS는 아니며 predecessor lifecycle은
-`DONE / STOP_V1_LAUNCHER_NO_PYTEST`다. §11은 commit까지 닫혔으며, 위 두 code/test
-경로 밖 제품 변경, 새 schema/cap 또는 계약 밖 runtime이 필요하면 즉시 STOP하고
-문서를 갱신한다.
+현재 ACTIVE item은 없다. A2 materializer candidate는 Sol `STATIC_ACCEPT`지만
+runtime PASS는 아니며 A2/A2R lifecycle은 각각 `DONE / STOP_V1_LAUNCHER_NO_PYTEST`,
+`DONE / STOP_V1R_TEST_FIXTURE_IR_RELATION`이다. 다음 허용 작업은 test-only successor
+필요성의 정적 재평가다. §11은 commit까지 닫혔으며, 위 두 code/test 경로 밖 제품
+변경, 새 schema/cap 또는 계약 밖 runtime이 필요하면 즉시 STOP하고 문서를 갱신한다.
 
 ## 11. 승인된 Unicode fixture successor — DONE / ACCEPT / COMMITTED @ eece8ab
 
