@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — 목적·기술 기준
 
-- 문서 버전: **3.16**
+- 문서 버전: **3.17**
 - 권위: **G0 — 목적, 우선순위, 합격 의미와 비주장 경계**
 - 최종 개정: **2026-09-02 (Asia/Seoul)**
 - 현재 외부 정확성: **W6-BASE 260729 retrospective numerical FAIL**
 - unseen/generalization: **unknown / not_run**
 - 현재 수치 개선: **0** — solver, `Y_global`, `Zii`와 PowerSI 비교 수치는 아직 바뀌지 않았다.
 - 현재 구현 gate: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY — D-091 DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c` — D-092 DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION — D-093 DONE / ACCEPT_FOCUSED / COMMITTED @ `bebbb80` — D-094 DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION — D-095 DONE / ACCEPT_FOCUSED — D-096 DONE / ACCEPT — D-097 DONE / STOP_D097_RAW_STACKUP_PROVENANCE_SCOPE / CONSUMED_NO_RERUN — D-097R DONE / STOP_D097R_TERMINAL_ENDPOINT_LAYER_SEMANTICS / CONSUMED_NO_RERUN — D-097S ACTIVE / not_run**
+- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY — D-091 DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c` — D-092 DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION — D-093 DONE / ACCEPT_FOCUSED / COMMITTED @ `bebbb80` — D-094 DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION — D-095 DONE / ACCEPT_FOCUSED — D-096 DONE / ACCEPT — D-097 DONE / STOP_D097_RAW_STACKUP_PROVENANCE_SCOPE / CONSUMED_NO_RERUN — D-097R DONE / STOP_D097R_TERMINAL_ENDPOINT_LAYER_SEMANTICS / CONSUMED_NO_RERUN — D-097S DONE / STOP_D097S_INVALID_DETACHED_FIXTURE_COMPONENT_COVERAGE / CONSUMED_NO_RERUN — D-097T ACTIVE / not_run**
 
 ## 1. 문서 역할과 권위
 
@@ -158,8 +158,9 @@ flowchart LR
     D95 --> D96["D-096 original-SPD source-block census<br/>DONE / ACCEPT<br/>PASS_SOURCE_BLOCK_CENSUS_COMPLETE / CONSUMED_NO_RERUN"]
     D96 --> D97["D-097 source-bound geometry manifest<br/>DONE / STOP_D097_RAW_STACKUP_PROVENANCE_SCOPE"]
     D97 --> D97R["D-097R selected-stackup provenance scope<br/>DONE / STOP_D097R_TERMINAL_ENDPOINT_LAYER_SEMANTICS"]
-    D97R --> D97S["D-097S terminal endpoint provenance<br/>ACTIVE / not_run"]
-    D97S -->|focused acceptance 후| D98["D-098 original-SPD geometry manifest one-shot<br/>separate one-shot"]
+    D97R --> D97S["D-097S terminal endpoint provenance<br/>DONE / STOP_D097S_INVALID_DETACHED_FIXTURE_COMPONENT_COVERAGE"]
+    D97S --> D97T["D-097T selected-island multicomponent provenance<br/>ACTIVE / not_run"]
+    D97T -->|focused acceptance 후| D98["D-098 original-SPD geometry manifest one-shot<br/>separate one-shot"]
     D98 -->|manifest PASS 후| OC["manufactured/source-bound nonzero deltaC oracle gate<br/>number/scope TBD"]
     OC -->|oracle PASS 후| L["production one-shot consideration"]
     D89 -->|STOP| SSRC["static diagnosis/replanning"]
@@ -485,19 +486,26 @@ solver/P1/PowerSI 실행은 0이다. 원인은 ownership terminal의 `source_nod
 PWR/GND인 의미 불일치이며, source layer로만 바꾸면 line 217에서 다음 실패가 보장된다.
 D-097R은 consumed/no-rerun으로 동결한다.
 
-### D-097S — W7-ACC-D097S-SOURCE-INTERNAL-TERMINAL-ENDPOINT-PROVENANCE-01 — ACTIVE / not_run
+### D-097S — W7-ACC-D097S-SOURCE-INTERNAL-TERMINAL-ENDPOINT-PROVENANCE-01 — DONE / STOP_D097S_INVALID_DETACHED_FIXTURE_COMPONENT_COVERAGE / CONSUMED_NO_RERUN
 
-동일 두 code/test 파일 whitelist만 유지하고 legacy `_terminal_raw_gate` 수정 및 새
-schema/compiler/loader/deps/cap은 금지한다. D-097 전용 최소 helper로 source Node와 Via를
-hash-bind하고, Via 반대 endpoint를 internal plane Node로 파생해 external alias/source layer와
-internal component layer/net/좌표를 exact 검증한다. `(padstack, ordinal, sha)` pad를 선택한 뒤
-source Node layer 및 PadDef/Regular layer를 검증하고, ground receipt는 2 nodes/1 via/1 pad와
-footprint을 포함한다. 새 node
-`tests/test_source_plane_patch_consumer.py::test_source_plane_fringe_geometry_manifest_binds_source_and_internal_terminal_endpoints_without_solver`
-를 static accept 후 정확히 1회 실행하며 alias/internal layer/pad layer/ordinal/hash tamper를
-fail-closed로 확인한다. 기존 D-097R node는 금지하고 original SPD/full suite/P1/solver/PowerSI도
-금지한다. D-097S PASS/commit 뒤에만 D-098 one-shot을 연다. 사용량 30% threshold와 long-wait
-정책을 유지한다.
+새 terminal helper/필수 alias·internal layer·pad layer·ordinal·hash 및 component/Via-layer tamper는
+실패 지점 전에 통과했으나, Python 3.12.10/pytest 9.0.3의 exact node 1회가 2.56초에 실패했다.
+후반 `_v2_import(detached=True)`의 Polygon5 비접촉 island가 ownership snapshot에는 포함됐지만
+anchor-filtered certificate component에는 없어 `spd_adapter` line 8991
+`island/component alignment is incomplete`가 발생했다. Windows SQLite PermissionError는 2차
+cleanup 증상이며 solver/P1/PowerSI 실행은 0이다. 기존 D-097S는 consumed/no-rerun으로 동결한다.
+
+### D-097T — W7-ACC-D097T-MULTICOMPONENT-SELECTED-ISLAND-UNIT-01 — ACTIVE / not_run
+
+동일 두 code/test 파일 whitelist만 유지한다. audit의 core island ID-set/selected geometry 부분만
+D-097 전용 최소 helper로 추출하고, 새 unit node
+`tests/test_source_plane_patch_consumer.py::test_source_plane_fringe_multicomponent_surface_selects_exact_island_without_solver`
+는 SPD import 없이 분리된 두 polygon으로 exact IDs, selected single component, deterministic
+normalized WKB/hash 및 missing/extra/unknown/duplicate fail-closed를 검증한다. 기존 D-097S node와
+`_v2_import(detached=True)`, SPD import/substrate/compiler, original SPD/full suite/P1/solver/oracle/
+PowerSI, spd_adapter/core/schema/loader/deps/cap 변경은 금지한다. Static accept 후 D-097T node만
+fresh process 1회 실행하고 D-097T PASS/commit 뒤에만 D-098 one-shot을 연다. 사용량 30% threshold와
+long-wait 정책을 유지한다.
 
 그다음 fitting 없이 analytic/manufactured oracle에서 limiting case, passivity,
 reciprocity, conservation, conditioning과 expected error signature를 판정한다.

@@ -1,12 +1,12 @@
 # SPD Decap PI Evaluator v0.23.1 — 작업 기준
 
-- 문서 버전: **3.16**
+- 문서 버전: **3.17**
 - 기준 branch: **main only**
 - current integrated-hardening docs base: `5a270677074868fc3e10ffa26309a208bb151ac3`
 - integrated-hardening implementation commit: `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`
 - 최종 개정: **2026-09-02 (Asia/Seoul)**
 - integrated-hardening lifecycle: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY — D-091 DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c` — D-092 DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION — D-093 DONE / ACCEPT_FOCUSED / COMMITTED @ `bebbb80` — D-094 DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION — D-095 DONE / ACCEPT_FOCUSED — D-096 DONE / ACCEPT — D-097 DONE / STOP_D097_RAW_STACKUP_PROVENANCE_SCOPE / CONSUMED_NO_RERUN — D-097R DONE / STOP_D097R_TERMINAL_ENDPOINT_LAYER_SEMANTICS / CONSUMED_NO_RERUN — D-097S ACTIVE / not_run**
+- current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY — D-091 DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c` — D-092 DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION — D-093 DONE / ACCEPT_FOCUSED / COMMITTED @ `bebbb80` — D-094 DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION — D-095 DONE / ACCEPT_FOCUSED — D-096 DONE / ACCEPT — D-097 DONE / STOP_D097_RAW_STACKUP_PROVENANCE_SCOPE / CONSUMED_NO_RERUN — D-097R DONE / STOP_D097R_TERMINAL_ENDPOINT_LAYER_SEMANTICS / CONSUMED_NO_RERUN — D-097S DONE / STOP_D097S_INVALID_DETACHED_FIXTURE_COMPONENT_COVERAGE / CONSUMED_NO_RERUN — D-097T ACTIVE / not_run**
 - D-089: **DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1`** — `W7-ACC-TERMINAL-PATH-KIND-OWNERSHIP-IR-01` / `TERMINAL_PATH_KIND_OWNERSHIP_IR_CONTRACT`.
 - D-090: **DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY** — consumed, no-rerun.
 - D-091: **DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c`** — `W7-ACC-OWNERSHIP-TERMINAL-MULTIBRANCH-CARDINALITY-01`.
@@ -15,7 +15,9 @@
 - D-094: **DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION** — consumed, no-rerun.
 - D-095: **DONE / ACCEPT_FOCUSED** — synthetic-only coordinator rows-hash projection check; consumed/no-rerun.
 - D-096: **DONE / ACCEPT** — source-block census complete; `PASS_SOURCE_BLOCK_CENSUS_COMPLETE / CONSUMED_NO_RERUN`.
-- D-097: **DONE / STOP_D097_RAW_STACKUP_PROVENANCE_SCOPE / CONSUMED_NO_RERUN** — source-bound candidate geometry manifest; D-097R is consumed and D-097S is active.
+- D-097: **DONE / STOP_D097_RAW_STACKUP_PROVENANCE_SCOPE / CONSUMED_NO_RERUN** — source-bound candidate geometry manifest; D-097R and D-097S are consumed and D-097T is active.
+- D-097S: **DONE / STOP_D097S_INVALID_DETACHED_FIXTURE_COMPONENT_COVERAGE / CONSUMED_NO_RERUN** — source-internal terminal endpoint provenance; successor D-097T is active.
+- D-097T: **ACTIVE / not_run** — selected-island multicomponent unit provenance.
 - current numerical improvement: **0**
 
 ## 1. 압축 후 즉시 복구 카드
@@ -44,8 +46,8 @@ contact/terminal owner coverage partition 불일치로 소비된 STOP이다. D-0
 contract는 `DONE / ACCEPT_FOCUSED / COMMITTED @ bebbb80`로 닫혔다. D-094 source-block
 census는 `DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION`으로 소비됐고, D-095 focused
 successor는 `DONE / ACCEPT_FOCUSED`로 닫혔다. D-096 original-SPD one-shot은
-`DONE / ACCEPT` 및 `PASS_SOURCE_BLOCK_CENSUS_COMPLETE / CONSUMED_NO_RERUN`이며, 현재 D-097
-geometry manifest가 `ACTIVE / not_run`이다.
+`DONE / ACCEPT` 및 `PASS_SOURCE_BLOCK_CENSUS_COMPLETE / CONSUMED_NO_RERUN`이며, D-097~D-097S는
+consumed/no-rerun이고 현재 D-097T가 `ACTIVE / not_run`이다.
 
 ```mermaid
 flowchart LR
@@ -73,8 +75,9 @@ flowchart LR
     D95 --> D96["D-096 original-SPD source-block census<br/>DONE / ACCEPT<br/>PASS_SOURCE_BLOCK_CENSUS_COMPLETE / CONSUMED_NO_RERUN"]
     D96 --> D97["D-097 source-bound geometry manifest<br/>DONE / STOP_D097_RAW_STACKUP_PROVENANCE_SCOPE"]
     D97 --> D97R["D-097R selected-stackup provenance scope<br/>DONE / STOP_D097R_TERMINAL_ENDPOINT_LAYER_SEMANTICS"]
-    D97R --> D97S["D-097S terminal endpoint provenance<br/>ACTIVE / not_run"]
-    D97S -->|focused acceptance 후| D98["D-098 original-SPD geometry manifest one-shot<br/>separate one-shot"]
+    D97R --> D97S["D-097S terminal endpoint provenance<br/>DONE / STOP_D097S_INVALID_DETACHED_FIXTURE_COMPONENT_COVERAGE"]
+    D97S --> D97T["D-097T selected-island multicomponent provenance<br/>ACTIVE / not_run"]
+    D97T -->|focused acceptance 후| D98["D-098 original-SPD geometry manifest one-shot<br/>separate one-shot"]
     D98 -->|manifest PASS 후| OC["manufactured/source-bound nonzero deltaC oracle gate<br/>number/scope TBD"]
     OC -->|oracle PASS 후| A3["production one-shot consideration"]
     D89 -->|STOP| STOPSRC["static diagnosis/replanning"]
@@ -314,7 +317,8 @@ focused ownership-terminal multibranch cardinality contract는
 `DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION`으로 소비됐고 D-095는
 `DONE / ACCEPT_FOCUSED`로 닫혔다. D-096은 `DONE / ACCEPT`이며 D-097은
 `DONE / STOP_D097_RAW_STACKUP_PROVENANCE_SCOPE / CONSUMED_NO_RERUN`, D-097R은
-`DONE / STOP_D097R_TERMINAL_ENDPOINT_LAYER_SEMANTICS / CONSUMED_NO_RERUN`, D-097S가 `ACTIVE / not_run`다.
+`DONE / STOP_D097R_TERMINAL_ENDPOINT_LAYER_SEMANTICS / CONSUMED_NO_RERUN`, D-097S는
+`DONE / STOP_D097S_INVALID_DETACHED_FIXTURE_COMPONENT_COVERAGE / CONSUMED_NO_RERUN`, D-097T가 `ACTIVE / not_run`다.
 
 ### A1 — W7-ACC-ERROR-BUDGET-01 — DONE / ACCEPT
 
@@ -817,8 +821,9 @@ partition 불일치로 `DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITI
 `DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION`으로 소비됐고 D-095 focused
 successor는 `DONE / ACCEPT_FOCUSED`로 닫혔다. D-096 source-block census는
 `DONE / ACCEPT`로 완료됐고 D-097은 `DONE / STOP_D097_RAW_STACKUP_PROVENANCE_SCOPE / CONSUMED_NO_RERUN`,
-D-097R은 `DONE / STOP_D097R_TERMINAL_ENDPOINT_LAYER_SEMANTICS / CONSUMED_NO_RERUN`, D-097S terminal endpoint
-provenance scope가 `ACTIVE / not_run`으로 열렸다.
+D-097R은 `DONE / STOP_D097R_TERMINAL_ENDPOINT_LAYER_SEMANTICS / CONSUMED_NO_RERUN`, D-097S는
+`DONE / STOP_D097S_INVALID_DETACHED_FIXTURE_COMPONENT_COVERAGE / CONSUMED_NO_RERUN`, D-097T selected-island
+multicomponent unit provenance가 `ACTIVE / not_run`으로 열렸다.
 
 ### D-092 — W7-ACC-SOURCE-BLOCK-ORIGINAL-SPD-D092-01 — DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION
 
@@ -982,19 +987,26 @@ solver/P1/PowerSI 실행은 0이다. 원인은 ownership terminal의 `source_nod
 PWR/GND인 의미 불일치이며, source layer로만 바꾸면 line 217에서 다음 실패가 보장된다.
 D-097R은 consumed/no-rerun으로 동결한다.
 
-### D-097S — W7-ACC-D097S-SOURCE-INTERNAL-TERMINAL-ENDPOINT-PROVENANCE-01 — ACTIVE / not_run
+### D-097S — W7-ACC-D097S-SOURCE-INTERNAL-TERMINAL-ENDPOINT-PROVENANCE-01 — DONE / STOP_D097S_INVALID_DETACHED_FIXTURE_COMPONENT_COVERAGE / CONSUMED_NO_RERUN
 
-동일 두 code/test 파일 whitelist만 유지하고 legacy `_terminal_raw_gate` 수정 및 새
-schema/compiler/loader/deps/cap은 금지한다. D-097 전용 최소 helper로 source Node와 Via를
-hash-bind하고, Via 반대 endpoint를 internal plane Node로 파생해 external alias/source layer와
-internal component layer/net/좌표를 exact 검증한다. `(padstack, ordinal, sha)` pad를 선택한 뒤
-source Node layer 및 PadDef/Regular layer를 검증하고, ground receipt는 2 nodes/1 via/1 pad와
-footprint을 포함한다. 새 node
-`tests/test_source_plane_patch_consumer.py::test_source_plane_fringe_geometry_manifest_binds_source_and_internal_terminal_endpoints_without_solver`
-를 static accept 후 정확히 1회 실행하며 alias/internal layer/pad layer/ordinal/hash tamper를
-fail-closed로 확인한다. 기존 D-097R node는 금지하고 original SPD/full suite/P1/solver/PowerSI도
-금지한다. D-097S PASS/commit 뒤에만 D-098 one-shot을 연다. 사용량 30% threshold와 long-wait
-정책을 유지한다.
+새 terminal helper/필수 alias·internal layer·pad layer·ordinal·hash 및 component/Via-layer tamper는
+실패 지점 전에 통과했으나, Python 3.12.10/pytest 9.0.3의 exact node 1회가 2.56초에 실패했다.
+후반 `_v2_import(detached=True)`의 Polygon5 비접촉 island가 ownership snapshot에는 포함됐지만
+anchor-filtered certificate component에는 없어 `spd_adapter` line 8991
+`island/component alignment is incomplete`가 발생했다. Windows SQLite PermissionError는 2차
+cleanup 증상이며 solver/P1/PowerSI 실행은 0이다. 기존 D-097S는 consumed/no-rerun으로 동결한다.
+
+### D-097T — W7-ACC-D097T-MULTICOMPONENT-SELECTED-ISLAND-UNIT-01 — ACTIVE / not_run
+
+동일 두 code/test 파일 whitelist만 유지한다. audit의 core island ID-set/selected geometry 부분만
+D-097 전용 최소 helper로 추출하고, 새 unit node
+`tests/test_source_plane_patch_consumer.py::test_source_plane_fringe_multicomponent_surface_selects_exact_island_without_solver`
+는 SPD import 없이 분리된 두 polygon으로 exact IDs, selected single component, deterministic
+normalized WKB/hash 및 missing/extra/unknown/duplicate fail-closed를 검증한다. 기존 D-097S node와
+`_v2_import(detached=True)`, SPD import/substrate/compiler, original SPD/full suite/P1/solver/oracle/
+PowerSI, spd_adapter/core/schema/loader/deps/cap 변경은 금지한다. Static accept 후 D-097T node만
+fresh process 1회 실행하고 D-097T PASS/commit 뒤에만 D-098 one-shot을 연다. 사용량 30% threshold와
+long-wait 정책을 유지한다.
 
 ## 10. 중단·사용자 검토 조건
 
@@ -1021,7 +1033,8 @@ no-rerun STOP이다. D-093은 `DONE / ACCEPT_FOCUSED / COMMITTED @ bebbb80`이�
 `DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION`으로 소비됐다. D-095는
 `DONE / ACCEPT_FOCUSED`이며 D-096은 `DONE / ACCEPT`다. D-097은
 `DONE / STOP_D097_RAW_STACKUP_PROVENANCE_SCOPE / CONSUMED_NO_RERUN`, D-097R은
-`DONE / STOP_D097R_TERMINAL_ENDPOINT_LAYER_SEMANTICS / CONSUMED_NO_RERUN`, D-097S는 `ACTIVE / not_run`이다.
+`DONE / STOP_D097R_TERMINAL_ENDPOINT_LAYER_SEMANTICS / CONSUMED_NO_RERUN`, D-097S는
+`DONE / STOP_D097S_INVALID_DETACHED_FIXTURE_COMPONENT_COVERAGE / CONSUMED_NO_RERUN`, D-097T는 `ACTIVE / not_run`이다.
 whitelist 밖 변경과 원본 SPD/full suite/P1/solver/
 PowerSI 실행은 금지한다.
 새 schema/cap 또는 계약 밖 runtime이 필요하면 즉시 STOP하고 문서를 갱신한다.
