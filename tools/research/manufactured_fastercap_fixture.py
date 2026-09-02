@@ -11,7 +11,7 @@ from typing import Iterable
 
 LEVELS = (0.002, 0.001, 0.0005)
 CONDUCTORS = {
-    "C0": (0.0, 0.0005),
+    "C0": (-0.0005, 0.0),
     "C1": (0.0045, 0.0050),
     "AP2": (0.0095, 0.0100),
     "C3": (0.0145, 0.0150),
@@ -83,14 +83,14 @@ def _aperture(name: str, z0: float, z1: float, h: float) -> list[str]:
         for y0, y1 in _cells(hx0, hx1, h):
             for z0c, z1c in hz:
                 vertices = ((x, y0, z0c), (x, y0, z1c), (x, y1, z1c), (x, y1, z0c))
-                if outward == "right":
+                if outward == "left":
                     vertices = tuple(reversed(vertices))
                 lines.append(_q(name, vertices))
     for y, outward in ((hx0, "bottom"), (hx1, "top")):
         for x0, x1 in _cells(hx0, hx1, h):
             for z0c, z1c in hz:
                 vertices = ((x0, y, z0c), (x1, y, z0c), (x1, y, z1c), (x0, y, z1c))
-                if outward == "top":
+                if outward == "bottom":
                     vertices = tuple(reversed(vertices))
                 lines.append(_q(name, vertices))
     return lines
