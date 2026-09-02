@@ -6,9 +6,10 @@ import argparse
 import hashlib
 import json
 import re
+import sys
 import time
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any, Mapping
 
 
 class AuditStop(RuntimeError):
@@ -29,183 +30,227 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _json(path: Path) -> dict[str, Any]:
+def _json(path: Path, code: str) -> dict[str, Any]:
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        _stop("STOP_IDENTITY_MISMATCH")
+        _stop(code)
     if not isinstance(value, dict):
-        _stop("STOP_IDENTITY_MISMATCH")
+        _stop(code)
     return value
 
 
-def _hash_gate(path: Path, expected: str, label: str) -> str:
+def _hash_gate(path: Path, expected: str, code: str) -> str:
     if not path.is_file() or not isinstance(expected, str) or not re.fullmatch(r"[0-9a-fA-F]{64}", expected):
-        _stop("STOP_IDENTITY_MISMATCH")
+        _stop(code)
     actual = _sha256(path)
     if actual.casefold() != expected.casefold():
-        _stop("STOP_IDENTITY_MISMATCH")
+        _stop(code)
     return actual
 
 
-def _tokens(payload: str) -> list[str]:
-    return [token for token in re.split(r"[\s,]+", payload.strip()) if token and token not in {";", "=>"}]
+def _canonical_hash(values: list[str]) -> str:
+    return hashlib.sha256("\n".join(values).encode("utf-8")).hexdigest()
 
 
-def _port_identity(source: Path, port_name: str, expected_positive: int, expected_negative: int, required_negative: set[str]) -> dict[str, Any]:
-    try:
-        lines = source.read_text(encoding="utf-8").splitlines()
-    except OSError:
-        _stop("STOP_IDENTITY_MISMATCH")
-    starts = [index for index, line in enumerate(lines) if re.search(rf"^\s*\.Port\s+{re.escape(port_name)}(?:\s|$)", line, re.I)]
-    if len(starts) != 1:
-        _stop("STOP_AMBIGUOUS_OR_MISSING_PORT")
-    start = starts[0]
-    end = len(lines)
-    for index in range(start + 1, len(lines)):
-        if re.match(r"^\s*\.(?:Port|Connect|End)", lines[index], re.I):
-            end = index
-            break
+def _scan_source(source: Path, port_id: str, expected_positive: int, expected_negative: int, selected_negative: set[str], deadline: float) -> tuple[str, dict[str, Any]]:
+    source_digest = hashlib.sha256()
+    record_digest = hashlib.sha256()
     positive: list[str] = []
-    negative_count = 0
-    negative_sequence = hashlib.sha256()
-    set_accumulator = bytearray(32)
-    selected_found: set[str] = set()
-    for line in lines[start + 1 : end]:
-        match = re.match(r"^\s*(positive|pos|pwr|\+|negative|neg|gnd|return|-)\s*[:=]?\s*(.*?)\s*$", line, re.I)
-        if not match:
-            continue
-        role, payload = match.group(1).casefold(), match.group(2)
-        values = _tokens(payload)
-        if role in {"positive", "pos", "pwr", "+"}:
-            positive.extend(values)
-            continue
-        for token in values:
-            negative_count += 1
-            if token in required_negative:
-                selected_found.add(token)
-            negative_sequence.update(token.encode("utf-8"))
-            negative_sequence.update(b"\n")
-            token_digest = hashlib.sha256(token.encode("utf-8")).digest()
-            for offset, value in enumerate(token_digest):
-                set_accumulator[offset] ^= value
-    if len(positive) != expected_positive or negative_count != expected_negative:
+    negative: list[str] = []
+    found = False
+    record_active = False
+    record_lines = 0
+    active_role = ""
+    positive_re = re.compile(r"^\s*\+\s+PositiveTerminal\s+(.+?)\s*$", re.I)
+    negative_re = re.compile(r"^\s*\+\s+NegativeTerminal\s+(.+?)\s*$", re.I)
+    continuation_re = re.compile(r"^\s*\+\s+(\$Package\.[^\s]+|Node[^\s]+!![^\s]+::[^\s]+)\s*$", re.I)
+    record_re = re.compile(r"^\s*(Port\S+)\s+", re.I)
+    try:
+        with source.open("rb") as stream:
+            for line_number, raw in enumerate(stream, 1):
+                if time.monotonic() > deadline:
+                    _stop("STOP_DEADLINE")
+                source_digest.update(raw)
+                try:
+                    line = raw.decode("utf-8")
+                except UnicodeDecodeError:
+                    _stop("STOP_SOURCE_IDENTITY")
+                header = record_re.match(line)
+                if header:
+                    if record_active:
+                        record_active = False
+                    if header.group(1) == port_id:
+                        if found:
+                            _stop("STOP_PORT_AMBIGUOUS")
+                        found = True
+                        record_active = True
+                        record_digest = hashlib.sha256(raw)
+                        record_lines = 1
+                        active_role = ""
+                    continue
+                if not record_active:
+                    continue
+                if line.lstrip().startswith("."):
+                    record_active = False
+                    continue
+                record_digest.update(raw)
+                record_lines += 1
+                match = positive_re.match(line) or negative_re.match(line)
+                role = "positive" if positive_re.match(line) else "negative" if negative_re.match(line) else ""
+                payload = match.group(1) if match else (continuation_re.match(line).group(1) if continuation_re.match(line) else "")
+                if role:
+                    active_role = role
+                else:
+                    role = active_role
+                if not payload:
+                    continue
+                terminal_match = re.search(r"(?:\$Package\.)?Node[^\s]+!![^\s]+::[^\s]+", payload)
+                if terminal_match is None:
+                    _stop("STOP_PORT_COMPILED_IDENTITY_UNPROVEN")
+                token = terminal_match.group(0)
+                if not token.startswith("$Package."):
+                    token = "$Package." + token
+                if role == "positive":
+                    positive.append(token)
+                elif role == "negative":
+                    negative.append(token)
+    except AuditStop:
+        raise
+    except OSError:
+        _stop("STOP_SOURCE_IDENTITY")
+    if not found:
+        _stop("STOP_PORT_AMBIGUOUS")
+    if len(positive) != expected_positive or len(negative) != expected_negative:
         _stop("STOP_PORT_TERMINAL_COUNT_MISMATCH")
-    if selected_found != required_negative:
+    if len(set(positive)) != len(positive) or len(set(negative)) != len(negative):
+        _stop("STOP_PORT_TERMINAL_DUPLICATE")
+    if not selected_negative.issubset(set(negative)):
         _stop("STOP_TERMINAL_MISMATCH")
-    return {
-        "port_name": port_name,
-        "positive_terminals": positive,
-        "positive_count": len(positive),
-        "positive_sequence_sha256": hashlib.sha256("\n".join(positive).encode("utf-8")).hexdigest(),
-        "positive_set_sha256": hashlib.sha256("\n".join(sorted(set(positive))).encode("utf-8")).hexdigest(),
-        "negative_count": negative_count,
-        "negative_sequence_sha256": negative_sequence.hexdigest(),
-        "negative_set_sha256": hashlib.sha256(bytes(set_accumulator)).hexdigest(),
-        "negative_set_hash_algorithm": "sha256(xor(sha256(terminal)))",
-    }
+    return source_digest.hexdigest(), {"port_id": port_id, "record_sha256": record_digest.hexdigest(), "record_line_count": record_lines, "positive_terminals": positive, "positive_count": len(positive), "positive_sequence_sha256": _canonical_hash(positive), "positive_set_sha256": _canonical_hash(sorted(positive)), "negative_count": len(negative), "negative_sequence_sha256": _canonical_hash(negative), "negative_set_sha256": _canonical_hash(sorted(negative))}
 
 
 def _binding_detail(binding: Mapping[str, Any]) -> dict[str, Any]:
-    required = ("terminal_id", "role", "source_path", "landing_node", "landing_layer", "pad_footprint", "finite_vertex", "finite_edge", "owner_id", "island_id", "component_id")
-    if any(key not in binding for key in required) or any(not isinstance(binding[key], str) or not binding[key] for key in ("terminal_id", "role", "landing_node", "landing_layer", "finite_vertex", "finite_edge", "owner_id", "island_id", "component_id")) or not isinstance(binding["pad_footprint"], Mapping) or not binding["pad_footprint"] or not isinstance(binding["source_path"], list) or not binding["source_path"]:
+    required = ("terminal_id", "package_terminal_key", "role", "source_node_record_id", "landing_node", "layer", "pad_footprint", "finite_vertex_id", "finite_edge_id", "via_owner_id", "island_id", "component_id")
+    if any(key not in binding for key in required) or any(not isinstance(binding[key], str) or not binding[key] for key in ("terminal_id", "package_terminal_key", "role", "source_node_record_id", "landing_node", "layer", "finite_vertex_id", "island_id", "component_id")) or not isinstance(binding["pad_footprint"], Mapping) or not binding["pad_footprint"]:
         _stop("STOP_IR_INCOMPLETE")
-    path = binding["source_path"]
-    first = path[0].get("kind") if isinstance(path[0], Mapping) else str(path[0]).split(":", 1)[0]
-    second = path[1].get("kind") if len(path) > 1 and isinstance(path[1], Mapping) else (str(path[1]).split(":", 1)[0] if len(path) > 1 else "")
-    if str(first).casefold() != "node" or str(second).casefold() not in {"via", "trace"}:
+    if not binding["source_node_record_id"].casefold().startswith("node:") or not (str(binding["via_owner_id"]) or str(binding["finite_edge_id"])):
         _stop("STOP_IR_INCOMPLETE")
-    return {key: binding[key] for key in required}
+    detail = {key: binding[key] for key in required}
+    detail["source_path"] = [binding["source_node_record_id"], f"via:{binding['via_owner_id']}" if binding["via_owner_id"] else f"trace:{binding['finite_edge_id']}"]
+    return detail
 
 
-def _cells(d104: Mapping[str, Any], window: list[int]) -> list[dict[str, Any]]:
-    raw = d104.get("cells")
-    if not isinstance(raw, list) or len(raw) != 8:
+def _d104_cells(d104: Mapping[str, Any], root: Path, window_pm: list[int]) -> list[dict[str, Any]]:
+    source = d104.get("source")
+    if not isinstance(source, Mapping) or not isinstance(source.get("sha256"), str):
+        _stop("STOP_D104_IDENTITY")
+    counts = d104.get("layer_counts")
+    if counts != {"L29": 1, "L30": 7}:
         _stop("STOP_D104_CENSUS_MISMATCH")
-    expected = [259, 260, 261, 262, 263, 264, 265, 266]
-    cells: list[dict[str, Any]] = []
-    for item, ordinal in zip(raw, expected):
-        if not isinstance(item, Mapping) or item.get("ordinal") != ordinal:
+    raw = d104.get("cells")
+    if not isinstance(raw, list) or len(raw) != 16:
+        _stop("STOP_D104_CENSUS_MISMATCH")
+    selected = [item for item in raw if isinstance(item, Mapping) and item.get("ordinal") in range(259, 267)]
+    if len(selected) != 8 or {item["ordinal"] for item in selected} != set(range(259, 267)):
+        _stop("STOP_D104_CENSUS_MISMATCH")
+    result: list[dict[str, Any]] = []
+    wx0, wy0, wx1, wy1 = window_pm
+    for item in sorted(selected, key=lambda value: int(value["ordinal"])):
+        ordinal = int(item["ordinal"])
+        expected_layer = "Signal$L29(DGND)" if ordinal == 259 else "Signal$L30(OTHER_POWER1)"
+        geometry = item.get("geometry")
+        if item.get("layer") != expected_layer or not isinstance(item.get("net"), str) or not item["net"] or not isinstance(item.get("island_id"), str) or not item["island_id"] or not isinstance(geometry, Mapping):
             _stop("STOP_D104_CENSUS_MISMATCH")
-        required = ("layer", "logical_net", "artwork_net", "island_id", "wkb_sha256", "bbox_pm")
-        if any(key not in item for key in required) or any(not isinstance(item[key], str) or not item[key] for key in ("layer", "logical_net", "artwork_net", "island_id", "wkb_sha256")) or not re.fullmatch(r"[0-9a-fA-F]{64}", item["wkb_sha256"]) or not isinstance(item["bbox_pm"], list) or len(item["bbox_pm"]) != 4 or any(type(value) is not int for value in item["bbox_pm"]):
+        if ordinal == 259 and item["island_id"] != "2db099...":
             _stop("STOP_D104_CENSUS_MISMATCH")
-        expected_layer = "L29" if ordinal == 259 else "L30"
-        if item["layer"] != expected_layer or not item["island_id"] or not item["wkb_sha256"]:
+        if ordinal == 264 and item["island_id"] != "cb8510...":
             _stop("STOP_D104_CENSUS_MISMATCH")
-        x0, y0, x1, y1 = map(int, item["bbox_pm"])
-        if x0 > x1 or y0 > y1:
-            _stop("STOP_INVALID_WINDOW")
-        wx0, wy0, wx1, wy1 = window
-        ix0, iy0, ix1, iy1 = max(x0, wx0), max(y0, wy0), min(x1, wx1), min(y1, wy1)
-        if ix0 > ix1 or iy0 > iy1:
-            _stop("STOP_D104_CELL_OUTSIDE_WINDOW")
-        cells.append({"ordinal": ordinal, "layer": item["layer"], "logical_net": item["logical_net"], "artwork_net": item["artwork_net"], "island_id": item["island_id"], "wkb_sha256": item["wkb_sha256"], "bbox_pm": [x0, y0, x1, y1], "intersection_pm": [ix0, iy0, ix1, iy1], "boundary_touch": ix0 in {wx0, wx1} or ix1 in {wx0, wx1} or iy0 in {wy0, wy1} or iy1 in {wy0, wy1} })
-    return cells
+        filename, bbox, wkb_sha, wkb_size = geometry.get("filename"), geometry.get("bbox_um"), geometry.get("wkb_sha256"), geometry.get("wkb_size_bytes")
+        if not isinstance(filename, str) or not isinstance(bbox, list) or len(bbox) != 4 or not isinstance(wkb_sha, str) or not re.fullmatch(r"[0-9a-fA-F]{64}", wkb_sha) or type(wkb_size) is not int:
+            _stop("STOP_D104_CENSUS_MISMATCH")
+        wkb_path = root / filename
+        if not wkb_path.is_file() or wkb_path.stat().st_size != wkb_size or _sha256(wkb_path).casefold() != wkb_sha.casefold():
+            _stop("STOP_D104_IDENTITY")
+        try:
+            from shapely import wkb
+            from shapely.geometry import box
+            shape = wkb.loads(wkb_path.read_bytes())
+            window = box(wx0 / 1_000_000, wy0 / 1_000_000, wx1 / 1_000_000, wy1 / 1_000_000)
+            intersects = bool(shape.intersects(window))
+            intersection = shape.intersection(window)
+            area = float(intersection.area)
+        except Exception as exc:
+            _stop(f"STOP_INTERNAL:{type(exc).__name__}")
+        result.append({"ordinal": ordinal, "layer": item["layer"], "net": item["net"], "island_id": item["island_id"], "geometry": {"filename": filename, "bbox_um": bbox, "wkb_sha256": wkb_sha, "wkb_size_bytes": wkb_size}, "intersects": intersects, "intersection_area_um2": area, "boundary_touch": bool(intersects and area == 0.0)})
+    return result
 
 
-def audit_source_local_l29_l30_port_window(*, source_path: Path, d103_path: Path, d104_path: Path, ir_path: Path, output_path: Path, expected_source_sha256: str, expected_d103_sha256: str, expected_d104_sha256: str, expected_ir_sha256: str, expected_positive_count: int = 3, expected_negative_count: int = 10919, window_pm: list[int] | None = None, deadline_s: float = 1800.0) -> dict[str, Any]:
+def audit_source_local_l29_l30_port_window(*, source_path: Path, d103_path: Path, d104_path: Path, ir_path: Path, output_path: Path, expected_source_sha256: str, expected_d103_sha256: str, expected_d104_sha256: str, expected_ir_sha256: str, expected_positive_count: int = 3, expected_negative_count: int = 10919, window_pm: list[int] | None = None, d104_root: Path | None = None, port_id: str = "Port44_SITE0::ADC_VDD_180_VQPS_SYS_1_AON/0", deadline_s: float = 1800.0) -> dict[str, Any]:
     started = time.monotonic()
     if output_path.exists():
         _stop("STOP_OUTPUT_EXISTS")
-    if window_pm is None or len(window_pm) != 4 or any(type(value) is not int for value in window_pm) or window_pm[0] > window_pm[2] or window_pm[1] > window_pm[3]:
+    if deadline_s <= 0 or not re.fullmatch(r"[0-9a-fA-F]{64}", expected_source_sha256) or window_pm is None or len(window_pm) != 4 or any(type(value) is not int for value in window_pm) or window_pm[0] > window_pm[2] or window_pm[1] > window_pm[3]:
         _stop("STOP_INVALID_WINDOW")
-    source_sha = _hash_gate(source_path, expected_source_sha256, "source")
-    d103_sha = _hash_gate(d103_path, expected_d103_sha256, "d103")
-    d104_sha = _hash_gate(d104_path, expected_d104_sha256, "d104")
-    ir_sha = _hash_gate(ir_path, expected_ir_sha256, "ir")
-    d103, d104, ir = _json(d103_path), _json(d104_path), _json(ir_path)
-    if any(not isinstance(meta.get("source_sha256"), str) or meta["source_sha256"].casefold() != source_sha.casefold() for meta in (d103, d104, ir)):
-        _stop("STOP_IDENTITY_MISMATCH")
+    deadline = started + deadline_s
+    d103_sha = _hash_gate(d103_path, expected_d103_sha256, "STOP_D103_IDENTITY")
+    d104_sha = _hash_gate(d104_path, expected_d104_sha256, "STOP_D104_IDENTITY")
+    ir_sha = _hash_gate(ir_path, expected_ir_sha256, "STOP_IR_IDENTITY")
+    d103, d104, ir = _json(d103_path, "STOP_D103_IDENTITY"), _json(d104_path, "STOP_D104_IDENTITY"), _json(ir_path, "STOP_IR_IDENTITY")
+    d103_source = d103.get("source", {}).get("sha256") if isinstance(d103.get("source"), Mapping) else None
+    if not isinstance(d103_source, str) or d103_source.casefold() != expected_source_sha256.casefold() or ("status" in d103 and d103["status"] != "PASS"):
+        _stop("STOP_D103_IDENTITY")
+    ir_source = ir.get("manifest", {}).get("source_sha256") if isinstance(ir.get("manifest"), Mapping) else ir.get("source_sha256")
+    if not isinstance(ir_source, str) or ir_source.casefold() != expected_source_sha256.casefold():
+        _stop("STOP_IR_IDENTITY")
     bindings_raw = ir.get("terminal_bindings")
     if not isinstance(bindings_raw, list):
         _stop("STOP_IR_INCOMPLETE")
     bindings = [_binding_detail(item) for item in bindings_raw if isinstance(item, Mapping)]
-    positive_bindings = [item for item in bindings if str(item["role"]).casefold() in {"positive", "power", "pwr"}]
-    selected_negative = [item for item in bindings if str(item["role"]).casefold() in {"negative", "ground", "gnd", "return"}]
-    selected_ids = [item["terminal_id"] for item in selected_negative]
-    if len(selected_ids) != len(set(selected_ids)) or len(selected_ids) > expected_negative_count:
-        _stop("STOP_TERMINAL_MISMATCH")
-    port = _port_identity(source_path, "Port44", expected_positive_count, expected_negative_count, set(selected_ids))
-    if [item["terminal_id"] for item in positive_bindings] != port["positive_terminals"]:
-        _stop("STOP_TERMINAL_MISMATCH")
-    cells = _cells(d104, window_pm)
-    if time.monotonic() - started > deadline_s:
+    positive_bindings = [item for item in bindings if item["role"].casefold() in {"positive", "power", "pwr"}]
+    selected_negative = [item for item in bindings if item["role"].casefold() in {"negative", "ground", "gnd", "return"}]
+    selected_ids = {item["package_terminal_key"] for item in selected_negative}
+    source_sha, port = _scan_source(source_path, port_id, expected_positive_count, expected_negative_count, selected_ids, deadline)
+    if source_sha.casefold() != expected_source_sha256.casefold() or [item["package_terminal_key"] for item in positive_bindings] != port["positive_terminals"]:
+        _stop("STOP_PORT_COMPILED_IDENTITY_UNPROVEN")
+    if d104.get("source", {}).get("sha256", "").casefold() != expected_source_sha256.casefold():
+        _stop("STOP_D104_IDENTITY")
+    cells = _d104_cells(d104, d104_root or d104_path.parent, window_pm)
+    if time.monotonic() > deadline:
         _stop("STOP_DEADLINE")
-    receipt = {
-        "schema": "source-local-l29-l30-port-window-receipt-v1",
-        "result": "PASS_SOURCE_LOCAL_GAP_ONLY",
-        "source_sha256": source_sha,
-        "evidence": {"d103_sha256": d103_sha, "d104_sha256": d104_sha, "source_ir_sha256": ir_sha},
-        "port44": port,
-        "terminal_bindings": bindings,
-        "selected_negative_terminal_ids": selected_ids,
-        "d104_cells": cells,
-        "window_pm": window_pm,
-        "scope": {"source_local_shadow_only": True, "full_port_negative_paths_resolved": False, "whole_layer_raw_primitive_census": False, "solver_executed": False, "powersi_executed": False},
-        "limitations": ["manufactured/production solver input is not proved", "PowerSI accuracy is not claimed"],
-    }
+    receipt = {"schema": "source-local-l29-l30-port-window-receipt-v2", "result": "PASS_SOURCE_LOCAL_GAP_ONLY", "source_sha256": source_sha, "evidence": {"d103_sha256": d103_sha, "d104_sha256": d104_sha, "source_ir_sha256": ir_sha}, "port44": port, "terminal_bindings": bindings, "d104_cells": cells, "window_pm": window_pm, "scope": {"source_local_shadow_only": True, "full_port_negative_paths_resolved": False, "whole_layer_raw_primitive_census": False, "solver_executed": False, "powersi_executed": False}}
     try:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(json.dumps(receipt, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
-    except OSError:
-        _stop("STOP_INTERNAL")
+    except OSError as exc:
+        _stop(f"STOP_INTERNAL:{type(exc).__name__}")
     return receipt
 
 
-def main() -> None:
+def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ("source", "d103", "d104", "ir", "output"):
         parser.add_argument(f"--{name}", type=Path, required=True)
     for name in ("source", "d103", "d104", "ir"):
         parser.add_argument(f"--expected-{name}-sha256", required=True)
+    parser.add_argument("--port-id", required=True)
+    parser.add_argument("--deadline-seconds", type=float, default=1800.0)
+    parser.add_argument("--window-pm", type=int, nargs=4, required=True)
     parser.add_argument("--expected-positive-count", type=int, default=3)
     parser.add_argument("--expected-negative-count", type=int, default=10919)
-    parser.add_argument("--window-pm", type=int, nargs=4, required=True)
+    parser.add_argument("--d104-root", type=Path)
     args = parser.parse_args()
-    receipt = audit_source_local_l29_l30_port_window(source_path=args.source, d103_path=args.d103, d104_path=args.d104, ir_path=args.ir, output_path=args.output, expected_source_sha256=args.expected_source_sha256, expected_d103_sha256=args.expected_d103_sha256, expected_d104_sha256=args.expected_d104_sha256, expected_ir_sha256=args.expected_ir_sha256, expected_positive_count=args.expected_positive_count, expected_negative_count=args.expected_negative_count, window_pm=args.window_pm)
+    try:
+        receipt = audit_source_local_l29_l30_port_window(source_path=args.source, d103_path=args.d103, d104_path=args.d104, ir_path=args.ir, output_path=args.output, expected_source_sha256=args.expected_source_sha256, expected_d103_sha256=args.expected_d103_sha256, expected_d104_sha256=args.expected_d104_sha256, expected_ir_sha256=args.expected_ir_sha256, expected_positive_count=args.expected_positive_count, expected_negative_count=args.expected_negative_count, window_pm=args.window_pm, d104_root=args.d104_root, port_id=args.port_id, deadline_s=args.deadline_seconds)
+    except AuditStop as exc:
+        print(json.dumps({"result": "STOP", "code": exc.code}, sort_keys=True))
+        return 1
+    except Exception as exc:
+        print(json.dumps({"result": "STOP", "code": f"STOP_INTERNAL:{type(exc).__name__}"}, sort_keys=True))
+        return 1
     print(json.dumps({"result": receipt["result"], "output": str(args.output)}, sort_keys=True))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
