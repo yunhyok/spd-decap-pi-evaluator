@@ -144,9 +144,97 @@ LAYERWISE_DIAGNOSTIC_REPORT_SCHEMA_VERSION = (
 )
 TERMINAL_COMPLETE_BATCH_REUSE_VERSION = "terminal-complete-batch-reuse-v1"
 
+FROZEN_METRIC_RAIL = "ADC_VDD_180_VQPS_SYS_1_AON/0"
+FROZEN_BASELINE_LOW_OFFSET_DB = 1.5547211732
+EVENTUAL_LOW_OFFSET_GATE_DB = 1.0
+FROZEN_TWO_ANCHOR_METRIC_SCHEMA = "frozen-two-anchor-first-metric-v1"
+
 
 class _TerminalCompleteReuseError(ValueError):
     """Raised when a terminal-complete result cannot be reused exactly."""
+
+
+def score_frozen_two_anchor_first_metric(report: Mapping[str, Any]) -> dict[str, Any]:
+    """Score the frozen rail's two-anchor first-measurable-improvement gate.
+
+    This is deliberately report-only: it consumes already-recorded identities,
+    anchor errors, and convergence proxies and performs no solver or PowerSI
+    work.  The eventual 1 dB gate is reported independently of first-gate
+    status.
+    """
+
+    if not isinstance(report, Mapping):
+        raise ValueError("frozen metric report must be a mapping")
+    if report.get("rail_id") != FROZEN_METRIC_RAIL:
+        raise ValueError("frozen metric rail differs")
+
+    def identity(value: Any, label: str) -> dict[str, Any]:
+        if not isinstance(value, Mapping):
+            raise ValueError(f"{label} identity is missing")
+        path = value.get("path")
+        size = value.get("size_bytes")
+        digest = value.get("sha256")
+        if not isinstance(path, str) or not path.strip() or type(size) is not int or size <= 0 or not _valid_sha256(digest):
+            raise ValueError(f"{label} identity is invalid")
+        return {"path": path, "size_bytes": size, "sha256": str(digest).casefold()}
+
+    source = identity(report.get("source"), "source")
+    touchstone = identity(report.get("touchstone"), "touchstone")
+    chosen = report.get("chosen")
+    if not isinstance(chosen, Mapping) or chosen.get("status") != "completed":
+        raise ValueError("chosen mode/rail is not completed")
+    mode = chosen.get("mode")
+    rail = chosen.get("rail_id", chosen.get("rail"))
+    if type(mode) is not int or mode <= 0 or not isinstance(rail, str) or rail != FROZEN_METRIC_RAIL:
+        raise ValueError("chosen numeric-highest mode/rail is invalid")
+
+    anchors = report.get("anchors")
+    if not isinstance(anchors, Mapping) or set(anchors) != {"0.1MHz", "1MHz"}:
+        raise ValueError("frozen metric anchors must be exactly 0.1MHz and 1MHz")
+    anchor_values: dict[str, float] = {}
+    for key in ("0.1MHz", "1MHz"):
+        item = anchors[key]
+        if not isinstance(item, Mapping):
+            raise ValueError(f"anchor {key} is invalid")
+        value = item.get("signed_magnitude_error_db")
+        if type(value) not in (int, float) or isinstance(value, bool) or not np.isfinite(float(value)):
+            raise ValueError(f"anchor {key} signed magnitude error is invalid")
+        anchor_values[key] = float(value)
+
+    convergence = report.get("convergence")
+    if not isinstance(convergence, Mapping):
+        raise ValueError("convergence mapping is required")
+    frequency_rms = convergence.get("frequency_rms_delta_db")
+    modal_rms = convergence.get("modal_rms_delta_db")
+    if any(type(value) not in (int, float) or isinstance(value, bool) or not np.isfinite(float(value)) or float(value) < 0.0 for value in (frequency_rms, modal_rms)):
+        raise ValueError("convergence RMS proxies are invalid")
+    frequency_rms = float(frequency_rms); modal_rms = float(modal_rms)
+    sigma = max(abs(frequency_rms), abs(modal_rms))
+    low_offset = abs((anchor_values["0.1MHz"] + anchor_values["1MHz"]) / 2.0)
+    improvement = FROZEN_BASELINE_LOW_OFFSET_DB - low_offset
+    threshold = max(3.0 * sigma, 0.25)
+    first_passed = improvement >= threshold
+    return {
+        "schema_version": FROZEN_TWO_ANCHOR_METRIC_SCHEMA,
+        "rail_id": FROZEN_METRIC_RAIL,
+        "source": source,
+        "touchstone": touchstone,
+        "chosen": {"status": "completed", "mode": mode, "rail_id": rail},
+        "anchors": {key: {"signed_magnitude_error_db": anchor_values[key]} for key in ("0.1MHz", "1MHz")},
+        "convergence": {"frequency_rms_delta_db": frequency_rms, "modal_rms_delta_db": modal_rms},
+        "sigma_mag_db": sigma,
+        "sigma_source": {"method": "max_abs_convergence_rms", "fields": ["frequency_rms_delta_db", "modal_rms_delta_db"]},
+        "e_100k_db": anchor_values["0.1MHz"],
+        "e_1m_db": anchor_values["1MHz"],
+        "low_offset_db": low_offset,
+        "baseline_low_offset_db": FROZEN_BASELINE_LOW_OFFSET_DB,
+        "improvement_db": improvement,
+        "first_threshold_db": threshold,
+        "first_measurable_improvement": first_passed,
+        "eventual_gate_db": EVENTUAL_LOW_OFFSET_GATE_DB,
+        "eventual_gate_passed": low_offset <= EVENTUAL_LOW_OFFSET_GATE_DB,
+        "status": "passed" if first_passed else "failed",
+    }
 
 
 def _is_frozen_dataclass_instance(value: Any) -> bool:

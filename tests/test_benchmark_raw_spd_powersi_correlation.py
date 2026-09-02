@@ -17,6 +17,47 @@ assert spec.loader
 spec.loader.exec_module(module)
 
 
+def test_frozen_two_anchor_first_metric_is_report_only_and_fail_closed():
+    report = {
+        "rail_id": module.FROZEN_METRIC_RAIL,
+        "source": {"path": "source.spd", "size_bytes": 101, "sha256": "a" * 64},
+        "touchstone": {"path": "reference.s92p", "size_bytes": 202, "sha256": "b" * 64},
+        "chosen": {"status": "completed", "mode": 8, "rail_id": module.FROZEN_METRIC_RAIL},
+        "anchors": {
+            "0.1MHz": {"signed_magnitude_error_db": 0.8},
+            "1MHz": {"signed_magnitude_error_db": 1.4},
+        },
+        "convergence": {"frequency_rms_delta_db": 0.05, "modal_rms_delta_db": 0.02},
+        "metrics": {"magnitude_db": {"rms_db": 99.0}},
+    }
+
+    result = module.score_frozen_two_anchor_first_metric(report)
+    assert result["status"] == "passed"
+    assert result["eventual_gate_passed"] is False
+    assert result["low_offset_db"] == pytest.approx(1.1)
+    assert result["sigma_mag_db"] == pytest.approx(0.05)
+    assert result["first_threshold_db"] == pytest.approx(0.25)
+    assert result["sigma_source"]["fields"] == [
+        "frequency_rms_delta_db",
+        "modal_rms_delta_db",
+    ]
+    assert result["source"]["sha256"] == "a" * 64
+    assert result["touchstone"]["sha256"] == "b" * 64
+
+    malformed = deepcopy(report)
+    malformed["anchors"].pop("1MHz")
+    with pytest.raises(ValueError):
+        module.score_frozen_two_anchor_first_metric(malformed)
+    malformed = deepcopy(report)
+    malformed["convergence"].pop("modal_rms_delta_db")
+    with pytest.raises(ValueError):
+        module.score_frozen_two_anchor_first_metric(malformed)
+    malformed = deepcopy(report)
+    malformed["source"]["size_bytes"] = 0
+    with pytest.raises(ValueError):
+        module.score_frozen_two_anchor_first_metric(malformed)
+
+
 def test_fixed_grid_and_metrics_are_sampling_density_independent():
     sparse = np.asarray([1e5, 1e6, 1e7, 1e8])
     dense = np.geomspace(1e5, 1e8, 1001)
