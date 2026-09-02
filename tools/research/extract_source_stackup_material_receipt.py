@@ -108,14 +108,9 @@ def extract_receipt(output_json: str | os.PathLike[str]) -> dict[str, Any]:
             raise ValueError(f"source SHA-256 mismatch: {observed_sha256}")
         layer_marker = data.find(b"* Layer description lines")
         node_marker = data.find(b"* Node description lines")
-        trace_marker = data.find(b"* Trace description lines")
         via_marker = data.find(b"* Via description lines")
         pad_marker = data.find(b"* PadStack collection description lines")
         material_marker = data.find(b"* Material description lines")
-        circuit_marker = data.find(b"* Circuit description lines")
-        first_shape = _find_line(data, b".Shape")
-        shape_start = first_shape if first_shape >= 0 else 0
-        shape_end = layer_marker if layer_marker > shape_start else (node_marker if node_marker > shape_start else len(data))
         if min(layer_marker, node_marker, material_marker) < 0:
             raise ValueError("required SPD section marker is missing")
         material_start = material_marker
@@ -134,8 +129,8 @@ def extract_receipt(output_json: str | os.PathLike[str]) -> dict[str, Any]:
     if any(names.count(target) != 1 for target in TARGET_LAYERS):
         raise ValueError("target layer identity is not unique")
     indices = [names.index(target) for target in TARGET_LAYERS]
-    if indices != sorted(indices):
-        raise ValueError("target layer order differs from frozen contract")
+    if indices != [indices[0], indices[0] + 1, indices[0] + 2]:
+        raise ValueError("target layers are not three consecutive source-order rows")
     neighborhoods = []
     for target, index in zip(TARGET_LAYERS, indices):
         neighborhoods.append(
@@ -167,7 +162,7 @@ def extract_receipt(output_json: str | os.PathLike[str]) -> dict[str, Any]:
             stream.write(receipt_bytes)
             stream.flush()
             os.fsync(stream.fileno())
-        os.replace(temporary, output)
+        os.rename(temporary, output)
         temporary = None
         written = output.read_bytes()
         if len(written) != len(receipt_bytes) or sha256(written).hexdigest() != sha256(receipt_bytes).hexdigest() or written != receipt_bytes:
