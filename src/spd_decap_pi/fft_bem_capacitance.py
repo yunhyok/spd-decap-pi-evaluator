@@ -100,6 +100,19 @@ class BEMCapacitanceResult:
     diagnostics: BEMDiagnostics
 
 
+@dataclass(frozen=True, slots=True)
+class DifferentialCapacitanceResidual:
+    """Unfitted finite-artwork differential capacitance residual."""
+
+    status: str
+    reason: str | None
+    c_bem_differential_f: float
+    c_parallel_plate_f: float
+    delta_c_f: float
+    intersection_area_m2: float
+    diagnostics: BEMDiagnostics
+
+
 def rectangular_cell_green_integral(dx_m: float, dy_m: float, dz_m: float, pitch_m: float) -> float:
     """Return ``integral_cell 1/r dA`` for a cell centred at ``(dx,dy,dz)``.
 
@@ -353,6 +366,51 @@ class FFTPulseBEM:
         except FFTBEMError as exc:
             diagnostics = BEMDiagnostics("blocked_fail_closed", str(exc), self.unknown_count, self.grid.cell_count, blocks, perf_counter()-started, workspace, (), (), None, None, None, None)
             return BEMCapacitanceResult((), np.empty((0, 0), dtype=float), diagnostics)
+
+
+def differential_capacitance_residual(
+    model: FFTPulseBEM, *, intersection_area_m2: float | None = None
+) -> DifferentialCapacitanceResidual:
+    """Return ``C_BEM,differential - epsilon0*Dk*A_intersection/d``.
+
+    This is a bounded diagnostic for exactly two finite, distinct-net surfaces;
+    it never fits a correction or mutates the supplied model.
+    """
+
+    if len(model.surfaces) != 2 or len(model.net_names) != 2:
+        raise FFTBEMError("differential residual requires exactly two distinct-net surfaces")
+    if intersection_area_m2 is not None and (not isfinite(intersection_area_m2) or intersection_area_m2 < 0.0):
+        raise FFTBEMError("intersection_area_m2 must be finite and non-negative")
+    separation_m = abs(model.surfaces[0].z_m - model.surfaces[1].z_m)
+    if not isfinite(separation_m) or separation_m <= 0.0:
+        raise FFTBEMError("differential residual requires two surfaces at distinct z positions")
+    bem = model.maxwell_capacitance()
+    if bem.diagnostics.status != "computed":
+        nan = float("nan")
+        return DifferentialCapacitanceResidual(
+            bem.diagnostics.status,
+            bem.diagnostics.reason,
+            nan,
+            nan,
+            nan,
+            nan,
+            bem.diagnostics,
+        )
+    if intersection_area_m2 is None:
+        intersection_area_m2 = float(np.count_nonzero(model.surfaces[0].mask & model.surfaces[1].mask) * model.grid.cell_area_m2)
+    matrix = bem.maxwell_capacitance_f
+    # Effective C for V=(+1/2,-1/2), averaged over both terminal charges.
+    c_bem = float(0.25 * (matrix[0, 0] - matrix[0, 1] - matrix[1, 0] + matrix[1, 1]))
+    c_parallel = float(EPSILON_0_F_PER_M * model.relative_permittivity * intersection_area_m2 / separation_m)
+    return DifferentialCapacitanceResidual(
+        "computed",
+        None,
+        c_bem,
+        c_parallel,
+        c_bem - c_parallel,
+        intersection_area_m2,
+        bem.diagnostics,
+    )
 
 
 def shapely_raster_grid(

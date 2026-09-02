@@ -11,6 +11,7 @@ from spd_decap_pi.fft_bem_capacitance import (
     FFTPulseBEM,
     SurfaceConductor,
     UniformXYGrid,
+    differential_capacitance_residual,
     rasterize_shapely_surfaces,
     rectangular_cell_green_integral,
 )
@@ -103,3 +104,55 @@ def test_resource_gate_is_fail_closed_and_deterministic() -> None:
     second = model.maxwell_capacitance()
     assert first.diagnostics.status == second.diagnostics.status == "blocked_fail_closed"
     assert first.diagnostics.reason == second.diagnostics.reason
+    residual = differential_capacitance_residual(model)
+    assert residual.status == "blocked_fail_closed"
+    assert residual.reason == first.diagnostics.reason
+
+
+def test_unfitted_differential_residual_has_fringe_and_convergence_evidence() -> None:
+    def square_model(pitch: float, *, padding: int = 2, side_um: float = 8.0) -> FFTPulseBEM:
+        side_cells = int(round(side_um * 1e-6 / pitch))
+        shape = (side_cells + 2 * padding, side_cells + 2 * padding)
+        mask = np.zeros(shape, dtype=bool)
+        mask[padding : padding + side_cells, padding : padding + side_cells] = True
+        return FFTPulseBEM(
+            UniformXYGrid(0.0, 0.0, pitch, shape),
+            (SurfaceConductor("upper", "P", 0.05e-6, mask), SurfaceConductor("lower", "G", 0.0, mask)),
+            3.3,
+            max_unknowns=10_000,
+        )
+
+    uniform = differential_capacitance_residual(square_model(1.0e-6, side_um=20.0))
+    assert uniform.status == "computed"
+    assert uniform.intersection_area_m2 == pytest.approx((20.0e-6) ** 2)
+    assert uniform.delta_c_f >= 0.0
+    assert uniform.delta_c_f / uniform.c_parallel_plate_f < 0.03
+
+    pitch = 0.5e-6
+    side_cells = 20
+    shape = (side_cells + 4, side_cells + 4)
+    upper = np.zeros(shape, dtype=bool)
+    upper[2:-2, 2:-2] = True
+    lower = np.zeros(shape, dtype=bool)
+    lower[2:-2, 4:-2] = True
+    fringe = differential_capacitance_residual(
+        FFTPulseBEM(
+            UniformXYGrid(0.0, 0.0, pitch, shape),
+            (SurfaceConductor("upper", "P", 0.05e-6, upper), SurfaceConductor("lower", "G", 0.0, lower)),
+            3.3,
+            max_unknowns=10_000,
+        )
+    )
+    assert fringe.status == "computed"
+    assert fringe.intersection_area_m2 == pytest.approx(18.0 * 20.0 * pitch * pitch)
+    assert fringe.delta_c_f > 0.0
+
+    coarse = differential_capacitance_residual(square_model(1.0e-6))
+    fine = differential_capacitance_residual(square_model(0.5e-6))
+    mesh_change_fraction = abs(fine.c_bem_differential_f - coarse.c_bem_differential_f) / fine.c_bem_differential_f
+    crop = differential_capacitance_residual(square_model(0.5e-6, padding=8))
+    crop_change_fraction = abs(crop.c_bem_differential_f - fine.c_bem_differential_f) / fine.c_bem_differential_f
+    convergence_fields = {"h_to_h_over_2": mesh_change_fraction, "crop_expansion": crop_change_fraction}
+    assert convergence_fields["h_to_h_over_2"] < 0.01
+    assert convergence_fields["crop_expansion"] < 1.0e-10
+    assert fine.diagnostics.min_energy_eigenvalue_f >= 0.0
