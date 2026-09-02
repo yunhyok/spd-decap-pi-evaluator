@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from hashlib import sha256
 import json
 import os
 from pathlib import Path
@@ -22,17 +23,18 @@ from tools.research.extract_source_plane_fringe_geometry_reuse import (
     BUNDLE_REPORT_PATH,
     BUNDLE_REPORT_SHA256,
     BUNDLE_SHA256,
-    PROGRAM,
-    SOURCE_PATH,
     SOURCE_SHA256,
     _digest,
     _geometry_manifest,
     _load_json,
     _role_geometry,
 )
+from spd_decap_pi.canonical_json import concrete_canonical_json_bytes
 
 
+PROGRAM = "SPD Decap PI Evaluator"
 VERSION = "0.23.1"
+SOURCE_PATH = Path(r"D:\S4LB002-2Para_260729_1_injected.spd")
 D103_RECEIPT_PATH = Path(
     r"D:\SPD-Decap-PI-Evaluator-W7\8177f7a82715979652d7dcb3cd7bfd2770746133\260729-d103-source-stackup-material-receipt-02\stackup_material_receipt.json"
 )
@@ -68,6 +70,13 @@ def _cell(
         "net": net,
         "island_id": island_id,
     }
+
+
+def _write_fsync(path: Path, payload: bytes) -> None:
+    with path.open("wb") as stream:
+        stream.write(payload)
+        stream.flush()
+        os.fsync(stream.fileno())
 
 
 CELL_RECORDS = (
@@ -121,7 +130,7 @@ def extract(output_dir: str | os.PathLike[str]) -> dict[str, Any]:
     manifests: list[dict[str, Any]] = []
     with zipfile.ZipFile(BUNDLE_PATH) as archive:
         bundle_manifest = json.loads(archive.read("manifest.json"))
-        if bundle_manifest.get("format") != "spd-decap-pi-scenario" or bundle_manifest.get("format_version") != 1 or bundle_manifest.get("raw_spd_embedded") is not False:
+        if bundle_manifest.get("format") != "spd-decap-pi-scenario" or bundle_manifest.get("format_version") != 1 or bundle_manifest.get("scenario_file") != "scenario.json" or bundle_manifest.get("raw_spd_embedded") is not False:
             raise ValueError("bundle manifest identity failed")
         attachments = bundle_manifest.get("attachments")
         if not isinstance(attachments, list):
@@ -144,6 +153,14 @@ def extract(output_dir: str | os.PathLike[str]) -> dict[str, Any]:
 
     if sum(len(item["payload"]) for item in manifests) > 64 * 1024 * 1024:
         raise ValueError("aggregate WKB research cap exceeded")
+    layer_counts = {
+        "L28": sum(item["layer"] == "Signal$L28(DGND)" for item in manifests),
+        "L29": sum(item["layer"] == "Signal$L29(DGND)" for item in manifests),
+        "L30": sum(item["layer"] == "Signal$L30(OTHER_POWER1)" for item in manifests),
+        "L31": sum(item["layer"] == "Signal$L31(OTHER_POWER2)" for item in manifests),
+    }
+    if layer_counts != {"L28": 1, "L29": 1, "L30": 7, "L31": 7}:
+        raise ValueError(f"local-window layer counts differ: {layer_counts}")
     receipt = {
         "schema_version": "source-local-window-geometry-receipt-v1",
         "program": PROGRAM,
@@ -154,7 +171,7 @@ def extract(output_dir: str | os.PathLike[str]) -> dict[str, Any]:
         "bundle": {"path": str(BUNDLE_PATH), "sha256": BUNDLE_SHA256},
         "bundle_report": {"path": str(BUNDLE_REPORT_PATH), "sha256": BUNDLE_REPORT_SHA256},
         "d103_receipt": {"path": str(D103_RECEIPT_PATH), "sha256": D103_RECEIPT_SHA256},
-        "layer_counts": {"L28": 1, "L29": 1, "L30": 7, "L31": 7},
+        "layer_counts": layer_counts,
         "ordinals": list(range(258, 274)),
         "derived_wkb_contract": "raw source island only; no merge/intersection/difference/simplify/snap",
         "limits": {"per_wkb_bytes": 8 * 1024 * 1024, "aggregate_wkb_bytes": 64 * 1024 * 1024, "production_caps_unchanged": True},
@@ -165,12 +182,12 @@ def extract(output_dir: str | os.PathLike[str]) -> dict[str, Any]:
     try:
         for item in manifests:
             path = temporary / item["geometry"]["filename"]
-            path.write_bytes(item["payload"])
+            _write_fsync(path, item["payload"])
             written = path.read_bytes()
             if len(written) != item["geometry"]["wkb_size_bytes"] or sha256(written).hexdigest() != item["geometry"]["wkb_sha256"]:
                 raise ValueError(f"WKB reread verification failed: {item['ordinal']}")
         receipt_path = temporary / "geometry_receipt.json"
-        receipt_path.write_bytes(receipt_bytes)
+        _write_fsync(receipt_path, receipt_bytes)
         receipt_written = receipt_path.read_bytes()
         if receipt_written != receipt_bytes or len(receipt_written) != len(receipt_bytes) or sha256(receipt_written).hexdigest() != sha256(receipt_bytes).hexdigest():
             raise ValueError("receipt reread verification failed")
