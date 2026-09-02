@@ -1,12 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — 작업 기준
 
-- 문서 버전: **3.19**
+- 문서 버전: **3.20**
 - 기준 branch: **main only**
 - current integrated-hardening docs base: `5a270677074868fc3e10ffa26309a208bb151ac3`
 - integrated-hardening implementation commit: `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`
 - 최종 개정: **2026-09-02 (Asia/Seoul)**
 - integrated-hardening lifecycle: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
 - current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY — D-091 DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c` — D-092 DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION — D-093 DONE / ACCEPT_FOCUSED / COMMITTED @ `bebbb80` — D-094 DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION — D-095 DONE / ACCEPT_FOCUSED — D-096 DONE / ACCEPT — D-097 DONE / STOP_D097_RAW_STACKUP_PROVENANCE_SCOPE / CONSUMED_NO_RERUN — D-097R DONE / STOP_D097R_TERMINAL_ENDPOINT_LAYER_SEMANTICS / CONSUMED_NO_RERUN — D-097S DONE / STOP_D097S_INVALID_DETACHED_FIXTURE_COMPONENT_COVERAGE / CONSUMED_NO_RERUN — D-097T DONE / PASS_FOCUSED / COMMITTED @ `6bdd8a1` — D-098 DONE / STOP_MANIFEST_REPRODUCTION / CONSUMED / NO_RERUN — D-099 DONE / STOP_D099_SQLITE_HANDLE_NOT_CLOSED / CONSUMED / NO_RERUN — D-099R DONE / STOP_D099R_TERMINAL_BINDING_PRESENTATION_ORDER / CONSUMED / NO_RERUN — D-100 DONE / PASS_FOCUSED — D-101 DONE / STOP_D096_EVIDENCE_IDENTITY / CONSUMED_NO_RERUN**
+- current accuracy gate continuation: **D102/D103/D104 DONE / PASS — D105 DOWNLOAD_ONLY / STATIC_AUDIT_DONE — D106 EXTRACTED / VERSION_PROBE_PASS — next: D105 read-only data-version/list gate**
 - D-089: **DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1`** — `W7-ACC-TERMINAL-PATH-KIND-OWNERSHIP-IR-01` / `TERMINAL_PATH_KIND_OWNERSHIP_IR_CONTRACT`.
 - D-090: **DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY** — consumed, no-rerun.
 - D-091: **DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c`** — `W7-ACC-OWNERSHIP-TERMINAL-MULTIBRANCH-CARDINALITY-01`.
@@ -84,10 +85,10 @@ flowchart LR
     D99 --> D99R["D-099R SQLite handle closure determinism successor<br/>DONE / STOP_D099R_TERMINAL_BINDING_PRESENTATION_ORDER / CONSUMED"]
     D99R --> D100["D-100 terminal binding canonical order<br/>DONE / PASS_FOCUSED"]
     D100 --> D101["D-101 original-SPD ownership reproduction then fringe<br/>DONE / STOP_D096_EVIDENCE_IDENTITY / CONSUMED"]
-    D101 --> PHY["Physics track<br/>two-surface BEM/oracle"]
+    D101 --> PHY["Physics track<br/>L28-L31 16-cell adaptive/global BEM"]
     D101 --> GEO["Geometry track<br/>source-bound crop/WKB acquisition"]
     D101 --> SCORE["Scoring track<br/>frozen 100kHz/1MHz metric"]
-    PHY --> INT["combined fringe-oracle → additive residual ΔC integration → first metric"]
+    PHY --> INT["raw C gates → conditional C_res or exact replacement → first metric"]
     GEO --> INT
     SCORE --> INT
     D89 -->|STOP| STOPSRC["static diagnosis/replanning"]
@@ -110,7 +111,7 @@ flowchart LR
 - stage와 commit은 explicit path로만 수행한다.
 
 사용량은 Codex Usage Guard v0.1.1로 phase 전환과 delegation/build 전에 확인한다.
-사용자가 지정한 남은 사용량 **30%** 지점에서는 새 expensive phase를 시작하지
+사용자가 지정한 남은 사용량 **10%** 지점에서는 새 expensive phase를 시작하지
 않고 현재 상태를 문서화해 멈춘다.
 
 ## 2. 문서 권위와 갱신 규칙
@@ -1081,17 +1082,41 @@ Observation은 ownership logical `7bea5522...18ef`, raw manifest/geometry/logica
 `a20f1310...616e`, section ledger count 14/total 249647/ledger SHA `5223339f...be36`, final SHA
 `34150d7d...0a93`를 보존한다. 수치 개선은 0이다.
 
-후속은 별도 diagnostic/oracle을 만들지 않고 하나의 bounded combined fringe-oracle gate로 묶는다.
+후속은 별도 diagnostic/oracle을 만들지 않고 하나의 bounded physical gate로 묶는다.
 D-101은 WKB/SQLite geometry artifact를 남기지 않았으므로 Geometry track은 source-bound crop/WKB를
 찾아 재사용하거나 bounded original-source read 1회로 생성해야 하며 full ownership compile은 반복하지 않는다.
-Physics/Geometry/Scoring 세 track은 `combined fringe-oracle → additive residual ΔC integration → first metric`에서
+Physics/Geometry/Scoring 세 track은 `raw C gates → conditional C_res or exact replacement → first metric`에서
 수렴한다. 준비 단계에서는 PowerSI app과 expensive solver를 실행하지 않지만, 최종 integration은 frozen reference에
 대한 bounded model solve를 수행한 뒤 첫 PowerSI 100 kHz/1 MHz metric만 측정한다.
-limiting case, passivity, reciprocity, conservation, conditioning과 expected error signature는 combined
-fringe-oracle의 acceptance 조건이며 하나라도 unmet이면 integration을 차단한다. 첫 metric은
+limiting case, passivity, reciprocity, conservation, conditioning과 expected error signature는 bounded
+physical gate의 acceptance 조건이며 하나라도 unmet이면 integration을 차단한다. 첫 metric은
 `e_f=20log10(|Zmodel|/|Zref|)`, `low_offset=abs((e_100k+e_1M)/2)`로 고정하고, frozen baseline
 `low_offset=1.5547211732 dB`에서 첫 measurable improvement는
 `baseline-candidate >= max(3*sigma_mag,0.25 dB)`여야 한다. 별도 eventual gate는 `low_offset<=1.0 dB`다.
+
+### v3.20 현재 상태 — D102–D106
+
+- D102–D104 완료 상태와 main 커밋은 `d405bce`, `6e348da`, `fe59cbc`, `6c9045f`,
+  `8177f7a`, `a51c130`, `fb596d9`다. direct-anchor 계약은 `f1a22d0`다.
+- D103 최종 receipt: `D:\SPD-Decap-PI-Evaluator-W7\8177f7a82715979652d7dcb3cd7bfd2770746133\260729-d103-source-stackup-material-receipt-02\stackup_material_receipt.json`,
+  SHA256 `4ea63cf86f6b1f4e8d56eead82033606cd2a2f9b6fae1b14e857a51e4c0749f9`, PASS,
+  95 layers/301 dielectric points. 100k material은 1MHz endpoint hold 정책이며 source-grounded-at-frequency가 아니다.
+- D104 final receipt: `D:\SPD-Decap-PI-Evaluator-W7\fb596d929427d926f091df380b88f162f830483d\260729-d104-source-local-window-geometry-01\geometry_receipt.json`,
+  SHA256 `bf3d965281f3fd09cf6be26cbd49cca22b4b3085f265ba859349e8091754263b`, PASS,
+  L28-L31 16 cells, raw WKB 13,600,420 bytes.
+- 최소 물리 도메인은 L28-L31 전체 16-cell multi-conductor adaptive/global BEM이다.
+  manufactured raw `C_full`은 infinity-reference Maxwell C이므로 row sum은 일반적으로 nonzero/nonnegative다. explicit infinity augmentation 뒤에만 zero-sum을 기대한다.
+  supplemental residual은 raw row-sum projection을 하지 않고, 같은 extended basis에서 `C_res_ext=C_full_ext-C_bulk_ext`를 만든 뒤 동일 `P_ext`로 production terminal basis에 congruence map한다.
+  infinity를 DGND와 같은 terminal에 map하는 것은 source-proven equipotential/environment tie와 production topology basis 일치가 있을 때만 허용한다. 현재 그 증거가 없으므로 supplemental injection은 STOP이며 exact bulk-pair replacement 필요성만 판정한다. disabled API 선구현은 금지한다.
+- scorer 권위는 `score_frozen_two_anchor_first_metric`이며 `f1a22d0`에서는 exact `modal_rms_delta_db`만 받는다. oracle uncertainty를 이 필드에 과적재하지 않는다.
+  두 anchor 각각 independent `u_Z<=20%|DeltaZii|` (SNR>=5)를 먼저 통과한 뒤 기존 scorer의 `max(3*abs(modal_rms_delta_db),0.25dB)`를 통과해야 하며 eventual `low_offset<=1.0dB`는 독립 gate다.
+- FasterCap은 연구 oracle 후보다. D105 installer는 `D:\SPD-Decap-PI-Evaluator-W7\fb596d929427d926f091df380b88f162f830483d\260729-d105-fastercap-bundle-download-01\fastfieldsolvers_bundle_5.2.0_setup_x64.exe`,
+  size 27,202,233, SHA256 `f0f25cadcb8dfc8bd5d33734ee8ae6bd50412247eb84f08c45cd0ebdd65c1212`다.
+  unsigned Inno Setup 5.4.2이며 아직 실행·설치·추출하지 않았고 FasterCap binary version은 UNKNOWN이다.
+- 다음 gate 순서는 trusted executable acquisition → manufactured 4-conductor/aperture smoke → D104 C-matrix oracle →
+  100k/1MHz ΔZii first metric → 필요할 때만 ownership seam이다. 실제 수치 정확도 개선은 0이며 usage stop line은 10%다.
+  반복 1분 polling과 small-step full verification은 하지 않는다.
+- D106은 같은 경로에서 official ZIP을 built-in Expand-Archive로 artifact root/extracted에 안전 추출 완료했다. exact allowlist 10 files/2 dirs, total files 1,300,144 bytes, no reparse point, exe hash/size exact, Authenticode NotSigned다. standard-user bounded `innoextract.exe --version`은 exit 0, 99.444 ms, stdout 76 B, stderr 0, child 0, artifact file changes 0, TEMP files 0으로 PASS했으며 `innoextract 1.9` / Inno Setup 1.2.10–6.0.5를 출력했다. Network isolation은 이 host에서 사용할 수 없어 `NOT_AVAILABLE_NOT_CLAIMED`; Sol PE/source static review 후 version-only probe만 ACCEPT_BOUNDED다. 다음은 D105 read-only data-version/list gate이며 ZIP extraction/EXE execution은 완료된 version-only 범위를 넘지 않는다.
 
 ## 10. 중단·사용자 검토 조건
 
@@ -1102,7 +1127,7 @@ fringe-oracle의 acceptance 조건이며 하나라도 unmet이면 integration을
 - 동일 물리 후보가 두 번째 high-cost 실행을 요구하지만 원인 변경이 없다.
 - 원본 SPD source data, PowerSI reference partition 또는 unseen design이 없다.
 - working tree에 범위 밖 tracked 변경이 생겨 안전하게 분리할 수 없다.
-- 사용량이 사용자가 지정한 30% 남음 지점에 도달한다.
+- 사용량이 사용자가 지정한 10% 남음 지점에 도달한다.
 
 D-089 `W7-ACC-TERMINAL-PATH-KIND-OWNERSHIP-IR-01`은 `DONE / ACCEPT_FOCUSED /
 COMMITTED @ 54c87d1`다. D-088/V3R은 소비된 STOP이며 동일 실행은 허용하지 않는다.
