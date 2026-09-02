@@ -27,7 +27,7 @@ def test_frozen_two_anchor_first_metric_is_report_only_and_fail_closed():
             "0.1MHz": {"signed_magnitude_error_db": 0.8},
             "1MHz": {"signed_magnitude_error_db": 1.4},
         },
-        "convergence": {"frequency_rms_delta_db": 0.05, "modal_rms_delta_db": 0.02},
+        "convergence": {"modal_rms_delta_db": 0.05},
         "metrics": {"magnitude_db": {"rms_db": 99.0}},
     }
 
@@ -37,15 +37,16 @@ def test_frozen_two_anchor_first_metric_is_report_only_and_fail_closed():
     assert result["low_offset_db"] == pytest.approx(1.1)
     assert result["sigma_mag_db"] == pytest.approx(0.05)
     assert result["first_threshold_db"] == pytest.approx(0.25)
-    assert result["sigma_source"]["fields"] == [
-        "frequency_rms_delta_db",
-        "modal_rms_delta_db",
-    ]
+    assert result["sigma_source"]["fields"] == ["modal_rms_delta_db"]
     assert result["source"]["sha256"] == "a" * 64
     assert result["touchstone"]["sha256"] == "b" * 64
 
     malformed = deepcopy(report)
     malformed["anchors"].pop("1MHz")
+    with pytest.raises(ValueError):
+        module.score_frozen_two_anchor_first_metric(malformed)
+    malformed = deepcopy(report)
+    malformed["convergence"]["frequency_rms_delta_db"] = 0.0
     with pytest.raises(ValueError):
         module.score_frozen_two_anchor_first_metric(malformed)
     malformed = deepcopy(report)

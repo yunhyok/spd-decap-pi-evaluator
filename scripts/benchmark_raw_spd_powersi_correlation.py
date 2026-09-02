@@ -204,12 +204,13 @@ def score_frozen_two_anchor_first_metric(report: Mapping[str, Any]) -> dict[str,
     convergence = report.get("convergence")
     if not isinstance(convergence, Mapping):
         raise ValueError("convergence mapping is required")
-    frequency_rms = convergence.get("frequency_rms_delta_db")
+    if set(convergence) != {"modal_rms_delta_db"}:
+        raise ValueError("convergence must contain only modal_rms_delta_db")
     modal_rms = convergence.get("modal_rms_delta_db")
-    if any(type(value) not in (int, float) or isinstance(value, bool) or not np.isfinite(float(value)) or float(value) < 0.0 for value in (frequency_rms, modal_rms)):
+    if type(modal_rms) not in (int, float) or isinstance(modal_rms, bool) or not np.isfinite(float(modal_rms)) or float(modal_rms) < 0.0:
         raise ValueError("convergence RMS proxies are invalid")
-    frequency_rms = float(frequency_rms); modal_rms = float(modal_rms)
-    sigma = max(abs(frequency_rms), abs(modal_rms))
+    modal_rms = float(modal_rms)
+    sigma = abs(modal_rms)
     low_offset = abs((anchor_values["0.1MHz"] + anchor_values["1MHz"]) / 2.0)
     improvement = FROZEN_BASELINE_LOW_OFFSET_DB - low_offset
     threshold = max(3.0 * sigma, 0.25)
@@ -221,9 +222,9 @@ def score_frozen_two_anchor_first_metric(report: Mapping[str, Any]) -> dict[str,
         "touchstone": touchstone,
         "chosen": {"status": "completed", "mode": mode, "rail_id": rail},
         "anchors": {key: {"signed_magnitude_error_db": anchor_values[key]} for key in ("0.1MHz", "1MHz")},
-        "convergence": {"frequency_rms_delta_db": frequency_rms, "modal_rms_delta_db": modal_rms},
+        "convergence": {"modal_rms_delta_db": modal_rms},
         "sigma_mag_db": sigma,
-        "sigma_source": {"method": "max_abs_convergence_rms", "fields": ["frequency_rms_delta_db", "modal_rms_delta_db"]},
+        "sigma_source": {"method": "abs_modal_convergence_rms", "fields": ["modal_rms_delta_db"]},
         "e_100k_db": anchor_values["0.1MHz"],
         "e_1m_db": anchor_values["1MHz"],
         "low_offset_db": low_offset,
