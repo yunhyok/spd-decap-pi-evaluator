@@ -1,3 +1,6 @@
+import hashlib
+import json
+import math
 from pathlib import Path
 
 from tools.research.manufactured_fastercap_fixture import generate_fixture
@@ -6,40 +9,58 @@ from tools.research.manufactured_fastercap_fixture import generate_fixture
 def _quads(path: Path) -> list[list[tuple[float, float, float]]]:
     quads = []
     for line in path.read_text().splitlines():
-        fields = line.split()
-        values = [float(value) for value in fields[2:]]
+        values = [float(value) for value in line.split()[2:]]
         quads.append([tuple(values[i : i + 3]) for i in range(0, 12, 3)])
     return quads
 
 
-def _normal(quad: list[tuple[float, float, float]]) -> tuple[float, float, float]:
-    a = tuple(quad[1][i] - quad[0][i] for i in range(3))
-    b = tuple(quad[2][i] - quad[0][i] for i in range(3))
-    return (a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0])
+def _canonical_quad(quad: list[tuple[float, float, float]]) -> tuple:
+    cycles = []
+    for sequence in (quad, list(reversed(quad))):
+        cycles.extend(tuple(sequence[offset:] + sequence[:offset]) for offset in range(4))
+    return min(cycles)
 
 
-def test_manufactured_fixture_counts_and_determinism(tmp_path: Path) -> None:
+def _triangle_volume(a: tuple[float, float, float], b: tuple[float, float, float], c: tuple[float, float, float]) -> float:
+    cross = (b[1] * c[2] - b[2] * c[1], b[2] * c[0] - b[0] * c[2], b[0] * c[1] - b[1] * c[0])
+    return sum(a[i] * cross[i] for i in range(3)) / 6.0
+
+
+def _topology(quad_list: list[list[tuple[float, float, float]]], h: float, expected_volume: float) -> None:
+    assert len({_canonical_quad(quad) for quad in quad_list}) == len(quad_list)
+    edges: dict[tuple, list[int]] = {}
+    volume = 0.0
+    for quad in quad_list:
+        assert len(set(quad)) == 4
+        a, b, c, d = quad
+        ab = tuple(b[i] - a[i] for i in range(3))
+        ac = tuple(c[i] - a[i] for i in range(3))
+        normal = (ab[1] * ac[2] - ab[2] * ac[1], ab[2] * ac[0] - ab[0] * ac[2], ab[0] * ac[1] - ab[1] * ac[0])
+        assert math.sqrt(sum(value * value for value in normal)) > 0.0
+        for start, end in zip(quad, quad[1:] + quad[:1]):
+            assert math.dist(start, end) <= h + 1e-12
+            key = tuple(sorted((start, end)))
+            edges.setdefault(key, []).append(1 if start <= end else -1)
+        volume += _triangle_volume(a, b, c) + _triangle_volume(a, c, d)
+    assert all(len(signs) == 2 and sum(signs) == 0 for signs in edges.values())
+    assert math.isclose(volume, expected_volume, rel_tol=1e-9, abs_tol=1e-15)
+
+
+def test_manufactured_fixture_topology_and_manifest(tmp_path: Path) -> None:
     first = generate_fixture(tmp_path / "first")
     second = generate_fixture(tmp_path / "second")
-    assert [first["levels"][key]["q_count_total"] for key in ("0.002", "0.001", "0.0005")] == [960, 3504, 13344]
-    assert [first["levels"][key]["q_count_ap2"] for key in ("0.002", "0.001", "0.0005")] == [240, 864, 3264]
-    c0 = _quads(tmp_path / "first" / "h_0.002" / "C0.qui")
-    z_values = [vertex[2] for quad in c0 for vertex in quad]
-    assert min(z_values) == -0.0005 and max(z_values) == 0.0
-    ap2 = _quads(tmp_path / "first" / "h_0.002" / "AP2.qui")
-    inner = {
-        "left": [quad for quad in ap2 if all(vertex[0] == -0.002 for vertex in quad)],
-        "right": [quad for quad in ap2 if all(vertex[0] == 0.002 for vertex in quad)],
-        "bottom": [quad for quad in ap2 if all(vertex[1] == -0.002 for vertex in quad)],
-        "top": [quad for quad in ap2 if all(vertex[1] == 0.002 for vertex in quad)],
-    }
-    assert _normal(inner["left"][0])[0] > 0
-    assert _normal(inner["right"][0])[0] < 0
-    assert _normal(inner["bottom"][0])[1] > 0
-    assert _normal(inner["top"][0])[1] < 0
-    for level in ("0.002", "0.001", "0.0005"):
-        for name in ("C0", "C1", "AP2", "C3"):
-            left = (tmp_path / "first" / f"h_{level}" / f"{name}.qui").read_bytes()
-            right = (tmp_path / "second" / f"h_{level}" / f"{name}.qui").read_bytes()
-            assert left == right
-        assert (tmp_path / "first" / f"h_{level}" / "fixture.lst").read_text() == "C C0.qui 1.0 0 0 0\nC C1.qui 1.0 0 0 0\nC AP2.qui 1.0 0 0 0\nC C3.qui 1.0 0 0 0\n"
+    first_manifest = (tmp_path / "first" / "manifest.json").read_bytes()
+    second_manifest = (tmp_path / "second" / "manifest.json").read_bytes()
+    assert first == second and first_manifest == second_manifest
+    assert first["conductor_order"] == ["C0", "C1", "AP2", "C3"]
+    assert first["expected_solver_labels"] == ["g1_C0", "g2_C1", "g3_AP2", "g4_C3"]
+    for level, h in (("0.002", 0.002), ("0.001", 0.001), ("0.0005", 0.0005)):
+        level_dir = tmp_path / "first" / f"h_{level}"
+        expected_volume = {"C0": 2.0e-7, "C1": 2.0e-7, "AP2": 1.92e-7, "C3": 2.0e-7}
+        for name in first["conductor_order"]:
+            path = level_dir / f"{name}.qui"
+            _topology(_quads(path), h, expected_volume[name])
+            recorded = first["levels"][level]["files"][f"{name}.qui"]["sha256"]
+            assert hashlib.sha256(path.read_bytes()).hexdigest() == recorded
+        assert (level_dir / "fixture.lst").read_text() == "C C0.qui 1.0 0 0 0\nC C1.qui 1.0 0 0 0\nC AP2.qui 1.0 0 0 0\nC C3.qui 1.0 0 0 0\n"
+    assert json.loads(first_manifest) == first

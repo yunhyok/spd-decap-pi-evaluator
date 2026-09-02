@@ -103,7 +103,13 @@ def _sha256(path: Path) -> str:
 def generate_fixture(root: Path) -> dict:
     root = Path(root)
     root.mkdir(parents=True, exist_ok=True)
-    manifest = {"format": "manufactured-fastercap-qui-v1", "epsilon_r": 1.0, "levels": {}}
+    manifest = {
+        "format": "manufactured-fastercap-qui-v1",
+        "epsilon_r": 1.0,
+        "conductor_order": ["C0", "C1", "AP2", "C3"],
+        "expected_solver_labels": ["g1_C0", "g2_C1", "g3_AP2", "g4_C3"],
+        "levels": {},
+    }
     expected_solid = {0.002: 240, 0.001: 880, 0.0005: 3360}
     expected_ap2 = {0.002: 240, 0.001: 864, 0.0005: 3264}
     for h in LEVELS:
