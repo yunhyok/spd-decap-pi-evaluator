@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import sys
 import tempfile
+from types import SimpleNamespace
 from typing import Any
 
 
@@ -41,6 +42,7 @@ from spd_decap_pi._core.io.spd import (
     _parse_materials,
 )
 from spd_decap_pi.canonical_json import concrete_canonical_json_bytes
+from spd_decap_pi.raw_spatial_contact_compiler import _parse_layers as _raw_parse_layers
 
 
 PROGRAM = "SPD Decap PI Evaluator"
@@ -55,21 +57,50 @@ TARGET_LAYERS = (
 )
 
 
-def _source_record_rows(provenance: dict[str, Any]) -> list[dict[str, Any]]:
-    return [dict(row) for row in provenance.get("source_records", ())]
+def _source_record_rows(
+    provenance: dict[str, Any], layers: tuple[Any, ...], raw_layers: list[Any]
+) -> list[dict[str, Any]]:
+    rows = [dict(row) for row in provenance.get("source_records", ())]
+    if len(raw_layers) != len(layers):
+        raise ValueError("raw layer row count differs from parsed layers")
+    rows.extend(
+        {
+            "record_id": f"layer:{layer.name}",
+            "kind": "Layer",
+            "name": str(layer.name),
+            "layer": str(layer.name),
+            "raw_ordinal": raw.ordinal,
+            "source_record_sha256": raw.source_record_sha256,
+        }
+        for layer, raw in zip(layers, raw_layers)
+    )
+    record_ids = [row.get("record_id") for row in rows]
+    if any(not isinstance(record_id, str) for record_id in record_ids) or len(record_ids) != len(set(record_ids)):
+        raise ValueError("source record IDs are missing or duplicated")
+    return rows
 
 
-def _stackup_rows(layers: tuple[Any, ...], provenance: dict[str, Any]) -> list[dict[str, Any]]:
+def _stackup_rows(
+    layers: tuple[Any, ...], provenance: dict[str, Any], raw_layers: list[Any]
+) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     source_rows = [dict(row) for row in provenance.get("stackup_layers", ())]
-    if len(source_rows) != len(layers):
+    if len(source_rows) != len(layers) or len(raw_layers) != len(layers):
         raise ValueError("stackup provenance row count differs from parsed layers")
     depth = 0.0
-    for ordinal, layer in enumerate(layers):
+    for ordinal, (layer, raw_layer) in enumerate(zip(layers, raw_layers)):
         thickness = float(layer.thickness_um)
         row = source_rows[ordinal]
         if row.get("layer_name") != str(layer.name) or row.get("thickness_um") != thickness:
             raise ValueError("stackup provenance identity differs from parsed layer")
+        if (
+            raw_layer.ordinal != ordinal
+            or raw_layer.layer_id != str(layer.name)
+            or row.get("layer_kind") != ("conductor" if raw_layer.is_conductor else "dielectric")
+        ):
+            raise ValueError("raw layer conductor identity differs from parsed layer")
+        row["raw_layer_ordinal"] = raw_layer.ordinal
+        row["raw_layer_source_record_sha256"] = raw_layer.source_record_sha256
         row["depth_from_stack_top_um"] = {"top": depth, "center": depth + thickness / 2.0, "bottom": depth + thickness}
         rows.append(row)
         depth += thickness
@@ -85,6 +116,18 @@ def _dielectric_rows(layers: tuple[Any, ...], provenance: dict[str, Any]) -> lis
             raise ValueError("dielectric provenance layer is absent from parsed stackup")
         row["layer_ordinal"] = layer_ordinals[layer_name]
     return rows
+
+
+def _validate_source_references(
+    stackup: list[dict[str, Any]],
+    dielectric: list[dict[str, Any]],
+    source_records: list[dict[str, Any]],
+) -> None:
+    record_ids = {row["record_id"] for row in source_records}
+    for row in (*stackup, *dielectric):
+        for key, value in row.items():
+            if key.endswith("_source_record_id") and value is not None and value not in record_ids:
+                raise ValueError(f"unresolved source record reference: {value}")
 
 
 def extract_receipt(output_json: str | os.PathLike[str]) -> dict[str, Any]:
@@ -120,11 +163,14 @@ def extract_receipt(output_json: str | os.PathLike[str]) -> dict[str, Any]:
         layer_start = layer_marker
         layer_end = node_marker if node_marker > layer_start else min((value for value in (via_marker, pad_marker, len(data)) if value > layer_start), default=len(data))
         layers = _parse_layers(data, layer_start, layer_end, {}, dielectrics, metals, set(), diagnostics, provenance)
+        raw_layers, _ = _raw_parse_layers(
+            SOURCE_PATH, layer_start, layer_end, SimpleNamespace(stackup_layers=layers), lambda: False
+        )
 
     errors = [diagnostic for diagnostic in diagnostics if diagnostic.severity == "error"]
     if errors:
         raise ValueError("SPD parser diagnostic error: " + "; ".join(item.code for item in errors))
-    stackup = _stackup_rows(layers, provenance)
+    stackup = _stackup_rows(layers, provenance, raw_layers)
     names = [row["layer_name"] for row in stackup]
     if any(names.count(target) != 1 for target in TARGET_LAYERS):
         raise ValueError("target layer identity is not unique")
@@ -150,9 +196,10 @@ def extract_receipt(output_json: str | os.PathLike[str]) -> dict[str, Any]:
         "targets": neighborhoods,
         "stackup_layers": stackup,
         "dielectric_points": _dielectric_rows(layers, provenance),
-        "source_records": _source_record_rows(provenance),
+        "source_records": _source_record_rows(provenance, layers, raw_layers),
         "diagnostics": [{"severity": item.severity, "code": item.code, "message": item.message} for item in diagnostics],
     }
+    _validate_source_references(receipt["stackup_layers"], receipt["dielectric_points"], receipt["source_records"])
     receipt_bytes = concrete_canonical_json_bytes(receipt)
     temporary: Path | None = None
     try:
