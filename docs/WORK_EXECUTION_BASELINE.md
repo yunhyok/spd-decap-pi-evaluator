@@ -1,12 +1,12 @@
 # SPD Decap PI Evaluator v0.23.1 — 작업 기준
 
-- 문서 버전: **3.18**
+- 문서 버전: **3.19**
 - 기준 branch: **main only**
 - current integrated-hardening docs base: `5a270677074868fc3e10ffa26309a208bb151ac3`
 - integrated-hardening implementation commit: `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`
 - 최종 개정: **2026-09-02 (Asia/Seoul)**
 - integrated-hardening lifecycle: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY — D-091 DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c` — D-092 DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION — D-093 DONE / ACCEPT_FOCUSED / COMMITTED @ `bebbb80` — D-094 DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION — D-095 DONE / ACCEPT_FOCUSED — D-096 DONE / ACCEPT — D-097 DONE / STOP_D097_RAW_STACKUP_PROVENANCE_SCOPE / CONSUMED_NO_RERUN — D-097R DONE / STOP_D097R_TERMINAL_ENDPOINT_LAYER_SEMANTICS / CONSUMED_NO_RERUN — D-097S DONE / STOP_D097S_INVALID_DETACHED_FIXTURE_COMPONENT_COVERAGE / CONSUMED_NO_RERUN — D-097T DONE / PASS_FOCUSED / COMMITTED @ `6bdd8a1` — D-098 DONE / STOP_MANIFEST_REPRODUCTION / CONSUMED / NO_RERUN — D-099 DONE / STOP_D099_SQLITE_HANDLE_NOT_CLOSED / CONSUMED / NO_RERUN — D-099R DONE / STOP_D099R_TERMINAL_BINDING_PRESENTATION_ORDER / CONSUMED / NO_RERUN — D-100 DONE / PASS_FOCUSED — D-101 ACTIVE / not_ready_coordinator**
+- current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY — D-091 DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c` — D-092 DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION — D-093 DONE / ACCEPT_FOCUSED / COMMITTED @ `bebbb80` — D-094 DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION — D-095 DONE / ACCEPT_FOCUSED — D-096 DONE / ACCEPT — D-097 DONE / STOP_D097_RAW_STACKUP_PROVENANCE_SCOPE / CONSUMED_NO_RERUN — D-097R DONE / STOP_D097R_TERMINAL_ENDPOINT_LAYER_SEMANTICS / CONSUMED_NO_RERUN — D-097S DONE / STOP_D097S_INVALID_DETACHED_FIXTURE_COMPONENT_COVERAGE / CONSUMED_NO_RERUN — D-097T DONE / PASS_FOCUSED / COMMITTED @ `6bdd8a1` — D-098 DONE / STOP_MANIFEST_REPRODUCTION / CONSUMED / NO_RERUN — D-099 DONE / STOP_D099_SQLITE_HANDLE_NOT_CLOSED / CONSUMED / NO_RERUN — D-099R DONE / STOP_D099R_TERMINAL_BINDING_PRESENTATION_ORDER / CONSUMED / NO_RERUN — D-100 DONE / PASS_FOCUSED — D-101 DONE / STOP_D096_EVIDENCE_IDENTITY / CONSUMED_NO_RERUN**
 - D-089: **DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1`** — `W7-ACC-TERMINAL-PATH-KIND-OWNERSHIP-IR-01` / `TERMINAL_PATH_KIND_OWNERSHIP_IR_CONTRACT`.
 - D-090: **DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY** — consumed, no-rerun.
 - D-091: **DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c`** — `W7-ACC-OWNERSHIP-TERMINAL-MULTIBRANCH-CARDINALITY-01`.
@@ -19,6 +19,7 @@
 - D-097S: **DONE / STOP_D097S_INVALID_DETACHED_FIXTURE_COMPONENT_COVERAGE / CONSUMED_NO_RERUN** — source-internal terminal endpoint provenance; D-097T and D-098 are consumed.
 - D-097T: **DONE / PASS_FOCUSED / COMMITTED @ `6bdd8a1`** — selected-island multicomponent unit provenance; D-098 is consumed.
 - D-098: **DONE / STOP_MANIFEST_REPRODUCTION / CONSUMED / NO_RERUN** — original-SPD source-bound geometry manifest one-shot; ownership logical hash reproduction failed.
+- D-101: **DONE / STOP_D096_EVIDENCE_IDENTITY / CONSUMED_NO_RERUN** — ownership reproduction stopped because frozen D096 project binding was absent/invalid; no product drift or fringe conclusion.
 - current numerical improvement: **0**
 
 ## 1. 압축 후 즉시 복구 카드
@@ -82,10 +83,13 @@ flowchart LR
     D98 --> D99["D-099 ownership logical rows cross-process determinism<br/>DONE / STOP_D099_SQLITE_HANDLE_NOT_CLOSED / CONSUMED"]
     D99 --> D99R["D-099R SQLite handle closure determinism successor<br/>DONE / STOP_D099R_TERMINAL_BINDING_PRESENTATION_ORDER / CONSUMED"]
     D99R --> D100["D-100 terminal binding canonical order<br/>DONE / PASS_FOCUSED"]
-    D100 --> D101["D-101 original-SPD ownership reproduction then fringe<br/>ACTIVE / not_ready_coordinator"]
-    D101 -->|conditional PASS 후| D98S["later original-SPD diagnostic/oracle successor<br/>number/scope TBD"]
-    D98S -->|diagnostic completion 후| OC["manufactured/source-bound nonzero deltaC oracle gate<br/>number/scope TBD"]
-    OC -->|oracle PASS 후| A3["production one-shot consideration"]
+    D100 --> D101["D-101 original-SPD ownership reproduction then fringe<br/>DONE / STOP_D096_EVIDENCE_IDENTITY / CONSUMED"]
+    D101 --> PHY["Physics track<br/>two-surface BEM/oracle"]
+    D101 --> GEO["Geometry track<br/>source-bound crop/WKB acquisition"]
+    D101 --> SCORE["Scoring track<br/>frozen 100kHz/1MHz metric"]
+    PHY --> INT["combined fringe-oracle → additive residual ΔC integration → first metric"]
+    GEO --> INT
+    SCORE --> INT
     D89 -->|STOP| STOPSRC["static diagnosis/replanning"]
 ```
 
@@ -1063,41 +1067,31 @@ SHA-256 `eaff0f7f848315f667a91e4cfa68877ea3559546ebbcb1bf32f4286e8297011c`였다
 anchor assertions, 모든 section ledger와 final logical hash가 process/order 간 일치해 terminal presentation
 defect 수정을 확인했다. 원본 SPD/census/fringe/P1/oracle/solver/PowerSI 실행과 수치 개선은 0이다.
 
-활성 D-101은 gate `W7-ACC-D101-ORIGINAL-SPD-OWNERSHIP-REPRODUCTION-THEN-FRINGE-01`이며, 아직
-coordinator가 준비되지 않아 launch-ready로 주장하지 않는다. 외부 coordinator 경로는
-`D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\d101_source_plane_ownership_reproduction_fringe_once.py`,
-output root는 `D:\SPD-Decap-PI-Evaluator-W7\<D101_CONTRACT_HEAD>\260729-d101-source-plane-ownership-reproduction-fringe-01`이다.
-Contract placeholder는 `<D101_CONTRACT_HEAD>`이며 clean combined source+test+docs commit, coordinator
-copy/patch, Sol static accept, exact size/SHA/postcopy 검증 전에는 대체하지 않는다.
+D-101은 gate `W7-ACC-D101-ORIGINAL-SPD-OWNERSHIP-REPRODUCTION-THEN-FRINGE-01`에서
+contract `a5dea56b6fd5fe8eb345420dddb16a88c10bc224`, coordinator 80,666 B/SHA
+`04697178770b438eee8f3aa409f623482d40cf1339a94ae29243617f215f579b`, 7,640.601 s 실행 후
+`DONE / STOP_D096_EVIDENCE_IDENTITY / CONSUMED_NO_RERUN`으로 닫혔다. 예외는
+`frozen census project binding is absent or invalid`였고, D096 report에 project binding field가 없어
+product drift나 fringe 결론으로 해석하지 않는다. Ledger는
+`source_hash=1,d096_receipt_load=1,d096_report_load=1,import=1,ownership_asset_validate=1,ownership_observation=1,receipt=1`이며
+`identity_compare/fringe/report/attachments/census/P1/oracle/solve/PowerSI/retry=0`이다. 산출물은
+receipt 3,143 B/SHA `fed4252bb60359bf2e2784ece86a9d83df78b9e67c78e713d49fd949c5d3c426`와
+observation 4,548 B/SHA `1b4699e6f067329edcbf397f776afb618dc91d9c3a66b22884de21e5721542f3`뿐이다.
+Observation은 ownership logical `7bea5522...18ef`, raw manifest/geometry/logical/plane 및 certificate/topology identity, project binding
+`a20f1310...616e`, section ledger count 14/total 249647/ledger SHA `5223339f...be36`, final SHA
+`34150d7d...0a93`를 보존한다. 수치 개선은 0이다.
 
-D-101은 observation `source_plane_ownership_reproduction_observation.json`(schema v1, 256 KiB cap)을
-frozen comparison보다 먼저 atomic publish하고, terminal receipt
-`source_plane_ownership_reproduction_fringe_receipt.json`(schema v1, 64 KiB cap)을 남긴다. Source hash,
-frozen D-096 receipt/report load, original-SPD import은 각 1회이며, ownership asset validation/observation/
-identity compare도 각 1회다. Mismatch 시 report/WKB를 만들지 않고 observation과 receipt만 보존하며,
-zero mismatch일 때만 동일 fringe audit와 report+5 fixed-2D WKB를 실행한다. Mismatch ledger는
-`source_hash=1,d096_receipt_load=1,d096_report_load=1,import=1,ownership_asset_validate=1,ownership_observation=1,identity_compare=1`이고,
-mismatch 시 fringe/report/attachments는 0, receipt final은 1이며 census/substrate_compile/P1/oracle/solve/PowerSI/retry는 0이다. Zero mismatch PASS에서는 fringe/report/attachments가 1/1/5로 증가한다.
-모든 D-098 caps에 observation 256 KiB와 final root 6 MiB를 추가한다. STOP categories는
-`STOP_PREFLIGHT`, `STOP_INPUT_IDENTITY`, `STOP_D096_EVIDENCE_IDENTITY`, `STOP_IMPORT_OR_OWNERSHIP`,
-`STOP_D101_OBSERVATION_FINALIZATION`, `STOP_D101_RAW_REPRODUCTION`, `STOP_D101_OWNERSHIP_BINDING_REPRODUCTION`,
-`STOP_D101_OWNERSHIP_LOGICAL_REPRODUCTION`, `STOP_FRINGE_GEOMETRY`, `STOP_FORBIDDEN_PATH`,
-`STOP_RESOURCE_OR_CANCELLED`, `STOP_REPORT_FINALIZATION_FAILED`, `STOP_UNEXPECTED`이며 모두 consumed/no-rerun이다.
-Tracked whitelist는 coordinator를 제외한 실제 source/test와 이 두 문서이며,
-Observation schema는 `source-plane-ownership-reproduction-observation-v1`이며 full observed ownership
-manifest와 canonical manifest SHA, observed raw-manifest canonical SHA/project binding을 보존한다. Complete
-`section_ledger`는 binary `section_name` 정렬의 `{section_name,row_count,logical_sha256}` 행으로 기록하고
-manifest count/set equality, section count/total rows/canonical ledger SHA 및 자기 자신을 제외한
-`final_observation_sha256`, `captured_before_frozen_comparison=true`를 검증한다. Receipt schema는
-`source-plane-ownership-reproduction-fringe-receipt-v1`이며 observation presence/path/size/file SHA/manifest
-SHA/ledger SHA를 bind한다. Public `load_source_plane_ownership_ir` validation/close 후 bounded stream-decompress,
-exclusive scratch, `closing` 기반 SQLite read-only/immutable query로 exact schema/type/lowercase SHA/count/set을
-검증하고, 모든 mismatch를 sorted `{field,expected,observed}`로 기록한다. Pre-observation STOP은 receipt만,
-mismatch는 receipt+observation, PASS는 receipt+observation+report+5 WKB만 남기며 partial fringe 삭제와
-durable observation 보존을 지킨다. Caps는 wall 14,400 s/RSS 24 GiB/scratch 8 GiB/start free 16 GiB/report
-1 MiB/WKB each 1 MiB/WKB aggregate 4 MiB/receipt 64 KiB/observation 256 KiB/final root 6 MiB이며 one
-blocking wait/no polling이다.
-수치 개선·production/oracle readiness를 주장하지 않는다.
+후속은 별도 diagnostic/oracle을 만들지 않고 하나의 bounded combined fringe-oracle gate로 묶는다.
+D-101은 WKB/SQLite geometry artifact를 남기지 않았으므로 Geometry track은 source-bound crop/WKB를
+찾아 재사용하거나 bounded original-source read 1회로 생성해야 하며 full ownership compile은 반복하지 않는다.
+Physics/Geometry/Scoring 세 track은 `combined fringe-oracle → additive residual ΔC integration → first metric`에서
+수렴한다. 준비 단계에서는 PowerSI app과 expensive solver를 실행하지 않지만, 최종 integration은 frozen reference에
+대한 bounded model solve를 수행한 뒤 첫 PowerSI 100 kHz/1 MHz metric만 측정한다.
+limiting case, passivity, reciprocity, conservation, conditioning과 expected error signature는 combined
+fringe-oracle의 acceptance 조건이며 하나라도 unmet이면 integration을 차단한다. 첫 metric은
+`e_f=20log10(|Zmodel|/|Zref|)`, `low_offset=abs((e_100k+e_1M)/2)`로 고정하고, frozen baseline
+`low_offset=1.5547211732 dB`에서 첫 measurable improvement는
+`baseline-candidate >= max(3*sigma_mag,0.25 dB)`여야 한다. 별도 eventual gate는 `low_offset<=1.0 dB`다.
 
 ## 10. 중단·사용자 검토 조건
 
