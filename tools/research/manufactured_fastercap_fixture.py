@@ -108,6 +108,8 @@ def generate_fixture(root: Path) -> dict:
         "epsilon_r": 1.0,
         "conductor_order": ["C0", "C1", "AP2", "C3"],
         "expected_solver_labels": ["g1_C0", "g2_C1", "g3_AP2", "g4_C3"],
+        "permuted_conductor_order": ["AP2", "C3", "C0", "C1"],
+        "permuted_solver_labels": ["g1_AP2", "g2_C3", "g3_C0", "g4_C1"],
         "levels": {},
     }
     expected_solid = {0.002: 240, 0.001: 880, 0.0005: 3360}
@@ -127,10 +129,13 @@ def generate_fixture(root: Path) -> dict:
                 raise AssertionError(f"{name} h={h}: {len(lines)} != {expected}")
         lst = level_dir / "fixture.lst"
         lst.write_text("".join(f"C {name}.qui 1.0 0 0 0\n" for name in CONDUCTORS), encoding="ascii", newline="\n")
+        permuted_lst = level_dir / "fixture_permuted.lst"
+        permuted_lst.write_text("".join(f"C {name}.qui 1.0 0 0 0\n" for name in manifest["permuted_conductor_order"]), encoding="ascii", newline="\n")
         manifest["levels"][level_key] = {
             "h_m": h,
             "files": {f"{name}.qui": {"q_count": counts[name], "sha256": _sha256(level_dir / f"{name}.qui")} for name in CONDUCTORS},
             "fixture.lst": {"sha256": _sha256(lst)},
+            "fixture_permuted.lst": {"sha256": _sha256(permuted_lst)},
             "q_count_total": sum(counts.values()),
             "q_count_ap2": counts["AP2"],
             "q_count_solid": {name: counts[name] for name in ("C0", "C1", "C3")},

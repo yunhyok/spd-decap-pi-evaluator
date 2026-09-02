@@ -54,6 +54,8 @@ def test_manufactured_fixture_topology_and_manifest(tmp_path: Path) -> None:
     assert first == second and first_manifest == second_manifest
     assert first["conductor_order"] == ["C0", "C1", "AP2", "C3"]
     assert first["expected_solver_labels"] == ["g1_C0", "g2_C1", "g3_AP2", "g4_C3"]
+    assert first["permuted_conductor_order"] == ["AP2", "C3", "C0", "C1"]
+    assert first["permuted_solver_labels"] == ["g1_AP2", "g2_C3", "g3_C0", "g4_C1"]
     for level, h in (("0.002", 0.002), ("0.001", 0.001), ("0.0005", 0.0005)):
         level_dir = tmp_path / "first" / f"h_{level}"
         expected_volume = {"C0": 2.0e-7, "C1": 2.0e-7, "AP2": 1.92e-7, "C3": 2.0e-7}
@@ -63,4 +65,9 @@ def test_manufactured_fixture_topology_and_manifest(tmp_path: Path) -> None:
             recorded = first["levels"][level]["files"][f"{name}.qui"]["sha256"]
             assert hashlib.sha256(path.read_bytes()).hexdigest() == recorded
         assert (level_dir / "fixture.lst").read_text() == "C C0.qui 1.0 0 0 0\nC C1.qui 1.0 0 0 0\nC AP2.qui 1.0 0 0 0\nC C3.qui 1.0 0 0 0\n"
+        permuted = "C AP2.qui 1.0 0 0 0\nC C3.qui 1.0 0 0 0\nC C0.qui 1.0 0 0 0\nC C1.qui 1.0 0 0 0\n"
+        permuted_path = level_dir / "fixture_permuted.lst"
+        assert permuted_path.read_text() == permuted
+        assert permuted_path.read_bytes() == (tmp_path / "second" / f"h_{level}" / "fixture_permuted.lst").read_bytes()
+        assert hashlib.sha256(permuted_path.read_bytes()).hexdigest() == first["levels"][level]["fixture_permuted.lst"]["sha256"]
     assert json.loads(first_manifest) == first
