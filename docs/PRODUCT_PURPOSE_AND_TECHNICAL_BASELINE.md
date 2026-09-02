@@ -1,6 +1,6 @@
 # SPD Decap PI Evaluator v0.23.1 — 목적·기술 기준
 
-- 문서 버전: **3.20**
+- 문서 버전: **3.21**
 - 권위: **G0 — 목적, 우선순위, 합격 의미와 비주장 경계**
 - 최종 개정: **2026-09-02 (Asia/Seoul)**
 - 현재 외부 정확성: **W6-BASE 260729 retrospective numerical FAIL**
@@ -8,7 +8,7 @@
 - 현재 수치 개선: **0** — solver, `Y_global`, `Zii`와 PowerSI 비교 수치는 아직 바뀌지 않았다.
 - 현재 구현 gate: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
 - current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY — D-091 DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c` — D-092 DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION — D-093 DONE / ACCEPT_FOCUSED / COMMITTED @ `bebbb80` — D-094 DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION — D-095 DONE / ACCEPT_FOCUSED — D-096 DONE / ACCEPT — D-097 DONE / STOP_D097_RAW_STACKUP_PROVENANCE_SCOPE / CONSUMED_NO_RERUN — D-097R DONE / STOP_D097R_TERMINAL_ENDPOINT_LAYER_SEMANTICS / CONSUMED_NO_RERUN — D-097S DONE / STOP_D097S_INVALID_DETACHED_FIXTURE_COMPONENT_COVERAGE / CONSUMED_NO_RERUN — D-097T DONE / PASS_FOCUSED / COMMITTED @ `6bdd8a1` — D-098 DONE / STOP_MANIFEST_REPRODUCTION / CONSUMED / NO_RERUN — D-099 DONE / STOP_D099_SQLITE_HANDLE_NOT_CLOSED / CONSUMED / NO_RERUN — D-099R DONE / STOP_D099R_TERMINAL_BINDING_PRESENTATION_ORDER / CONSUMED / NO_RERUN — D-100 DONE / PASS_FOCUSED — D-101 DONE / STOP_D096_EVIDENCE_IDENTITY / CONSUMED_NO_RERUN**
-- current accuracy gate continuation: **D102/D103/D104 DONE / PASS — D105 DOWNLOAD_ONLY / STATIC_AUDIT_DONE — D106 EXTRACTED / VERSION_PROBE_PASS — next: D105 read-only data-version/list gate**
+- current accuracy gate continuation: **D102/D103/D104 DONE / PASS — D105 DOWNLOAD_ONLY / STATIC_AUDIT_DONE — D106 EXTRACTED / VERSION_PROBE_PASS — D107S/D107T/D107U DONE/STOP — D109R/D110/D112R/D114 PASS — next: D104 production input contract**
 
 ## 1. 문서 역할과 권위
 
@@ -598,7 +598,7 @@ candidate와 설정을 동결한 뒤 260729 development comparison을 한 번 �
 PowerSI fitting, 전체 평균으로 rail 실패 숨기기, 원인 변경 없는 반복 실행,
 development FAIL 상태에서 holdout·release로 진행하는 것을 금지한다.
 
-### v3.20 현재 상태 — D102–D106
+### v3.21 현재 상태 — D102–D114
 
 - D102–D104 완료 상태와 main 커밋은 `d405bce`, `6e348da`, `fe59cbc`, `6c9045f`,
   `8177f7a`, `a51c130`, `fb596d9`다. direct-anchor 계약은 `f1a22d0`다.
@@ -621,6 +621,14 @@ development FAIL 상태에서 holdout·release로 진행하는 것을 금지한�
   100k/1MHz ΔZii first metric → 필요할 때만 ownership seam이다. 실제 수치 정확도 개선은 첫 metric 전까지 0이다.
   사용량 stop line은 10%이며 반복 1분 polling과 small-step full verification은 하지 않는다.
 - D106은 같은 경로에서 official ZIP을 built-in Expand-Archive로 artifact root/extracted에 안전 추출 완료했다. exact allowlist 10 files/2 dirs, total files 1,300,144 bytes, no reparse point, exe hash/size exact, Authenticode NotSigned다. standard-user bounded `innoextract.exe --version`은 exit 0, 99.444 ms, stdout 76 B, stderr 0, child 0, artifact file changes 0, TEMP files 0으로 PASS했으며 `innoextract 1.9` / Inno Setup 1.2.10–6.0.5를 출력했다. Network isolation은 이 host에서 사용할 수 없어 `NOT_AVAILABLE_NOT_CLAIMED`; Sol PE/source static review 후 version-only probe만 ACCEPT_BOUNDED다. 다음은 D105 read-only data-version/list gate이며 ZIP extraction/EXE execution은 완료된 version-only 범위를 넘지 않는다.
+
+- manufactured fixture는 runner/oracle front-end validation이며 D104 production geometry나 PowerSI accuracy 증거가 아니다. primary goal은 original SPD physics로 PowerSI-like `Zii` 정확도를 얻는 것이다.
+- D107S는 `--timestamps=none`의 innoextract 1.9 Windows explicit-close 우회로 Boost 4100-byte buffer tail loss를 확인했고, `History.txt` UTC discriminator 2805 bytes SHA1 `f90f...32aa`는 PASS다.
+- D107T는 UTC full filtered extraction PASS (16 files/3 dirs/7,617,034 bytes)이며 `FasterCap.exe` 7,211,520 bytes SHA256 `02806e...c9b9`, `libgomp` SHA256 `68d15b...84c9`다. prior D107/D107R는 NO_REUSE다.
+- D107U는 `-bv`에서 version 6.0.7에 도달했지만 known nonfatal HKLM settings diagnostic 때문에 exact strict output gate STOP이다. payload/temp/registry persistent state는 unchanged이며, 세 registry path는 GUI/install-path 전용이고 numerical CLI는 Reset+explicit options를 사용한다. install/registry write는 금지한다.
+- main fixture generator/topology test는 `bf4ea80`, `3344757`, `9068a13`, `fd2ed82`에 반영됐고 focused test는 1 passed다. D109R coarse는 raw/solver/after 960/1920/1920, 66,533 KiB, 0.290 s; D110 medium은 3504/7008/7008, 396,793 KiB, 2.233 s; D112R fine은 13344/26688/26688, 685,597 KiB, 4.438 s다. all physical gates PASS, adaptive refinement/OOC 없음, registry startup diagnostic만 exact이며 FasterCap exit code는 source defect 때문에 oracle이 아니다.
+- convergence는 coarse eF/eM/eG 0.995414%/1.030384%/0.231067%, fine 0.362382%/0.248236%/0.0473907%, contractions 0.364052/0.240916/0.205095로 PASS다. D114 permutation `[AP2,C3,C0,C1]`도 PASS (remap Fro 2.544954e-6, max normalized 4.502334e-6)다.
+- 다음 gate는 D104 production geometry+dielectric FasterCap input contract → bounded production oracle 1회 → source-proven conductor/terminal basis일 때만 transform → first two-anchor scorer다. `C_res` injection은 exact extended basis/tie가 증명될 때까지 STOP이다. usage 10% stop line과 micro-step full-suite 금지는 유지한다.
 
 ## 9. Promotion과 검증 비용 원칙
 
