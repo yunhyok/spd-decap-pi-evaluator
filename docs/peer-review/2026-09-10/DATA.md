@@ -18,7 +18,7 @@ JSON 수치·판정·실행 소스는 Git 저장소에서 바로 열 수 있다.
 
 ## 내려받기와 무결성 확인
 
-본인 GitHub 계정으로 이 private 저장소에 로그인한 뒤 링크를 열거나, GitHub CLI에서 아래처럼 받는다. 아래 스크립트는 파일 확인만 하며 solver를 실행하지 않는다.
+위 GitHub 링크를 열거나, GitHub CLI에서 아래처럼 받는다. 아래 스크립트는 파일 확인만 하며 solver를 실행하지 않는다.
 
 ```powershell
 gh auth login
