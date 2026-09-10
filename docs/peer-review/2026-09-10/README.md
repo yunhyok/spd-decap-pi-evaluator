@@ -15,3 +15,7 @@ GitHub 저장소는 private 상태로 유지한다. 저장소에 접근 가능�
 게시를 위해 링크·탐색 문서만 정리했으며, 원문·결과·소스 스냅샷의 바이트는 보존했다. 대형 배열은 게시 복사본의 SHA256을 새로 확인했다. 계산이나 물리 검증을 다시 수행한 것은 아니다. 연구와 자동 후속 작업은 중지 상태를 유지한다.
 
 보존한 과거 입력 기록 중 `astra-native-loaded-vtrip-field-02/field.json`은 원본 자체가 유효한 JSON으로 해석되지 않는다. 수정 없이 보존하고 [manifest](manifest.json)의 `historical_json_parse_errors`에 표시했다. 최신 세 실험의 직접 인용 결과 JSON은 정상 해석되며 원래 해시와 일치한다.
+
+## 접수된 외부 검토 의견
+
+- **[REVIEW_CLAUDE_FABLE_2026-09-10.md](REVIEW_CLAUDE_FABLE_2026-09-10.md)** — Claude Fable 5.1, 2026-09-10, commit `215d7f5` 기준. 총평: 대안으로 전환(실행 경로·연구 순서 전환, MQS 모델 계열은 유지). 요청서의 여섯 질문에 요청 형식으로 답했다.
