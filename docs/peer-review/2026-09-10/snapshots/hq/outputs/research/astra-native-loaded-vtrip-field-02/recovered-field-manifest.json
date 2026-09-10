@@ -1,0 +1,251 @@
+{
+  "program": "SPD Decap PI Evaluator v0.23.1",
+  "created_utc": "2026-09-07T01:23:12.182875+00:00",
+  "status": "RECOVERED_VERIFIED_ARTIFACT_MANIFEST_AFTER_SHUTDOWN_RACE",
+  "artifacts": {
+    "field.json": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\field.json",
+      "sha256": "1864f9920d43fb110788d7986d86c1acac97d4fe931af5a51d5384c5dcd18830",
+      "size_bytes": 8304
+    },
+    "observer-driver-at-run.py": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\observer-driver-at-run.py",
+      "sha256": "5d09ee1ffc413215e641275b9dd1851ff716f7f86aea279a10228c099ee452cd",
+      "size_bytes": 68429
+    },
+    "numeric-capture-checkpoint.npz": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\numeric-capture-checkpoint.npz",
+      "sha256": "c54d9e73a47a862396e6f70347ad9e319a6fbc1a3310e95feeeedf2b3cf1e292",
+      "size_bytes": 16297774
+    },
+    "raw-field-snapshot.npz": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\raw-field-snapshot.npz",
+      "sha256": "6eac098738598a78b2068ce4f80e46fd70e17010a89bfb5949ec8a68124df4a7",
+      "size_bytes": 145099492
+    },
+    "derived-field-observation.npz": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\derived-field-observation.npz",
+      "sha256": "be5a83dff88db545de4625414e46dcc360364eb0a29077c91848a6ac805cb6c0",
+      "size_bytes": 22990365
+    },
+    "checkpoints/frequency-1000000.json": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\checkpoints\\frequency-1000000.json",
+      "sha256": "3b9cc9845564b6d65bcaabbe4aa9a8f0f92da19ca56e90e271495d545f00f47f",
+      "size_bytes": 14325
+    },
+    "checkpoints/progress.jsonl": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\checkpoints\\progress.jsonl",
+      "sha256": "81d0175074b2158e2759782bfe1c6bcf97275abe3334e82c24222f48beb1a58a",
+      "size_bytes": 10668
+    }
+  },
+  "complete_original_top_level_values": {
+    "adapter": {
+      "base_driver_sha256": "5f73464f9bd8aea1eac54bae7c7840134fbf19a63d62b28e1edb57e76ec844eb",
+      "loaded_driver_frequency_override_hz": [
+        1000000.0
+      ],
+      "loaded_driver_sha256": "3c1fd9c4cd2c3247e2b1f2ae41c78ed6310d25092a92e6b9751a7593e4fcdf52",
+      "observer_driver_sha256": "5d09ee1ffc413215e641275b9dd1851ff716f7f86aea279a10228c099ee452cd",
+      "original_loaded_driver_frequency_grid_hz": [
+        1000000.0,
+        10000000.0,
+        100000000.0,
+        1000000000.0
+      ],
+      "pinned_1mhz_device_zdd_ohm": [
+        0.00010031137009881143,
+        -0.0006057593380320584
+      ],
+      "product_numerical_guards_passed_before_field_promotion": true,
+      "reference_receipt_sha256": "e2c1f16ce4ff3998445e09c6cde2d1b23cdbc4d2c5e102e32c5f3d915e51790d",
+      "reproduced_1mhz_device_zdd_ohm": [
+        0.00010031137009881143,
+        -0.0006057593380320584
+      ]
+    },
+    "bundle": {
+      "design_fingerprint": "73a0167ef13cadc885b0f97bcab00de4322095b1a25d9bfd014f32bb39b40dab",
+      "load_validated_all_declared_member_hashes": true,
+      "manifest_sha256": "7ceb7f1a94a7140c5f0c82a6a1252e2f96ba5f8543d75e9e9edae6ab12a5a82b",
+      "path": "D:\\SPD-Decap-PI-Evaluator-W7\\e2f219e71d8c8a397009f72242cce10d78cfc7ab\\260902-d115b-source-plane-ownership-materialization-04\\source_plane_ownership_candidate.spdpi",
+      "scenario_sha256": "2f5ae107221857f7f093ab8d6cbcff4c286a0c6cee5b6a9994de1c384cf39c83",
+      "size_bytes": 925278361,
+      "source_sha256": "40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2"
+    },
+    "derived_field_snapshot": {
+      "allow_pickle_required": false,
+      "array_count": 15,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\derived-field-observation.npz",
+      "sha256": "be5a83dff88db545de4625414e46dcc360364eb0a29077c91848a6ac805cb6c0",
+      "size_bytes": 22990365,
+      "text_scalar_encoding": "utf8_json_uint8_scalar",
+      "text_vector_encoding": "utf8_json_uint8"
+    },
+    "device_port": {
+      "negative_node_id": "spd-finite-via-vertex:1e9e3a9fb6978e92411bce4c",
+      "port_id": "ADC_VDD_075_VTRIP_SRAM/0",
+      "positive_node_id": "spd-device-port-node:820d47f6bf1a0a52a37b4706"
+    },
+    "field": {
+      "capture_counts": {
+        "active_termination_stamp_count": 11050,
+        "batch_port_count": 1,
+        "factor_solve_frame_count": 1,
+        "finite_parallel_rl_count": 1692389,
+        "original_finite_parallel_rl_count": 1692389,
+        "original_partial_count": 36
+      },
+      "device_port": {
+        "negative_active_index": 2656,
+        "negative_global_reduced_index": 2656,
+        "port_id": "ADC_VDD_075_VTRIP_SRAM/0",
+        "positive_active_index": 2699,
+        "positive_global_reduced_index": 2699,
+        "voltage_ohm_at_1a": [
+          0.00010031137009881143,
+          -0.0006057593380320585
+        ]
+      },
+      "field_power": {
+        "absolute_error_ohm": 2.4790502953424228e-14,
+        "device_zdd_ohm": [
+          0.00010031137009881143,
+          -0.0006057593380320584
+        ],
+        "finite_current_formula": "I = y * (V_first - V_second)",
+        "finite_parallel_rl_complex_contribution_ohm_at_1a": [
+          3.240780158732434e-05,
+          1.31864687791299e-05
+        ],
+        "formula": "conj(vH Y_k v) at the native one-amp Device drive",
+        "partial_complex_contribution_ohm_at_1a": [
+          6.445060851894071e-11,
+          -1.1584162921273059e-08
+        ],
+        "pass": true,
+        "sum_complex_contribution_ohm_at_1a": [
+          0.00010031137012262017,
+          -0.0006057593380389658
+        ],
+        "sum_minus_device_zdd_ohm": [
+          2.3808740894602776e-14,
+          -6.907452040905149e-15
+        ],
+        "termination_complex_contribution_ohm_at_1a": [
+          6.790350408468731e-05,
+          -0.0006189342226551745
+        ],
+        "tolerance_ohm": 6.1400875122765e-10
+      },
+      "finite_active_order_count": 1692389,
+      "frequency_hz": 1000000.0,
+      "no_assembled_global_matrix_saved": true,
+      "text_scalar_encoding": "utf8_json_uint8_scalar",
+      "text_vector_encoding": "utf8_json_uint8"
+    },
+    "frequencies_hz": [
+      1000000.0
+    ],
+    "identities": {
+      "base_driver_sha256": "5f73464f9bd8aea1eac54bae7c7840134fbf19a63d62b28e1edb57e76ec844eb",
+      "base_substrate_identity_sha256": "ded5a0de451b0f195214f9f175c51ccb61af1b60f97f5a4b1052570125a84abc",
+      "driver_code_sha256": "3c1fd9c4cd2c3247e2b1f2ae41c78ed6310d25092a92e6b9751a7593e4fcdf52",
+      "loaded_scenario_identity_sha256": "061ba8053e25b2c1f8d4c778eecaa344ac8d47213143d32e210f49420d10e729",
+      "solver_profile": "layerwise_admittance_v1",
+      "source_model_evidence_sha256": "df253a8d51a5e135d5100a693efe187bf2ff7d4631e25b5126d7544e006c0bf5",
+      "termination_manifest_sha256": "c753669eacf83d3bfcf5c657e14e343a8c9ab5a0a2464039069a9053a293af75"
+    },
+    "limitations": [
+      "The NPZ raw snapshot is retained as UNVALIDATED_RAW_SOLVER_FRAME; the JSON field checks independently bind its active mapping and field power to the returned one-amp Device Zdd.",
+      "Active reduced-node IDs come only from active_global_nodes -> self._reduced_node_ids. Source SQLite ordinals are never treated as voltage offsets.",
+      "Ideal-topology-collapsed links have no inferred current. Only finite_parallel_rl links use I = y * delta-V.",
+      "Original partial net names, layer pairs, nominal-C CSC data, and actual 1 MHz dispersion scales are preserved for later source G/C analysis, but this observer neither replaces nor re-owns any partial.",
+      "This one 1 MHz observation does not establish AC convergence, PowerSI agreement, current sharing beyond the compiled model, or source-bound replacement readiness."
+    ],
+    "numeric_capture_checkpoint": {
+      "allow_pickle_required": false,
+      "array_count": 16,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\numeric-capture-checkpoint.npz",
+      "sha256": "c54d9e73a47a862396e6f70347ad9e319a6fbc1a3310e95feeeedf2b3cf1e292",
+      "size_bytes": 16297774,
+      "text_scalar_encoding": null,
+      "text_vector_encoding": null
+    },
+    "points": {
+      "1000000": {
+        "device_zdd_magnitude_ohm": 0.00061400875122765,
+        "device_zdd_ohm": [
+          0.00010031137009881143,
+          -0.0006057593380320584
+        ],
+        "device_zdd_phase_deg": -80.59737054741048,
+        "device_zdd_real_nonnegative": true,
+        "diagnostics": {
+          "active_reduced_node_count": 756889,
+          "active_structural_component_count": 1,
+          "active_termination_cluster_count": 11050,
+          "active_termination_element_count": 11050,
+          "finite_via_link_count": 1692389,
+          "maximum_factor_pivot_ratio": 9031482.148991613,
+          "maximum_port_rhs_batch_size": 1,
+          "maximum_relative_residual": 8.094519081196738e-19,
+          "maximum_termination_kron_relative_residual": 0.0,
+          "physical_surface_count": 812988,
+          "pruned_portless_node_count": 0,
+          "reduced_node_count": 756889,
+          "solve_identity_sha256": "fc9f9b81cfe02e0f9f061c7061334ad5b8b5945080cd5e8cf4525b918ba000fd",
+          "structural_component_count": 1,
+          "termination_manifest_sha256": "c753669eacf83d3bfcf5c657e14e343a8c9ab5a0a2464039069a9053a293af75",
+          "topology_only_link_count": 56888
+        },
+        "effective_admittance_s": [
+          266.0731432731124,
+          1606.759941355236
+        ],
+        "frequency_hz": 1000000.0,
+        "resource_at_checkpoint": {
+          "elapsed_s": 1026.5630000000237,
+          "peak_private_bytes": 11861639168,
+          "peak_working_set_bytes": 10631168000
+        },
+        "status": "COMPLETED_ACTUAL_SOURCE_MOUNTED_DEVICE_POINT"
+      }
+    },
+    "program": "SPD Decap PI Evaluator v0.23.1",
+    "rail_id": "ADC_VDD_075_VTRIP_SRAM/0"
+  },
+  "original_output": {
+    "valid_json": false,
+    "incomplete_key": "raw_capture",
+    "decode_error_character_offset": 8304,
+    "modified": false
+  },
+  "process": {
+    "observed_exec_exit_code": 1,
+    "clean_exit": false,
+    "final_progress": {
+      "elapsed_s": 1069.7029999999795,
+      "private_bytes": 4607500288,
+      "reason": null,
+      "stage": "watchdog_stop",
+      "working_set_bytes": 4547293184
+    },
+    "native_rerun_for_recovery": false,
+    "diagnosis": "Graceful stop.set races with watchdog cancelled(); reason is null, and hard exit interrupts final JSON writing."
+  },
+  "native_model_resistive_contribution_percent": {
+    "finite_via_rl": 32.30720660619143,
+    "terminations": 67.6927291669919,
+    "original_gc_partials": 6.425055151320715e-05
+  },
+  "limits": [
+    "Hash manifest and exact complete-prefix recovery only; separate independent NPZ review validates arrays and physics.",
+    "No missing original JSON values, successful process status or completed raw_capture object is fabricated.",
+    "Contributions describe the present native model; they do not attribute PowerSI error or certify finite-width source contacts."
+  ],
+  "independent_review": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\independent-artifact-review.json",
+    "sha256": "bf9c2e60db938c8bc3d02a1efcd2aed3ef4f43828140ea5f6466967bf8a4a11e"
+  }
+}

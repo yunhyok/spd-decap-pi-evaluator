@@ -1,0 +1,104 @@
+{
+  "elapsed_s": 234.12772789999144,
+  "inputs": {
+    "mesh_npz": {
+      "bytes": 54863370,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-sheet-mesh-preflight-02\\mesh-stiffness.npz",
+      "sha256": "137b4952f739a75e7bf6f2e21684529a43c48558412df59faab0ad003ea10fb9"
+    },
+    "mesh_result": {
+      "bytes": 4646,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-sheet-mesh-preflight-02\\result.json",
+      "sha256": "2ff4183b727373d8f6d9dbd32a39fcfc55a92b19bc55328b7e79082e766bfe59"
+    },
+    "mesh_review": {
+      "bytes": 3499,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-sheet-mesh-preflight-02\\independent-review.json",
+      "sha256": "69019084739f64c96d68450bf0e4a8cd0b22f9a70f55cae1095ae109a9468c06"
+    },
+    "overlap_npz": {
+      "bytes": 1121901,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-gc-source-overlaps-01\\source-overlap-polygons.npz",
+      "sha256": "7ce1575f8b03380aff3a549f347bbafe9bc0fd85d47fe4039383de9bcaa6d920"
+    },
+    "overlap_result": {
+      "bytes": 545300,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-gc-source-overlaps-01\\result.json",
+      "sha256": "3ee62248ceae6d54a2d182a615c882b2e270d8752b166408fcc1441a9549fb46"
+    },
+    "overlap_review": {
+      "bytes": 2478,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-gc-source-overlaps-01\\independent-review.json",
+      "sha256": "3f135214d73478b0d32173b1580e0812b4966634a80231be6d8596d1c59caebb"
+    },
+    "owner_ledger": {
+      "bytes": 2248642,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-gc-owner-ledger-01\\result.json",
+      "sha256": "69fb96a75b7bbe8a73d6704b237043272b7b1ca2da8c35880894205f606982b8"
+    },
+    "triangle_mass_helper": {
+      "bytes": 61282,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\project_astra_l14_gc_mass.py",
+      "sha256": "f2c668fd090db5c4606eec27558c9bdbbdde6552d2f82c3b64b8837bd7350dc3"
+    }
+  },
+  "mass": {
+    "clipped_triangle_count": 496092,
+    "expanded_nnz": 4862069,
+    "expanded_shape": [
+      1441310,
+      1441310
+    ],
+    "finite": true,
+    "full_triangle_analytic_count": 545249,
+    "global_spectral_claim": null,
+    "local_element_psd_gate_passed": true,
+    "local_psd_absolute_tolerance": "max(element_area_um2,1)*1e-12",
+    "mesh_node_count": 1439614,
+    "mesh_triangle_count": 2127824,
+    "minimum_local_triangle_mass_eigenvalue": 1.0734027865877648e-12,
+    "nonnegative_consistent_first_moments": true,
+    "owner_block_construction": "density * [M,-M1;-(M1)^T,1^T M 1] from symmetric local consistent P1 masses",
+    "row_sum_relative_max": 7.992712156165092e-15,
+    "sparse_block_layout": "[all saved mesh nodes, sorted external active nodes]",
+    "symmetric": true
+  },
+  "mesh_geometry_arrays": {
+    "container_sha256": "137b4952f739a75e7bf6f2e21684529a43c48558412df59faab0ad003ea10fb9",
+    "raw_array_sha256": {
+      "node_xy_um": "6a8af3a559663774eea76a9a4f32113112e7dd9d34342c54ab3cc718f22c1232",
+      "triangles": "21c32c5fb933096600d27782969c8e4dac9c396b0d706330c737b73475f58d9f"
+    }
+  },
+  "mesh_result_status": "COMPLETED_CONDITIONAL_L02_SHEET_MESH_PREFLIGHT",
+  "output": {
+    "bytes": 46180834,
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-gc-mass-04\\l02-gc-capacitance-block.npz",
+    "sha256": "920dc89580bf123df00343d1a59f149c5fd96158694c391179528a02fe1af184"
+  },
+  "owner_contract": {
+    "area_relative_tolerance": 2e-09,
+    "external_active_identity_count": 1696,
+    "fingerprints_sorted_and_exact": true,
+    "integrated_capacitance_total_f": 5.909971854073673e-09,
+    "integrated_capacitance_total_relative_error": 1.5395989968736429e-15,
+    "maximum_owner_area_relative_error": 5.814792542085604e-14,
+    "maximum_owner_capacitance_recollapse_relative_error": 5.160064642896065e-15,
+    "native_capacitance_total_f": 5.909971854073682e-09,
+    "owner_count": 2064,
+    "partial_ordinal": 0
+  },
+  "program": "SPD Decap PI Evaluator",
+  "scope": "Sparse source-owned capacitance block in F with layout [all saved mesh nodes, sorted external active nodes]. Only the frozen 2064 owner overlaps and their original C values are stamped; added trace/pad copper creates no invented G/C owner. The original partial-0 frequency coefficient is intentionally applied later. No contact contraction, raw source replay, mesh compilation, circuit/operator mutation, LU, or solve.",
+  "script_sha256": "b50915a6ec98b9d09665eac678a101444d055c610d6f9601f1439b0fe06e76eb",
+  "source_geometry_arrays": {
+    "container_sha256": "7ce1575f8b03380aff3a549f347bbafe9bc0fd85d47fe4039383de9bcaa6d920",
+    "raw_array_sha256": {
+      "overlap_area_um2": "75d5025473b6c06d38d6e15d6a897202037b80d1b381b9fa8ae9a603fdb356ef",
+      "wkb_bytes": "9e4e2bb657a1d8b64546e048f7d75dd5fa7eb72ffd39be7bb571c22a88b908e3",
+      "wkb_offsets": "02127286d4bc6d9790cb929925a960869a976813e92342cc14caf6b43c9a286e"
+    }
+  },
+  "status": "COMPLETED_L02_SOURCE_GC_P1_CAPACITANCE_BLOCK",
+  "version": "0.23.1"
+}

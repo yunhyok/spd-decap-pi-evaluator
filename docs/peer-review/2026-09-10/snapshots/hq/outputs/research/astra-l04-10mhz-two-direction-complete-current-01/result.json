@@ -1,0 +1,209 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "UNVALIDATED_TWO_DIRECTION_COMPLETE_CURRENT_SCREEN",
+  "run_released": true,
+  "inputs": {
+    "prior_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-closed-current-direction-01\\result.json",
+      "sha256": "63ba3212c49e73cdbbb576e1a213d3b89ac24cdfb5f4655469bcc995ac2c0c47",
+      "size_bytes": 43466
+    },
+    "prior_guard": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-closed-current-direction-01\\external-budget.json",
+      "sha256": "4bd84257c478967fcd7d39c1fcb5b0e209b0147cad56d3884569ad6a2c2addcf",
+      "size_bytes": 1084
+    },
+    "prior_arrays": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-closed-current-direction-01\\closed-current-direction-screen-arrays.npz",
+      "sha256": "11a36fa73db93d930439839af4d8cb1a0025649bade1901d2f8d7fa2f468615b",
+      "size_bytes": 228515621
+    },
+    "prior_initial": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-closed-current-direction-01\\initial-complete-model-residual.npz",
+      "sha256": "16fd56e355f950b6ac5127a979758d4135343713d9a5b432fa2d2c57b664dd1b",
+      "size_bytes": 195512060
+    },
+    "prior_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-closed-current-direction-01\\driver-at-run.py",
+      "sha256": "aaf7700bb9294f71d69f142132795e0989763f467c5c27c2f88e8ee0bc52e7d7",
+      "size_bytes": 28557
+    },
+    "magnetic_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\continue_astra_l04_10mhz_l25_magnetic_gcrotmk.py",
+      "sha256": "fb737651456a57c1fcba96073ef1b8b2e48682b4dfb930a1abf10603bf51bcce",
+      "size_bytes": 39735
+    },
+    "joint_action_source": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_l25_l04_joint_magnetic_action.py",
+      "sha256": "caf5ba8fd0a1a156f987069be4d14e12d5ae8268e613716d120fb6edf2ab6a5e",
+      "size_bytes": 18767
+    },
+    "frequency_operator": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-full-contact-frequency-operators-02\\frequency-10000000-conditional-operator.npz",
+      "sha256": "7d528de4ced4e24e6fbf1c0ba437276ce8ccc706684e36028f63494685171701",
+      "size_bytes": 101909646
+    },
+    "frequency_bridge": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-partial-inputs-01\\frequency-10000000-partial-inputs.npz",
+      "sha256": "f5fff0c74c667d8243852b709ed07238585eec427a878bb074519d995f5f680a",
+      "size_bytes": 391933
+    },
+    "static": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-joint-native-l14-auxiliary-10mhz-01\\joint-native-l14-l04-hybrid-aux-block.npz",
+      "sha256": "babe65c41ad7e33eb6752e96f5209994adb348105c6d7552793abbe88d26c4b6",
+      "size_bytes": 62963594
+    },
+    "cached_factors": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-joint-native-l14-factor-cache-01\\qualified-public-factors.npz",
+      "sha256": "b95162dc946a2d757f630bcc08b3d1311b36d334b97b515eca1aa8239e58a762",
+      "size_bytes": 686651870
+    }
+  },
+  "prior": {
+    "raw_info": 1,
+    "positive_screen_only": false,
+    "structural_gates": {
+      "rhs_minus_saved_action_matches_saved_residual": true,
+      "saved_scaled_to_physical_matches": true,
+      "bc_dpsi": true,
+      "pt_r_c_dpsi": true,
+      "projected_r_c_dpsi": true,
+      "h_scaled_identity": true,
+      "h_solve_rhs_identity": true,
+      "pt_full04_gradient": true,
+      "finite_initial_direction": true,
+      "four_scalar_source_fmm_calls": true,
+      "direction_pt_gradient": true,
+      "alpha_orthogonality": true,
+      "norm_nonincrease": true
+    },
+    "original_physical_failures": [
+      "l04_all_contact_kcl",
+      "matrix_global_circuit_kcl",
+      "matrix_identity_power",
+      "physical_power_closure",
+      "physical_source_global_circuit_kcl"
+    ]
+  },
+  "m_checkpoint": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-two-direction-complete-current-01\\m-existing-direction-before-h.npz",
+    "sha256": "3b20f2d9b89e640ed45cfd39339e4d7a50d4ea4b0678e476ddfbdebd27611740",
+    "size_bytes": 135722772
+  },
+  "factor_release": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-two-direction-complete-current-01\\pre-fmm-factor-release.json",
+    "sha256": "6c38f0bde92020762ac4db3b4a70e2b9d0921f8d2e059139e95f05dc0481f62c",
+    "size_bytes": 247
+  },
+  "runtime_before_fmm": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-two-direction-complete-current-01\\runtime-before-fmm.json",
+    "sha256": "013b25ce17decaee0f60831e4feadd805dcef1704c7770746151a83cec29c8fc",
+    "size_bytes": 2493
+  },
+  "returned_ntd_replay": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-two-direction-complete-current-01\\returned-ntd-replay.json",
+    "sha256": "ddfc89cbac4a545abffdfdc38f121d6a971b9634fb7cc03b139547ce2bf5ece7",
+    "size_bytes": 261
+  },
+  "raw_joint_action": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-two-direction-complete-current-01\\raw-two-direction-joint-action-before-projections.npz",
+    "sha256": "c84214455d050c562f4681b5f516e9e6127f8bb0585e6c21a9948b5fb7ba773e",
+    "size_bytes": 74473283
+  },
+  "artifact": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-two-direction-complete-current-01\\two-direction-fit-before-gates.npz",
+    "sha256": "1ca4ee00d75da9fdd0dafb90d0de524a4a70ca81bf65734bc2b3e275758570ac",
+    "size_bytes": 353852305
+  },
+  "fit": {
+    "raw_column_norms": [
+      320.8116048711326,
+      4835.399000667999
+    ],
+    "normalized_column_norms": [
+      1.0000000000000062,
+      1.0000000000000213
+    ],
+    "singular_values": [
+      1.3256641423545248,
+      0.4925592164151653
+    ],
+    "rank": 2,
+    "normalized_condition": 2.691380240537733,
+    "rank2": true,
+    "condition_lte_1e6": true,
+    "orthogonality_relative": 1.6331342219598462e-13
+  },
+  "metrics": {
+    "norms": {
+      "initial_potential": 0.0008974859364689875,
+      "initial_l25": 0.005256521069576354,
+      "initial_contact": 14.273720572444065,
+      "initial_original_nonclosed": 14.273721568557649,
+      "initial_closed": 0.0048175443764687294,
+      "initial_full": 14.273722381545499,
+      "candidate_potential": 0.0008974440592435806,
+      "candidate_l25": 0.0203192933342501,
+      "candidate_contact": 2.437162583193532,
+      "candidate_original_nonclosed": 2.437247450712796,
+      "candidate_closed": 0.024628689293408657,
+      "candidate_full": 2.4373718855238944
+    },
+    "ratios": {
+      "potential": 0.9999533394076662,
+      "l25": 3.86554016721324,
+      "contact": 0.1707447312579849,
+      "original_nonclosed": 0.1707506650600218,
+      "closed": 5.1122911111535085,
+      "full": 0.17075937308933328
+    },
+    "performance_gates": {
+      "full_lte_80_percent": true,
+      "closed_lte_80_percent": false,
+      "original_nonclosed_lte_110_percent": true,
+      "potential_lte_200_percent": true,
+      "l25_lte_200_percent": false
+    }
+  },
+  "gates": {
+    "shape": true,
+    "finite": true,
+    "kcl": true,
+    "energy_scaled_stationarity": true,
+    "dual_rq": true,
+    "dual_finite": true,
+    "stationarity_metrics_finite": true,
+    "four_fmm_calls": true,
+    "fmm_ier_zero": true,
+    "pt_gradient": true,
+    "finite_ad2": true,
+    "fit": true,
+    "inverse": true,
+    "primal_identities": true,
+    "saved_psi_full_lte_80_percent": true,
+    "port_scalar_finite": true
+  },
+  "screen_pass": false,
+  "positive_screen_only": false,
+  "no_extension_after_screen": true,
+  "raw_z_unvalidated_change_only_from_coeff2_dv": {
+    "positive_index": 2698,
+    "negative_index": 2655,
+    "scalar_finite": true,
+    "initial": [
+      0.0008425706827559387,
+      0.00015658454177993749
+    ],
+    "delta": [
+      -9.141465732397136e-08,
+      1.714091736804404e-07
+    ],
+    "candidate": [
+      0.0008424792680986146,
+      0.00015675595095361792
+    ]
+  },
+  "linear_superposition_only": "Candidate residual is a two-column fit to saved r0; no fresh candidate true operator replay was performed.",
+  "scope": "Held conditional complete-current screen. No PSD, error bound, PowerSI, physical, or accuracy acceptance."
+}

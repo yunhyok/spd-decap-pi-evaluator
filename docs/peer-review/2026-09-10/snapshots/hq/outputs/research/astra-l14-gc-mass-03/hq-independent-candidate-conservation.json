@@ -1,0 +1,14 @@
+{
+  "candidate_sha256": "521a70e96b0c89602e75352ae8d0a1da9fb478b95db52b94da210997917cba2e",
+  "canonical_upper": true,
+  "owner_area_relative_error_max": 3.944528546990675e-14,
+  "owner_count": 224,
+  "physical_external_rowsum_max_s": 4.479672556748992e-16,
+  "projection03_rhs_error_max_a": 3.487429799345237e-21,
+  "projection03_rhs_relative_error": 2.4000584492404192e-14,
+  "projection03_rhs_scale_a": 1.4530603621128286e-07,
+  "recollapsed_owner_y_error_max_s": 4.492971330945279e-16,
+  "scope": "Independently reaggregate each tagged upper mass exactly once; candidate conservation only, not the failed aggregate or completed global solve.",
+  "status": "VERIFIED_PRESERVED_OWNER_MASS_CANDIDATE_CONSERVATION",
+  "tagged_upper_entries": 1984536
+}

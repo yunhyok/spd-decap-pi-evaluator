@@ -1,0 +1,119 @@
+{
+  "driver_sha256": "059bcb66624be60e9a0e7670ba3783f1056e17022a47ffab78f62d30bd087d56",
+  "elapsed_s": 4.184918400016613,
+  "finite_replay": {
+    "max_abs_a": 2.4371331736087383e-12,
+    "max_forward_bound_a": 3.056286216072029e-08,
+    "max_row_error_to_bound": 0.002734222464008743,
+    "rows_above_bound": 0
+  },
+  "inputs": {
+    "assembly_map": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-assembly-map-02\\combined-assembly-map.npz",
+      "sha256": "a6ccff514fe788396eb9d7620ebc828f966efbea3f7899e7a73991c17f8a2469",
+      "size_bytes": 16919703
+    },
+    "field": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-block-gmres-01\\unvalidated-field.npz",
+      "sha256": "00cf8451f340614e5c7e1b5445df98f04cdbb8a4d8fd7177729218556fa28110",
+      "size_bytes": 31349721
+    },
+    "frozen_solver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-block-gmres-01\\driver-at-run.py",
+      "sha256": "a19c59b634214de3e24277b0cd411f91979b25f8a633cfa45fd3224df361cab4",
+      "size_bytes": 34258
+    },
+    "operator": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-operator-02\\combined-operator.npz",
+      "sha256": "45cc79706849631e9c33dc2f0d0e3c7910fe7dcce817585c728f6f1e3c30a1e8",
+      "size_bytes": 77455200
+    },
+    "source_categories": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-combined-source-categories-01\\combined-source-categories.npz",
+      "sha256": "f9253786da9eb88367c6bde51e78c64b647528e2856358b1fdd204ade1db6e9f",
+      "size_bytes": 63449271
+    }
+  },
+  "limitations": [
+    "No linear solve, PowerSI comparison or field acceptance.",
+    "The failed physical KCL and driven-power closure gates remain unchanged.",
+    "The dot-product bound is deliberately loose; do not use it to relax physical power closure."
+  ],
+  "power_forward_bound_ohm": 9.463057007417173e-05,
+  "power_replay_error_ohm": 2.6663705785493907e-14,
+  "program": "SPD Decap PI Evaluator",
+  "scope": "Conservative componentwise double-precision forward envelope for arithmetic replay of pinned matrices/finite branches. Uses eps rather than half-eps and a padded complex operation count; not a sharp error estimate. Measured stored matrix differences are retained explicitly.",
+  "source_replay": {
+    "max_abs_a": 4.962234514039667e-12,
+    "max_forward_bound_a": 6.889462675196229e-08,
+    "max_row_error_to_bound": 0.0010046082725046548,
+    "rows_above_bound": 0
+  },
+  "status": "DIAGNOSTIC_UNCONVERGED_FIELD_ARITHMETIC_ONLY",
+  "stored_source_matrix_difference_action_max_abs_a": 2.3793560249176548e-15,
+  "stored_source_matrix_difference_max_abs_s": 3.637978807091713e-12,
+  "stored_source_matrix_difference_nnz": 682,
+  "top_source_error_rows": [
+    {
+      "active_index": 885408,
+      "error_abs_a": 4.962234514039667e-12,
+      "forward_bound_a": 1.123354669533975e-08,
+      "stored_matrix_difference_action_abs_a": 0.0
+    },
+    {
+      "active_index": 885494,
+      "error_abs_a": 4.071081048434846e-12,
+      "forward_bound_a": 1.1320700496294252e-08,
+      "stored_matrix_difference_action_abs_a": 0.0
+    },
+    {
+      "active_index": 886352,
+      "error_abs_a": 4.063656769229708e-12,
+      "forward_bound_a": 1.1408276236422753e-08,
+      "stored_matrix_difference_action_abs_a": 0.0
+    },
+    {
+      "active_index": 887144,
+      "error_abs_a": 3.673823810165355e-12,
+      "forward_bound_a": 1.3289293788992762e-08,
+      "stored_matrix_difference_action_abs_a": 0.0
+    },
+    {
+      "active_index": 887925,
+      "error_abs_a": 3.4440128846401846e-12,
+      "forward_bound_a": 1.3989751997385241e-08,
+      "stored_matrix_difference_action_abs_a": 0.0
+    },
+    {
+      "active_index": 888607,
+      "error_abs_a": 3.2738626802538933e-12,
+      "forward_bound_a": 1.4215947919539933e-08,
+      "stored_matrix_difference_action_abs_a": 0.0
+    },
+    {
+      "active_index": 888651,
+      "error_abs_a": 3.070124576329741e-12,
+      "forward_bound_a": 1.4309981457682946e-08,
+      "stored_matrix_difference_action_abs_a": 0.0
+    },
+    {
+      "active_index": 884562,
+      "error_abs_a": 2.9405689758116484e-12,
+      "forward_bound_a": 9.573945842752029e-09,
+      "stored_matrix_difference_action_abs_a": 0.0
+    },
+    {
+      "active_index": 2699,
+      "error_abs_a": 2.4371331736087383e-12,
+      "forward_bound_a": 6.889462675196229e-08,
+      "stored_matrix_difference_action_abs_a": 0.0
+    },
+    {
+      "active_index": 895079,
+      "error_abs_a": 1.8782792375926033e-12,
+      "forward_bound_a": 7.88620128918632e-09,
+      "stored_matrix_difference_action_abs_a": 0.0
+    }
+  ],
+  "version": "0.23.1"
+}

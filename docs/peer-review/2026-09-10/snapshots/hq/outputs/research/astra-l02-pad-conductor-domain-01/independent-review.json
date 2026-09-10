@@ -1,0 +1,76 @@
+{
+  "checks": {
+    "conditional_16_sided_mesh_triangle_count_no_other_steiner": 2127824,
+    "conditional_16_sided_mesh_vertex_count_no_other_steiner": 1439614,
+    "domain_area_um2": 9360714797.64983,
+    "domain_boundary_vertex_occurrences": 817918,
+    "domain_holes": 33258,
+    "drill_components": 38856,
+    "excluded_fully_covered_count": 2,
+    "excluded_positive_added_area_count": 40,
+    "excluded_rows": 42,
+    "native_row_identity_exact": true,
+    "native_rows": 76139,
+    "pad_covers_predicate": false,
+    "pad_residue_relative_to_domain_area": 1.4530801359515514e-22,
+    "pad_union_uncovered_area_um2": 1.3601868730772715e-12,
+    "result_and_output_hashes_exact": true,
+    "strict_drill_union_coverage": true,
+    "unique_drill_supports": 38856,
+    "unique_pad_supports": 38856,
+    "valid_single_component_domain": true,
+    "worker_elapsed_s": 162.70300000003772,
+    "worker_sampled_peak_private_bytes": 3029082112
+  },
+  "findings": [
+    "The source pad union has a 1.3601868730772715e-12 um^2 GEOS boundary residue, so strict pad covers is false and the conditional residue status must remain. Drill support is strictly covered with zero difference area.",
+    "The worker exited after writing result.json and every hashed output because the exclusive persistence helper cannot overwrite the existing checkpoint.json. This review accepts the saved evidence without treating the process exit as a clean completion."
+  ],
+  "outputs": {
+    "domain": {
+      "bytes": 13751877,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-pad-conductor-domain-01\\l02-pad-augmented-conductor-domain.wkb",
+      "sha256": "306515d688f6359c49a867c18240bfd0c18008086a4e8eab0da056cff97bf6f7"
+    },
+    "drill_union": {
+      "bytes": 160281009,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-pad-conductor-domain-01\\l02-source-drill-footprint-union.wkb",
+      "sha256": "7f8d7e29ab51bd29ce4e5b54711ca5bb6510c4e9583ee1891d4795e472790995"
+    },
+    "support_map": {
+      "bytes": 1262293,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-pad-conductor-domain-01\\l02-pad-drill-support-map.npz",
+      "sha256": "3774bb012f5769be006ca27f463d6dcb58d07c4c611ffbf8072bc80754d20a47"
+    }
+  },
+  "program": "SPD Decap PI Evaluator",
+  "reviewed": {
+    "contact_npz": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-source-contact-inputs-01\\contact-ledger-inputs.npz",
+      "sha256": "c5c0dab9ac22d750aeecf3a4290c2b9ef9285bcf7ed33a5d8a7a2775c8430984"
+    },
+    "contact_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-source-contact-inputs-01\\result.json",
+      "sha256": "98bce62fde03d676e43d121207d00bb5ed840552bf8fd02793ae6732ab8bffd2"
+    },
+    "driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-pad-conductor-domain-01\\driver-at-run.py",
+      "sha256": "8d376f856f0ae2b948622a6f3268383461614f6b9d54c0f3bd3735da713b9c3f"
+    },
+    "failure": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-pad-conductor-domain-01\\failure.json",
+      "sha256": "13c5385142e35f9d121706fa1230c8390269b450a0fb188389b06d3440049575"
+    },
+    "guard": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-pad-conductor-domain-01-guard\\external-budget.json",
+      "sha256": "ea8c19098fa186538e03ece6342ef07cedb07470e0d691b55fa6a0d1ec66e6a7"
+    },
+    "result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-pad-conductor-domain-01\\result.json",
+      "sha256": "91e16302f7b7c6b5a43067a6208331f1aa1acee75440aa48ba035c02f1350a9d"
+    }
+  },
+  "scope": "Independent hash/schema/source-row/support-map replay plus direct parsing of the saved pad domain and drill union. The review does not rebuild the 38,856-pad union, repair its boundary residue, choose drill fill/plating/current injection, build a mesh/operator, solve a circuit, fit a reference, or claim PowerSI accuracy.",
+  "status": "ACCEPT_L02_PAD_AUGMENTED_DOMAIN_WITH_POST_RESULT_CHECKPOINT_FAILURE_INDEPENDENT_REVIEW",
+  "version": "0.23.1"
+}

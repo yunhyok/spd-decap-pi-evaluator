@@ -1,0 +1,179 @@
+{
+  "baseline": {
+    "baseline_lu_repeated": false,
+    "l14_only_zdd_ohm": [
+      0.00016775649360375398,
+      -0.0005763505953017184
+    ],
+    "original_native_zdd_ohm": [
+      0.00010031137009881143,
+      -0.0006057593380320584
+    ]
+  },
+  "frequency_hz": 1000000.0,
+  "inputs": {
+    "drive_receipt": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-sheet-drive-02\\sheet-electrode-drive.json",
+      "sha256": "ada249febeb03dd48b57bc54294d5360477534d33c4c8586fdf089eb998906b5",
+      "size_bytes": 101496
+    },
+    "inventory": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-source-sheet-01\\l25-gc-projection-inventory.json",
+      "sha256": "703e8cdf9988805a2fb05a40ff659bc9890ba999e2eef00c741a112aa5976a77",
+      "size_bytes": 20467
+    },
+    "l14_field": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-sheet-r-shadow-01\\epsilon-1-field.npz",
+      "sha256": "15265003d3d93e3765cc22f4985c6a5edda77628fa57912b9676f4952dcc9f9a",
+      "size_bytes": 5732075
+    },
+    "l14_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\run_astra_l14_sheet_r_shadow.py",
+      "sha256": "30a976448dafa9a2bf2ed98b04c6fb625222d74dcdf09cc07e52f7399e1ccd82",
+      "size_bytes": 23405
+    },
+    "l14_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-sheet-r-shadow-01\\result.json",
+      "sha256": "b0401b240cd855dc4beffbc2f8920c2f285022885c2940660601cc41aa2adca5",
+      "size_bytes": 9846
+    },
+    "l25_drive": {
+      "path": "outputs\\research\\astra-l25-sheet-drive-02\\sheet-electrode-drive.npz",
+      "sha256": "dd1e927ba48e86be331e9c5e0bb0a966dcee77f8bf47052aa94660654065a266",
+      "size_bytes": 7344654
+    },
+    "l25_mass": {
+      "allow_pickle_required": false,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-gc-mass-02\\gc-mass-shadow.npz",
+      "sha256": "1aaee9b7f045385afcb37bf3bb4889466c3584793f52273e513863cac0ca45fe",
+      "size_bytes": 56197796
+    },
+    "l25_mass_receipt": {
+      "path": "outputs\\research\\astra-l25-gc-mass-02\\receipt.json",
+      "sha256": "39c522208ebc3690613ceb1b1359a2bb86c49469143f457f1dbe1084384cdd56",
+      "size_bytes": 10270
+    },
+    "mesh": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-sheet-mesh-preflight-01\\mesh-stiffness.npz",
+      "sha256": "09e79fcbdac766603a3e2f451e2079c3c6b8b588026d0aa47f532f1e98d78134",
+      "size_bytes": 11048098
+    },
+    "source": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-source-sheet-01\\receipt.json",
+      "sha256": "a45f6601bae33dc72f9c56190cd85a42037c4046c460bedbdd7cecbc9e85851b",
+      "size_bytes": 774113
+    }
+  },
+  "limitations": [
+    "Two conditional DC sheets only; native R/L and all other terms retained. L25 plated-barrel and drill-radius sheet contacts are distinct assumptions.",
+    "Fixed source meshes, no physical mesh/contact convergence or magnetic coupling. Other ideal conductors may carry redistributed current.",
+    "No PowerSI input, fitting, broad-frequency or unseen accuracy promotion. The sheet_dc power category and sheet_active_indices field refer to L25."
+  ],
+  "points": [
+    {
+      "delta_from_collapsed_baseline_ohm": [
+        0.0003460018739412886,
+        -8.625448951421022e-06
+      ],
+      "epsilon_sheet_resistance_scale": 1.0,
+      "factor_elapsed_s": 52.40600000001723,
+      "field": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-l25-sheet-r-shadow-01\\epsilon-1-field.npz",
+        "sha256": "3874e0bd74365427b124cc31264956e925f8b5129da56f176f57a2362beeb6ae",
+        "size_bytes": 13939338
+      },
+      "matrix": {
+        "matrix_nnz": 9001002,
+        "maximum_abs_entry_s": 147135081.85488778,
+        "product_relative_gate_tolerance_s": 0.014713508185488779,
+        "row_sum_max_abs_s": 7.158597783408069e-05,
+        "symmetry_max_abs_s": 2.399963341663627e-10
+      },
+      "normalized_backward_residual": 1.4303924204628691e-19,
+      "physical_residual_max_abs_a": 1.6474404817133085e-10,
+      "pivot_abs_ratio": 9677738.4882754,
+      "power_closure_error_ohm": 1.2627559827779608e-13,
+      "power_contributions_ohm": {
+        "finite_via": [
+          7.18153464129496e-05,
+          4.386790290131653e-05
+        ],
+        "l14_distributed_gc": [
+          3.756081373824975e-11,
+          -9.161174082500009e-09
+        ],
+        "l14_sheet_dc": [
+          0.00021928448663346498,
+          1.2998914892072867e-15
+        ],
+        "l25_distributed_gc": [
+          3.15695628132414e-11,
+          -3.1569562813241654e-09
+        ],
+        "retained_gc": [
+          3.136971445673493e-13,
+          -4.6343878987213786e-11
+        ],
+        "sheet_dc": [
+          0.00015494409755655722,
+          4.949609075193245e-15
+        ],
+        "termination": [
+          6.771436762410784e-05,
+          -0.0006288315826800116
+        ]
+      },
+      "zdd_ohm": [
+        0.0005137583675450426,
+        -0.0005849760442531394
+      ]
+    }
+  ],
+  "program": "SPD Decap PI Evaluator",
+  "rail_id": "ADC_VDD_075_VTRIP_SRAM/0",
+  "resource": {
+    "elapsed_s": 62.71799999999348,
+    "max_memory_bytes": 25769803776,
+    "max_runtime_s": 900.0,
+    "peak_private_bytes": 14719639552,
+    "peak_working_set_bytes": 5912027136
+  },
+  "script_sha256": "8f36b33d3e399de482c31cbf1b366ec1f386e2d41a66af66e99ac42cf72c24e9",
+  "split_contract": {
+    "epsilon_scales_only": "L25 DC sheet resistance; L14 remains epsilon=1",
+    "expanded_active_nodes": 1436468,
+    "gc_collapse": {
+      "difference_nnz": 10,
+      "maximum_abs_difference_s": 7.683491493281522e-15,
+      "reference_maximum_abs_s": 0.11645132462579666,
+      "relative_maximum_difference": 6.598028419145566e-14
+    },
+    "l14_active_nodes": 903945,
+    "l14_operator_collapse": {
+      "difference_nnz": 9,
+      "maximum_abs_difference_s": 1.7199465315732333e-06,
+      "reference_maximum_abs_s": 147135081.85488778,
+      "relative_maximum_difference": 1.1689574708427005e-14
+    },
+    "l25_contacts": 175,
+    "l25_finite_endpoints_relocated": 350,
+    "l25_full_mesh_nodes": 535149,
+    "l25_gc_partition": [
+      {
+        "ordinal": 13,
+        "removed": 1,
+        "retained": 3
+      },
+      {
+        "ordinal": 14,
+        "removed": 3,
+        "retained": 11
+      }
+    ],
+    "l25_sheet_collapse_max_abs_s": 4.929097485728562e-07,
+    "l25_sheet_dofs": 532524,
+    "saved_l14_field_reassembled_residual_max_a": 5.173711103128657e-11
+  },
+  "status": "COMPLETED_CONDITIONAL_L14_L25_DC_SHEET_SHADOW",
+  "version": "0.23.1"
+}

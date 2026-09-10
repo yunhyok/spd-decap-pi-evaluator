@@ -1,0 +1,104 @@
+{
+  "candidate_only": true,
+  "elapsed_s": 2.464889499999117,
+  "frequency_hz": 1000000.0,
+  "inputs": {
+    "candidate": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-gc-mass-03\\owner-mass-candidate-unvalidated.npz",
+      "sha256": "521a70e96b0c89602e75352ae8d0a1da9fb478b95db52b94da210997917cba2e",
+      "size_bytes": 7488067
+    },
+    "conservation": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-gc-mass-03\\hq-independent-candidate-conservation.json",
+      "sha256": "32ac4e5f84d2602e1c38cdc94b587ff192c30d2c101c94eb0003469715d17678",
+      "size_bytes": 752
+    },
+    "partition": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\hq-gc-source-edge-partition.json",
+      "sha256": "e25498573fe85fb7c2e2a9de622f8ce9f92e60629fe8f22ff10e855d3e128288",
+      "size_bytes": 998
+    },
+    "projection_npz": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-gc-projection-03\\gc-nodal-injection.npz",
+      "sha256": "5d25cfd04533b2e92c5c82f0143801cf282b2b6f41f4e138295651ed1576bfa9",
+      "size_bytes": 1166976
+    },
+    "projection_receipt": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-gc-projection-03\\receipt.json",
+      "sha256": "c819c905e174bde9ce718fbbc053fb232c36d60dddde73a8aab0ae1ae2d9b98e",
+      "size_bytes": 8238
+    }
+  },
+  "mass": {
+    "aggregate_matrix_kind": "unweighted_geometric_mass_diagnostic",
+    "binding_area_relative_max": 0.0,
+    "candidate_unvalidated_sha256": "521a70e96b0c89602e75352ae8d0a1da9fb478b95db52b94da210997917cba2e",
+    "canonical_upper_mirrored_once": true,
+    "complex_symmetric": true,
+    "coordinate_units": "um; raw mass data is um^2",
+    "external_diagonal_uses_source_area_by_terminal": true,
+    "mass_1t_m_first_sum_is_source_area": true,
+    "mass_derived_capacitance_absolute_max_error_f": 6.86559908419013e-23,
+    "mass_derived_capacitance_relative_max": 3.913593987906746e-14,
+    "owner_m1_area_absolute_max_um2": 7.05718994140625e-05,
+    "owner_m1_area_relative_max": 3.9180552010377173e-14,
+    "owner_m1_nnz": 297238,
+    "owner_original_y_recoupling_absolute_max_s": 4.44092950810325e-16,
+    "owner_original_y_recoupling_relative": 3.910413763053992e-14,
+    "owner_original_y_scale_s": 0.011388248434045659,
+    "partition_receipt_counts_verified": true,
+    "physical_gc_y_nnz": 1436620,
+    "physical_gc_y_rowsum_absolute_max_s": 2.8450306934304406e-16,
+    "physical_gc_y_rowsum_original_owner_y_relative": 2.4982162181544082e-14,
+    "projection03_rhs_absolute_max_a": 3.487221439637121e-21,
+    "projection03_rhs_relative": 2.3999150555359668e-14,
+    "projection03_rhs_scale_a": 1.4530603621128286e-07,
+    "raw_nnz": 1436620,
+    "raw_rowsum_abs_entry_scale_um2": 3652798789.5602417,
+    "raw_rowsum_absolute_max_um2": 6.651878356933594e-05,
+    "raw_rowsum_backward_relative": 1.8210360712845095e-14,
+    "real_physical_y_diagonal_min": 0.0,
+    "real_physical_y_symmetric": true,
+    "real_scalar_scale_min_s_per_um2": 2.5850569621571824e-14,
+    "real_scalar_scale_nonnegative": true,
+    "shape": [
+      171960,
+      171960
+    ]
+  },
+  "output": {
+    "allow_pickle_required": false,
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-gc-mass-05\\gc-mass-shadow.npz",
+    "sha256": "d2a87e4753bbf80ce555c560ff50e4129bdd3ae43b2d7691c7b041c2d776470a",
+    "size_bytes": 19505349
+  },
+  "owner_binding": {
+    "external_global_reduced_indices": [
+      210280,
+      397611,
+      639027
+    ],
+    "owner_count": 224,
+    "partial_owner_counts": {
+      "6": 110,
+      "7": 114
+    },
+    "retained_nonincident_owner_counts": {
+      "6": 336,
+      "7": 412
+    }
+  },
+  "program": "SPD Decap PI Evaluator",
+  "projection_contract": {
+    "external_terminal": "source external reduced terminal and binding preserved per owner",
+    "nonincident_edges": "partial06 336 and partial07 412 retained unchanged",
+    "owner_mass_data": "raw geometric um^2; canonical upper entries are mirrored exactly once",
+    "physical_stamp": "owner_density(F/um^2) * original_dispersion(S/F) applied once to each owner mass entry",
+    "scope": "first-order GC mass shadow only; no native/global solve, geometry reread, or PowerSI fit"
+  },
+  "rail_id": "ADC_VDD_075_VTRIP_SRAM/0",
+  "script_sha256": "f2c668fd090db5c4606eec27558c9bdbbdde6552d2f82c3b64b8837bd7350dc3",
+  "source_geometry_read": false,
+  "status": "COMPLETED_SOURCE_EXACT_L14_GC_P1_MASS_FINALIZE",
+  "version": "0.23.1"
+}

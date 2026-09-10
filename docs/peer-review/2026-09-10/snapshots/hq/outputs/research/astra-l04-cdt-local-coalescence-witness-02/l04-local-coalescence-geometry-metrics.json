@@ -1,0 +1,38 @@
+{
+  "coordinate_map": {
+    "affected_raw_occurrence_count": 10,
+    "affected_raw_triangle_count": 5,
+    "removed_triangle_rows": [
+      807731,
+      976112
+    ],
+    "replacement_coordinate_um": [
+      -12596.3,
+      13546.3
+    ],
+    "ring_index": 563,
+    "ring_positions": [
+      42,
+      44
+    ]
+  },
+  "local_geometry_change": {
+    "bounds_equal": true,
+    "changed_domain_wkb_sha256": "8dbfbb75d87efa7c9504b1ab521a78687ef97b45d1eb0e6a8d5ff6007658c674",
+    "component_count_equal": true,
+    "domain_area_delta_um2": 0.0,
+    "domain_valid": true,
+    "hole_count_equal": true,
+    "local_operand_bound_um2": 8.694186220736867e-10,
+    "max_vertex_displacement_um": 1.473493695890548e-10,
+    "patch_symmetric_difference_area_um2": 2.1573214325785256e-11,
+    "ring_hausdorff_distance_um": 1.8189894035458565e-12,
+    "ring_symmetric_difference_area_um2": 2.1573214325785256e-11
+  },
+  "retained_gates": {
+    "native_area_gate_um2": 1.874101850983222e-07,
+    "next_minimum_area_triangle_index": 74212,
+    "next_minimum_area_um2": 0.006032676888298349,
+    "stiffness_area_gate_um2": 7.020418024694663e-05
+  }
+}

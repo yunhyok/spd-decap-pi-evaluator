@@ -1,0 +1,43 @@
+{
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-contact-ntd-action-02\\driver-at-run.py",
+    "sha256": "c12c9f9bfb40c0fa6549a38953a10e0ee7806c970802a06e8fd3cf3d670932fe",
+    "size_bytes": 28853
+  },
+  "gate_contract": {
+    "branch_current_relative_lte": 1.2e-10,
+    "contact_dual_max_abs_v_lte": 6e-15,
+    "contact_dual_relative_lte": 1.2e-10,
+    "dual_rq_relative_lte": 1.2e-10,
+    "energy_scaled_stationarity_relative_lt": 2e-08,
+    "independent_constraint_max_a_lt": 1e-10,
+    "raw_ct_rq_norm_ratio": "diagnostic only; not an acceptance threshold",
+    "root_constraint_abs_a_lt": 1e-10
+  },
+  "program": "SPD Decap PI Evaluator",
+  "saved_rhs_replay": {
+    "apply_seconds": 3.2377129000378773,
+    "branch_current_relative": 2.8608230124812476e-13,
+    "contact_dual_max_abs_v": 1.7115765066936101e-15,
+    "contact_dual_relative": 1.2302303042499186e-12,
+    "dual_reader_result": "PASS_SAVED_L04_RT0_CONTACT_DUAL_POTENTIALS",
+    "dual_rq_relative": 1.26037518220899e-10,
+    "dual_seconds": 1.1496385000064038,
+    "energy_scaled_stationarity_relative": 7.73509383488034e-14,
+    "independent_constraint_max_a": 5.551115123125783e-17,
+    "joule_energy_real": 0.0004742739539035998,
+    "kcl_max_abs_a": 6.436180616093476e-17,
+    "kcl_relative": 3.5270591082367626e-16,
+    "preserved_original_root_target_residual_a": [
+      3.5181926816285625e-14,
+      2.7765116594746786e-14
+    ],
+    "r_c_h_correction_seconds": 0.5539961999747902,
+    "raw_ct_rq_max_abs": 7.049664983610858e-16,
+    "raw_ct_rq_norm_ratio": 2.167146662102796e-12,
+    "root_constraint_abs_a": 6.436180616093478e-17,
+    "tree_lift_seconds": 1.3739582999842241
+  },
+  "status": "SAVED_L04_CONTACT_NTD_REPLAY_DIAGNOSTICS_BEFORE_ACCEPTANCE",
+  "version": "0.23.1"
+}

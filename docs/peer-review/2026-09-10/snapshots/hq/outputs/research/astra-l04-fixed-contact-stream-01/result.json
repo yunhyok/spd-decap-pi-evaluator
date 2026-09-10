@@ -1,0 +1,162 @@
+{
+  "budget": {
+    "elapsed_s": 40.35899999999674,
+    "max_rss_bytes": 12884901888,
+    "max_runtime_s": 240,
+    "peak_rss_bytes": 3731550208
+  },
+  "driver_sha256": "65c48fe18db408a9c38ee28a86b50f57c470e3286b7dab975ca0a77f1c6b8c27",
+  "field": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\l04-fixed-contact-current.npz",
+    "sha256": "dec07e1681c8400c43b6c79ab7a25ef37f7c19443441ad369016f6daefbfe9fd",
+    "size_bytes": 63886278
+  },
+  "frequency_hz": 1000000.0,
+  "geometry_approximation": {
+    "domain": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-conditional-sheet-mesh-02\\l04-coalesced-conductor-domain.wkb",
+      "sha256": "8dbfbb75d87efa7c9504b1ab521a78687ef97b45d1eb0e6a8d5ff6007658c674",
+      "size_bytes": 14024197
+    },
+    "max_vertex_displacement_um": 1.473493695890548e-10,
+    "method": "EXACT_TWO_SOURCE_VERTEX_COALESCENCE_L04_RING563",
+    "source_domain": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-pad-conductor-domain-01\\l04-pad-augmented-conductor-domain.wkb",
+      "sha256": "0eeaffc34a6b9759fd285f28d35ebd59042e6bcd909a697fad3f18a5d2eafa68",
+      "size_bytes": 14024197
+    },
+    "unchanged_source_geometry": false,
+    "witness_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-cdt-local-coalescence-witness-02\\result.json",
+      "sha256": "3e097e7086f6bd10e009afbcdb6b98ca8029f6555273f4e7b1f92c3059a216ce",
+      "size_bytes": 6819
+    }
+  },
+  "inherited_source_field_sha256": "960e767c383cd7e5580dfc86e9a221cfdff78086f8478465a25d8bd4dd98654b",
+  "inputs": {
+    "assemble_astra_l25_rt0_resistance.py": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\assemble_astra_l25_rt0_resistance.py",
+      "sha256": "ec299b76564463bcea09a54aea4391cb2659e5267375cb7b3b2175d1fe475010",
+      "size_bytes": 18360
+    },
+    "conditional_domain": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-conditional-sheet-mesh-02\\l04-coalesced-conductor-domain.wkb",
+      "sha256": "8dbfbb75d87efa7c9504b1ab521a78687ef97b45d1eb0e6a8d5ff6007658c674",
+      "size_bytes": 14024197
+    },
+    "geometry_witness": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-cdt-local-coalescence-witness-02\\result.json",
+      "sha256": "3e097e7086f6bd10e009afbcdb6b98ca8029f6555273f4e7b1f92c3059a216ce",
+      "size_bytes": 6819
+    },
+    "l04-pad-augmented-conductor-domain.wkb": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-pad-conductor-domain-01\\l04-pad-augmented-conductor-domain.wkb",
+      "sha256": "0eeaffc34a6b9759fd285f28d35ebd59042e6bcd909a697fad3f18a5d2eafa68",
+      "size_bytes": 14024197
+    },
+    "mesh": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-conditional-sheet-mesh-02\\l04-conditional-sheet-mesh-before-stiffness.npz",
+      "sha256": "6f2f396fe2319d60ad4b1586fd7043960e42f1d85c29f28a1d9c082302a3a211",
+      "size_bytes": 19845932
+    },
+    "mesh_guard": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-saved-mesh-qualification-01\\external-budget.json",
+      "sha256": "1749c8d8ca63fc53a351a08d3514beb9b58815d574a191f79727f2ed0cd2f8a4",
+      "size_bytes": 1008
+    },
+    "mesh_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-saved-mesh-qualification-01\\result.json",
+      "sha256": "b0bfb67985d123600c892d3d34cd39d56254e2a1fb9bcdc95622da8be990ca4d",
+      "size_bytes": 6860
+    },
+    "prepare_astra_l02_rt0_current_space.py": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l02_rt0_current_space.py",
+      "sha256": "a5b8ecc5998a7ec9f5685a89eefaaa06cdc9c7382eb40de042ebac5a9b487d5e",
+      "size_bytes": 13690
+    },
+    "probe_astra_l25_rt0_p1_refined_pair.py": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_l25_rt0_p1_refined_pair.py",
+      "sha256": "4e3f025b88b20633f5f64535c30c31c983d3e6344a231c07cc1cdeba06acbc33",
+      "size_bytes": 48538
+    },
+    "project_astra_l14_gc_mass.py": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\project_astra_l14_gc_mass.py",
+      "sha256": "f2c668fd090db5c4606eec27558c9bdbbdde6552d2f82c3b64b8837bd7350dc3",
+      "size_bytes": 61282
+    },
+    "reconstruct_astra_native_loaded_field.py": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\reconstruct_astra_native_loaded_field.py",
+      "sha256": "354d9e004b189cf8193c2922c8fa4dc1903b407bebb295a4576673200ce6b213",
+      "size_bytes": 33457
+    },
+    "source_current_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-currents-01\\result.json",
+      "sha256": "6c03c997c724da002e12bef0845a08cdae409f76d33428ab1bfba2f875a3a46f",
+      "size_bytes": 4621
+    },
+    "source_currents": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-currents-01\\l04-fixed-contact-currents.npz",
+      "sha256": "5c2fd3bd30a45d9d92ccc47a5ad2d553f0d122acb4282a1046be09d7b4e51adb",
+      "size_bytes": 3013247
+    }
+  },
+  "metrics": {
+    "all_local_matrix_relative": 8.578603417043014e-16,
+    "bilinear_r_integral_a2_ohm": [
+      0.00046978820953475257,
+      -1.8659346756992873e-05
+    ],
+    "closed_gradient_max_v": 7.245727498037249e-16,
+    "complete_closed_dimension": 644870,
+    "correction_constraint_max_a": 6.941061969544859e-17,
+    "dependent_equation": "omitted; original target retained",
+    "energy_scaled_stationarity_relative": 7.64137800016702e-14,
+    "exterior_flux_condition": "fixed zero; excluded before local resistance assembly",
+    "factor_l_nnz": 5862340,
+    "factor_seconds": 1.1410000000032596,
+    "factor_u_nnz": 5862772,
+    "gauge_contact_graph_row": 1615267,
+    "independent_constraint_max_a": 5.898697549827395e-17,
+    "independent_quadrature_joule_w": 0.0004742739539035983,
+    "independent_quadrature_relative": 3.086803190296364e-15,
+    "insulating_loops": 32423,
+    "min_local_eigenvalue_ohm": 7.623910498727191e-09,
+    "minimum_joule_w": 0.00047427395390359976,
+    "original_component_sum_a": [
+      3.520100877452137e-14,
+      2.7765983956484774e-14
+    ],
+    "root_constraint_residual_a": [
+      -3.5263458819656535e-14,
+      -2.7762080828663827e-14
+    ],
+    "scaled_equation_relative": 7.823567482805814e-16,
+    "source_and_mesh_bounds_um": [
+      -49700.0,
+      -49700.0,
+      49700.0,
+      49700.0
+    ],
+    "stream_count": 644871,
+    "tree_component_sum_a": [
+      3.527733660746435e-14,
+      2.7760779786056844e-14
+    ],
+    "tree_joule_w": 1.2049412180856236
+  },
+  "program": "SPD Decap PI Evaluator",
+  "scope": "Conditional homogeneous20um Cu/59.59MS/m sheet with no cell G/C loads and zero exterior-normal current. Explicit local ring563 vertex coalescence is retained as a geometry approximation. Existing16-sided filled equipotential drill contacts; contact interiors have no reconstructed current field. Every original1MHz source contact drive remains saved. One dependent equation is omitted and its residual reported without renormalization. Complete closed-stream minimum, not a new coupled circuit response, derivative of the collapsed-L04 circuit, 3D conductor model, mesh convergence, full return path or PowerSI accuracy acceptance. The bilinear R form is a fixed-current diagnostic, not a finite impedance correction.",
+  "source_current_a": 1.0,
+  "space": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\l04-fixed-contact-rt0-space.npz",
+    "sha256": "5d31b3c6183eb4f43723eb80d1a545953a42fb2c9320be425d3ebc034cb51bb6",
+    "size_bytes": 79222436
+  },
+  "status": "PASS_CONDITIONAL_L04_FIXED_CONTACT_RT0_MINIMUM",
+  "stream_system": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\l04-fixed-contact-stream-system.npz",
+    "sha256": "b299d67995b58b7fa698b080380cda495032472d0f426ed2dd9e4b78542fb34a",
+    "size_bytes": 21072655
+  },
+  "version": "0.23.1"
+}

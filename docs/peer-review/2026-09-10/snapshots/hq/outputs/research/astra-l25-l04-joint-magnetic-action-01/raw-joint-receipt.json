@@ -1,0 +1,109 @@
+{
+  "status": "UNVALIDATED_JOINT_ACTION_CHECKPOINT",
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-l04-joint-magnetic-action-01\\driver-at-run.py",
+    "sha256": "caf5ba8fd0a1a156f987069be4d14e12d5ae8268e613716d120fb6edf2ab6a5e",
+    "size_bytes": 18767
+  },
+  "artifact": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-l04-joint-magnetic-action-01\\raw-joint-action-before-reductions.npz",
+    "sha256": "29953d468ee1df56a18ddc4ea65d9261c6903d54b827f788a30b819cf63711ba",
+    "size_bytes": 44430666
+  },
+  "pins": {
+    "cross_source": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_l25_to_l04_all_row_cross_force.py",
+      "sha256": "50e309f6faee25941b87f6f28f943594921e368d4ead612eee7a955e8e409fa8",
+      "size_bytes": 26409
+    },
+    "legacy_source": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\continue_astra_l04_10mhz_l25_magnetic_gcrotmk.py",
+      "sha256": "fb737651456a57c1fcba96073ef1b8b2e48682b4dfb930a1abf10603bf51bcce",
+      "size_bytes": 39735
+    },
+    "counter": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_l25_rt0_p1_pair.py",
+      "sha256": "35b1fb7c485b31cab4ea26beba52765ad6cfcbc2a60504d96194aa3b183eee20",
+      "size_bytes": 35907
+    },
+    "cross_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-to-l04-all-row-cross-force-01\\result.json",
+      "sha256": "b70503aa5cf90c790f1415928f0a9bc26bedcdf6dbbceeb23f64a382b2f361fe",
+      "size_bytes": 32110
+    },
+    "cross_guard": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-to-l04-all-row-cross-force-01\\external-budget.json",
+      "sha256": "b5f5fee1db1ba2813eafdca7267dc6326fd8a24a7a34d2f03b5aaca515333425",
+      "size_bytes": 1022
+    },
+    "cross_field": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-to-l04-all-row-cross-force-01\\l25-to-l04-all-row-cross-force.npz",
+      "sha256": "9c880c3c0b8ec45e8d844489e620cf460e490310cc9e329e5eb2e1ca4467aab7",
+      "size_bytes": 90674132
+    },
+    "self25_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-rt0-self-magnetic-02\\result.json",
+      "sha256": "c930d29e7437c62aabc45efe58acbcfbde6fa2b9bd2646254711b1ea9a8dd7ed",
+      "size_bytes": 6002
+    },
+    "near25_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-shared-edge-magnetic-01\\result.json",
+      "sha256": "6b4df2af404ec46fdd983efc5fc6e00a3fed4c8babf05a3eaa30cf239261f174",
+      "size_bytes": 2955
+    },
+    "self04_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-rt0-self-magnetic-01\\result.json",
+      "sha256": "d8a771b8e6e865b108f4094c81666e3b6a97025776a9f68716a5a92213590ae4",
+      "size_bytes": 6946
+    },
+    "self04_guard": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-rt0-self-magnetic-01\\external-budget.json",
+      "sha256": "099aa86a7d57539bb5caaebc7224acc93916ac8283ed93cf19fc5fd9a99bfb1e",
+      "size_bytes": 1006
+    },
+    "self04_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-rt0-self-magnetic-01\\driver-at-run.py",
+      "sha256": "31b4336b3450b198a65d9571574558cc8c2e168aa084fbc4a06f86941eade06b",
+      "size_bytes": 19415
+    }
+  },
+  "runtime": {
+    "version": "2.1.0",
+    "receipt_status": "ACCEPT_FMM3D_POINT_KERNEL_ONLY"
+  },
+  "counts": {
+    "l25_triangles": 579177,
+    "l04_triangles": 1589827,
+    "joint_source_points": 2169004,
+    "l25_branches": 604031,
+    "l04_branches": 2272974,
+    "independent_contacts": 38277,
+    "closed_coordinates": 644870
+  },
+  "calls": [
+    {
+      "component": 0,
+      "imaginary": false,
+      "elapsed_s": 66.97817620000023,
+      "ier": 0
+    },
+    {
+      "component": 0,
+      "imaginary": true,
+      "elapsed_s": 63.00318200000038,
+      "ier": 0
+    },
+    {
+      "component": 1,
+      "imaginary": false,
+      "elapsed_s": 70.92803860000004,
+      "ier": 0
+    },
+    {
+      "component": 1,
+      "imaginary": true,
+      "elapsed_s": 67.04647589999968,
+      "ier": 0
+    }
+  ]
+}

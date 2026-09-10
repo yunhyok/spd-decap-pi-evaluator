@@ -1,0 +1,567 @@
+{
+  "inputs": {
+    "frequency_data": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-low-band-stamps-01\\frequency-stamps.npz",
+      "sha256": "4ba1c4922dca764a57646a5bb30c0d43ccfe51434776d5d6bacc42c40a2f745b"
+    },
+    "frequency_receipt": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-low-band-stamps-01\\receipt.json",
+      "sha256": "1968b9091d7eab184c2c0ad195fdc847661377484624a4ac4985d06e42216299"
+    },
+    "frequency_review": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-low-band-stamps-01\\independent-review.json",
+      "sha256": "1fed75a2227ffb90f937914ebf2b112614736b632b9fec053ac9876125168228"
+    },
+    "l14_candidate": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-gc-mass-03\\owner-mass-candidate-unvalidated.npz",
+      "sha256": "521a70e96b0c89602e75352ae8d0a1da9fb478b95db52b94da210997917cba2e"
+    },
+    "mass_review": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-gc-mass-02\\independent-numeric-review.json",
+      "sha256": "9cec332a59f6d5d2737621280e155fa5a59f2ddad591c7ece7c6a1697f98e5a3"
+    },
+    "native_low_baseline": {
+      "path": "outputs\\research\\astra-primary-low-band-native-02\\result.json",
+      "sha256": "4036d18172ba24a2d58b5d028bdf8c9c9c1dea4e90ccdff50e0744b711396791"
+    },
+    "native_points": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_native_loaded_development_rail_2026-09-07.json",
+      "sha256": "e2c1f16ce4ff3998445e09c6cde2d1b23cdbc4d2c5e102e32c5f3d915e51790d"
+    },
+    "saved_field": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-l25-sheet-r-shadow-01\\epsilon-1-field.npz",
+      "sha256": "3874e0bd74365427b124cc31264956e925f8b5129da56f176f57a2362beeb6ae"
+    },
+    "saved_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-l25-sheet-r-shadow-01\\result.json",
+      "sha256": "d5a9873fb81c21773dbca79b96a83496078bdbfaa3b345478d0d21a4448e0530"
+    },
+    "two_sheet_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\run_astra_l14_l25_sheet_r_shadow.py",
+      "sha256": "f9acaf310726e737ff4af56bafd21b193bb2571541603855a8da8ab0ec64d211"
+    }
+  },
+  "limitations": [
+    "L14/L25 remain conditional DC resistance sheets at every frequency; no added magnetic coupling, skin or proximity model.",
+    "All native finite R/L, sampled cap models and per-gap dispersion retained. Existing1MHz field verifies assembly without repeating its LU.",
+    "Four source-owned capacitance matrices reuse saved integrals; no geometry replay, PowerSI fitting, mesh/contact convergence or unseen validation.",
+    "Below the source dielectric table's minimum, the existing model retains its endpoint-clamping behavior; no new measured low-frequency dielectric data is claimed."
+  ],
+  "one_mhz_inputs": {
+    "drive_receipt": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-sheet-drive-02\\sheet-electrode-drive.json",
+      "sha256": "ada249febeb03dd48b57bc54294d5360477534d33c4c8586fdf089eb998906b5",
+      "size_bytes": 101496
+    },
+    "inventory": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-source-sheet-01\\l25-gc-projection-inventory.json",
+      "sha256": "703e8cdf9988805a2fb05a40ff659bc9890ba999e2eef00c741a112aa5976a77",
+      "size_bytes": 20467
+    },
+    "l14_field": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-sheet-r-shadow-01\\epsilon-1-field.npz",
+      "sha256": "15265003d3d93e3765cc22f4985c6a5edda77628fa57912b9676f4952dcc9f9a",
+      "size_bytes": 5732075
+    },
+    "l14_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\run_astra_l14_sheet_r_shadow.py",
+      "sha256": "ff234c89be9bb6828f4efa3e559116c903d62b463f9f9fec6893abf71a369803",
+      "size_bytes": 25205
+    },
+    "l14_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-sheet-r-shadow-01\\result.json",
+      "sha256": "b0401b240cd855dc4beffbc2f8920c2f285022885c2940660601cc41aa2adca5",
+      "size_bytes": 9846
+    },
+    "l25_drive": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-sheet-drive-02\\sheet-electrode-drive.npz",
+      "sha256": "dd1e927ba48e86be331e9c5e0bb0a966dcee77f8bf47052aa94660654065a266",
+      "size_bytes": 7344654
+    },
+    "l25_mass": {
+      "allow_pickle_required": false,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-gc-mass-02\\gc-mass-shadow.npz",
+      "sha256": "1aaee9b7f045385afcb37bf3bb4889466c3584793f52273e513863cac0ca45fe",
+      "size_bytes": 56197796
+    },
+    "l25_mass_receipt": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-gc-mass-02\\receipt.json",
+      "sha256": "39c522208ebc3690613ceb1b1359a2bb86c49469143f457f1dbe1084384cdd56",
+      "size_bytes": 10270
+    },
+    "mesh": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-sheet-mesh-preflight-01\\mesh-stiffness.npz",
+      "sha256": "09e79fcbdac766603a3e2f451e2079c3c6b8b588026d0aa47f532f1e98d78134",
+      "size_bytes": 11048098
+    },
+    "source": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-source-sheet-01\\receipt.json",
+      "sha256": "a45f6601bae33dc72f9c56190cd85a42037c4046c460bedbdd7cecbc9e85851b",
+      "size_bytes": 774113
+    }
+  },
+  "points": [
+    {
+      "csc_matvec_residual_max_abs_a": 1.2428759002407872e-08,
+      "current_corrections": [
+        {
+          "gauge_residual_abs_a": 2.930844267244197e-07,
+          "iteration": 0,
+          "physical_residual_max_abs_a": 2.930844267244197e-07,
+          "retained_residual_max_abs_a": 1.9737720841233284e-08,
+          "zdd_ohm": [
+            0.007255264570395198,
+            -0.6056958178406024
+          ]
+        },
+        {
+          "gauge_residual_abs_a": 9.679534934565862e-14,
+          "iteration": 1,
+          "physical_residual_max_abs_a": 2.974339576667502e-09,
+          "retained_residual_max_abs_a": 2.974339576667502e-09,
+          "zdd_ohm": [
+            0.007255087085206713,
+            -0.6056958218427093
+          ]
+        }
+      ],
+      "delta_from_collapsed_baseline_ohm": [
+        0.00040217066961602266,
+        -1.9025364672575762e-07
+      ],
+      "epsilon_sheet_resistance_scale": 1.0,
+      "factor_elapsed_s": 51.79599999997299,
+      "field": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-primary-low-band-shadow-03\\1000hz\\epsilon-1-field.npz",
+        "sha256": "26034dd556e161096c011437566170e5005e8cdb61e85b876053726e1e6e8acb",
+        "size_bytes": 11653294
+      },
+      "frequency_hz": 1000.0,
+      "matrix": {
+        "matrix_nnz": 9001002,
+        "maximum_abs_entry_s": 157462885.49479192,
+        "product_relative_gate_tolerance_s": 0.015746288549479192,
+        "row_sum_max_abs_s": 0.0001945573942340683,
+        "symmetry_max_abs_s": 2.3283148325851816e-10
+      },
+      "native_external_recollapse": {
+        "difference_nnz": 105,
+        "maximum_abs_difference_s": 1.778856148672812e-07,
+        "reference_maximum_abs_s": 157462885.49479192,
+        "relative_maximum_difference": 1.1296986861908152e-15
+      },
+      "native_point": {
+        "csc_matvec_residual_max_abs_a": 5.052755831068111e-08,
+        "current_corrections": [
+          {
+            "gauge_residual_abs_a": 1.5023489670965806e-07,
+            "iteration": 0,
+            "physical_residual_max_abs_a": 1.509592738359641e-07,
+            "retained_residual_max_abs_a": 1.509592738359641e-07,
+            "zdd_ohm": [
+              0.0068530073957532005,
+              -0.6056956295432919
+            ]
+          },
+          {
+            "gauge_residual_abs_a": 1.821387162870774e-13,
+            "iteration": 1,
+            "physical_residual_max_abs_a": 1.0579500673827585e-10,
+            "retained_residual_max_abs_a": 1.0579500673827585e-10,
+            "zdd_ohm": [
+              0.00685291641559069,
+              -0.6056956315890626
+            ]
+          }
+        ],
+        "factor_elapsed_s": 9.15600000001723,
+        "field": {
+          "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-primary-low-band-native-02\\1000hz\\native\\epsilon-1-field.npz",
+          "sha256": "e71287b014cddb6f2c194a9e3856ed955e8833b4d9033defabddaaed81c8cc0f",
+          "size_bytes": 3024902
+        },
+        "frequency_hz": 1000.0,
+        "matrix": {
+          "matrix_nnz": 2904015,
+          "maximum_abs_entry_s": 157462885.49479192,
+          "product_relative_gate_tolerance_s": 0.015746288549479192,
+          "row_sum_max_abs_s": 0.0001945573942340683,
+          "symmetry_max_abs_s": 2.3283148325851816e-10
+        },
+        "normalized_backward_residual": 1.010453213641419e-18,
+        "physical_residual_max_abs_a": 1.0579500673827585e-10,
+        "physical_residual_method": "source branch currents with fixed-LU correction; unchanged1e-7A gate",
+        "pivot_abs_ratio": 9966405058.479424,
+        "power_closure_error_ohm": 2.5979494516567846e-14,
+        "power_contributions_ohm": {
+          "finite_via": [
+            2.9600250514411205e-05,
+            1.187202817160297e-08
+          ],
+          "original_gc": [
+            6.256681513115686e-08,
+            -1.1245575819246e-05
+          ],
+          "termination": [
+            0.006823253598261267,
+            -0.6056843978852975
+          ]
+        },
+        "status": "COMPLETED_ORIGINAL_SOURCE_FREQUENCY_POINT",
+        "zdd_ohm": [
+          0.00685291641559069,
+          -0.6056956315890626
+        ]
+      },
+      "normalized_backward_residual": 1.0102883487801352e-19,
+      "original_native_zdd_ohm": [
+        0.00685291641559069,
+        -0.6056956315890626
+      ],
+      "physical_residual_max_abs_a": 2.974339576667502e-09,
+      "physical_residual_method": "source branch currents with fixed-LU correction; unchanged1e-7A gate",
+      "pivot_abs_ratio": 10733654080.013727,
+      "power_closure_error_ohm": 5.640237739324079e-14,
+      "power_contributions_ohm": {
+        "distributed_gc_p06": [
+          1.7251209313915675e-08,
+          -4.207612027784305e-06
+        ],
+        "distributed_gc_p07": [
+          1.735336824925556e-08,
+          -4.232528841281857e-06
+        ],
+        "distributed_gc_p13": [
+          1.4231583458985193e-08,
+          -1.4231583458985188e-06
+        ],
+        "distributed_gc_p14": [
+          1.353726618081398e-08,
+          -1.3537266180813953e-06
+        ],
+        "finite_via": [
+          7.134228265565073e-05,
+          4.8507852881579496e-08
+        ],
+        "l14_sheet_dc": [
+          0.00020663550464809847,
+          -7.670141682436602e-16
+        ],
+        "retained_gc": [
+          1.935832702683053e-10,
+          -2.8580444784574837e-08
+        ],
+        "sheet_dc": [
+          0.00015379452512828185,
+          -3.788744276683636e-16
+        ],
+        "termination": [
+          0.006823252205763622,
+          -0.6056846247443397
+        ]
+      },
+      "zdd_ohm": [
+        0.007255087085206713,
+        -0.6056958218427093
+      ]
+    },
+    {
+      "csc_matvec_residual_max_abs_a": 1.4229278436021192e-08,
+      "current_corrections": [
+        {
+          "gauge_residual_abs_a": 1.4229278436021192e-08,
+          "iteration": 0,
+          "physical_residual_max_abs_a": 1.4229278436021192e-08,
+          "retained_residual_max_abs_a": 1.741222909861063e-09,
+          "zdd_ohm": [
+            0.0011953413326863459,
+            -0.06158102240779258
+          ]
+        }
+      ],
+      "delta_from_collapsed_baseline_ohm": [
+        0.0004017899484052513,
+        4.868663402990414e-08
+      ],
+      "epsilon_sheet_resistance_scale": 1.0,
+      "factor_elapsed_s": 54.76500000001397,
+      "field": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-primary-low-band-shadow-03\\10000hz\\epsilon-1-field.npz",
+        "sha256": "995298689c9868bbd9f4ce680d602032a441f045e7f5ccd9420eca329684a2e7",
+        "size_bytes": 12534593
+      },
+      "frequency_hz": 10000.0,
+      "matrix": {
+        "matrix_nnz": 9001002,
+        "maximum_abs_entry_s": 157461710.9738982,
+        "product_relative_gate_tolerance_s": 0.01574617109738982,
+        "row_sum_max_abs_s": 0.00012055351277775282,
+        "symmetry_max_abs_s": 3.492507024002521e-10
+      },
+      "native_external_recollapse": {
+        "difference_nnz": 102,
+        "maximum_abs_difference_s": 4.2966678733534696e-07,
+        "reference_maximum_abs_s": 157461710.9738982,
+        "relative_maximum_difference": 2.728706456178233e-15
+      },
+      "native_point": {
+        "csc_matvec_residual_max_abs_a": 3.944268789482051e-09,
+        "current_corrections": [
+          {
+            "gauge_residual_abs_a": 6.720787397450956e-10,
+            "iteration": 0,
+            "physical_residual_max_abs_a": 9.783535385085e-10,
+            "retained_residual_max_abs_a": 9.783535385085e-10,
+            "zdd_ohm": [
+              0.0007935513842810946,
+              -0.06158107109442661
+            ]
+          }
+        ],
+        "factor_elapsed_s": 8.954000000027008,
+        "field": {
+          "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-primary-low-band-native-02\\10000hz\\native\\epsilon-1-field.npz",
+          "sha256": "717dfdbf386a7917dc418a0dfd20bc8eae55ef60f77130d395a242e383a6c51e",
+          "size_bytes": 3220518
+        },
+        "frequency_hz": 10000.0,
+        "matrix": {
+          "matrix_nnz": 2904015,
+          "maximum_abs_entry_s": 157461710.9738982,
+          "product_relative_gate_tolerance_s": 0.01574617109738982,
+          "row_sum_max_abs_s": 0.00012055351277775282,
+          "symmetry_max_abs_s": 3.492507024002521e-10
+        },
+        "normalized_backward_residual": 8.528677070062043e-19,
+        "physical_residual_max_abs_a": 9.783535385085e-10,
+        "physical_residual_method": "source branch currents with fixed-LU correction; unchanged1e-7A gate",
+        "pivot_abs_ratio": 999650213.6075674,
+        "power_closure_error_ohm": 4.14404016164425e-11,
+        "power_contributions_ohm": {
+          "finite_via": [
+            2.9387698210719504e-05,
+            1.1772521499573396e-07
+          ],
+          "original_gc": [
+            6.467627388650692e-09,
+            -1.1624723746695798e-06
+          ],
+          "termination": [
+            0.0007641571770151597,
+            -0.06158002634624612
+          ]
+        },
+        "status": "COMPLETED_ORIGINAL_SOURCE_FREQUENCY_POINT",
+        "zdd_ohm": [
+          0.0007935513842810946,
+          -0.06158107109442661
+        ]
+      },
+      "normalized_backward_residual": 1.2509660555748243e-19,
+      "original_native_zdd_ohm": [
+        0.0007935513842810946,
+        -0.06158107109442661
+      ],
+      "physical_residual_max_abs_a": 1.4229278436021192e-08,
+      "physical_residual_method": "source branch currents with fixed-LU correction; unchanged1e-7A gate",
+      "pivot_abs_ratio": 1073353033.6492178,
+      "power_closure_error_ohm": 8.763252273049758e-10,
+      "power_contributions_ohm": {
+        "distributed_gc_p06": [
+          1.7833250976832362e-09,
+          -4.349573408983515e-07
+        ],
+        "distributed_gc_p07": [
+          1.7938864357234975e-09,
+          -4.375332770057313e-07
+        ],
+        "distributed_gc_p13": [
+          1.4712095495044084e-09,
+          -1.471209549504409e-07
+        ],
+        "distributed_gc_p14": [
+          1.3994332562333827e-09,
+          -1.3994332562333823e-07
+        ],
+        "finite_via": [
+          7.111079240305428e-05,
+          4.839728872723181e-07
+        ],
+        "l14_sheet_dc": [
+          0.00020627830491481042,
+          1.4601863334862955e-16
+        ],
+        "retained_gc": [
+          2.0014756651264444e-11,
+          -2.9549598457265623e-09
+        ],
+        "sheet_dc": [
+          0.0001537895951481462,
+          -5.876838996014464e-17
+        ],
+        "termination": [
+          0.000764155296026032,
+          -0.06158034387100897
+        ]
+      },
+      "zdd_ohm": [
+        0.0011953413326863459,
+        -0.06158102240779258
+      ]
+    },
+    {
+      "csc_matvec_residual_max_abs_a": 8.75543730715056e-09,
+      "current_corrections": [
+        {
+          "gauge_residual_abs_a": 8.75543730715056e-09,
+          "iteration": 0,
+          "physical_residual_max_abs_a": 8.75543730715056e-09,
+          "retained_residual_max_abs_a": 1.6537632304599306e-10,
+          "zdd_ohm": [
+            0.0005755097505466273,
+            -0.006265094225280737
+          ]
+        }
+      ],
+      "delta_from_collapsed_baseline_ohm": [
+        0.00040150526746057433,
+        2.7261097277067256e-06
+      ],
+      "epsilon_sheet_resistance_scale": 1.0,
+      "factor_elapsed_s": 51.95299999997951,
+      "field": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-primary-low-band-shadow-03\\100000hz\\epsilon-1-field.npz",
+        "sha256": "975f9745cdfde7c7c09fe4fed8d24147788c6a32b1fbfdbca00e470ecac6580e",
+        "size_bytes": 13368452
+      },
+      "frequency_hz": 100000.0,
+      "matrix": {
+        "matrix_nnz": 9001002,
+        "maximum_abs_entry_s": 157344438.5527932,
+        "product_relative_gate_tolerance_s": 0.01573444385527932,
+        "row_sum_max_abs_s": 0.000143221036334696,
+        "symmetry_max_abs_s": 2.329443027495599e-10
+      },
+      "native_external_recollapse": {
+        "difference_nnz": 102,
+        "maximum_abs_difference_s": 1.8561523135985972e-06,
+        "reference_maximum_abs_s": 157344438.5527932,
+        "relative_maximum_difference": 1.1796745602646827e-14
+      },
+      "native_point": {
+        "csc_matvec_residual_max_abs_a": 1.5270272324158202e-09,
+        "current_corrections": [
+          {
+            "gauge_residual_abs_a": 1.5270272324158202e-09,
+            "iteration": 0,
+            "physical_residual_max_abs_a": 1.5270272324158202e-09,
+            "retained_residual_max_abs_a": 1.455118955411601e-09,
+            "zdd_ohm": [
+              0.000174004483086053,
+              -0.006267820335008444
+            ]
+          }
+        ],
+        "factor_elapsed_s": 9.797000000020489,
+        "field": {
+          "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-primary-low-band-native-02\\100000hz\\native\\epsilon-1-field.npz",
+          "sha256": "a4984d98da17af23e4eb8ad31401a4626be3dcff2734ae8feb9364220c9f591b",
+          "size_bytes": 3348314
+        },
+        "frequency_hz": 100000.0,
+        "matrix": {
+          "matrix_nnz": 2904015,
+          "maximum_abs_entry_s": 157344438.5527932,
+          "product_relative_gate_tolerance_s": 0.01573444385527932,
+          "row_sum_max_abs_s": 0.000143221036334696,
+          "symmetry_max_abs_s": 2.329443027495599e-10
+        },
+        "normalized_backward_residual": 1.2714374240569292e-18,
+        "physical_residual_max_abs_a": 1.5270272324158202e-09,
+        "physical_residual_method": "source branch currents with fixed-LU correction; unchanged1e-7A gate",
+        "pivot_abs_ratio": 101319237.00400585,
+        "power_closure_error_ohm": 9.574877682875964e-12,
+        "power_contributions_ohm": {
+          "finite_via": [
+            2.9152876536360562e-05,
+            1.1662583080626348e-06
+          ],
+          "original_gc": [
+            6.704159262509186e-10,
+            -1.204985919280208e-07
+          ],
+          "termination": [
+            0.00014485094570787236,
+            -0.0062688660946030325
+          ]
+        },
+        "status": "COMPLETED_ORIGINAL_SOURCE_FREQUENCY_POINT",
+        "zdd_ohm": [
+          0.000174004483086053,
+          -0.006267820335008444
+        ]
+      },
+      "normalized_backward_residual": 1.235553398665793e-19,
+      "original_native_zdd_ohm": [
+        0.000174004483086053,
+        -0.006267820335008444
+      ],
+      "physical_residual_max_abs_a": 8.75543730715056e-09,
+      "physical_residual_method": "source branch currents with fixed-LU correction; unchanged1e-7A gate",
+      "pivot_abs_ratio": 107213308.11682196,
+      "power_closure_error_ohm": 5.4967898010185935e-11,
+      "power_contributions_ohm": {
+        "distributed_gc_p06": [
+          1.8496456503572895e-10,
+          -4.511330854529976e-08
+        ],
+        "distributed_gc_p07": [
+          1.8606288875222093e-10,
+          -4.538119237859053e-08
+        ],
+        "distributed_gc_p13": [
+          1.526931565804668e-10,
+          -1.5269315658046474e-08
+        ],
+        "distributed_gc_p14": [
+          1.4524279903961862e-10,
+          -1.4524279903961952e-08
+        ],
+        "finite_via": [
+          7.081024748020837e-05,
+          4.814336488168182e-06
+        ],
+        "l14_sheet_dc": [
+          0.00020602691186779183,
+          -4.716978252493429e-17
+        ],
+        "retained_gc": [
+          2.0876341670805127e-12,
+          -3.0821944757459744e-10
+        ],
+        "sheet_dc": [
+          0.0001538199888834175,
+          -9.637646752977836e-18
+        ],
+        "termination": [
+          0.0001448519862320609,
+          -0.006269787965471645
+        ]
+      },
+      "zdd_ohm": [
+        0.0005755097505466273,
+        -0.006265094225280737
+      ]
+    }
+  ],
+  "program": "SPD Decap PI Evaluator",
+  "rail_id": "ADC_VDD_075_VTRIP_SRAM/0",
+  "resource": {
+    "elapsed_s": 192.76600000000326,
+    "peak_private_bytes": 15221182464,
+    "peak_working_set_bytes": 6444728320
+  },
+  "script_sha256": "c852c6574d612097ac8727e500331173c3b5395d9086c223a2b6d859e9c1db0e",
+  "status": "COMPLETED_PRIMARY_LOW_BAND_NATIVE_TWO_DC_SHEET_COMPARISON",
+  "version": "0.23.1"
+}

@@ -1,0 +1,118 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "COMPLETED_L25_RT0_SELF_MAGNETIC",
+  "inputs": {
+    "step_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-adaptive-longest-pair-01\\step-06\\result.json",
+      "sha256": "9734d6b5222ad72488a07bea7a901874cb983c2a6710d862faaee07233865217"
+    },
+    "mesh": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-adaptive-longest-pair-01\\step-06\\mesh.npz",
+      "sha256": "20b52d26783bf98197524c56f22d9872aee3b67b7e526ff20a02e396f39e89cb"
+    },
+    "topology": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-adaptive-longest-pair-01\\step-06\\topology.npz",
+      "sha256": "d70ceb1b38cede682247967495c6ef83d08ef2b0ef63e3543df908ba13412a4d"
+    },
+    "rt0_r": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-adaptive-longest-pair-01\\step-06\\rt0.npz",
+      "sha256": "b41e42f5b4c3d1788a4ab3dd4b2ef6f221d1dbbeb6a58c55b675613f17b9a5e4"
+    },
+    "board_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-rt0-board-1mhz-01\\result.json",
+      "sha256": "61a48c10c054e65accc32203429d6b1c49b215693e12d439493a106d7c9e1752"
+    },
+    "board_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-rt0-board-1mhz-01\\driver-at-run.py",
+      "sha256": "4a6bf51cf37c64e3e86c1ad982ad7f73cf77d1990a40f011381b4238707ab8ae"
+    },
+    "board_field": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-rt0-board-1mhz-01\\field.npz",
+      "sha256": "be2a3515dca426a45a5fe8c0eb696e3aa59544ee32e2d93971917e19c32b5ce1"
+    },
+    "self_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_rt0_self_inductance.py",
+      "sha256": "8766c96ec7a822aedc9e3c1229a2b3dcc0f700b52a58a9ff9b92b131ecff16fb"
+    },
+    "resistance_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\assemble_astra_l25_rt0_resistance.py",
+      "sha256": "ec299b76564463bcea09a54aea4391cb2659e5267375cb7b3b2175d1fe475010"
+    },
+    "refine_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\refine_astra_l25_pair_mesh.py",
+      "sha256": "2ceb44814ec1d9655a0a3e70d3cbd16f354c6a8b757a35868b1ef29db89f7393"
+    },
+    "adaptive_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-adaptive-longest-pair-01\\driver-at-run.py",
+      "sha256": "8ba3f885906dc4b23867012b5a2da707cfe08cbc7c041d27ba2d86eac82f0e31"
+    },
+    "pair_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-adaptive-longest-pair-01\\pair-at-run.py",
+      "sha256": "4e3f025b88b20633f5f64535c30c31c983d3e6344a231c07cc1cdeba06acbc33"
+    },
+    "closed_self_receipt": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-rt0-closed-self-inductance-01\\result.json",
+      "sha256": "614cfa2f18fe67dd0afce95c04b998cbec1e4526612f31f19547989feb2b763e"
+    },
+    "stress_receipt": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-shape-kernel-stress-01\\result.json",
+      "sha256": "c4450535687d9d69e8215179e81a85355e67cb285c711b0c3cc87165bf765120"
+    },
+    "sliver_receipt": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-sliver-kernel-refined-01\\result.json",
+      "sha256": "cb2751c17ed1233ca9ed5673011379ba83ec1e73c3b71301161faa91ea09200a"
+    }
+  },
+  "counts": {
+    "free_triangles": 579177,
+    "branches": 604031,
+    "omitted_natural_facets": 532357,
+    "sparse_nnz": 1949981
+  },
+  "metrics": {
+    "minimum_local_eigenvalue_h": 1.0380325471717516e-18,
+    "maximum_local_eigenvalue_h": 8.171112654720916e-09,
+    "sparse_symmetry_max_abs_h": 0.0,
+    "saved_q_transpose_lself_q_h_a2": [
+      2.830610887645821e-11,
+      -3.041728087325063e-12
+    ],
+    "saved_q_hermitian_lself_q_h_a2": 2.882240955479996e-11,
+    "saved_q_hermitian_imaginary_relative": 1.471395449573679e-16,
+    "local_to_sparse_transpose_energy_relative": 1.8379972603057396e-15,
+    "local_to_sparse_hermitian_energy_relative": 2.247022245413457e-15
+  },
+  "gates": {
+    "local_psd_diagnostic": true,
+    "sparse_symmetry": true,
+    "saved_q_transpose_energy_consistency": true,
+    "saved_q_hermitian_energy_consistency": true,
+    "saved_q_self_energy_nonnegative": true,
+    "branch_support_matches_topology": true,
+    "natural_facets_omitted": true,
+    "spectral_clipping_not_applied": true
+  },
+  "step_status": "COMPLETED_CONDITIONAL_ADAPTIVE_STEP",
+  "field_status": "COMPLETED_CONDITIONAL_L14_P1_L25_RT0_BOARD_1MHZ",
+  "field_frequency_hz": 1000000.0,
+  "budget": {
+    "batch_triangles": 50000,
+    "max_runtime_s": 90.0,
+    "max_rss_gib": 4.0,
+    "peak_rss_bytes": 288395264,
+    "cooperative_batch_checks": true,
+    "single_numpy_calls_noninterruptible": true
+  },
+  "limitations": [
+    "Same-triangle zero-thickness self partial inductance only; all mutual triangle terms are omitted.",
+    "Natural facets with branch=-1 are omitted. No LU, spectral clipping, return closure, source-wide accuracy, or PowerSI claim."
+  ],
+  "checkpoint": {
+    "file": "rt0-self-magnetic.npz",
+    "dense_global_allocated": false,
+    "sha256": "3008ff8b4cd50cfaf202f90ece440b5aebff44e8cd3bdc79a048c5048bc407d9"
+  },
+  "elapsed_s": 3.547000000020489,
+  "script_sha256": "ec964ed1b08dd37a86f5dd4a8c2a36efb30dd2310c8bc454bce588e9c8326c33"
+}

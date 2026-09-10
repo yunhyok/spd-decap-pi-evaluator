@@ -1,0 +1,219 @@
+{
+  "budget": {
+    "elapsed_s": 83.59400000004098,
+    "max_rss_bytes": 34359738368,
+    "max_runtime_s": 270.0,
+    "peak_rss_bytes": 31350837248
+  },
+  "factors": {
+    "l02_exact": {
+      "L_nnz": 35226187,
+      "U_nnz": 42950578,
+      "factor_elapsed_s": 10.771029199997429,
+      "max_private_or_working_bytes": 31350837248,
+      "nnz": 7917807,
+      "pivot_max": 1.0503559815886199,
+      "pivot_min": 0.0003321788244853114,
+      "pivot_ratio": 3162.019683873815,
+      "probe_solve_relative_residual": 9.069395144957002e-14,
+      "size": 1694809
+    },
+    "l14": {
+      "L_nnz": 3089280,
+      "U_nnz": 3960848,
+      "factor_elapsed_s": 0.5366348000243306,
+      "max_private_or_working_bytes": 19855020032,
+      "nnz": 783495,
+      "pivot_max": 0.6014764875953702,
+      "pivot_min": 0.00037070312558150386,
+      "pivot_ratio": 1622.5287732653007,
+      "probe_solve_relative_residual": 2.847236790057736e-13,
+      "size": 147057
+    },
+    "l25_current": {
+      "L_nnz": 5167934,
+      "U_nnz": 7128948,
+      "factor_elapsed_s": 1.2704330999986269,
+      "max_private_or_working_bytes": 18835972096,
+      "nnz": 4930001,
+      "pivot_max": 4.018760513959803,
+      "pivot_min": 0.0002589860868118936,
+      "pivot_ratio": 15517.283431826603,
+      "probe_solve_relative_residual": 7.548391300021124e-13,
+      "size": 1183383
+    },
+    "native_l04_primal": {
+      "L_nnz": 11996422,
+      "SymmetricMode": true,
+      "U_nnz": 11996422,
+      "apply_seconds": 0.1656446999986656,
+      "diag_pivot_thresh": 0.0,
+      "factor_seconds": 59.004122100013774,
+      "max_private_or_working_bytes": 12546760704,
+      "nnz": 9244607,
+      "ordinary_transpose_inverse_witness": 1.881909711859538e-14,
+      "permc_spec": "MMD_AT_PLUS_A",
+      "pivot_finite": true,
+      "pivot_max_abs": 1.0000000000000002,
+      "pivot_min_abs": 5.536190172972811e-08,
+      "pivot_nonzero": true,
+      "probe_gate_lte_2e_8": true,
+      "probe_relative_residual": 6.723703071595763e-09,
+      "size": 2384989,
+      "transpose_apply_seconds": 0.13409190002130345,
+      "transpose_gate_lte_2e_8": true
+    }
+  },
+  "inputs": {
+    "balanced": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\solve_astra_l02_l14_l25_combined_block_lgmres.py",
+      "sha256": "853f193fd51d3c204668019f7957cc74ea295a0e47206aae338076dfa796c692",
+      "size_bytes": 45742
+    },
+    "base": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l02_conditional_hybrid_block_lgmres.py",
+      "sha256": "ae0fb71ea00d02381abf28bf440d9407191e45f1c43d774cae31da6e0fb8da5e",
+      "size_bytes": 35889
+    },
+    "bridge": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-full-contact-circuit-bridge-01\\l04-full-contact-circuit-bridge.npz",
+      "sha256": "02508f2e1588fe5e6ad4231b9c128a3324a88baf0229293d6a8b70ea10380e57",
+      "size_bytes": 1702061
+    },
+    "bridge_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-full-contact-circuit-bridge-01\\result.json",
+      "sha256": "1583612f90fca3c97f7b9fb4f8c3a0a004d6ae8d84ccc1f7bbc8f382247d266f",
+      "size_bytes": 8656
+    },
+    "budget": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\reconstruct_astra_native_loaded_field.py",
+      "sha256": "354d9e004b189cf8193c2922c8fa4dc1903b407bebb295a4576673200ce6b213",
+      "size_bytes": 33457
+    },
+    "coupled_source": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\solve_astra_l04_full_contact_coupled.py",
+      "sha256": "6f9b6ce6dc22cefdbb5980b47b30b0c06c8e5ab04a4a0840e7738b014d642430",
+      "size_bytes": 26880
+    },
+    "factor_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-factor-01\\driver-at-run.py",
+      "sha256": "8ded2b0fdde86f32bb44c955abcb81942f237079a2d9b227131d942e122fcf7a",
+      "size_bytes": 12882
+    },
+    "factor_external": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-factor-01\\external-budget.json",
+      "sha256": "6ed6ca723c195988e3dc755c7a4856da973a839fa9502baaf1beaa8ec104f3bc",
+      "size_bytes": 1021
+    },
+    "factor_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-factor-01\\result.json",
+      "sha256": "fcf48774d1e49a0ea3cfcf9aa82d423c9968fb18de0328c72bce863aaa7ae091",
+      "size_bytes": 4246
+    },
+    "guard": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_fmm3d_runtime.py",
+      "sha256": "2961d1606ec2d4583c37d990d238a6abc87a54d8e0b93f9d83397f3851536a25",
+      "size_bytes": 16465
+    },
+    "memory_counter": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_l25_rt0_p1_pair.py",
+      "sha256": "35b1fb7c485b31cab4ea26beba52765ad6cfcbc2a60504d96194aa3b183eee20",
+      "size_bytes": 35907
+    },
+    "ntd_action": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l04_contact_ntd_action.py",
+      "sha256": "e9108a481308335d3f442a53652468ec9b8507204537c6d96d6f730de2bfbde8",
+      "size_bytes": 28847
+    },
+    "ntd_probe_diagnostic": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-contact-ntd-action-02\\saved-rhs-replay-diagnostics.json",
+      "sha256": "4d20a2542666f5b8e122712d4849307d7ce4132f64cc6ca8f51476adfca0d02e",
+      "size_bytes": 1831
+    },
+    "ntd_probe_external": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-contact-ntd-action-02\\external-budget.json",
+      "sha256": "d51acba383cb5bda0d09fcf10793be6a31de4a048567911bcef020d6bd124266",
+      "size_bytes": 1007
+    },
+    "ntd_qualification": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-contact-ntd-action-03\\result.json",
+      "sha256": "a583a96e466f8f5eee14c0b8d6cc23e120512b65a0c19c687886d5a28d3dce2c",
+      "size_bytes": 4095
+    },
+    "ntd_qualifier": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\qualify_astra_l04_contact_ntd_saved_diagnostic.py",
+      "sha256": "6eb11fcb97289aed527b3ce36f671bf5a776a390f4cadd84781a98f90e3f14eb",
+      "size_bytes": 7971
+    },
+    "operator": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-operator-02\\conditional-hybrid-operator.npz",
+      "sha256": "5ab5ba38aaf8c317aa05ae1d4f790c1d6447406ec25afe3c30e96536c714aa92",
+      "size_bytes": 115480771
+    },
+    "restart6": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-full-contact-coupled-01\\stopped-restart6-unvalidated-field.npz",
+      "sha256": "e0950b0cddf277b6b336beb96e1a9d4b8925d377d7613a5f7bf0edbe08a3e792",
+      "size_bytes": 44788326
+    },
+    "restart6_drained": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-full-contact-coupled-01\\hq-drained-state.json",
+      "sha256": "d8906915477965456980e52da2f786538d9071fa2319325a76ab025cd2d077be",
+      "size_bytes": 3789
+    },
+    "restart6_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-full-contact-coupled-01\\driver-at-run.py",
+      "sha256": "6f9b6ce6dc22cefdbb5980b47b30b0c06c8e5ab04a4a0840e7738b014d642430",
+      "size_bytes": 26880
+    },
+    "restart6_external": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-full-contact-coupled-01\\external-budget.json",
+      "sha256": "d8bf0b874fb8e003a6b3f79e82c5226542ebf09a42338b8f80fd9b92c365a0a2",
+      "size_bytes": 1144
+    },
+    "restart6_stop": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-full-contact-coupled-01\\hq-stop-decision.json",
+      "sha256": "650bc7d17d463690958dd2c9b219392d4e2b1a6a9fe0d1c68c177f93792a95a5",
+      "size_bytes": 3202
+    },
+    "static": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-block-01\\native-l04-auxiliary-block.npz",
+      "sha256": "c9ddef8e180a337f9a8ac5b509a060776fed5e7e5e3d1a13380ec847c76126ad",
+      "size_bytes": 52261901
+    },
+    "static_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-block-01\\driver-at-run.py",
+      "sha256": "5836ba78aa01a818675a4bb4ce3175219a32f2a39b896d8aa2a47314a8d4ffde",
+      "size_bytes": 10283
+    },
+    "static_external": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-block-01\\external-budget.json",
+      "sha256": "94e12ebc2562da027d3421ba4b87ffa25b29bb13f8c1473b2b8dd0e24150796d",
+      "size_bytes": 1018
+    },
+    "static_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-block-01\\result.json",
+      "sha256": "ae45f21634d9bdc688639d37cdeaa5cc1752c6ca7df1a4a13a1d541a9be579de",
+      "size_bytes": 6050
+    }
+  },
+  "primal": {
+    "coarse_condition_2": 38172.161476549205,
+    "coarse_gate": true,
+    "coarse_singular_values": [
+      0.0007355956241927395,
+      1.4640950226766145e-07,
+      1.9270473448160578e-08
+    ],
+    "coarse_symmetry_relative": 3.4615333150883676e-16,
+    "dimension": 5410238,
+    "full_u_nnz": 114441,
+    "l02_offblock_u_nnz": 20,
+    "mode_error": 4.503817941580242e-11,
+    "mode_gate": true,
+    "native_l04_dimension": 2384989
+  },
+  "program": "SPD Decap PI Evaluator",
+  "rss_bytes": 32182890496,
+  "status": "FACTORS_AND_PRIMAL_COARSE_READY_BEFORE_NTD_OR_MEASUREMENT",
+  "version": "0.23.1"
+}

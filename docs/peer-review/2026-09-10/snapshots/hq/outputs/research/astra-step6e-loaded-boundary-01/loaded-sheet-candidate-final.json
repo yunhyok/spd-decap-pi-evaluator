@@ -1,0 +1,262 @@
+{
+  "actual_scenario_state": {
+    "all_source_and_current_net_equal": true,
+    "all_source_and_current_rail_equal": true,
+    "complete_conditional_ground_contact_count": 450,
+    "complete_conditional_power_contact_count": 450,
+    "connection_kind_counts": {
+      "DIRECT": 8,
+      "SHARED_ANCHOR": 217,
+      "SHARED_DUMMY": 196
+    },
+    "enabled_source_mounted_count": 421,
+    "ground_source_via_count": 450,
+    "physical_anchor_or_direct_refdes_count": 225,
+    "power_source_via_count": 450,
+    "rerouted_count": 0,
+    "shared_cluster_count": 29,
+    "shared_dummy_refdes_count": 196,
+    "unique_refdes_count": 421
+  },
+  "adjacent_reference_geometry": {
+    "area_um2": 9616001123.138739,
+    "bounds_um": [
+      -49700.0,
+      -49700.0,
+      49700.0,
+      49700.0
+    ],
+    "component_count": 57,
+    "compressed_sha256": "1c42beade69d1493eb00d6c6cb61bfd3c05320ef657571661f5873817ffc0d6a",
+    "compressed_size_bytes": 1650865,
+    "format": "powersi-spd-plane-primitives-v1",
+    "hole_count": 5744,
+    "layer": "Signal$L13(DGND)",
+    "member": "geometry/0087-1c42beade69d1493.spdgeom.zlib",
+    "negative_circle_count": 888,
+    "negative_polygon_count": 4856,
+    "net": "DGND",
+    "ordered_shape_type": "MultiPolygon",
+    "positive_circle_count": 0,
+    "positive_polygon_count": 57,
+    "primitive_order_count": 5801
+  },
+  "candidate_component": {
+    "actual_power_contact_vertex_count": 450,
+    "adjacent_dielectric_points": [
+      [
+        1000000.0,
+        3.4,
+        0.0041
+      ],
+      [
+        1000000000.0,
+        3.3,
+        0.004
+      ],
+      [
+        5800000000.0,
+        3.3,
+        0.0044
+      ],
+      [
+        10000000000.0,
+        3.2,
+        0.0046
+      ],
+      [
+        20000000000.0,
+        3.4,
+        0.0051
+      ],
+      [
+        40000000000.0,
+        3.3,
+        0.0058
+      ],
+      [
+        60000000000.0,
+        3.3,
+        0.006
+      ]
+    ],
+    "all_actual_power_contact_vertices_reach_component": true,
+    "all_device_power_anchors_reach_component": true,
+    "artwork_island_count": 110,
+    "common_plane_quotient_vertex_id": "spd-finite-via-vertex:f2f31612c49fc66b38b50488",
+    "common_plane_quotient_vertex_ordinal": 744683,
+    "component_evidence_sha256": "c10b41be0dd935e2f2a20a3ce6ec409513e07dc07c5e230738e01e7c171cf305",
+    "component_id": "spd-surface-equivalence-component:c10b41be0dd935e2f2a20a3c",
+    "contact_status": "complete",
+    "device_anchor_graph_distance_histogram": {
+      "13": 45
+    },
+    "device_power_anchor_count": 45,
+    "geometry": {
+      "area_um2": 1839325486.4314904,
+      "bounds_um": [
+        -3577.039,
+        25.002,
+        49700.0,
+        49700.0
+      ],
+      "component_count": 110,
+      "compressed_sha256": "eb5c10758ed3e08d19db505d10e3efe35d1c764145fbe29d457719075b2c7838",
+      "compressed_size_bytes": 538394,
+      "format": "powersi-spd-plane-primitives-v1",
+      "hole_count": 1732,
+      "layer": "Signal$L14(MAIN_POWER4)",
+      "member": "geometry/0090-eb5c10758ed3e08d.spdgeom.zlib",
+      "negative_circle_count": 0,
+      "negative_polygon_count": 1732,
+      "net": "ADC_VDD_075_VTRIP_SRAM/0",
+      "ordered_shape_type": "MultiPolygon",
+      "positive_circle_count": 0,
+      "positive_polygon_count": 110,
+      "primitive_order_count": 1842
+    },
+    "layer": "Signal$L14(MAIN_POWER4)",
+    "net": "adc_vdd_075_vtrip_sram/0",
+    "power_contact_graph_distance_histogram": {
+      "13": 450
+    },
+    "reachable_target_graph_node_count": 21666,
+    "representative_island_id": "spd-surface-island:04259876ac08adae3d7020ad",
+    "stackup_rows": [
+      [
+        24,
+        "Signal$L13(DGND)",
+        "conductor",
+        20.0,
+        59590000.0,
+        "COPPER"
+      ],
+      [
+        25,
+        "Medium$DR1314",
+        "dielectric",
+        30.0,
+        null,
+        "ABF-GL102"
+      ],
+      [
+        26,
+        "Signal$L14(MAIN_POWER4)",
+        "conductor",
+        20.0,
+        59590000.0,
+        "COPPER"
+      ]
+    ],
+    "surface_link_count": 110,
+    "target_finite_link_count": 30162,
+    "target_raw_via_count": 30520
+  },
+  "device_port_reduction": {
+    "deduplicated_quotient_vertices": {
+      "ground": 1,
+      "power": 45
+    },
+    "interpretation": "45/1 are certified finite-via quotient vertices after exact terminal selection; they are not counts of raw pins, artwork islands, or assumed physical current splits.",
+    "member_counts": {
+      "0": 978,
+      "1": 978,
+      "2": 45,
+      "3": 1
+    },
+    "member_kind_semantics": {
+      "0": "positive_pin_ids",
+      "1": "negative_pin_ids",
+      "2": "positive_anchor_node_ids",
+      "3": "negative_anchor_node_ids"
+    },
+    "negative_node": {
+      "flat_index": 94023,
+      "kind": 0,
+      "local_ordinal": 94023,
+      "node_id": "spd-finite-via-vertex:1e9e3a9fb6978e92411bce4c"
+    },
+    "pin_to_complete_contact_join": {
+      "ground": 978,
+      "power": 978
+    },
+    "port_ordinal": 34,
+    "positive_node": {
+      "flat_index": 784764,
+      "kind": 1,
+      "local_ordinal": 77,
+      "node_id": "spd-device-port-node:820d47f6bf1a0a52a37b4706"
+    },
+    "positive_supernode_neighbors_equal_positive_anchor_set": true,
+    "positive_supernode_star_link_count": 45
+  },
+  "finite_rl_boundary": {
+    "edge_count": 2110,
+    "inductance_h_range": [
+      2.2039728043259365e-11,
+      2.6094379124341013e-11
+    ],
+    "owner_count": 2110,
+    "padstack_counts": {
+      "DR-1314": 450,
+      "DR-1314_60": 978,
+      "DR-1415_60": 682
+    },
+    "raw_source_rows_sha256": "4bf4cb245326ea3ef349b9d68ca7fb4d6ec138570c7f03ef6aac66b3e30c9712",
+    "raw_source_via_count": 2110,
+    "records_sha256": "9ea1085bab78ce6dbada2eea3f915bae793318c47c6c0d98f9dca1da5fcf6fdf",
+    "resistance_ohm_range": [
+      0.000296759230840177,
+      0.0006677082693903983
+    ],
+    "span_counts": {
+      "Signal$L13(DGND) -> Signal$L14(MAIN_POWER4)": 1428,
+      "Signal$L14(MAIN_POWER4) -> Signal$L15(MAIN_POWER5)": 682
+    }
+  },
+  "inputs": {
+    "bundle_path": "D:\\SPD-Decap-PI-Evaluator-W7\\e2f219e71d8c8a397009f72242cce10d78cfc7ab\\260902-d115b-source-plane-ownership-materialization-04\\source_plane_ownership_candidate.spdpi",
+    "bundle_size_bytes": 925278361,
+    "compiled_topology_db": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-step4-basis-01\\indexes\\compiled-topology.sqlite",
+    "ownership_db": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-step4-basis-01\\ownership.sqlite",
+    "raw_spatial_db": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-step4-basis-01\\indexes\\raw-spatial.sqlite",
+    "scenario_sha256": "2f5ae107221857f7f093ab8d6cbcff4c286a0c6cee5b6a9994de1c384cf39c83",
+    "script_sha256": "60685a3fb1d69390c6c853f4dc3088a38701358e59f83b416882f551b924e662",
+    "source_sha256": "40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2"
+  },
+  "limitations": [
+    "The target-net graph proves connectivity in the existing compiled topology; it does not assign current sharing or certify a sheet replacement.",
+    "The component is a 110-island, 1,732-hole ordered source geometry, not one admissible connected hole-free tri_fem_gap input.",
+    "No native solve, controller replay, raw SPD scan, PowerSI fit, or product/source edit was performed."
+  ],
+  "program": "SPD Decap PI Evaluator",
+  "rail_id": "ADC_VDD_075_VTRIP_SRAM/0",
+  "replacement_readiness": {
+    "candidate_is_not_one_connected_hole_free_gap_domain": true,
+    "missing": [
+      "VTRIP-specific geometry/contact ownership mapping from each of the 110 artwork islands to the retained or replaced boundary",
+      "complete original dispersive G/C partial ordinal and fingerprint partition for every old-to-retained overlap",
+      "replacement ledger proving that the 2,110 finite-R/L owners are rewired exactly once while all non-boundary owners remain",
+      "eligible connected and hole-free local overlap partitions if compile_tri_fem_gap is used"
+    ],
+    "next_bounded_use": "Use the observed 1 MHz native physical node/branch field to rank which of these source-proven contacts carries Device current before materializing a VTRIP ownership replacement.",
+    "status": "STOP_REPLACEMENT_BOUNDARY_INCOMPLETE",
+    "target_ownership_rows": {
+      "contact_boundary": 0,
+      "rail_bindings": 0,
+      "retained_owner_refs": 0,
+      "terminal_bindings": 0
+    }
+  },
+  "resources": {
+    "bounded": true,
+    "elapsed_s": 22.953000000008615,
+    "maximum_runtime_s": 55.0
+  },
+  "status": "PARTIAL_SOURCE_COMPONENT_AND_CONTACT_GRAPH_PROVEN_REPLACEMENT_BOUNDARY_INCOMPLETE",
+  "superseded_evidence": {
+    "loaded-development-boundary-02.json": "partial only: flat-node correction is valid, but its member-kind descriptions and cross-table member evidence are not used by this receipt",
+    "loaded-development-boundary.json": "rejected: flat positive node was decoded with a kind-local ordinal"
+  },
+  "version": "0.23.1"
+}

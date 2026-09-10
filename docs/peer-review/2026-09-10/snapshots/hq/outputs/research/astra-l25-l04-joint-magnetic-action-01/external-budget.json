@@ -1,0 +1,27 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "STOP_NATIVE_WORKER_EXIT",
+  "owned_pid": 18012,
+  "exit_code": 1,
+  "elapsed_s": 284.3899999999994,
+  "sampled_peak_private_bytes": 18660007936,
+  "sampled_peak_working_set_bytes": 18570207232,
+  "max_runtime_s": 450.0,
+  "max_memory_bytes": 34359738368,
+  "driver_sha256": "caf5ba8fd0a1a156f987069be4d14e12d5ae8268e613716d120fb6edf2ab6a5e",
+  "worker_command": [
+    "C:\\Users\\User\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+    "-B",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_l25_l04_joint_magnetic_action.py",
+    "--native-worker",
+    "--output",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-l04-joint-magnetic-action-01"
+  ],
+  "memory_at_launch": {
+    "total_physical_bytes": 68374552576,
+    "available_physical_bytes": 50168233984,
+    "available_commit_bytes": 58603704320
+  },
+  "guard_failure": null
+}

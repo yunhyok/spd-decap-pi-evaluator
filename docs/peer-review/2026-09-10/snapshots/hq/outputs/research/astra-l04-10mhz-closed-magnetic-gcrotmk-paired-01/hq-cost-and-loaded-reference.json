@@ -1,0 +1,10 @@
+{
+  "status": "UNVALIDATED_COST_AND_LOADED_REFERENCE_DIAGNOSTIC",
+  "result_sha256": "ef23ddf9c0a81f5ef0e234932592ea6403685f022c7e3dc1c04bd4517c488f03",
+  "raw_reference_error_percent": 54.593165264094736,
+  "phase_error_deg": -22.728615409983234,
+  "fmm_elapsed_s": 812.7748460000039,
+  "external_elapsed_s": 1030.4689999999973,
+  "fmm_fraction_of_external": 0.7887426463095988,
+  "scope": "Loaded development reference compared after the solve only; no fitting, physical acceptance or recognized accuracy gain."
+}

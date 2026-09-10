@@ -1,0 +1,64 @@
+{
+  "budget": {
+    "elapsed_s": 3.875,
+    "max_rss_bytes": 4294967296,
+    "max_runtime_s": 120.0,
+    "peak_rss_bytes": 467193856
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_l02_symmetric_relaxation.py",
+    "sha256": "102f50b86a9e13f59e2c93219ee5f07cb396d931881b5d9e14e7529c0ae983a3",
+    "size_bytes": 6384
+  },
+  "failed_l02_scaled_residual_norm": 5.601393314711588e-07,
+  "inputs": {
+    "budget_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\reconstruct_astra_native_loaded_field.py",
+      "sha256": "354d9e004b189cf8193c2922c8fa4dc1903b407bebb295a4576673200ce6b213",
+      "size_bytes": 33457
+    },
+    "failed_diagnostic": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-block-lgmres-01\\unvalidated-field.json",
+      "sha256": "458d8afca94ccbdd5227c7fffb1f7b6049848d6c677a2b194bd50c3d1a9c2fab",
+      "size_bytes": 55522
+    },
+    "failed_field": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-block-lgmres-01\\unvalidated-field.npz",
+      "sha256": "9fd9fae38a4c1cb016b61f450ee188461650fa19cdcc89ea14ac4f81c6a5b3b4",
+      "size_bytes": 43183829
+    },
+    "numeric_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l02_conditional_hybrid_block_lgmres.py",
+      "sha256": "ae0fb71ea00d02381abf28bf440d9407191e45f1c43d774cae31da6e0fb8da5e",
+      "size_bytes": 35889
+    },
+    "operator": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-operator-02\\conditional-hybrid-operator.npz",
+      "sha256": "5ab5ba38aaf8c317aa05ae1d4f790c1d6447406ec25afe3c30e96536c714aa92",
+      "size_bytes": 115480771
+    }
+  },
+  "lower_nnz": 4806308,
+  "matrix_nnz": 7917807,
+  "program": "SPD Decap PI Evaluator",
+  "relaxation": {
+    "jacobi": {
+      "apply_elapsed_s": 0.006899000029079616,
+      "max_abs_correction_scaled": 1.5703569820490658e-07,
+      "remaining_diagonal_weighted_norm_ratio": 0.9951966575576043,
+      "remaining_residual_norm_ratio": 0.994166360597331
+    },
+    "symmetric_gauss_seidel": {
+      "apply_elapsed_s": 0.3427938999957405,
+      "max_abs_correction_scaled": 4.6619626075493274e-07,
+      "remaining_diagonal_weighted_norm_ratio": 1.1424758261251706,
+      "remaining_residual_norm_ratio": 1.152200052930679
+    }
+  },
+  "rows": 1694809,
+  "sampled_transpose_symmetry_relative": 2.4172634636428456e-15,
+  "scope": "One actual residual application and two symmetry probes, without LU/coarse solve or a new field iteration. Residual contraction here does not establish full preconditioned convergence or physical accuracy.",
+  "setup_elapsed_s": 0.19936499994946644,
+  "status": "PASS_ACTUAL_L02_SYMMETRIC_RELAXATION_ARITHMETIC_AND_COST_ONLY",
+  "version": "0.23.1"
+}

@@ -1,0 +1,7 @@
+{
+  "error": "[WinError 183] \ud30c\uc77c\uc774 \uc774\ubbf8 \uc788\uc73c\ubbc0\ub85c \ub9cc\ub4e4 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4: 'C:\\\\Users\\\\User\\\\.codex\\\\worktrees\\\\5950\\\\SPD Decap PI Evaluator\\\\outputs\\\\research\\\\astra-l02-pad-conductor-domain-01\\\\.checkpoint.json.tmp-32220' -> 'C:\\\\Users\\\\User\\\\.codex\\\\worktrees\\\\5950\\\\SPD Decap PI Evaluator\\\\outputs\\\\research\\\\astra-l02-pad-conductor-domain-01\\\\checkpoint.json'",
+  "error_type": "FileExistsError",
+  "program": "SPD Decap PI Evaluator",
+  "status": "STOP_L02_PAD_AUGMENTED_DOMAIN",
+  "version": "0.23.1"
+}

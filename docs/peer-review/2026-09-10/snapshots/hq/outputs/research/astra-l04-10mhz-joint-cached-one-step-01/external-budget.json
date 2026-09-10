@@ -1,0 +1,28 @@
+{
+  "driver_sha256": "a9ab2e92e90cf04a7acb07fff2c4f4b56f45decd1f69bcf919fc86a3c1c29a4b",
+  "elapsed_s": 63.57900000002701,
+  "exit_code": 0,
+  "max_memory_bytes": 34359738368,
+  "max_runtime_s": 300.0,
+  "memory_at_launch": {
+    "available_commit_bytes": 42952175616,
+    "available_physical_bytes": 38921834496,
+    "total_physical_bytes": 68374552576
+  },
+  "owned_pid": 8344,
+  "program": "SPD Decap PI Evaluator",
+  "reference_guard_sha256": "2961d1606ec2d4583c37d990d238a6abc87a54d8e0b93f9d83397f3851536a25",
+  "sampled_peak_private_bytes": 24739639296,
+  "sampled_peak_working_set_bytes": 8279126016,
+  "sampling_interval_s": 0.5,
+  "status": "COMPLETED_NATIVE_WORKER",
+  "version": "0.23.1",
+  "worker_command": [
+    "C:\\Users\\User\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+    "-B",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_l04_10mhz_joint_cached_one_step.py",
+    "--native-worker",
+    "--output",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-joint-cached-one-step-01"
+  ]
+}

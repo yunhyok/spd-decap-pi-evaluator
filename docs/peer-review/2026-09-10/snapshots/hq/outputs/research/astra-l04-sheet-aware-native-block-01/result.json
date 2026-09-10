@@ -1,0 +1,130 @@
+{
+  "artifact": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-block-01\\native-l04-auxiliary-block.npz",
+    "sha256": "c9ddef8e180a337f9a8ac5b509a060776fed5e7e5e3d1a13380ec847c76126ad",
+    "size_bytes": 52261901
+  },
+  "budget": {
+    "elapsed_s": 9.125,
+    "max_rss_bytes": 8589934592,
+    "max_runtime_s": 120,
+    "peak_rss_bytes": 599859200
+  },
+  "dimensions": {
+    "combined": 2384989,
+    "contacts": 38277,
+    "l04_gauged_graph": 1628104,
+    "native": 756885,
+    "root_graph": 1615267
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-block-01\\driver-at-run.py",
+    "sha256": "5836ba78aa01a818675a4bb4ce3175219a32f2a39b896d8aa2a47314a8d4ffde",
+    "size_bytes": 10283
+  },
+  "frequency_hz": 1000000.0,
+  "geometry_approximation": {
+    "domain": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-conditional-sheet-mesh-02\\l04-coalesced-conductor-domain.wkb",
+      "sha256": "8dbfbb75d87efa7c9504b1ab521a78687ef97b45d1eb0e6a8d5ff6007658c674",
+      "size_bytes": 14024197
+    },
+    "max_vertex_displacement_um": 1.473493695890548e-10,
+    "method": "EXACT_TWO_SOURCE_VERTEX_COALESCENCE_L04_RING563",
+    "source_domain": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-pad-conductor-domain-01\\l04-pad-augmented-conductor-domain.wkb",
+      "sha256": "0eeaffc34a6b9759fd285f28d35ebd59042e6bcd909a697fad3f18a5d2eafa68",
+      "size_bytes": 14024197
+    },
+    "unchanged_source_geometry": false,
+    "witness_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-cdt-local-coalescence-witness-02\\result.json",
+      "sha256": "3e097e7086f6bd10e009afbcdb6b98ca8029f6555273f4e7b1f92c3059a216ce",
+      "size_bytes": 6819
+    }
+  },
+  "inputs": {
+    "base_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l02_conditional_hybrid_block_lgmres.py",
+      "sha256": "ae0fb71ea00d02381abf28bf440d9407191e45f1c43d774cae31da6e0fb8da5e",
+      "size_bytes": 35889
+    },
+    "bridge": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-full-contact-circuit-bridge-01\\l04-full-contact-circuit-bridge.npz",
+      "sha256": "02508f2e1588fe5e6ad4231b9c128a3324a88baf0229293d6a8b70ea10380e57",
+      "size_bytes": 1702061
+    },
+    "bridge_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-full-contact-circuit-bridge-01\\result.json",
+      "sha256": "1583612f90fca3c97f7b9fb4f8c3a0a004d6ae8d84ccc1f7bbc8f382247d266f",
+      "size_bytes": 8656
+    },
+    "budget": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\reconstruct_astra_native_loaded_field.py",
+      "sha256": "354d9e004b189cf8193c2922c8fa4dc1903b407bebb295a4576673200ce6b213",
+      "size_bytes": 33457
+    },
+    "coupled_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\solve_astra_l04_full_contact_coupled.py",
+      "sha256": "6f9b6ce6dc22cefdbb5980b47b30b0c06c8e5ab04a4a0840e7738b014d642430",
+      "size_bytes": 26880
+    },
+    "guard": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_fmm3d_runtime.py",
+      "sha256": "2961d1606ec2d4583c37d990d238a6abc87a54d8e0b93f9d83397f3851536a25",
+      "size_bytes": 16465
+    },
+    "ntd_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l04_contact_ntd_action.py",
+      "sha256": "e9108a481308335d3f442a53652468ec9b8507204537c6d96d6f730de2bfbde8",
+      "size_bytes": 28847
+    },
+    "operator": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-operator-02\\conditional-hybrid-operator.npz",
+      "sha256": "5ab5ba38aaf8c317aa05ae1d4f790c1d6447406ec25afe3c30e96536c714aa92",
+      "size_bytes": 115480771
+    },
+    "stream_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\result.json",
+      "sha256": "3e5417fa1a2db0308208449896c2aa1650beff5051d2ee03b60a8b4a11fe2bf1",
+      "size_bytes": 8797
+    },
+    "stream_space": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\l04-fixed-contact-rt0-space.npz",
+      "sha256": "5d31b3c6183eb4f43723eb80d1a545953a42fb2c9320be425d3ebc034cb51bb6",
+      "size_bytes": 79222436
+    }
+  },
+  "program": "SPD Decap PI Evaluator",
+  "scope": "Preconditioner-only diag(R04) graph, including all gauged graph/contact nodes and same root. Native+L04 replaces the old native factor; it must not overlap that factor in a later solver. Twenty L02 couplings remain explicit off-block. No RT0 mass reconstruction, mesh change, exact-NtD replacement, sparse LU, global solve, spectral equivalence, residual reduction, or accuracy claim.",
+  "sparse": {
+    "csc_storage_bytes": 194432100,
+    "lumped_l04_graph_nnz": 6174020,
+    "native_delta_nnz": 16,
+    "native_diagonal_block_nnz": 2841745,
+    "native_l04_coupling_nnz": 114421,
+    "robin_nnz": 6174020,
+    "total_nnz": 9244607
+  },
+  "status": "PASS_STATIC_L04_SHEET_AWARE_NATIVE_AUXILIARY_NO_FACTOR",
+  "symmetry_relative": 1.630959364830643e-18,
+  "u_partition": {
+    "l02": {
+      "nnz": 20,
+      "unique_rows": 20
+    },
+    "l14": {
+      "nnz": 0,
+      "unique_rows": 0
+    },
+    "l25": {
+      "nnz": 0,
+      "unique_rows": 0
+    },
+    "native": {
+      "nnz": 114421,
+      "unique_rows": 59740
+    }
+  },
+  "version": "0.23.1"
+}

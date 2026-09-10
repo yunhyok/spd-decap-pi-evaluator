@@ -1,0 +1,183 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "ACCEPT_THREE_SHAPE_CLOSED_SELF_L_ONLY",
+  "inputs": {
+    "stress": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-shape-kernel-stress-01\\result.json",
+      "sha256": "c4450535687d9d69e8215179e81a85355e67cb285c711b0c3cc87165bf765120"
+    },
+    "refined": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-sliver-kernel-refined-01\\result.json",
+      "sha256": "cb2751c17ed1233ca9ed5673011379ba83ec1e73c3b71301161faa91ea09200a"
+    }
+  },
+  "cases": [
+    {
+      "triangle_index": 0,
+      "vertices_m": [
+        [
+          -0.0038549979999999997,
+          0.01201667
+        ],
+        [
+          -0.0038549979999999997,
+          0.012139249999999999
+        ],
+        [
+          -0.0038200779999999998,
+          0.0121503
+        ]
+      ],
+      "self_partial_L_h": [
+        [
+          1.1475282780039634e-11,
+          -3.3106879097312273e-12,
+          -5.213064085017299e-12
+        ],
+        [
+          -3.3106879097312273e-12,
+          2.478334727743338e-12,
+          2.430695673244265e-12
+        ],
+        [
+          -5.213064085017299e-12,
+          2.430695673244265e-12,
+          4.219992626328821e-12
+        ]
+      ],
+      "reference_order": 64,
+      "metrics": {
+        "saved_outer_quadrature_relative_difference": 4.7947698231475645e-08,
+        "independent_edge_quadrature_relative_difference": 1.1277149703481914e-16,
+        "all_vertex_permutations_relative_difference": 5.141870008322446e-16,
+        "translation_relative_difference": 0.0,
+        "rotation_relative_difference": 2.57418729515688e-16,
+        "length_scaling_relative_difference": 3.16860552220916e-16,
+        "minimum_eigenvalue_h": 7.418190231422853e-13
+      },
+      "gates": {
+        "saved_outer_quadrature_relative_difference": true,
+        "independent_edge_quadrature_relative_difference": true,
+        "all_vertex_permutations_relative_difference": true,
+        "translation_relative_difference": true,
+        "rotation_relative_difference": true,
+        "length_scaling_relative_difference": true,
+        "minimum_eigenvalue_h": true
+      },
+      "passed": true
+    },
+    {
+      "triangle_index": 457250,
+      "vertices_m": [
+        [
+          0.03770650347464103,
+          0.048364922186352126
+        ],
+        [
+          0.03834349652535897,
+          0.048364922186352126
+        ],
+        [
+          0.038349999999999995,
+          0.048365002
+        ]
+      ],
+      "self_partial_L_h": [
+        [
+          2.4723457438728586e-10,
+          -6.841765894617238e-11,
+          -7.164035950887396e-11
+        ],
+        [
+          -6.841765894617238e-11,
+          4.551490620626336e-11,
+          4.667811509732176e-11
+        ],
+        [
+          -7.164035950887396e-11,
+          4.667811509732176e-11,
+          4.788610932304014e-11
+        ]
+      ],
+      "reference_order": 256,
+      "metrics": {
+        "saved_outer_quadrature_relative_difference": 2.9751427036179546e-07,
+        "independent_edge_quadrature_relative_difference": 3.2791740123285435e-15,
+        "all_vertex_permutations_relative_difference": 4.919021963868291e-15,
+        "translation_relative_difference": 0.0,
+        "rotation_relative_difference": 4.333866083486462e-14,
+        "length_scaling_relative_difference": 1.8834273499413062e-16,
+        "minimum_eigenvalue_h": 3.3377016822805606e-18
+      },
+      "gates": {
+        "saved_outer_quadrature_relative_difference": true,
+        "independent_edge_quadrature_relative_difference": true,
+        "all_vertex_permutations_relative_difference": true,
+        "translation_relative_difference": true,
+        "rotation_relative_difference": true,
+        "length_scaling_relative_difference": true,
+        "minimum_eigenvalue_h": true
+      },
+      "passed": true
+    },
+    {
+      "triangle_index": 542067,
+      "vertices_m": [
+        [
+          0.048365002,
+          0.02405
+        ],
+        [
+          0.0497,
+          9.499299999999999e-05
+        ],
+        [
+          0.0497,
+          0.04787572999999999
+        ]
+      ],
+      "self_partial_L_h": [
+        [
+          3.517086647926078e-10,
+          3.377533688978352e-10,
+          3.4981960040951946e-10
+        ],
+        [
+          3.377533688978352e-10,
+          4.31075297933446e-09,
+          -3.6049525683480555e-09
+        ],
+        [
+          3.4981960040951946e-10,
+          -3.6049525683480555e-09,
+          4.292101962799718e-09
+        ]
+      ],
+      "reference_order": 64,
+      "metrics": {
+        "saved_outer_quadrature_relative_difference": 3.805516555927875e-08,
+        "independent_edge_quadrature_relative_difference": 3.3063354674683068e-16,
+        "all_vertex_permutations_relative_difference": 2.751272429848118e-16,
+        "translation_relative_difference": 0.0,
+        "rotation_relative_difference": 3.031804067570525e-16,
+        "length_scaling_relative_difference": 1.4726569474683307e-16,
+        "minimum_eigenvalue_h": 8.229248737057132e-12
+      },
+      "gates": {
+        "saved_outer_quadrature_relative_difference": true,
+        "independent_edge_quadrature_relative_difference": true,
+        "all_vertex_permutations_relative_difference": true,
+        "translation_relative_difference": true,
+        "rotation_relative_difference": true,
+        "length_scaling_relative_difference": true,
+        "minimum_eigenvalue_h": true
+      },
+      "passed": true
+    }
+  ],
+  "invalid_inputs_rejected": 3,
+  "elapsed_s": 0.02885300002526492,
+  "scope": "Three actual source shapes: exact zero-thickness static same-triangle RT0 kernel reduction, independently compared with saved outer integration and adaptive edge quadrature. No inter-triangle mutual kernel, full-board assembly/solve, finite-thickness/internal/return composition, speedup benchmark, or PowerSI accuracy claim.",
+  "script_sha256": "8766c96ec7a822aedc9e3c1229a2b3dcc0f700b52a58a9ff9b92b131ecff16fb"
+}

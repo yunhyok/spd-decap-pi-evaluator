@@ -1,0 +1,272 @@
+{
+  "assembly": {
+    "external_recollapse": {
+      "difference_nnz": 9,
+      "maximum_abs_difference_s": 3.6557963239925137e-07,
+      "reference_maximum_abs_s": 147135081.85488778,
+      "relative_maximum_difference": 2.484653067035399e-15
+    },
+    "gc_only_recollapse": {
+      "difference_nnz": 13,
+      "maximum_abs_difference_s": 7.412524795292195e-15,
+      "reference_maximum_abs_s": 0.007568572285488839,
+      "relative_maximum_difference": 9.793821761475631e-13
+    },
+    "l25_electrode_count": 175,
+    "l25_free_cell_count": 579177,
+    "local_dc_pair_gap_over_p1": 0.1099298434254942,
+    "native_vias_relocated": 350,
+    "nodal_potentials": 1483296,
+    "original_l14_size": 903945,
+    "saved_l14_field_kcl_max_a": 5.173711103128657e-11,
+    "sheet_currents": 604031,
+    "sheet_incidence_vanishes_on_collapse": true,
+    "source_gc_owners": 4,
+    "target_isolation_before_new_gc_and_incidence": {
+      "column_max_abs_s": 8.674676106452505e-19,
+      "gamma_350": 7.7715611723767e-14,
+      "old_target_via_row_sum_abs_s": 556382.8349828721,
+      "row_max_abs_s": 8.674676106452505e-19,
+      "tolerance_formula": "(2*gamma_350+8*machine_epsilon)*old_target_via_row_sum_abs_s+1e-12",
+      "tolerance_s": 8.746859920084197e-08
+    }
+  },
+  "budget": {
+    "max_memory_bytes": 25769803776,
+    "max_runtime_s": 240.0,
+    "peak_private_bytes": 17195384832,
+    "peak_working_set_bytes": 4777734144
+  },
+  "dc_step_artifacts": {
+    "drive": {
+      "bytes": 8539631,
+      "path": "drive.npz",
+      "sha256": "eb9b23ae52aba42ecfcefaf7d347491d925d382f41366c6c7c478c9b4d87c269"
+    },
+    "mesh": {
+      "bytes": 6565241,
+      "path": "mesh.npz",
+      "sha256": "20b52d26783bf98197524c56f22d9872aee3b67b7e526ff20a02e396f39e89cb"
+    },
+    "rt0": {
+      "bytes": 9968871,
+      "path": "rt0.npz",
+      "sha256": "b41e42f5b4c3d1788a4ab3dd4b2ef6f221d1dbbeb6a58c55b675613f17b9a5e4"
+    },
+    "topology": {
+      "bytes": 7985409,
+      "path": "topology.npz",
+      "sha256": "d70ceb1b38cede682247967495c6ef83d08ef2b0ef63e3543df908ba13412a4d"
+    }
+  },
+  "delta_from_saved_p1_board_ohm": [
+    3.775606517141862e-05,
+    -3.824779853967464e-06
+  ],
+  "driver": {
+    "bytes": 22560,
+    "path": "driver-at-run.py",
+    "sha256": "4a6bf51cf37c64e3e86c1ad982ad7f73cf77d1990a40f011381b4238707ab8ae"
+  },
+  "elapsed_s": 27.885419700003695,
+  "field": {
+    "bytes": 21430540,
+    "path": "field.npz",
+    "sha256": "be2a3515dca426a45a5fe8c0eb696e3aa59544ee32e2d93971917e19c32b5ce1"
+  },
+  "frequency_hz": 1000000.0,
+  "gc_receipt": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-refined-gc-areas-02\\result.json",
+    "sha256": "8c0cd86b78ac647eadbf15962eadb5ad4d7a2ab385e41488982771a2432a69ef"
+  },
+  "inputs": {
+    "binding": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-dual-cell-source-binding-01\\native-source-binding.npz",
+      "sha256": "c9d41f1e2b870dd854affa1db2c31bb86f24c472866fcd2125f313cb29981c6a"
+    },
+    "budget": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_l25_rt0_p1_pair.py",
+      "sha256": "35b1fb7c485b31cab4ea26beba52765ad6cfcbc2a60504d96194aa3b183eee20"
+    },
+    "dc_review": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-adaptive-longest-pair-01\\independent-review.json",
+      "sha256": "4906a3b111b8f3378a13a203e8f2ccdd845bee61ff260af05e64c6494c1ad9bb"
+    },
+    "frequency": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\run_astra_two_sheet_frequency_shadow.py",
+      "sha256": "7e42bbb02679aa974451776e7f9577a68ba832f003884958afc744091f45da5c"
+    },
+    "gc_review": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-refined-gc-areas-02\\independent-review.json",
+      "sha256": "1d594bda428bd1b00f7ce78506bc013c8619621f093c8ca72e81d207d72afb63"
+    },
+    "inventory": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-source-sheet-01\\l25-gc-projection-inventory.json",
+      "sha256": "703e8cdf9988805a2fb05a40ff659bc9890ba999e2eef00c741a112aa5976a77"
+    },
+    "l14": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\run_astra_l14_sheet_r_shadow.py",
+      "sha256": "ff234c89be9bb6828f4efa3e559116c903d62b463f9f9fec6893abf71a369803"
+    },
+    "l14_field": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-sheet-r-shadow-01\\epsilon-1-field.npz",
+      "sha256": "15265003d3d93e3765cc22f4985c6a5edda77628fa57912b9676f4952dcc9f9a"
+    },
+    "p1_board": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-l25-sheet-r-shadow-01\\result.json",
+      "sha256": "d5a9873fb81c21773dbca79b96a83496078bdbfaa3b345478d0d21a4448e0530"
+    },
+    "step": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-adaptive-longest-pair-01\\step-06\\result.json",
+      "sha256": "9734d6b5222ad72488a07bea7a901874cb983c2a6710d862faaee07233865217"
+    }
+  },
+  "limitations": [
+    "Closed-loop board result for conditional L14 P1 DC and L25 RT0/P0 DC sheets; all original native via R/L, terminations and G/C owner totals retained.",
+    "L25 source mesh and G/C basis differ from the saved original P1 baseline; this is a combined discretization comparison, not isolated magnetic physics. No external magnetic, skin/proximity or return replacement.",
+    "The single local DC-pair bracket remains10.99298%; it neither certifies board-field convergence nor bounds the AC Device error. No PowerSI fitting, broad-band or unseen accuracy claim."
+  ],
+  "point": {
+    "category_passivity": {
+      "finite_via": true,
+      "l14_distributed_gc": true,
+      "l14_sheet_dc": true,
+      "l25_distributed_gc": true,
+      "l25_rt0_dc": true,
+      "retained_gc": true,
+      "termination": true
+    },
+    "factor_elapsed_s": 16.899616300011985,
+    "factorizations": 1,
+    "nnz": 11382530,
+    "normalized_backward_residual": 3.36377628903165e-20,
+    "physical_checks": [
+      {
+        "constitutive_max_v": 1.7912587498013675e-16,
+        "iteration": 0,
+        "kcl_max_a": 6.612764906435021e-11
+      }
+    ],
+    "pivot_abs_ratio": 152457434.18612885,
+    "power_closure_error_ohm": 2.795942980312478e-14,
+    "power_contributions_ohm": {
+      "finite_via": [
+        7.333597813323603e-05,
+        4.04517751470943e-05
+      ],
+      "l14_distributed_gc": [
+        3.792986445205138e-11,
+        -9.25118645171986e-09
+      ],
+      "l14_sheet_dc": [
+        0.00025879900707507825,
+        -7.827456876565407e-16
+      ],
+      "l25_distributed_gc": [
+        3.1934882561308246e-11,
+        -3.193488256130353e-09
+      ],
+      "l25_rt0_dc": [
+        0.00015166875564658682,
+        -2.879912020664621e-20
+      ],
+      "retained_gc": [
+        3.371709845445576e-13,
+        -4.981154904426047e-11
+      ],
+      "termination": [
+        6.77106216316946e-05,
+        -0.000629240104766344
+      ]
+    },
+    "unknowns": 2087326,
+    "zdd_ohm": [
+      0.0005515144327164612,
+      -0.0005888008241071069
+    ]
+  },
+  "program": "SPD Decap PI Evaluator v0.23.1",
+  "rail_id": "ADC_VDD_075_VTRIP_SRAM/0",
+  "saved_p1_board_zdd_ohm": [
+    0.0005137583675450426,
+    -0.0005849760442531394
+  ],
+  "source_l14_inputs": {
+    "baseline_reconstruction": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_native_loaded_field_reconstruction_2026-09-07.json",
+      "sha256": "a46dfe30d8c48f1509d5010d93a4169a04a67028d482f7cbd9e55fbd76e092d5",
+      "size_bytes": 4868
+    },
+    "budget_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_native_device_branch_2port.py",
+      "sha256": "5f73464f9bd8aea1eac54bae7c7840134fbf19a63d62b28e1edb57e76ec844eb",
+      "size_bytes": 26545
+    },
+    "derived": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\derived-field-observation.npz",
+      "sha256": "be5a83dff88db545de4625414e46dcc360364eb0a29077c91848a6ac805cb6c0",
+      "size_bytes": 22990365
+    },
+    "drive": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-sheet-mesh-preflight-05\\sheet-electrode-drive.npz",
+      "sha256": "05a1102082a76cb2f83184576e4d1c4af5985824e134e3199b2ac06fa32c050d",
+      "size_bytes": 3133737
+    },
+    "footprints": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-step6e-loaded-boundary-01\\l14-via-footprint-qualification.json",
+      "sha256": "98848ffea1eaa07f601d24fbfdf8ba642226ded7d05d9e5d2f1286af14854d9c",
+      "size_bytes": 1653042
+    },
+    "inventory": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\l14-gc-projection-inventory.json",
+      "sha256": "4409cdccc3b3d488d8f3abdd2f1e8b09a488d3c18a5bace010c765a240bc397f",
+      "size_bytes": 604254
+    },
+    "ledger": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\l14-island-external-current-ledger.json",
+      "sha256": "8cf11e747532b87f2955fbfb65ec65fab12fd18bafa1da08e9b3ca47ee83bc5b",
+      "size_bytes": 467262
+    },
+    "mass": {
+      "allow_pickle_required": false,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-gc-mass-05\\gc-mass-shadow.npz",
+      "sha256": "d2a87e4753bbf80ce555c560ff50e4129bdd3ae43b2d7691c7b041c2d776470a",
+      "size_bytes": 19505349
+    },
+    "mass_receipt": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-gc-mass-05\\receipt.json",
+      "sha256": "dd41a5a2772a280d98a73943eb276b94d3eeadd502c981f328eb7548cfb5cdeb",
+      "size_bytes": 4774
+    },
+    "mesh": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-sheet-mesh-preflight-05\\mesh-stiffness.npz",
+      "sha256": "a7a8234df9fb173a6fd88a5c613fc074321b984d5e7f0708842d66c8f0b9e779",
+      "size_bytes": 5430129
+    },
+    "raw": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\raw-field-snapshot.npz",
+      "sha256": "6eac098738598a78b2068ce4f80e46fd70e17010a89bfb5949ec8a68124df4a7",
+      "size_bytes": 145099492
+    },
+    "reconstruction_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\reconstruct_astra_native_loaded_field.py",
+      "sha256": "354d9e004b189cf8193c2922c8fa4dc1903b407bebb295a4576673200ce6b213"
+    },
+    "sensitivity": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-sheet-sensitivity-01\\result.json",
+      "sha256": "559d9ff53d9c6c4e7a2ebbb1717fe8a15725aa741aa7af83f17ef36c19e1f2fc",
+      "size_bytes": 2771
+    },
+    "trace_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\run_astra_l14_trace_r_shadow.py",
+      "sha256": "52b5e319e071827bb1854f1ea79f066f2fd9e856f410a23534832ad22edb40c4"
+    },
+    "watchdog_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_native_loaded_voltage_field.py",
+      "sha256": "9381ff41328962f40fe5663eb91dd4689989a58dcda5304f7cb67cb09ba9b403",
+      "size_bytes": 70003
+    }
+  },
+  "status": "COMPLETED_CONDITIONAL_L14_P1_L25_RT0_BOARD_1MHZ",
+  "version": "0.23.1"
+}

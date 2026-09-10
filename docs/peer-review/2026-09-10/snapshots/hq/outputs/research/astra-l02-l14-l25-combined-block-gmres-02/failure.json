@@ -1,0 +1,16 @@
+{
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-block-gmres-02\\driver-at-run.py",
+    "sha256": "a25ad79351a0245d6fdcdee5336bd7ce35314109affbc4a0fd92711cf990836d",
+    "size_bytes": 38204
+  },
+  "error": "ValueError: GMRES did not converge: info=4",
+  "program": "SPD Decap PI Evaluator",
+  "status": "STOP_CONDITIONAL_L02_L14_L25_BLOCK_GMRES_1MHZ",
+  "unvalidated_field": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-block-gmres-02\\unvalidated-field.npz",
+    "sha256": "2d1ac88c8465f9c5162bca2daa5212cdb0dd6270f4c9ef38ad912be81ec8c61b",
+    "size_bytes": 31396577
+  },
+  "version": "0.23.1"
+}

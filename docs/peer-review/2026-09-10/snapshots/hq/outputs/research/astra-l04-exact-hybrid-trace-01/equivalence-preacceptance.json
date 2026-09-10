@@ -1,0 +1,130 @@
+{
+  "artifact": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-exact-hybrid-trace-01\\saved-field-equivalence.npz",
+    "sha256": "1396cc1334ac4583c4e9cebda94b4a141802623d456ee4aabcd001cecab5b97b",
+    "size_bytes": 285585398
+  },
+  "budget": {
+    "elapsed_s": 43.46900000004098,
+    "max_rss_bytes": 8589934592,
+    "max_runtime_s": 180,
+    "peak_rss_bytes": 1893236736
+  },
+  "checkpoint": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-exact-hybrid-trace-01\\structural-checkpoint.npz",
+    "sha256": "23bbdd3b62f5541ee1f762b5d0552902d41bdb4255cc6a9baef74305bfdb8aad",
+    "size_bytes": 91607431
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-exact-hybrid-trace-01\\driver-at-run.py",
+    "sha256": "d2ba043b93d09590796b67274052e835d612123670df902528f15a65dbf21a3e",
+    "size_bytes": 32931
+  },
+  "gates": {
+    "bilinear_corrected_relative": true,
+    "contact_potentials": true,
+    "direct_vs_original_target_relative": true,
+    "energy_matrix_corrected_relative": true,
+    "finite_arrays": true,
+    "full_r_dual_relative": true,
+    "hermitian_corrected_relative": true,
+    "independent_cell_u_relative": true,
+    "local_q_reconstruction_relative": true,
+    "raw_hlambda_minus_direct_relative": false,
+    "shared_trace_q_reconstruction_relative": true,
+    "trace_occurrences": true
+  },
+  "metrics": {
+    "bilinear_corrected_difference": [
+      2.177701378600072e-14,
+      -3.064053595265917e-15
+    ],
+    "bilinear_corrected_relative": 4.677467201326201e-11,
+    "contact_average_vs_saved_max_abs_v": 3.285260423029036e-15,
+    "direct_cell_residual_l2_a": 1.379112636711383e-16,
+    "direct_contact_residual_l2_a": 4.488352729173385e-14,
+    "direct_minus_ideal_max_abs_a": 4.4883063189797685e-14,
+    "direct_root_residual_a": [
+      -3.526692826660849e-14,
+      -2.7762080828663827e-14
+    ],
+    "direct_vs_original_target_relative": 6.75262673967221e-13,
+    "energy_corrected_difference_max_abs": 2.19524919076175e-14,
+    "energy_full": [
+      [
+        0.0004720310817191742,
+        -9.329673378496443e-06
+      ],
+      [
+        -9.329673378496455e-06,
+        2.2428721844235775e-06
+      ]
+    ],
+    "energy_hybrid": [
+      [
+        0.0004720310816972217,
+        -9.329673376703188e-06
+      ],
+      [
+        -9.329673377225704e-06,
+        2.242872184248145e-06
+      ]
+    ],
+    "energy_matrix_corrected_relative": 4.672165996692751e-11,
+    "energy_rho_correction": [
+      [
+        1.9375213500288427e-33,
+        5.54575919800467e-37
+      ],
+      [
+        5.54575919800467e-37,
+        1.0073430960224001e-36
+      ]
+    ],
+    "full_r_bilinear": [
+      0.00046978820953475257,
+      -1.8659346756992873e-05
+    ],
+    "full_r_dual_relative": 9.879896034364875e-11,
+    "full_r_hermitian": [
+      0.00047427395390359976,
+      -3.049318610115481e-20
+    ],
+    "hermitian_corrected_difference": [
+      2.212786160901703e-14,
+      -5.225837530721186e-16
+    ],
+    "hermitian_corrected_relative": 4.666929604577958e-11,
+    "hybrid_h_bilinear": [
+      0.00046978820951297555,
+      -1.865934675392882e-05
+    ],
+    "hybrid_h_hermitian": [
+      0.0004742739538814719,
+      5.225532598860175e-16
+    ],
+    "independent_cell_u_relative": 1.4802813664815985e-15,
+    "lambda_occurrence_max_abs_v": 5.021296620776053e-15,
+    "local_q_reconstruction_relative": 4.3608755443388184e-10,
+    "raw_hlambda_minus_direct_max_abs_a": 3.0319212888516965e-09,
+    "raw_hlambda_minus_direct_relative": 1.4130845734022627e-07,
+    "raw_q_common_voltage_cancellation_max_abs_a": 4.458432167522889e-10,
+    "rho_correction_bilinear": [
+      1.9365140069328156e-33,
+      1.109151839600934e-36
+    ],
+    "rho_correction_hermitian": 1.938528693124864e-33,
+    "saved_full_r_dual_max_abs_v": 5.362562546342743e-15,
+    "shared_trace_q_reconstruction_max_abs_a": 2.6812927575406914e-09,
+    "shared_trace_q_reconstruction_relative": 3.072398945483237e-09,
+    "shifted_q_replay_max_abs_a": 4.415251801760256e-10,
+    "trace_arithmetic_bound_v": 9.38244695449534e-16,
+    "trace_bound_operation_count": 58,
+    "trace_comparison_bound_v": 1.1663370570569179e-14,
+    "u_identity_max_abs_v": 4.1189483600513554e-16
+  },
+  "program": "SPD Decap PI Evaluator",
+  "relative_threshold": 1e-07,
+  "status": "MEASURED_L04_EXACT_TRACE_SAVED_FIELD_EQUIVALENCE_PREACCEPTANCE",
+  "version": "0.23.1"
+}

@@ -1,0 +1,170 @@
+{
+  "archive_checks": {
+    "all_npz_loaded_allow_pickle_false": true,
+    "checkpoint_count": 4,
+    "checkpoints": [
+      {
+        "allow_pickle": false,
+        "crc_ok": true,
+        "full_fingerprint_vector_and_prefix_bindings": true,
+        "matches_final_tagged_prefix": true,
+        "owner_count": 1,
+        "sha256": "cdf7f44934238161a0235d340522773beb9484b5b919bb8063b2435d3f590b05"
+      },
+      {
+        "allow_pickle": false,
+        "crc_ok": true,
+        "full_fingerprint_vector_and_prefix_bindings": true,
+        "matches_final_tagged_prefix": true,
+        "owner_count": 2,
+        "sha256": "38d619762560de4f04b66ea2b5456c64752ee5ba10f1142b70e0b72ca249cf25"
+      },
+      {
+        "allow_pickle": false,
+        "crc_ok": true,
+        "full_fingerprint_vector_and_prefix_bindings": true,
+        "matches_final_tagged_prefix": true,
+        "owner_count": 3,
+        "sha256": "fb5dbd4308bee905ac61082da2febe17adc6079b82799b46fa09f96d0f3f04a9"
+      },
+      {
+        "allow_pickle": false,
+        "crc_ok": true,
+        "full_fingerprint_vector_and_prefix_bindings": true,
+        "matches_final_tagged_prefix": true,
+        "owner_count": 4,
+        "sha256": "a4104fb325502a36b00588d20967fc828ed584e12b59ee310287a77c1a0f1dd3"
+      }
+    ],
+    "final_zip_crc_ok": true
+  },
+  "elapsed_s": 6.319866899983026,
+  "findings": {
+    "P1": [],
+    "P2": []
+  },
+  "limitations": [
+    "Numeric artifact verification only; no geometry, native compilation, LU solve, or replacement promotion.",
+    "M1 GC outgoing and Drive02 finite contact injection differ by the recorded saved-field KCL residual, accepted only under Drive02 1e-9 A tolerance.",
+    "Checkpoint Y is source C times dispersion; final Y is recomputed from M1 C, with the recorded roundoff-scale delta."
+  ],
+  "local_gram": {
+    "canonical_six_entry_groups": 1079330,
+    "groups_per_owner": [
+      539641,
+      527123,
+      5796,
+      6770
+    ],
+    "maximum_eigenvalue_um2": 10631198.055587662,
+    "minimum_eigenvalue_um2": 1.934196091271002e-09,
+    "negative_beyond_tolerance_count": 0,
+    "symmetric_reconstruction": true,
+    "three_distinct_nodes_each": true
+  },
+  "m1": {
+    "branch_admittance_max_abs_error_s": 0.0,
+    "capacitance_max_abs_error_f": 1.0339757656912846e-25,
+    "checkpoint_branch_admittance_max_abs_delta_s": 4.3110032634048756e-16,
+    "maximum_abs_reconstruction_error_um2": 2.2351741790771484e-08,
+    "overlap_area_max_abs_error_um2": 0.00016546249389648438,
+    "shape": [
+      4,
+      535149
+    ],
+    "source_branch_admittance_max_abs_error_s": 4.311003263404876e-16,
+    "source_capacitance_max_abs_error_f": 6.276232897746097e-23
+  },
+  "m1_outgoing_sign": {
+    "corrected_drive_a": [
+      4.568265556782165e-06,
+      9.749542902640428e-07
+    ],
+    "drive02_scalar_gc_kcl_tolerance_a": 1e-09,
+    "mass_drive_minus_drive02_contact_abs_a": 2.7326698039004104e-14,
+    "mass_drive_minus_owner_sum_abs_a": 8.470329472543003e-22,
+    "owner_rhs_plus_outgoing_max_abs_a": 2.654997589676267e-19
+  },
+  "physical_gc": {
+    "nnz": 4830117,
+    "passivity_basis": "Every saved tagged 3x3 Gram is PSD and Re(density*dispersion) is nonnegative; saved Y equals reconstructed T^T M T.",
+    "real_owner_scale_min_s_per_um2": 2.4902167907642823e-14,
+    "reference_max_abs_s": 0.003878901645148396,
+    "row_sum_max_abs_s": 2.890939220980246e-15,
+    "shape": [
+      535153,
+      535153
+    ],
+    "transpose_symmetry_max_abs_s": 0.0,
+    "weighted_owner_gram_max_abs_difference_s": 4.30232940207491e-16,
+    "weighted_owner_gram_relative_max_difference": 1.1091617668254423e-13
+  },
+  "program": "SPD Decap PI Evaluator",
+  "review": "independent saved numeric L25 G/C mass review",
+  "reviewed_hashes": {
+    "gc-mass-shadow.npz": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-gc-mass-02\\gc-mass-shadow.npz",
+      "sha256": "1aaee9b7f045385afcb37bf3bb4889466c3584793f52273e513863cac0ca45fe",
+      "size_bytes": 56197796
+    },
+    "l25-gc-inventory-independent-review.json": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-source-sheet-01\\l25-gc-inventory-independent-review.json",
+      "sha256": "e1da1189e77876c2e79b1cd4a37efc5549c672b33bf76868789811073e42894a",
+      "size_bytes": 7319
+    },
+    "l25-gc-projection-inventory.json": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-source-sheet-01\\l25-gc-projection-inventory.json",
+      "sha256": "703e8cdf9988805a2fb05a40ff659bc9890ba999e2eef00c741a112aa5976a77",
+      "size_bytes": 20467
+    },
+    "owner-mass-candidate-01-unvalidated.npz": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-gc-mass-02\\owner-mass-candidate-01-unvalidated.npz",
+      "sha256": "cdf7f44934238161a0235d340522773beb9484b5b919bb8063b2435d3f590b05",
+      "size_bytes": 9578111
+    },
+    "owner-mass-candidate-02-unvalidated.npz": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-gc-mass-02\\owner-mass-candidate-02-unvalidated.npz",
+      "sha256": "38d619762560de4f04b66ea2b5456c64752ee5ba10f1142b70e0b72ca249cf25",
+      "size_bytes": 18914764
+    },
+    "owner-mass-candidate-03-unvalidated.npz": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-gc-mass-02\\owner-mass-candidate-03-unvalidated.npz",
+      "sha256": "fb5dbd4308bee905ac61082da2febe17adc6079b82799b46fa09f96d0f3f04a9",
+      "size_bytes": 19082354
+    },
+    "owner-mass-candidate-04-unvalidated.npz": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-gc-mass-02\\owner-mass-candidate-04-unvalidated.npz",
+      "sha256": "a4104fb325502a36b00588d20967fc828ed584e12b59ee310287a77c1a0f1dd3",
+      "size_bytes": 19234315
+    },
+    "receipt.json": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-gc-mass-02\\receipt.json",
+      "sha256": "39c522208ebc3690613ceb1b1359a2bb86c49469143f457f1dbe1084384cdd56",
+      "size_bytes": 10270
+    },
+    "sheet-electrode-drive.json": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-sheet-drive-02\\sheet-electrode-drive.json",
+      "sha256": "ada249febeb03dd48b57bc54294d5360477534d33c4c8586fdf089eb998906b5",
+      "size_bytes": 101496
+    }
+  },
+  "source_contract": {
+    "external_global_reduced_indices": [
+      126094,
+      725157,
+      744014,
+      163769
+    ],
+    "owner_count": 4,
+    "owner_fingerprint_set_sha256": "be7097076babc8ccbb46920a4d39f0dc78981962d99767947f22a60b54de2986",
+    "partial_ordinals": [
+      13,
+      14
+    ],
+    "retained_nonincident_owner_counts": {
+      "13": 3,
+      "14": 11
+    }
+  },
+  "status": "ACCEPT_CONDITIONAL_L25_GC_MASS_NUMERIC"
+}

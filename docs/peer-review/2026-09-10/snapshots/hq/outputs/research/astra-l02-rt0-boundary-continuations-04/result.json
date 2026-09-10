@@ -1,0 +1,53 @@
+{
+  "assertions": {
+    "all_source_matches_exact_not_tolerance_only": true,
+    "endpoint_touches_retain_base_exterior_or_hole_class": true,
+    "full_arc_requires_whole_segment_coverage": true,
+    "no_normal_current_inferred": true,
+    "source_witness_bijection_exact_0_to_n_minus_1": true
+  },
+  "counts": {
+    "ARTIFICIAL_OR_UNKNOWN_CUT_UNMATCHED": 0,
+    "EXCLUDED_PAD_BOUNDARY_ARC_GEOMETRY_ONLY": 1154,
+    "SOURCE_BOUNDARY_MULTI_MATCH_UNRESOLVED": 0,
+    "SOURCE_POLYGON_EXTERIOR_BOUNDARY_NO_FLUX_NOT_INFERRED": 8,
+    "SOURCE_POLYGON_HOLE_BOUNDARY_UNRESOLVED": 816756,
+    "excluded_pad_candidate_segments": 1490,
+    "excluded_pad_endpoint_touch_segments": 336,
+    "excluded_pad_full_boundary_arc_segments": 1154,
+    "excluded_pad_partial_segments": 0,
+    "exterior_support_rows": 817918
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-rt0-boundary-continuations-04\\driver-at-run.py",
+    "sha256": "a17f78b8165efe4f3138a64067d615f7fdf9239f50be2c25b18afeb184e1e2cd",
+    "size_bytes": 26223
+  },
+  "elapsed_s": 3.4436861999565735,
+  "inputs": {
+    "excluded_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-excluded-via-flat-domain-01\\result.json",
+      "sha256": "5e18de3bba96b07870175058852aacd5ac2c937c8ffe946bd95518899e337587",
+      "size_bytes": 30276
+    },
+    "map02": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-rt0-boundary-continuations-02\\boundary-continuation-map.npz",
+      "sha256": "e79e63982bb974c39b82c22f1cfbea5eca594e7bebd319c19f078b4174881557",
+      "size_bytes": 17597619
+    },
+    "map02_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-rt0-boundary-continuations-02\\result.json",
+      "sha256": "92b5acc317d2b4f7513d0e5137d85c70f3eebebb7809cfa429255553608d81ca",
+      "size_bytes": 4873
+    }
+  },
+  "output": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-rt0-boundary-continuations-04\\boundary-continuation-map.npz",
+    "sha256": "bee3df63c4178620aa330c19e06c4d8351d7bd2531a7d724f33abdddeb0cb24e",
+    "size_bytes": 17611053
+  },
+  "program": "SPD Decap PI Evaluator",
+  "scope": "A saved-map-only refinement of excluded pad geometry evidence. Only a boundary intersection covering an entire exterior segment is labeled EXCLUDED_PAD_BOUNDARY_ARC_GEOMETRY_ONLY. Point endpoint touches retain their exact saved source exterior/hole class. Excluded via vertical continuation remains separate contact-rim evidence; no flux condition is inferred.",
+  "status": "QUALIFIED_L02_RT0_BOUNDARY_SEGMENT_CONTINUATION_MAP_REFINED_NO_FLUX_INFERENCE",
+  "version": "0.23.1"
+}

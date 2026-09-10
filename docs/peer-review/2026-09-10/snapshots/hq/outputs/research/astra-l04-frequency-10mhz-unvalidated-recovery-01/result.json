@@ -1,0 +1,181 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "RECOVERED_UNVALIDATED_FULL_CONTACT_L04_CHECKPOINT",
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-10mhz-unvalidated-recovery-01\\driver-at-run.py",
+    "sha256": "0334087871401cf664f4eea7cf66b97cdb37fdb1e49a0a06dfc1e8e0cdd6ba95",
+    "size_bytes": 16956
+  },
+  "field": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-10mhz-unvalidated-recovery-01\\recovered-unvalidated-full-contact-l04-10mhz-field.npz",
+    "sha256": "c60f3f67ac7b8914ab36fa1e9d273c4be20f259817347517cb8117c032163443",
+    "size_bytes": 150209956
+  },
+  "inputs": {
+    "stream_reader": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\solve_astra_l04_fixed_contact_stream.py",
+      "sha256": "65c48fe18db408a9c38ee28a86b50f57c470e3286b7dab975ca0a77f1c6b8c27",
+      "size_bytes": 24864
+    },
+    "stream_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\result.json",
+      "sha256": "3e5417fa1a2db0308208449896c2aa1650beff5051d2ee03b60a8b4a11fe2bf1",
+      "size_bytes": 8797
+    },
+    "stream_guard": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\external-budget.json",
+      "sha256": "016bd3039ada75e8475a23ab328b2b0f135f641235bf5c9088e62636c0d04efc",
+      "size_bytes": 1634
+    },
+    "stream_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\driver-at-run.py",
+      "sha256": "65c48fe18db408a9c38ee28a86b50f57c470e3286b7dab975ca0a77f1c6b8c27",
+      "size_bytes": 24864
+    },
+    "stream_field": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\l04-fixed-contact-current.npz",
+      "sha256": "dec07e1681c8400c43b6c79ab7a25ef37f7c19443441ad369016f6daefbfe9fd",
+      "size_bytes": 63886278
+    },
+    "stream_space": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\l04-fixed-contact-rt0-space.npz",
+      "sha256": "5d31b3c6183eb4f43723eb80d1a545953a42fb2c9320be425d3ebc034cb51bb6",
+      "size_bytes": 79222436
+    },
+    "stream_system": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\l04-fixed-contact-stream-system.npz",
+      "sha256": "b299d67995b58b7fa698b080380cda495032472d0f426ed2dd9e4b78542fb34a",
+      "size_bytes": 21072655
+    },
+    "dual_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-saved-contact-potentials-01\\driver-at-run.py",
+      "sha256": "e3b0ff15c28b2ecd9f132e311a843225cd9ac6834915c63cc61ef84df57c2c39",
+      "size_bytes": 9649
+    },
+    "dual_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-saved-contact-potentials-01\\result.json",
+      "sha256": "97e36e08295f2d8eeeb15c508598842d552ee6f7c2601fdac51d8ba5aa6eb6b4",
+      "size_bytes": 5937
+    },
+    "dual_guard": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-saved-contact-potentials-01\\external-budget.json",
+      "sha256": "60676fd4b5f5d937f0668d21dae39d9e78f6f9d22338ce02dae9dc039a1ecb41",
+      "size_bytes": 1016
+    },
+    "dual_artifact": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-saved-contact-potentials-01\\l04-saved-contact-dual-potentials.npz",
+      "sha256": "d638dcf046a22709111bceea53f720477430c78d46ed2f79d8dc1b60b52f0fd2",
+      "size_bytes": 1223786
+    },
+    "external_guard": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_fmm3d_runtime.py",
+      "sha256": "2961d1606ec2d4583c37d990d238a6abc87a54d8e0b93f9d83397f3851536a25",
+      "size_bytes": 16465
+    },
+    "solver_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-10mhz-hybrid-aux-right-lgmres-01\\result.json",
+      "sha256": "5fa0b4faef1909e0c66d0d21f75e37aa3f0cd96c94504bcf18be09c2001e2e8d",
+      "size_bytes": 28622
+    },
+    "solver_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-10mhz-hybrid-aux-right-lgmres-01\\driver-at-run.py",
+      "sha256": "e50707e8189ae6f71e107a620d8b194c387965c53db276c4ebdc97fc1dcd3c9f",
+      "size_bytes": 29495
+    },
+    "solver_external": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-10mhz-hybrid-aux-right-lgmres-01\\external-budget.json",
+      "sha256": "c05235fc381d1a442d7835b90e996aa2051dae5841d6c71e1c2447bc3df00caf",
+      "size_bytes": 1274
+    },
+    "solver_field": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-10mhz-hybrid-aux-right-lgmres-01\\restart-4-unvalidated-field.npz",
+      "sha256": "02a2444e2aae549ffaae6422ec189a5d39e1a74213ae6cfb0bb449ca7c1a1849",
+      "size_bytes": 45761458
+    }
+  },
+  "prior_solve": {
+    "solver_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-10mhz-hybrid-aux-right-lgmres-01\\result.json",
+      "sha256": "5fa0b4faef1909e0c66d0d21f75e37aa3f0cd96c94504bcf18be09c2001e2e8d",
+      "size_bytes": 28622
+    },
+    "solver_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-10mhz-hybrid-aux-right-lgmres-01\\driver-at-run.py",
+      "sha256": "e50707e8189ae6f71e107a620d8b194c387965c53db276c4ebdc97fc1dcd3c9f",
+      "size_bytes": 29495
+    },
+    "solver_external": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-10mhz-hybrid-aux-right-lgmres-01\\external-budget.json",
+      "sha256": "c05235fc381d1a442d7835b90e996aa2051dae5841d6c71e1c2447bc3df00caf",
+      "size_bytes": 1274
+    },
+    "solver_field": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-10mhz-hybrid-aux-right-lgmres-01\\restart-4-unvalidated-field.npz",
+      "sha256": "02a2444e2aae549ffaae6422ec189a5d39e1a74213ae6cfb0bb449ca7c1a1849",
+      "size_bytes": 45761458
+    }
+  },
+  "numerical": {
+    "info": 4,
+    "initial_scaled_residual_relative": 24.024289493894187,
+    "final_scaled_residual_relative": 0.008413688787312131,
+    "field_scaled_residual_relative": 0.008413688787312131,
+    "algebraically_converged": false
+  },
+  "original_numerical_gate": false,
+  "recovery": {
+    "metrics": {
+      "apply_seconds": 3.3713960999739356,
+      "tree_lift_seconds": 1.4299324000021443,
+      "r_c_h_correction_seconds": 0.5640964999911375,
+      "dual_seconds": 1.2112709000357427,
+      "kcl_max_abs_a": 5.713447131315291e-18,
+      "kcl_relative": 1.3698516861157739e-17,
+      "independent_constraint_max_a": 2.360630828161597e-18,
+      "root_constraint_abs_a": 5.713447131315291e-18,
+      "raw_ct_rq_max_abs": 1.1493692310819436e-18,
+      "raw_ct_rq_norm_ratio": 1.3407058148646928e-13,
+      "joule_energy_real": 9.434535003283479e-07,
+      "energy_scaled_stationarity_relative": 2.4724788849450652e-14,
+      "dual_rq_relative": 6.45526896103413e-12
+    },
+    "field": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-10mhz-unvalidated-recovery-01\\recovered-unvalidated-full-contact-l04-10mhz-field.npz",
+      "sha256": "c60f3f67ac7b8914ab36fa1e9d273c4be20f259817347517cb8117c032163443",
+      "size_bytes": 150209956
+    },
+    "contact_equation": {
+      "status": "NOT_COMPUTED_DIAGNOSTIC_ONLY"
+    }
+  },
+  "geometry_approximation": {
+    "domain": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-conditional-sheet-mesh-02\\l04-coalesced-conductor-domain.wkb",
+      "sha256": "8dbfbb75d87efa7c9504b1ab521a78687ef97b45d1eb0e6a8d5ff6007658c674",
+      "size_bytes": 14024197
+    },
+    "max_vertex_displacement_um": 1.473493695890548e-10,
+    "method": "EXACT_TWO_SOURCE_VERTEX_COALESCENCE_L04_RING563",
+    "source_domain": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-pad-conductor-domain-01\\l04-pad-augmented-conductor-domain.wkb",
+      "sha256": "0eeaffc34a6b9759fd285f28d35ebd59042e6bcd909a697fad3f18a5d2eafa68",
+      "size_bytes": 14024197
+    },
+    "unchanged_source_geometry": false,
+    "witness_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-cdt-local-coalescence-witness-02\\result.json",
+      "sha256": "3e097e7086f6bd10e009afbcdb6b98ca8029f6555273f4e7b1f92c3059a216ce",
+      "size_bytes": 6819
+    }
+  },
+  "frequency_hz": 10000000.0,
+  "source_current_amplitude_a": 1.0,
+  "source_current_a": 1.0,
+  "scope": "Diagnostic full-contact L04 checkpoint recovery only. No numerical, physical, PowerSI, or acceptance-compatible gate is emitted.",
+  "budget": {
+    "internal_seconds": 120.0,
+    "memory_gib": 8.0,
+    "elapsed_seconds": 6.546999999962281
+  }
+}

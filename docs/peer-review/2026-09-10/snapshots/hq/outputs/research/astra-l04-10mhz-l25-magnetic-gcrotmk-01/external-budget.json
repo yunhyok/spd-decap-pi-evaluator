@@ -1,0 +1,26 @@
+{
+  "driver_sha256": "fb737651456a57c1fcba96073ef1b8b2e48682b4dfb930a1abf10603bf51bcce",
+  "elapsed_s": 560.5,
+  "exit_code": 0,
+  "max_memory_bytes": 34359738368,
+  "max_runtime_s": 720.0,
+  "memory_at_launch": {
+    "available_commit_bytes": 42234863616,
+    "available_physical_bytes": 38312722432,
+    "total_physical_bytes": 68374552576
+  },
+  "owned_pid": 24612,
+  "program": "SPD Decap PI Evaluator",
+  "sampled_peak_private_bytes": 28166250496,
+  "sampled_peak_working_set_bytes": 11813048320,
+  "status": "COMPLETED_NATIVE_WORKER",
+  "version": "0.23.1",
+  "worker_command": [
+    "C:\\Users\\User\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+    "-B",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\continue_astra_l04_10mhz_l25_magnetic_gcrotmk.py",
+    "--native-worker",
+    "--output",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-l25-magnetic-gcrotmk-01"
+  ]
+}

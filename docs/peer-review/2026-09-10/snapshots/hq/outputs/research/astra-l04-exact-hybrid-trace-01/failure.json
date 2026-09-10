@@ -1,0 +1,9 @@
+{
+  "status": "STOP_L04_EXACT_TRACE_PREPARATION",
+  "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\assemble_astra_l04_exact_hybrid_trace.py\", line 355, in main\n    run(output)\n  File \"C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\assemble_astra_l04_exact_hybrid_trace.py\", line 341, in run\n    require(all(gates.values()), \"saved-field equivalence gates; arrays and metrics preserved\")\n  File \"C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\assemble_astra_l04_exact_hybrid_trace.py\", line 56, in require\n    raise AssertionError(message)\nAssertionError: saved-field equivalence gates; arrays and metrics preserved\n",
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\assemble_astra_l04_exact_hybrid_trace.py",
+    "sha256": "d2ba043b93d09590796b67274052e835d612123670df902528f15a65dbf21a3e",
+    "size_bytes": 32931
+  }
+}

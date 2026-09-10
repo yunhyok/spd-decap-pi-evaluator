@@ -1,0 +1,80 @@
+{
+  "contact_count": 38856,
+  "coverage": {
+    "calls": 4255648,
+    "global_control_checks": 1054,
+    "global_controls_s": 2.9654190007131547,
+    "indexed_predicate_s": 245.29493616940454
+  },
+  "elapsed_s": 1437.0470000000205,
+  "inputs": {
+    "coverage_predicate": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_l02_triangle_coverage.py",
+      "sha256": "4fc704eb32c70cb5311de07a0b94bd0f998975d3c159a2e8150f3e072f3be07c"
+    },
+    "fem": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\src\\spd_decap_pi\\_core\\solver\\tri_fem_sheet.py",
+      "sha256": "16eb6fd122fb5cf8d7ab60bb4b0364b760cb354806c02651d2847ede633640e0"
+    },
+    "persistence": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\project_astra_l14_gc_mass.py",
+      "sha256": "f2c668fd090db5c4606eec27558c9bdbbdde6552d2f82c3b64b8837bd7350dc3"
+    },
+    "previous_preflight": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\preflight_astra_l14_sheet_mesh.py",
+      "sha256": "88db083c385e24db8ad6d301adc98874212712afd0fbbcb3bce29aa0878cda5f"
+    }
+  },
+  "mesh_nodes": 1439614,
+  "mesh_triangles": 2127824,
+  "operator_identity_sha256": "c0f02b0123e3697e455474754ea047ab5ee2afc0259bbe30aed242be645abd76",
+  "program": "SPD Decap PI Evaluator",
+  "scope": "Existing fixed-level native FEM compiler with unchanged strict contact/triangle/union checks and exact exterior/hole-interior coverage indexing with original-predicate controls. Micrometre coordinates are a DC similarity calculation only. Source pad copper is retained;16-sided drill disks are conditional filled equipotential contacts, not a chosen plating/current injection truth. Includes source support metadata for20 junction corrections and2 leaves, but does not attach or revive any circuit owner. No Kron/contact dense matrix, global circuit assembly, LU, G/C projection, magnetic current basis, convergence or PowerSI claim.",
+  "script_sha256": "176ae7bd1aa0d9727cc905b4f805fa613a04988bd2a3fce58268351a2ad70a9c",
+  "snapshot": {
+    "coordinate_units": "um",
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-sheet-mesh-preflight-02\\mesh-stiffness.npz",
+    "sha256": "137b4952f739a75e7bf6f2e21684529a43c48558412df59faab0ad003ea10fb9",
+    "stiffness_units": "dimensionless; sigma*t multiplies for DC admittance"
+  },
+  "source_outputs": {
+    "domain": {
+      "bytes": 13751877,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-pad-conductor-domain-01\\l02-pad-augmented-conductor-domain.wkb",
+      "sha256": "306515d688f6359c49a867c18240bfd0c18008086a4e8eab0da056cff97bf6f7"
+    },
+    "drill_union": {
+      "bytes": 160281009,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-pad-conductor-domain-01\\l02-source-drill-footprint-union.wkb",
+      "sha256": "7f8d7e29ab51bd29ce4e5b54711ca5bb6510c4e9583ee1891d4795e472790995"
+    },
+    "support_map": {
+      "bytes": 1262293,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-pad-conductor-domain-01\\l02-pad-drill-support-map.npz",
+      "sha256": "3774bb012f5769be006ca27f463d6dcb58d07c4c611ffbf8072bc80754d20a47"
+    }
+  },
+  "source_pad_coverage": {
+    "strict": false,
+    "uncovered_area_um2": 1.3601868730772715e-12
+  },
+  "source_result": {
+    "path": "outputs\\research\\astra-l02-pad-conductor-domain-01\\result.json",
+    "sha256": "91e16302f7b7c6b5a43067a6208331f1aa1acee75440aa48ba035c02f1350a9d"
+  },
+  "source_review_sha256": "ac4f8ba26c1ad976d843fc0177e449f24523382498b21f7c65ad5cf5a5cae7f6",
+  "source_status": "COMPLETED_CONDITIONAL_L02_PAD_AUGMENTED_DOMAIN_WITH_PAD_COVERAGE_RESIDUE",
+  "status": "COMPLETED_CONDITIONAL_L02_SHEET_MESH_PREFLIGHT",
+  "stiffness_nnz": 8421202,
+  "unvalidated_cdt_checkpoints": [
+    {
+      "face_wkb_sha256": "de6eced976e3b6df5fe8fc31bebf95756e9550ddd0d4bd6fa2ee9553c3784622",
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-sheet-mesh-preflight-02\\unvalidated-large-face-cdt.wkb",
+      "scope": "Raw CDT output before native coverage, area, contact or stiffness checks; not an accepted mesh.",
+      "sha256": "009beaed27ffab2f0e3f40fe5aadac1ebc12aed81ed7a42a79991b1664de804c",
+      "status": "UNVALIDATED_CDT_ONLY",
+      "triangle_count": 1583840
+    }
+  ],
+  "version": "0.23.1"
+}

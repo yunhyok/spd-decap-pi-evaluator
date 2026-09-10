@@ -1,0 +1,97 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "DIAGNOSTIC_UNVALIDATED_L04_OUTPUT_IMPACT_10MHZ",
+  "inputs": {
+    "solver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-10mhz-hybrid-aux-right-lgmres-01\\result.json",
+      "sha256": "5fa0b4faef1909e0c66d0d21f75e37aa3f0cd96c94504bcf18be09c2001e2e8d"
+    },
+    "physical_diagnostic": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-10mhz-unvalidated-physical-diagnostic-01\\physical-diagnostic.json",
+      "sha256": "a8adce893b8c518f2636030cdc0913984a0a8284f70f8b6a958a818440045206"
+    },
+    "saved_reference": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_loaded_development_reference_2026-09-07.json",
+      "sha256": "761d61334678ceaca0db55bc8c5539bb080ee36363eae33a2c419a1ea5c06430"
+    }
+  },
+  "frequency_hz": 10000000.0,
+  "source_current_a": 1.0,
+  "reference_port_one_based": 18,
+  "reference_rail_id": "ADC_VDD_075_VTRIP_SRAM/0",
+  "reference_point": {
+    "frequency_hz": 10000000.0,
+    "source_frequency_index": 200,
+    "reference_zdd_ohm": [
+      0.0013351332705258876,
+      0.0008761129830389292
+    ],
+    "s_to_z_condition": 37.239753455080745,
+    "s_to_z_relative_residual": 2.9436779916631783e-16
+  },
+  "original_numerical_gate": false,
+  "solver_numerical": {
+    "algebraically_converged": false,
+    "field_scaled_residual_relative": 0.008413688787312131,
+    "final_scaled_residual_relative": 0.008413688787312131,
+    "info": 4,
+    "initial_scaled_residual_relative": 24.024289493894187
+  },
+  "physical_gates": {
+    "finite_source_assembled_forward_envelope": true,
+    "full_source_assembled_forward_envelope": true,
+    "l02_cell_kcl": true,
+    "l02_constitutive": true,
+    "l02_global_rt0_kcl": true,
+    "l02_local_constitutive": true,
+    "l02_local_global_joule_identity": true,
+    "l02_local_joule_passivity": true,
+    "l02_shared_jump": true,
+    "l04_all_contact_kcl": false,
+    "l04_bq_divergence_kcl": true,
+    "l04_bq_scatter": true,
+    "l04_constitutive": true,
+    "l04_electrode_work": true,
+    "l04_energy_stationarity": true,
+    "l04_exterior_zero": true,
+    "l04_inherited_dual_rq_relative": true,
+    "l25_constitutive": true,
+    "matrix_global_circuit_kcl": false,
+    "matrix_identity_power": false,
+    "physical_passivity": true,
+    "physical_power_closure": false,
+    "physical_source_global_circuit_kcl": false
+  },
+  "zdd_ohm": {
+    "unvalidated": [
+      0.0006383312485782705,
+      0.0001360440491696138
+    ],
+    "stationary_unvalidated": [
+      0.0006407753922677915,
+      0.0001390262704338679
+    ],
+    "reference": [
+      0.0013351332705258876,
+      0.0008761129830389292
+    ]
+  },
+  "diagnostic_errors_unvalidated": {
+    "complex_relative_error": 0.6365262224735816,
+    "complex_gap_ohm": 0.0010164817188069604,
+    "magnitude_error_db": -7.771826721660454,
+    "phase_error_deg": -21.24170941508725
+  },
+  "diagnostic_errors_stationary_unvalidated": {
+    "complex_relative_error": 0.6341173997501796,
+    "complex_gap_ohm": 0.0010126350206259023,
+    "magnitude_error_db": -7.731774748037571,
+    "phase_error_deg": -21.031355638714878
+  },
+  "stationary_correction_ohm": 3.855837398541936e-06,
+  "physical_power_defect_ohm": 3.1663250317715042e-06,
+  "physical_power_defect_relative_to_port": 0.004851360610017931,
+  "physical_power_defect_to_raw_reference_gap": 0.0031149847293739865,
+  "scope": "Post-freeze saved-JSON development comparison only. info4, original 1e-9 numerical failure and all five physical failures preserved. Raw and stationary estimates are unvalidated; neither stationary correction nor power imbalance bounds impedance error. No fitting, accepted improvement, attribution of the full gap to physics, holdout or broadband claim."
+}

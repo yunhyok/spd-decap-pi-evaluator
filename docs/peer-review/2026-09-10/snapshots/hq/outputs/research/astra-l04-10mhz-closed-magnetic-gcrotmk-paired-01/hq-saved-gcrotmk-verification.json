@@ -1,0 +1,45 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "PASS_SAVED_COMPLETE_CURRENT_GCROTMK_REVIEW",
+  "result_sha256": "ef23ddf9c0a81f5ef0e234932592ea6403685f022c7e3dc1c04bd4517c488f03",
+  "guard_sha256": "1d87f15f23219a26f2e690f26ae8ad12b4bbdbd006f8d08155aef4e63bb1c111",
+  "final_artifact_sha256": "db4a1c4a1d1b1a1279616419900b2a98380c4ac2d8a3a25727f97fb108dc07f1",
+  "capture_artifact_sha256": "3a4e2f68ff5120ff180c9959b9ae4fa2d4cc59482f8be89e1b476b5d595063bf",
+  "qr_correction_relative": 1.4681412782013007e-13,
+  "qr_action_relative": 1.8566369275351525e-11,
+  "independent_explicit_replay_relative": 7.296298677065407e-11,
+  "replay_denominator": 0.6898180959975525,
+  "verified_block_norms": {
+    "potential": 0.0008984581123671976,
+    "l25": 0.009763764527418931,
+    "contact": 0.6896787426043994,
+    "original_nonclosed": 0.6897484369863488,
+    "closed": 0.009803022012451233,
+    "full": 0.6898180959975525
+  },
+  "original_rhs_relative_residual": 689.0729320236888,
+  "raw_z_unvalidated": [
+    0.0008425135764462607,
+    0.00015682342494613286
+  ],
+  "stationary_j_unvalidated": [
+    0.0010705443639005023,
+    0.00021971144088153317
+  ],
+  "stationary_gap_ohm": 0.00023654374347103894,
+  "raw_gcrotmk_info": 1,
+  "expected_progress_caps": {
+    "full": 0.7912610103778646,
+    "gap_ohm": 0.00010279694220459625
+  },
+  "paired_comparison": {
+    "full_residual_factor": 0.6974367112244105,
+    "stationary_gap_factor": 1.8408620987985973,
+    "elapsed_factor": 1.0515483379832091,
+    "elapsed_lte_110_percent": true
+  },
+  "positive_progress_screen": false,
+  "elapsed_s": 8.435115700001916,
+  "scope": "Saved evidence only. No new H/FMM, physical acceptance, accuracy claim, or original source/reference access."
+}

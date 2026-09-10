@@ -1,0 +1,2362 @@
+{
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-release-basis-lgmres-01\\driver-at-run.py",
+    "sha256": "e42a44d48a5e7e7b0a143db493e82e4c9099e86583ae7d56f4642370a5056b4c",
+    "size_bytes": 5307
+  },
+  "field": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-release-basis-lgmres-01\\unvalidated-field.npz",
+    "sha256": "d5bd9859cb6ea8c46745051da9c026f79c8d9bfa705bba9a213f349a060057ca",
+    "size_bytes": 40147119
+  },
+  "frequency_hz": 1000000.0,
+  "inputs": {
+    "accepted_external": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-block-lgmres-02\\external-budget.json",
+      "sha256": "0c2d721588653bfb423e57b0ce61cab2bb1b067a4e443586c2ad884c25fb8eaf",
+      "size_bytes": 1033
+    },
+    "accepted_field": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-block-lgmres-02\\field.npz",
+      "sha256": "c7360f92732f956c6c63c3e564cd97315b26a09a9a79414446bdcd4a6fce76f3",
+      "size_bytes": 30741111
+    },
+    "accepted_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-block-lgmres-02\\result.json",
+      "sha256": "832841f9277bc47a9be5ef87b1cee940bff176405698f48ea4fb08ed26e9c097",
+      "size_bytes": 15819
+    },
+    "canonical_ae0_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l02_conditional_hybrid_block_lgmres.py",
+      "sha256": "ae0fb71ea00d02381abf28bf440d9407191e45f1c43d774cae31da6e0fb8da5e",
+      "size_bytes": 35889
+    },
+    "conditional": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-operator-02\\conditional-hybrid-operator.npz",
+      "sha256": "5ab5ba38aaf8c317aa05ae1d4f790c1d6447406ec25afe3c30e96536c714aa92",
+      "size_bytes": 115480771
+    },
+    "conditional_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-operator-02\\result.json",
+      "sha256": "604a44f12ce843b4ccbf2d268ae4a6887b95cf9c3133c8f55576a484b49bc7b5",
+      "size_bytes": 5391
+    },
+    "exact_external": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-conditional-l02-exact-factor-guard-01\\external-budget.json",
+      "sha256": "ae2e4a03f978dccaaeeb9aecd0e5ec9303a9e48bb597d550cb0c96b0b276eebc",
+      "size_bytes": 995
+    },
+    "exact_full_memory_stop": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-exact-lgmres-01\\external-budget.json",
+      "sha256": "444e87e3e9c10f68c0cacd03f06850bdeca6af9917cb63210b3fe60a804159c7",
+      "size_bytes": 1029
+    },
+    "exact_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_conditional_l02_exact_factor.py",
+      "sha256": "561175a0d899e5658cfaa8a63efc7eda5513c494f86e7591868ec79b6c90e81d",
+      "size_bytes": 4446
+    },
+    "exact_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-conditional-l02-exact-factor-01\\result.json",
+      "sha256": "612770dfc935d8b691ff3424f2f48fde082d478791bab15218285427b9df195f",
+      "size_bytes": 2309
+    },
+    "exact_wrapper_frozen": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-exact-lgmres-01\\driver-at-run.py",
+      "sha256": "c1ab14f84dbb4284c32e1c8755a150f4abba0225ce39173e92809043a0cb5284",
+      "size_bytes": 22501
+    },
+    "exact_wrapper_source": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l02_conditional_hybrid_exact_lgmres.py",
+      "sha256": "c1ab14f84dbb4284c32e1c8755a150f4abba0225ce39173e92809043a0cb5284",
+      "size_bytes": 22501
+    },
+    "frozen_ae0_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-block-lgmres-01\\driver-at-run.py",
+      "sha256": "ae0fb71ea00d02381abf28bf440d9407191e45f1c43d774cae31da6e0fb8da5e",
+      "size_bytes": 35889
+    },
+    "frozen_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\solve_astra_l02_l14_l25_combined_block_lgmres.py",
+      "sha256": "853f193fd51d3c204668019f7957cc74ea295a0e47206aae338076dfa796c692",
+      "size_bytes": 45742
+    },
+    "guarded_source_worker": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_fmm3d_runtime.py",
+      "sha256": "2961d1606ec2d4583c37d990d238a6abc87a54d8e0b93f9d83397f3851536a25",
+      "size_bytes": 16465
+    },
+    "low_memory_frozen": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-exact-low-memory-lgmres-01\\driver-at-run.py",
+      "sha256": "87366a4f36478a9fbb5181d82d5476d0075f91eba5700882928f7ffe2951512f",
+      "size_bytes": 4453
+    },
+    "low_memory_source": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l02_conditional_hybrid_exact_low_memory_lgmres.py",
+      "sha256": "87366a4f36478a9fbb5181d82d5476d0075f91eba5700882928f7ffe2951512f",
+      "size_bytes": 4453
+    },
+    "low_memory_stop": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-exact-low-memory-lgmres-01\\external-budget.json",
+      "sha256": "5fb05c755208f3205f8f1b9195858653c704b1966548c4257e6b48f2191a1eb0",
+      "size_bytes": 1051
+    },
+    "old_operator": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-operator-02\\combined-operator.npz",
+      "sha256": "45cc79706849631e9c33dc2f0d0e3c7910fe7dcce817585c728f6f1e3c30a1e8",
+      "size_bytes": 77455200
+    },
+    "physical_validator": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\validate_astra_l02_hybrid_field.py",
+      "sha256": "fd28d5a3eef17d7d85e0fab52de1a88e1910faa2ad46a4cde3b16d3607c8abd9",
+      "size_bytes": 19406
+    },
+    "transfer": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-hybrid-p1-transfer-01\\p1-hybrid-transfer.npz",
+      "sha256": "7db244bf196f7c2195a0ce79e7abed848ae0c2404809ea2c25dcedec23528a68",
+      "size_bytes": 16620587
+    },
+    "transfer_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-hybrid-p1-transfer-01\\result.json",
+      "sha256": "01e6634740daa33cbed0d25b076fe30c8a2502e8a77b4b7548a1de4ab48f9dd5",
+      "size_bytes": 2908
+    },
+    "warm_final_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-galerkin-sgs-lgmres-01\\driver-at-run.py",
+      "sha256": "0324a8992b0cee43a05cdd7f1f196710d8bd31603c804099dea6fb6c2e9d0d28",
+      "size_bytes": 14010
+    },
+    "warm_final_external": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-galerkin-sgs-lgmres-01\\external-budget.json",
+      "sha256": "d804739817012e470bb5c88f50f5a1499b19654dfba105f3f1cb49cef0b4b247",
+      "size_bytes": 878
+    },
+    "warm_final_factor": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-galerkin-sgs-lgmres-01\\factor-diagnostic.json",
+      "sha256": "3441f1ab54a6eb9fe59ad4fc56578ef6c6b69df21a65649c5fed9c538568395c",
+      "size_bytes": 1297
+    },
+    "warm_final_failure": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-galerkin-sgs-lgmres-01\\failure.json",
+      "sha256": "b92c269ee63991b2a8b2cfee93417ed852172b22c915b7638ecafcfe16fc2b04",
+      "size_bytes": 168
+    },
+    "warm_final_field": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-galerkin-sgs-lgmres-01\\unvalidated-field.npz",
+      "sha256": "1a8efde773057e73ee6a37e76d1131f79679be5e235c2a8a23c3a1e6624f2449",
+      "size_bytes": 41790459
+    },
+    "warm_final_json": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-galerkin-sgs-lgmres-01\\unvalidated-field.json",
+      "sha256": "08f0a9e115a6bdc27a4ebd86253b0575146f7bec6726d9ad5ea4b36006759ac6",
+      "size_bytes": 71106
+    }
+  },
+  "latest_outer_field": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-release-basis-lgmres-01\\latest-unvalidated-outer-field.npz",
+    "sha256": "a675a8307e852e31d47cc1186e5810df98316eb8948c19d388a384aa188f1e90",
+    "size_bytes": 40396143
+  },
+  "lgmres": {
+    "callback_semantics": "x_k at the start of each outer cycle",
+    "final_scaled_residual_relative": 1.2079399903272957e-09,
+    "info": 20,
+    "initial_scaled_residual_relative": 2.981808099577283e-06,
+    "inner_m": 8,
+    "maxiter": 20,
+    "outer_callbacks": 20,
+    "outer_history": [
+      {
+        "callback_index": 0,
+        "completed_outer_cycles": 0,
+        "operator_matvec_count": 1,
+        "preconditioner_matvec_count": 0,
+        "scaled_residual_l2": 1.84649559102473e-09,
+        "scaled_residual_relative": 2.981808099577283e-06,
+        "scaled_residual_squared_norms": {
+          "current": 2.3242440796617095e-33,
+          "l02": 3.4064011204184953e-18,
+          "l14": 1.6787097600970646e-22,
+          "l25": 1.249089248782227e-22,
+          "native": 2.852067354327863e-21
+        },
+        "top_physical_kcl_active_indices": [
+          1522412,
+          1522414,
+          3002344,
+          2998257,
+          1522416,
+          2995761,
+          2361362,
+          1522418,
+          3026496,
+          2976843,
+          1522454,
+          1522448,
+          3031023,
+          2489887,
+          1522410,
+          1522404
+        ],
+        "top_physical_kcl_values_a": [
+          [
+            -1.1723867435821681e-06,
+            -7.617555474727051e-07
+          ],
+          [
+            -1.1209836062489836e-06,
+            -8.210035434423859e-07
+          ],
+          [
+            -1.1104654677324133e-06,
+            -7.36286684493298e-07
+          ],
+          [
+            -1.0560607500986752e-06,
+            -7.95749863176376e-07
+          ],
+          [
+            -9.199458340286615e-07,
+            -7.735573223824045e-07
+          ],
+          [
+            -8.823788374134889e-07,
+            -7.563466915341822e-07
+          ],
+          [
+            1.0539800480713348e-06,
+            2.204089416327215e-07
+          ],
+          [
+            -6.783333757179777e-07,
+            -6.831655777648543e-07
+          ],
+          [
+            7.42514516219317e-07,
+            5.404555999850846e-07
+          ],
+          [
+            -6.204461797387761e-07,
+            -6.618927715050515e-07
+          ],
+          [
+            8.495640181597911e-07,
+            1.596078374497081e-07
+          ],
+          [
+            8.573470031704151e-07,
+            1.01651049077379e-07
+          ],
+          [
+            6.522750380238973e-07,
+            5.469244098062209e-07
+          ],
+          [
+            8.440645109519805e-07,
+            9.662279693012366e-08
+          ],
+          [
+            -7.286067807315329e-07,
+            -4.320078694747373e-07
+          ],
+          [
+            6.740449788897405e-07,
+            5.111678040920418e-07
+          ]
+        ]
+      },
+      {
+        "callback_index": 1,
+        "completed_outer_cycles": 1,
+        "operator_matvec_count": 7,
+        "preconditioner_matvec_count": 6,
+        "scaled_residual_l2": 1.3279904516574501e-09,
+        "scaled_residual_relative": 2.1445015651057928e-06,
+        "scaled_residual_squared_norms": {
+          "current": 1.5810593767741588e-33,
+          "l02": 1.1729358136117492e-22,
+          "l14": 1.5484521101206309e-22,
+          "l25": 2.1653220495968884e-22,
+          "native": 1.763069968696918e-18
+        },
+        "top_physical_kcl_active_indices": [
+          2656,
+          633720,
+          107248,
+          363006,
+          29480,
+          339174,
+          312672,
+          231196,
+          123114,
+          498151,
+          590689,
+          113130,
+          482749,
+          209541,
+          291415,
+          333386
+        ],
+        "top_physical_kcl_values_a": [
+          [
+            -3.497937675805078e-08,
+            -2.6169244204425305e-07
+          ],
+          [
+            -2.150166350437331e-08,
+            -8.212850999116872e-09
+          ],
+          [
+            -2.0919481299239298e-08,
+            -8.240014945931637e-09
+          ],
+          [
+            -2.0293778910479657e-08,
+            -8.777750925479255e-09
+          ],
+          [
+            -1.9481293458850445e-08,
+            -8.742522380827179e-09
+          ],
+          [
+            -1.976110048099542e-08,
+            -6.311762690840542e-09
+          ],
+          [
+            -1.9521079264244953e-08,
+            -5.896705804157124e-09
+          ],
+          [
+            -1.7416526645246675e-08,
+            -8.418483972701953e-09
+          ],
+          [
+            -1.623695436450269e-08,
+            -8.171391485653503e-09
+          ],
+          [
+            -1.4092721335562544e-08,
+            -7.754881636166898e-09
+          ],
+          [
+            1.574748062876387e-08,
+            1.2761544131201439e-09
+          ],
+          [
+            -1.4322680970037925e-08,
+            -6.1329173607865985e-09
+          ],
+          [
+            1.5467505176611314e-08,
+            1.1846375541402307e-09
+          ],
+          [
+            -1.4463714104081196e-08,
+            -5.032382661616056e-09
+          ],
+          [
+            -1.3999506663174602e-08,
+            -5.6234224257486625e-09
+          ],
+          [
+            -1.4019024786175929e-08,
+            -5.029463847863142e-09
+          ]
+        ]
+      },
+      {
+        "callback_index": 2,
+        "completed_outer_cycles": 2,
+        "operator_matvec_count": 16,
+        "preconditioner_matvec_count": 15,
+        "scaled_residual_l2": 3.0581685657978245e-10,
+        "scaled_residual_relative": 4.938474721354733e-07,
+        "scaled_residual_squared_norms": {
+          "current": 1.1235978638978285e-32,
+          "l02": 6.504166603272967e-23,
+          "l14": 9.705521902384975e-23,
+          "l25": 1.6501218279073178e-23,
+          "native": 9.334535166506813e-20
+        },
+        "top_physical_kcl_active_indices": [
+          2656,
+          633720,
+          107248,
+          363006,
+          29480,
+          731737,
+          538220,
+          238485,
+          619647,
+          339174,
+          312672,
+          231196,
+          81415,
+          123114,
+          300006,
+          588564
+        ],
+        "top_physical_kcl_values_a": [
+          [
+            1.4505466253016928e-08,
+            -3.3336398654305955e-08
+          ],
+          [
+            -3.792768658043688e-09,
+            -4.7223840989885294e-11
+          ],
+          [
+            -3.70638811293146e-09,
+            -8.714495313966502e-11
+          ],
+          [
+            -3.6978589863094354e-09,
+            -1.707030006204946e-10
+          ],
+          [
+            -3.5677131025404723e-09,
+            -2.1652018706432834e-10
+          ],
+          [
+            3.41871135448122e-09,
+            7.232977440235414e-10
+          ],
+          [
+            3.350229164049553e-09,
+            7.86901022659697e-10
+          ],
+          [
+            3.2811665832000857e-09,
+            8.605873005337823e-10
+          ],
+          [
+            3.2796215209177602e-09,
+            8.628022542452198e-10
+          ],
+          [
+            -3.373695929698088e-09,
+            9.095389289619356e-11
+          ],
+          [
+            -3.352542519176824e-09,
+            1.4398295783321332e-10
+          ],
+          [
+            -3.290075696467261e-09,
+            -2.572887611589862e-10
+          ],
+          [
+            2.9895785899879944e-09,
+            9.734709881945638e-10
+          ],
+          [
+            -3.0857030312904955e-09,
+            -2.9172848409857906e-10
+          ],
+          [
+            2.822082572200035e-09,
+            9.64237413863945e-10
+          ],
+          [
+            1.9982435530606574e-09,
+            -2.1581365269302254e-09
+          ]
+        ]
+      },
+      {
+        "callback_index": 3,
+        "completed_outer_cycles": 3,
+        "operator_matvec_count": 25,
+        "preconditioner_matvec_count": 24,
+        "scaled_residual_l2": 9.753410983760602e-11,
+        "scaled_residual_relative": 1.5750267702368913e-07,
+        "scaled_residual_squared_norms": {
+          "current": 7.066641346402143e-33,
+          "l02": 1.290949832630339e-23,
+          "l14": 5.205532068016463e-23,
+          "l25": 1.2196986906493859e-23,
+          "native": 9.43574077591089e-21
+        },
+        "top_physical_kcl_active_indices": [
+          2656,
+          633720,
+          107248,
+          363006,
+          29480,
+          339174,
+          312672,
+          231196,
+          123114,
+          731737,
+          538220,
+          209541,
+          238485,
+          291415,
+          619647,
+          498151
+        ],
+        "top_physical_kcl_values_a": [
+          [
+            -1.8347640285540965e-08,
+            8.696893087279313e-09
+          ],
+          [
+            -5.082062560196786e-10,
+            1.225160615361056e-09
+          ],
+          [
+            -5.109977058552258e-10,
+            1.193559391224526e-09
+          ],
+          [
+            -4.96648014726675e-10,
+            1.1885282173268763e-09
+          ],
+          [
+            -4.998005852747264e-10,
+            1.1396708201812514e-09
+          ],
+          [
+            -4.4016467320106916e-10,
+            1.107817783039036e-09
+          ],
+          [
+            -4.05464255112293e-10,
+            1.1103080295261858e-09
+          ],
+          [
+            -4.3676597080572967e-10,
+            1.0558098804549367e-09
+          ],
+          [
+            -4.2639366061322743e-10,
+            9.870952177190803e-10
+          ],
+          [
+            3.606763924660474e-10,
+            9.582258821825348e-10
+          ],
+          [
+            3.3230031687469033e-10,
+            9.498829009321558e-10
+          ],
+          [
+            -2.3076958020754312e-10,
+            9.451341691770394e-10
+          ],
+          [
+            3.040770578854792e-10,
+            9.227588175572959e-10
+          ],
+          [
+            -2.3847024169070313e-10,
+            9.417013124631848e-10
+          ],
+          [
+            3.013229071097655e-10,
+            9.217880926326995e-10
+          ],
+          [
+            -3.756369296281417e-10,
+            8.78644425415968e-10
+          ]
+        ]
+      },
+      {
+        "callback_index": 4,
+        "completed_outer_cycles": 4,
+        "operator_matvec_count": 34,
+        "preconditioner_matvec_count": 33,
+        "scaled_residual_l2": 6.657459801459335e-11,
+        "scaled_residual_relative": 1.0750779831315476e-07,
+        "scaled_residual_squared_norms": {
+          "current": 4.8055409642571296e-33,
+          "l02": 7.930314635995105e-24,
+          "l14": 3.105883220940891e-23,
+          "l25": 4.9850677036472745e-24,
+          "native": 4.388202886260937e-21
+        },
+        "top_physical_kcl_active_indices": [
+          2656,
+          731737,
+          538220,
+          619647,
+          238485,
+          81415,
+          588564,
+          300006,
+          115518,
+          146438,
+          31734,
+          244439,
+          363006,
+          573833,
+          633720,
+          581927
+        ],
+        "top_physical_kcl_values_a": [
+          [
+            -6.4295145009571524e-09,
+            4.1064892641363464e-08
+          ],
+          [
+            -5.042928890772701e-10,
+            6.014181878646028e-10
+          ],
+          [
+            -5.127381077227669e-10,
+            5.808597409790903e-10
+          ],
+          [
+            -5.290329569817426e-10,
+            5.391785373584027e-10
+          ],
+          [
+            -5.259790721186524e-10,
+            5.40585888390583e-10
+          ],
+          [
+            -5.219555519541491e-10,
+            4.6279355428932036e-10
+          ],
+          [
+            2.4991155743144325e-10,
+            6.324156530725653e-10
+          ],
+          [
+            -4.996437340200246e-10,
+            4.2313962824878834e-10
+          ],
+          [
+            -3.83020990222865e-10,
+            5.182664395400247e-10
+          ],
+          [
+            -4.340523721018839e-10,
+            4.69919599648585e-10
+          ],
+          [
+            2.4640147292865656e-10,
+            5.886794693135927e-10
+          ],
+          [
+            -4.36773591537651e-10,
+            4.5544123567916e-10
+          ],
+          [
+            6.081619850672392e-10,
+            -2.1900673876311022e-11
+          ],
+          [
+            -4.89101044658536e-10,
+            3.5338453966196875e-10
+          ],
+          [
+            6.029850197915277e-10,
+            4.821892539916317e-12
+          ],
+          [
+            -4.015410221257795e-10,
+            4.4460733164024464e-10
+          ]
+        ]
+      },
+      {
+        "callback_index": 5,
+        "completed_outer_cycles": 5,
+        "operator_matvec_count": 43,
+        "preconditioner_matvec_count": 42,
+        "scaled_residual_l2": 5.830341276656334e-11,
+        "scaled_residual_relative": 9.415109858120847e-08,
+        "scaled_residual_squared_norms": {
+          "current": 2.370832881493393e-33,
+          "l02": 7.123032254089465e-25,
+          "l14": 1.0294562005598748e-23,
+          "l25": 2.0395007627117564e-24,
+          "native": 3.3862415742379273e-21
+        },
+        "top_physical_kcl_active_indices": [
+          2656,
+          731737,
+          538220,
+          238485,
+          619647,
+          81415,
+          588564,
+          300006,
+          115518,
+          146438,
+          244439,
+          31734,
+          581927,
+          573833,
+          37782,
+          575096
+        ],
+        "top_physical_kcl_values_a": [
+          [
+            -1.0414433992684884e-08,
+            -5.204813791789668e-09
+          ],
+          [
+            -7.384878332222962e-10,
+            -8.574552463872746e-12
+          ],
+          [
+            -7.278851380952602e-10,
+            -2.499518893782947e-11
+          ],
+          [
+            -7.097896526309317e-10,
+            -4.3941130009652395e-11
+          ],
+          [
+            -7.092481352926911e-10,
+            -4.5749047089991295e-11
+          ],
+          [
+            -6.517648093998978e-10,
+            -8.050113318989811e-11
+          ],
+          [
+            -3.2215926747038853e-10,
+            5.415419344186448e-10
+          ],
+          [
+            -6.143308692156159e-10,
+            -8.538551103809586e-11
+          ],
+          [
+            -6.073867554745593e-10,
+            8.955762751666012e-12
+          ],
+          [
+            -6.019116870643057e-10,
+            -5.135885619906787e-11
+          ],
+          [
+            -5.910543734674069e-10,
+            -6.306591774470312e-11
+          ],
+          [
+            -2.8994852116601307e-10,
+            5.181919757434778e-10
+          ],
+          [
+            -5.688713223899432e-10,
+            -2.6470987309955165e-11
+          ],
+          [
+            -5.56130263056607e-10,
+            -1.2123524129306836e-10
+          ],
+          [
+            2.903529363826058e-10,
+            -4.6308062363684296e-10
+          ],
+          [
+            2.766599529763908e-10,
+            -4.712719595520712e-10
+          ]
+        ]
+      },
+      {
+        "callback_index": 6,
+        "completed_outer_cycles": 6,
+        "operator_matvec_count": 52,
+        "preconditioner_matvec_count": 51,
+        "scaled_residual_l2": 3.1804887822149784e-11,
+        "scaled_residual_relative": 5.1360031713697704e-08,
+        "scaled_residual_squared_norms": {
+          "current": 7.884800792783909e-33,
+          "l02": 8.079571638599564e-25,
+          "l14": 2.9534853327789678e-24,
+          "l25": 8.817480753021877e-25,
+          "native": 1.0069076988027789e-21
+        },
+        "top_physical_kcl_active_indices": [
+          2656,
+          731737,
+          538220,
+          633720,
+          107248,
+          238485,
+          619647,
+          363006,
+          29480,
+          339174,
+          312672,
+          588564,
+          81415,
+          115518,
+          146438,
+          244439
+        ],
+        "top_physical_kcl_values_a": [
+          [
+            4.05454148853489e-09,
+            -9.007133842155361e-09
+          ],
+          [
+            -1.458257097567599e-10,
+            -3.624713804079508e-10
+          ],
+          [
+            -1.3444624195413715e-10,
+            -3.5998993730722835e-10
+          ],
+          [
+            4.361561652640704e-11,
+            -3.8166830665294895e-10
+          ],
+          [
+            4.6608008464487396e-11,
+            -3.7350720997138003e-10
+          ],
+          [
+            -1.2011153423046542e-10,
+            -3.491843340756486e-10
+          ],
+          [
+            -1.1869088368664672e-10,
+            -3.4905034867610473e-10
+          ],
+          [
+            4.1788255707566883e-11,
+            -3.641130855093281e-10
+          ],
+          [
+            4.6515091710018694e-11,
+            -3.517066634392121e-10
+          ],
+          [
+            3.3260312187493484e-11,
+            -3.4903040332553914e-10
+          ],
+          [
+            2.2174096190935227e-11,
+            -3.4486297385540176e-10
+          ],
+          [
+            -3.356843352413227e-10,
+            -4.765062843095134e-11
+          ],
+          [
+            -8.958504863496378e-11,
+            -3.2561184002805507e-10
+          ],
+          [
+            -1.286092909686537e-10,
+            -3.0130730776095017e-10
+          ],
+          [
+            -9.884798513569438e-11,
+            -3.092643474545671e-10
+          ],
+          [
+            -9.032334481859274e-11,
+            -3.0701380058859373e-10
+          ]
+        ]
+      },
+      {
+        "callback_index": 7,
+        "completed_outer_cycles": 7,
+        "operator_matvec_count": 61,
+        "preconditioner_matvec_count": 60,
+        "scaled_residual_l2": 1.3786727802303223e-11,
+        "scaled_residual_relative": 2.2263457777746998e-08,
+        "scaled_residual_squared_norms": {
+          "current": 3.2905751460686486e-33,
+          "l02": 1.2135648823663166e-25,
+          "l14": 1.6975107974276355e-24,
+          "l25": 5.538343619306394e-25,
+          "native": 1.8770116184432837e-22
+        },
+        "top_physical_kcl_active_indices": [
+          2656,
+          731737,
+          538220,
+          619647,
+          238485,
+          81415,
+          300006,
+          588564,
+          146438,
+          115518,
+          244439,
+          31734,
+          573833,
+          581927,
+          37782,
+          575096
+        ],
+        "top_physical_kcl_values_a": [
+          [
+            1.7632695282673055e-10,
+            -6.790374281683149e-10
+          ],
+          [
+            5.941259244020107e-11,
+            -1.7229260973908601e-10
+          ],
+          [
+            6.249393132162512e-11,
+            -1.68232646618996e-10
+          ],
+          [
+            6.651588569490333e-11,
+            -1.6180092644518533e-10
+          ],
+          [
+            6.617702321190782e-11,
+            -1.6182141148639312e-10
+          ],
+          [
+            7.040198517205535e-11,
+            -1.4520547487650975e-10
+          ],
+          [
+            6.879020564168423e-11,
+            -1.3594489884992712e-10
+          ],
+          [
+            -1.0213130554215676e-10,
+            -1.125402159544063e-10
+          ],
+          [
+            5.768258144896697e-11,
+            -1.3818466896653453e-10
+          ],
+          [
+            4.3877786292030076e-11,
+            -1.4242583026577988e-10
+          ],
+          [
+            5.94486422030938e-11,
+            -1.349456768604612e-10
+          ],
+          [
+            -9.891035606117599e-11,
+            -1.0361621244030561e-10
+          ],
+          [
+            7.247804502288728e-11,
+            -1.1957505170815587e-10
+          ],
+          [
+            5.0576295999556556e-11,
+            -1.290795444312038e-10
+          ],
+          [
+            8.504476285795416e-11,
+            1.042540360702433e-10
+          ],
+          [
+            8.79498840970121e-11,
+            1.0176233727416645e-10
+          ]
+        ]
+      },
+      {
+        "callback_index": 8,
+        "completed_outer_cycles": 8,
+        "operator_matvec_count": 70,
+        "preconditioner_matvec_count": 69,
+        "scaled_residual_l2": 1.283256926813969e-11,
+        "scaled_residual_relative": 2.0722637610464235e-08,
+        "scaled_residual_squared_norms": {
+          "current": 2.157250067462325e-33,
+          "l02": 6.955042245447675e-26,
+          "l14": 1.0866789047016272e-24,
+          "l25": 3.8283507050100394e-25,
+          "native": 1.6313576962227868e-22
+        },
+        "top_physical_kcl_active_indices": [
+          2656,
+          731737,
+          538220,
+          238485,
+          619647,
+          81415,
+          300006,
+          588564,
+          146438,
+          115518,
+          244439,
+          31734,
+          573833,
+          581927,
+          633720,
+          37782
+        ],
+        "top_physical_kcl_values_a": [
+          [
+            3.823391382588463e-09,
+            -2.7918906741645665e-10
+          ],
+          [
+            2.4401870213591574e-11,
+            -1.6364396988401456e-10
+          ],
+          [
+            2.7869066849726083e-11,
+            -1.6049487712513084e-10
+          ],
+          [
+            3.187340900923357e-11,
+            -1.5604731108124408e-10
+          ],
+          [
+            3.194782283231882e-11,
+            -1.559040779724937e-10
+          ],
+          [
+            3.8096821650037554e-11,
+            -1.4199887722066704e-10
+          ],
+          [
+            3.7956574569595475e-11,
+            -1.338937912857141e-10
+          ],
+          [
+            -1.0474052178420337e-10,
+            -8.668203540171946e-11
+          ],
+          [
+            2.7788936015032788e-11,
+            -1.317873183882622e-10
+          ],
+          [
+            1.6457361081551047e-11,
+            -1.336426672299463e-10
+          ],
+          [
+            2.977863788888868e-11,
+            -1.2889713233228586e-10
+          ],
+          [
+            -1.0110053432995682e-10,
+            -7.89961036563408e-11
+          ],
+          [
+            4.415590866579423e-11,
+            -1.1966800509743478e-10
+          ],
+          [
+            2.4857751748370675e-11,
+            -1.2428576699946082e-10
+          ],
+          [
+            -1.2330382202529986e-10,
+            -8.416967407588047e-12
+          ],
+          [
+            9.340799264438964e-11,
+            7.915842076298225e-11
+          ]
+        ]
+      },
+      {
+        "callback_index": 9,
+        "completed_outer_cycles": 9,
+        "operator_matvec_count": 79,
+        "preconditioner_matvec_count": 78,
+        "scaled_residual_l2": 1.0249259309208369e-11,
+        "scaled_residual_relative": 1.6550986945982955e-08,
+        "scaled_residual_squared_norms": {
+          "current": 1.9565746621407922e-33,
+          "l02": 1.1762834969870089e-25,
+          "l14": 8.536597252042763e-25,
+          "l25": 3.0116125781444966e-25,
+          "native": 1.0377486705301565e-22
+        },
+        "top_physical_kcl_active_indices": [
+          2656,
+          633720,
+          107248,
+          363006,
+          29480,
+          339174,
+          312672,
+          731737,
+          231196,
+          538220,
+          238485,
+          619647,
+          123114,
+          81415,
+          300006,
+          209541
+        ],
+        "top_physical_kcl_values_a": [
+          [
+            3.4747187632366668e-09,
+            -7.039719811925528e-10
+          ],
+          [
+            -1.1825884897790462e-10,
+            6.102853937955483e-11
+          ],
+          [
+            -1.1638008077933639e-10,
+            5.853647250033443e-11
+          ],
+          [
+            -1.136627328086634e-10,
+            5.820398103663805e-11
+          ],
+          [
+            -1.1085398068107758e-10,
+            5.447733459589933e-11
+          ],
+          [
+            -1.068176568679759e-10,
+            5.742001743207039e-11
+          ],
+          [
+            -1.0405704608114047e-10,
+            6.023020300886531e-11
+          ],
+          [
+            4.00216589334151e-11,
+            -1.058381019302598e-10
+          ],
+          [
+            -9.933282693615724e-11,
+            5.138288168605867e-11
+          ],
+          [
+            4.182675531611262e-11,
+            -1.0325500422696859e-10
+          ],
+          [
+            4.389802054033474e-11,
+            -1.007689305733063e-10
+          ],
+          [
+            4.3764965298163407e-11,
+            -1.0070846828749354e-10
+          ],
+          [
+            -9.407134268030139e-11,
+            4.6834251857471747e-11
+          ],
+          [
+            4.595769732384635e-11,
+            -9.091091476854585e-11
+          ],
+          [
+            4.4857454380218924e-11,
+            -8.584463695745535e-11
+          ],
+          [
+            -7.58459549603505e-11,
+            5.944016514108575e-11
+          ]
+        ]
+      },
+      {
+        "callback_index": 10,
+        "completed_outer_cycles": 10,
+        "operator_matvec_count": 88,
+        "preconditioner_matvec_count": 87,
+        "scaled_residual_l2": 4.8388615105225435e-12,
+        "scaled_residual_relative": 7.814021606627083e-09,
+        "scaled_residual_squared_norms": {
+          "current": 3.7239546271715764e-33,
+          "l02": 2.8586471490190954e-25,
+          "l14": 5.759927076143134e-25,
+          "l25": 2.0684590529287354e-25,
+          "native": 2.2345877386509532e-23
+        },
+        "top_physical_kcl_active_indices": [
+          2656,
+          633720,
+          107248,
+          363006,
+          339174,
+          731737,
+          312672,
+          29480,
+          538220,
+          238485,
+          619647,
+          81415,
+          231196,
+          300006,
+          588564,
+          123114
+        ],
+        "top_physical_kcl_values_a": [
+          [
+            6.912731299254882e-09,
+            -8.020050051861547e-11
+          ],
+          [
+            -2.5772362899721937e-11,
+            4.9526173628709446e-11
+          ],
+          [
+            -2.5705978885872692e-11,
+            4.8352523595700563e-11
+          ],
+          [
+            -2.3451973871943364e-11,
+            4.706415127801402e-11
+          ],
+          [
+            -2.3755411119179043e-11,
+            4.594361992954814e-11
+          ],
+          [
+            4.723559721532891e-11,
+            -1.9668057377359593e-11
+          ],
+          [
+            -2.1728004634161374e-11,
+            4.627361396752739e-11
+          ],
+          [
+            -2.3562407916588517e-11,
+            4.525390553564944e-11
+          ],
+          [
+            4.68557219255759e-11,
+            -1.8258329987469557e-11
+          ],
+          [
+            4.603329123323372e-11,
+            -1.770297221218603e-11
+          ],
+          [
+            4.5812456828326145e-11,
+            -1.7694428380582452e-11
+          ],
+          [
+            4.3119252770120256e-11,
+            -1.4331709514606133e-11
+          ],
+          [
+            -1.8892318441533947e-11,
+            4.09159749172698e-11
+          ],
+          [
+            4.1106359147721067e-11,
+            -1.3527719518960385e-11
+          ],
+          [
+            9.166601871546214e-12,
+            -4.154268738388708e-11
+          ],
+          [
+            -1.8231637581986578e-11,
+            3.8191031672833085e-11
+          ]
+        ]
+      },
+      {
+        "callback_index": 11,
+        "completed_outer_cycles": 11,
+        "operator_matvec_count": 96,
+        "preconditioner_matvec_count": 95,
+        "scaled_residual_l2": 3.6136344759793313e-12,
+        "scaled_residual_relative": 5.8354672503751296e-09,
+        "scaled_residual_squared_norms": {
+          "current": 2.015748455187058e-33,
+          "l02": 2.214759346235989e-25,
+          "l14": 5.448393613597193e-25,
+          "l25": 1.9031113274833234e-25,
+          "native": 1.2101727695253674e-23
+        },
+        "top_physical_kcl_active_indices": [
+          2656,
+          633720,
+          731737,
+          107248,
+          538220,
+          238485,
+          619647,
+          363006,
+          339174,
+          312672,
+          29480,
+          81415,
+          300006,
+          588564,
+          115518,
+          146438
+        ],
+        "top_physical_kcl_values_a": [
+          [
+            5.143717094887473e-09,
+            -9.226012062179397e-10
+          ],
+          [
+            1.740355215719259e-11,
+            3.247644096595064e-11
+          ],
+          [
+            2.0160123909347162e-11,
+            -3.082958244984197e-11
+          ],
+          [
+            1.6825404890159448e-11,
+            3.202585367942413e-11
+          ],
+          [
+            2.047282021645433e-11,
+            -2.982614111482715e-11
+          ],
+          [
+            2.0133493830454263e-11,
+            -2.923619662277937e-11
+          ],
+          [
+            1.9996727228721242e-11,
+            -2.9158492713662806e-11
+          ],
+          [
+            1.7142426171212218e-11,
+            3.0143130637173655e-11
+          ],
+          [
+            1.6047916021534223e-11,
+            3.018011386653197e-11
+          ],
+          [
+            1.7066232886488294e-11,
+            2.9200639847355626e-11
+          ],
+          [
+            1.611575703644955e-11,
+            2.957968471675387e-11
+          ],
+          [
+            1.9740429180615388e-11,
+            -2.6088398055700148e-11
+          ],
+          [
+            1.88997210351545e-11,
+            -2.4834396995536457e-11
+          ],
+          [
+            -1.144116196910832e-11,
+            -2.7960373164804362e-11
+          ],
+          [
+            1.7183911398314065e-11,
+            -2.456701463023712e-11
+          ],
+          [
+            1.8670434393398133e-11,
+            -2.3348893011581123e-11
+          ]
+        ]
+      },
+      {
+        "callback_index": 12,
+        "completed_outer_cycles": 12,
+        "operator_matvec_count": 105,
+        "preconditioner_matvec_count": 104,
+        "scaled_residual_l2": 1.3850817854308512e-11,
+        "scaled_residual_relative": 2.2366953414075947e-08,
+        "scaled_residual_squared_norms": {
+          "current": 6.541273379805042e-33,
+          "l02": 1.0995334184170969e-25,
+          "l14": 3.680215100475018e-25,
+          "l25": 1.106098948095326e-25,
+          "native": 1.9125657048041067e-22
+        },
+        "top_physical_kcl_active_indices": [
+          2656,
+          633720,
+          107248,
+          363006,
+          29480,
+          339174,
+          312672,
+          231196,
+          123114,
+          209541,
+          291415,
+          333386,
+          113130,
+          498151,
+          209532,
+          733549
+        ],
+        "top_physical_kcl_values_a": [
+          [
+            1.7329072662314797e-09,
+            -8.805622785158089e-10
+          ],
+          [
+            2.421894587802093e-10,
+            2.8940399706854458e-11
+          ],
+          [
+            2.374952624076039e-10,
+            3.108357486304222e-11
+          ],
+          [
+            2.344275098010344e-10,
+            2.2894085886797184e-11
+          ],
+          [
+            2.2649832668218288e-10,
+            2.6773473310762538e-11
+          ],
+          [
+            2.1983604467841906e-10,
+            2.6719679001771163e-11
+          ],
+          [
+            2.197322057388156e-10,
+            1.859103524778753e-11
+          ],
+          [
+            2.0730937514068066e-10,
+            1.3439742083228303e-11
+          ],
+          [
+            1.9494521402955077e-10,
+            1.5181842881174164e-11
+          ],
+          [
+            1.9032077318316195e-10,
+            -2.23713499487448e-11
+          ],
+          [
+            1.8927140802144145e-10,
+            -2.3932315364864005e-11
+          ],
+          [
+            1.8754365327271598e-10,
+            -2.0139786477394686e-11
+          ],
+          [
+            1.7251710131335193e-10,
+            -3.4728075211846482e-12
+          ],
+          [
+            1.7093254266110754e-10,
+            8.10912504676674e-12
+          ],
+          [
+            1.6799704733756879e-10,
+            -2.485415782738602e-11
+          ],
+          [
+            1.675139045623783e-10,
+            -1.1525421987352013e-11
+          ]
+        ]
+      },
+      {
+        "callback_index": 13,
+        "completed_outer_cycles": 13,
+        "operator_matvec_count": 114,
+        "preconditioner_matvec_count": 113,
+        "scaled_residual_l2": 5.802804405435069e-12,
+        "scaled_residual_relative": 9.370642020751672e-09,
+        "scaled_residual_squared_norms": {
+          "current": 5.422868574236526e-33,
+          "l02": 6.334063316228566e-26,
+          "l14": 4.269492893227407e-25,
+          "l25": 7.039546551416538e-26,
+          "native": 3.311185357437115e-23
+        },
+        "top_physical_kcl_active_indices": [
+          2656,
+          633720,
+          107248,
+          363006,
+          29480,
+          339174,
+          312672,
+          731737,
+          231196,
+          538220,
+          238485,
+          619647,
+          123114,
+          588564,
+          115518,
+          81415
+        ],
+        "top_physical_kcl_values_a": [
+          [
+            8.32583777438947e-10,
+            -6.108006447560181e-11
+          ],
+          [
+            6.803444358404926e-11,
+            3.6350148258334235e-11
+          ],
+          [
+            6.62633538208258e-11,
+            3.617012227716909e-11
+          ],
+          [
+            6.462400529629205e-11,
+            3.538363992637681e-11
+          ],
+          [
+            6.204720465764159e-11,
+            3.5226924782987453e-11
+          ],
+          [
+            6.272421694895728e-11,
+            3.148073809471929e-11
+          ],
+          [
+            6.28979522054174e-11,
+            2.913496418947836e-11
+          ],
+          [
+            3.0171708312104126e-11,
+            5.763896018963708e-11
+          ],
+          [
+            5.607054099390809e-11,
+            3.106787645981178e-11
+          ],
+          [
+            2.7963888759381834e-11,
+            5.738175664975809e-11
+          ],
+          [
+            2.5461471052736804e-11,
+            5.501149858685607e-11
+          ],
+          [
+            2.519699297029009e-11,
+            5.4797828169775946e-11
+          ],
+          [
+            5.216174883970765e-11,
+            2.997420168160788e-11
+          ],
+          [
+            5.57413003558424e-11,
+            5.3945691185575874e-12
+          ],
+          [
+            2.554722576607153e-11,
+            4.9252824945018216e-11
+          ],
+          [
+            1.9988524209294325e-11,
+            5.110068724872855e-11
+          ]
+        ]
+      },
+      {
+        "callback_index": 14,
+        "completed_outer_cycles": 14,
+        "operator_matvec_count": 118,
+        "preconditioner_matvec_count": 117,
+        "scaled_residual_l2": 2.1970043300143213e-12,
+        "scaled_residual_relative": 3.547826129607762e-09,
+        "scaled_residual_squared_norms": {
+          "current": 1.9039698922379403e-33,
+          "l02": 2.876372763083966e-25,
+          "l14": 4.257276387527771e-25,
+          "l25": 1.2250332540736875e-25,
+          "native": 3.990959783735782e-24
+        },
+        "top_physical_kcl_active_indices": [
+          2656,
+          1780,
+          1786,
+          633720,
+          107248,
+          363006,
+          29480,
+          1270,
+          1266,
+          339174,
+          1568,
+          312672,
+          1278,
+          1560,
+          1262,
+          1572
+        ],
+        "top_physical_kcl_values_a": [
+          [
+            -4.030846546628165e-09,
+            1.4003383902442332e-10
+          ],
+          [
+            -2.5124034808158924e-11,
+            7.046597307903932e-12
+          ],
+          [
+            -2.493119748574793e-11,
+            6.9063502776088494e-12
+          ],
+          [
+            -2.05250186404636e-11,
+            7.487712111770055e-12
+          ],
+          [
+            -2.0156983379264668e-11,
+            7.144502171609903e-12
+          ],
+          [
+            -1.9804769081616753e-11,
+            6.959226609574674e-12
+          ],
+          [
+            -1.9280424406551357e-11,
+            6.441112230189787e-12
+          ],
+          [
+            -1.7881729234234647e-11,
+            9.291029803470069e-12
+          ],
+          [
+            -1.722902916729131e-11,
+            1.0300829535934337e-11
+          ],
+          [
+            -1.8435823197503242e-11,
+            7.2367256231526455e-12
+          ],
+          [
+            -1.7472475448140716e-11,
+            8.929774095433973e-12
+          ],
+          [
+            -1.8024804694165796e-11,
+            7.683456021704442e-12
+          ],
+          [
+            -1.8064144869832786e-11,
+            7.28774518498123e-12
+          ],
+          [
+            -1.7785477768862612e-11,
+            7.366779214340001e-12
+          ],
+          [
+            -1.6129054078034057e-11,
+            1.0226806031904514e-11
+          ],
+          [
+            -1.660151942842427e-11,
+            9.359753735407005e-12
+          ]
+        ]
+      },
+      {
+        "callback_index": 15,
+        "completed_outer_cycles": 15,
+        "operator_matvec_count": 121,
+        "preconditioner_matvec_count": 120,
+        "scaled_residual_l2": 3.865199469554505e-12,
+        "scaled_residual_relative": 6.241706257421052e-09,
+        "scaled_residual_squared_norms": {
+          "current": 2.4756925041893324e-33,
+          "l02": 1.5541703290447907e-24,
+          "l14": 8.558184449687284e-25,
+          "l25": 3.2188483762018797e-25,
+          "native": 1.2207893325365858e-23
+        },
+        "top_physical_kcl_active_indices": [
+          2656,
+          1780,
+          1786,
+          1266,
+          1270,
+          1568,
+          1278,
+          1262,
+          1572,
+          1560,
+          1282,
+          1576,
+          1556,
+          1254,
+          1580,
+          1250
+        ],
+        "top_physical_kcl_values_a": [
+          [
+            -1.1061291417046377e-08,
+            3.030481130958729e-09
+          ],
+          [
+            -6.304075480522541e-11,
+            3.155179969245685e-11
+          ],
+          [
+            -6.264439802387654e-11,
+            3.117953928760963e-11
+          ],
+          [
+            -4.164063707980287e-11,
+            3.315820587130664e-11
+          ],
+          [
+            -4.333176929920381e-11,
+            3.089824114274545e-11
+          ],
+          [
+            -4.2437437856044917e-11,
+            3.0079908895128007e-11
+          ],
+          [
+            -4.408387774893636e-11,
+            2.6163373807271815e-11
+          ],
+          [
+            -3.916645132222059e-11,
+            3.2771281911623904e-11
+          ],
+          [
+            -4.03685654461122e-11,
+            3.0929121495801273e-11
+          ],
+          [
+            -4.342712962784064e-11,
+            2.6402557702617995e-11
+          ],
+          [
+            -4.370695090167516e-11,
+            2.055780355150854e-11
+          ],
+          [
+            -3.786798048450749e-11,
+            2.9951295737730505e-11
+          ],
+          [
+            -4.305722781408126e-11,
+            2.1359180226524735e-11
+          ],
+          [
+            -3.621867640873252e-11,
+            2.9606962252689466e-11
+          ],
+          [
+            -3.5058588899509614e-11,
+            2.650742748142412e-11
+          ],
+          [
+            -3.343096911184453e-11,
+            2.556737319244031e-11
+          ]
+        ]
+      },
+      {
+        "callback_index": 16,
+        "completed_outer_cycles": 16,
+        "operator_matvec_count": 130,
+        "preconditioner_matvec_count": 129,
+        "scaled_residual_l2": 4.815632133848085e-12,
+        "scaled_residual_relative": 7.776509714449972e-09,
+        "scaled_residual_squared_norms": {
+          "current": 5.806264133063663e-33,
+          "l02": 1.2251526021068315e-26,
+          "l14": 2.5704301469044135e-25,
+          "l25": 6.444558502255841e-26,
+          "native": 2.285657271703453e-23
+        },
+        "top_physical_kcl_active_indices": [
+          2656,
+          633720,
+          107248,
+          363006,
+          29480,
+          339174,
+          312672,
+          231196,
+          123114,
+          731737,
+          538220,
+          238485,
+          619647,
+          209541,
+          498151,
+          291415
+        ],
+        "top_physical_kcl_values_a": [
+          [
+            -1.0817637565911438e-09,
+            -1.416787878525976e-10
+          ],
+          [
+            5.896959861674653e-11,
+            3.1367555774596775e-11
+          ],
+          [
+            5.739041636033929e-11,
+            3.1222291134614165e-11
+          ],
+          [
+            5.613444117427203e-11,
+            3.088694493102226e-11
+          ],
+          [
+            5.384094021277561e-11,
+            3.0705180419550375e-11
+          ],
+          [
+            5.417444024220217e-11,
+            2.6912167883415017e-11
+          ],
+          [
+            5.424928666957753e-11,
+            2.5012143340307638e-11
+          ],
+          [
+            4.8796733440935886e-11,
+            2.7475291827765062e-11
+          ],
+          [
+            4.539062339116574e-11,
+            2.6528348618683032e-11
+          ],
+          [
+            3.902236712471745e-11,
+            3.5180670616238144e-11
+          ],
+          [
+            3.729381809879778e-11,
+            3.5625508196637765e-11
+          ],
+          [
+            3.463353609705743e-11,
+            3.452620010972169e-11
+          ],
+          [
+            3.436863620575551e-11,
+            3.447320191889769e-11
+          ],
+          [
+            4.410967362774879e-11,
+            1.4287018461663593e-11
+          ],
+          [
+            3.9514159428411914e-11,
+            2.3918254095452604e-11
+          ],
+          [
+            4.324620150994692e-11,
+            1.4968267032305037e-11
+          ]
+        ]
+      },
+      {
+        "callback_index": 17,
+        "completed_outer_cycles": 17,
+        "operator_matvec_count": 139,
+        "preconditioner_matvec_count": 138,
+        "scaled_residual_l2": 1.9365063193735672e-12,
+        "scaled_residual_relative": 3.1271616656209827e-09,
+        "scaled_residual_squared_norms": {
+          "current": 4.307191079124707e-33,
+          "l02": 3.121739785189172e-26,
+          "l14": 1.9808142787247296e-25,
+          "l25": 4.6128653521117095e-26,
+          "native": 3.4746292414259825e-24
+        },
+        "top_physical_kcl_active_indices": [
+          2656,
+          731737,
+          538220,
+          238485,
+          619647,
+          588564,
+          115518,
+          81415,
+          146438,
+          633720,
+          31734,
+          244439,
+          107248,
+          581626,
+          363006,
+          300006
+        ],
+        "top_physical_kcl_values_a": [
+          [
+            1.895593863478667e-09,
+            -6.626397963163088e-10
+          ],
+          [
+            1.5737873081556747e-11,
+            1.521091218027409e-11
+          ],
+          [
+            1.4968564243460734e-11,
+            1.537403768160788e-11
+          ],
+          [
+            1.3958434153535718e-11,
+            1.480071928757363e-11
+          ],
+          [
+            1.3837746649491417e-11,
+            1.473119337314259e-11
+          ],
+          [
+            1.8826530530932983e-11,
+            -3.632336521153793e-12
+          ],
+          [
+            1.3195450008812898e-11,
+            1.3274191482044353e-11
+          ],
+          [
+            1.179647036249256e-11,
+            1.4082370380874928e-11
+          ],
+          [
+            1.2101508583737229e-11,
+            1.3615900835999326e-11
+          ],
+          [
+            1.6718287434571246e-11,
+            -7.079882080262277e-12
+          ],
+          [
+            1.745852656778561e-11,
+            -4.011776002291043e-12
+          ],
+          [
+            1.1522470477753899e-11,
+            1.3698470597032156e-11
+          ],
+          [
+            1.6443126316366294e-11,
+            -6.777579190031594e-12
+          ],
+          [
+            1.7038486073428505e-11,
+            4.297937534840888e-12
+          ],
+          [
+            1.6045326639696885e-11,
+            -6.797633271252002e-12
+          ],
+          [
+            1.1085676552614365e-11,
+            1.3141882052383078e-11
+          ]
+        ]
+      },
+      {
+        "callback_index": 18,
+        "completed_outer_cycles": 18,
+        "operator_matvec_count": 142,
+        "preconditioner_matvec_count": 141,
+        "scaled_residual_l2": 3.5395400520870285e-12,
+        "scaled_residual_relative": 5.715816082850288e-09,
+        "scaled_residual_squared_norms": {
+          "current": 2.015863644541291e-33,
+          "l02": 1.3439398625933373e-24,
+          "l14": 5.398117332230569e-25,
+          "l25": 1.9322095178762266e-25,
+          "native": 1.0451371230721552e-23
+        },
+        "top_physical_kcl_active_indices": [
+          2656,
+          1786,
+          1780,
+          1304,
+          1536,
+          1300,
+          1540,
+          1292,
+          1574,
+          1578,
+          1570,
+          1586,
+          1566,
+          633720,
+          1558,
+          1554
+        ],
+        "top_physical_kcl_values_a": [
+          [
+            7.588750689341852e-09,
+            -9.164914271181691e-09
+          ],
+          [
+            1.7701554038580847e-11,
+            -4.9845386894353003e-11
+          ],
+          [
+            1.739825319684278e-11,
+            -4.965802500322869e-11
+          ],
+          [
+            9.681167913130385e-12,
+            -3.2741145143619715e-11
+          ],
+          [
+            9.322101737273232e-12,
+            -3.213576044627137e-11
+          ],
+          [
+            8.235777812264634e-12,
+            -3.139620714944046e-11
+          ],
+          [
+            7.884752588679555e-12,
+            -3.072892502655128e-11
+          ],
+          [
+            6.9686159963177065e-12,
+            -2.9538677663467676e-11
+          ],
+          [
+            1.0119348052408792e-11,
+            -2.8584215772120346e-11
+          ],
+          [
+            1.0115772817301829e-11,
+            -2.8574337620354337e-11
+          ],
+          [
+            1.0058818172612423e-11,
+            -2.849957711258653e-11
+          ],
+          [
+            1.0007415033951846e-11,
+            -2.8432581600096095e-11
+          ],
+          [
+            9.950301308414898e-12,
+            -2.8357195629660748e-11
+          ],
+          [
+            1.5579779800421495e-11,
+            -2.566377338525706e-11
+          ],
+          [
+            9.820656738389947e-12,
+            -2.8184006731818574e-11
+          ],
+          [
+            9.740281220518245e-12,
+            -2.804038752071483e-11
+          ]
+        ]
+      },
+      {
+        "callback_index": 19,
+        "completed_outer_cycles": 19,
+        "operator_matvec_count": 151,
+        "preconditioner_matvec_count": 150,
+        "scaled_residual_l2": 1.7809176273219938e-12,
+        "scaled_residual_relative": 2.875909713318973e-09,
+        "scaled_residual_squared_norms": {
+          "current": 4.005501696513428e-33,
+          "l02": 1.2240889389848915e-26,
+          "l14": 1.0149026449651218e-25,
+          "l25": 3.824960638345686e-26,
+          "native": 3.0196868310349617e-24
+        },
+        "top_physical_kcl_active_indices": [
+          2656,
+          731737,
+          538220,
+          238485,
+          619647,
+          588564,
+          633720,
+          115518,
+          107248,
+          363006,
+          146438,
+          81415,
+          244439,
+          31734,
+          581626,
+          29480
+        ],
+        "top_physical_kcl_values_a": [
+          [
+            -6.233719816390075e-10,
+            -1.525803181943567e-10
+          ],
+          [
+            2.985925309090254e-14,
+            -2.0500799898776593e-11
+          ],
+          [
+            6.775540821761169e-13,
+            -2.0055470392134393e-11
+          ],
+          [
+            8.373293784681365e-13,
+            -1.8913072492359e-11
+          ],
+          [
+            8.536284743301814e-13,
+            -1.8762192925814424e-11
+          ],
+          [
+            -1.4591389565794116e-11,
+            -1.0527317270765977e-11
+          ],
+          [
+            -1.553357272928639e-11,
+            -8.914491336538238e-12
+          ],
+          [
+            7.511967800187189e-13,
+            -1.7607676152968165e-11
+          ],
+          [
+            -1.5108536335927034e-11,
+            -8.880548851434329e-12
+          ],
+          [
+            -1.491992470058891e-11,
+            -8.739778141259365e-12
+          ],
+          [
+            1.4624682216114737e-12,
+            -1.705993358673934e-11
+          ],
+          [
+            1.7246154320176702e-12,
+            -1.693294457430768e-11
+          ],
+          [
+            1.926687420174787e-12,
+            -1.6703123847784884e-11
+          ],
+          [
+            -1.3971951810039414e-11,
+            -9.303353425315409e-12
+          ],
+          [
+            -7.786560079440369e-12,
+            -1.4826616090467606e-11
+          ],
+          [
+            -1.4287580068330425e-11,
+            -8.687227083299291e-12
+          ]
+        ]
+      }
+    ],
+    "outer_k": 3,
+    "retained_outer_vector_count": 3,
+    "rtol": 1e-09,
+    "solver_matvec_counts": {
+      "callback_diagnostic_operator_matvec": 20,
+      "operator_matvec": 155,
+      "post_return_diagnostic_operator_matvec": 1,
+      "preconditioner_matvec": 155
+    }
+  },
+  "preflight": {
+    "change": "Finished-basis lifetime only relative to inner8 exact-L02 worker; same final SGS warm, four factors, balanced3, outer3/max20/rtol1e-9 and every physical gate.",
+    "driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l02_conditional_hybrid_release_basis_lgmres.py",
+      "sha256": "e42a44d48a5e7e7b0a143db493e82e4c9099e86583ae7d56f4642370a5056b4c",
+      "size_bytes": 5307
+    },
+    "inputs": {
+      "canonical_ae0_driver": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l02_conditional_hybrid_block_lgmres.py",
+        "sha256": "ae0fb71ea00d02381abf28bf440d9407191e45f1c43d774cae31da6e0fb8da5e",
+        "size_bytes": 35889
+      },
+      "exact_external": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-conditional-l02-exact-factor-guard-01\\external-budget.json",
+        "sha256": "ae2e4a03f978dccaaeeb9aecd0e5ec9303a9e48bb597d550cb0c96b0b276eebc",
+        "size_bytes": 995
+      },
+      "exact_full_memory_stop": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-exact-lgmres-01\\external-budget.json",
+        "sha256": "444e87e3e9c10f68c0cacd03f06850bdeca6af9917cb63210b3fe60a804159c7",
+        "size_bytes": 1029
+      },
+      "exact_helper": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_conditional_l02_exact_factor.py",
+        "sha256": "561175a0d899e5658cfaa8a63efc7eda5513c494f86e7591868ec79b6c90e81d",
+        "size_bytes": 4446
+      },
+      "exact_result": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-conditional-l02-exact-factor-01\\result.json",
+        "sha256": "612770dfc935d8b691ff3424f2f48fde082d478791bab15218285427b9df195f",
+        "size_bytes": 2309
+      },
+      "exact_wrapper_frozen": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-exact-lgmres-01\\driver-at-run.py",
+        "sha256": "c1ab14f84dbb4284c32e1c8755a150f4abba0225ce39173e92809043a0cb5284",
+        "size_bytes": 22501
+      },
+      "exact_wrapper_source": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l02_conditional_hybrid_exact_lgmres.py",
+        "sha256": "c1ab14f84dbb4284c32e1c8755a150f4abba0225ce39173e92809043a0cb5284",
+        "size_bytes": 22501
+      },
+      "frozen_ae0_driver": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-block-lgmres-01\\driver-at-run.py",
+        "sha256": "ae0fb71ea00d02381abf28bf440d9407191e45f1c43d774cae31da6e0fb8da5e",
+        "size_bytes": 35889
+      },
+      "inherited_accepted_external": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-block-lgmres-02\\external-budget.json",
+        "sha256": "0c2d721588653bfb423e57b0ce61cab2bb1b067a4e443586c2ad884c25fb8eaf",
+        "size_bytes": 1033
+      },
+      "inherited_accepted_field": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-block-lgmres-02\\field.npz",
+        "sha256": "c7360f92732f956c6c63c3e564cd97315b26a09a9a79414446bdcd4a6fce76f3",
+        "size_bytes": 30741111
+      },
+      "inherited_accepted_result": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-block-lgmres-02\\result.json",
+        "sha256": "832841f9277bc47a9be5ef87b1cee940bff176405698f48ea4fb08ed26e9c097",
+        "size_bytes": 15819
+      },
+      "inherited_conditional": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-operator-02\\conditional-hybrid-operator.npz",
+        "sha256": "5ab5ba38aaf8c317aa05ae1d4f790c1d6447406ec25afe3c30e96536c714aa92",
+        "size_bytes": 115480771
+      },
+      "inherited_conditional_result": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-operator-02\\result.json",
+        "sha256": "604a44f12ce843b4ccbf2d268ae4a6887b95cf9c3133c8f55576a484b49bc7b5",
+        "size_bytes": 5391
+      },
+      "inherited_frozen_helper": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\solve_astra_l02_l14_l25_combined_block_lgmres.py",
+        "sha256": "853f193fd51d3c204668019f7957cc74ea295a0e47206aae338076dfa796c692",
+        "size_bytes": 45742
+      },
+      "inherited_guarded_source_worker": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_fmm3d_runtime.py",
+        "sha256": "2961d1606ec2d4583c37d990d238a6abc87a54d8e0b93f9d83397f3851536a25",
+        "size_bytes": 16465
+      },
+      "inherited_old_operator": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-operator-02\\combined-operator.npz",
+        "sha256": "45cc79706849631e9c33dc2f0d0e3c7910fe7dcce817585c728f6f1e3c30a1e8",
+        "size_bytes": 77455200
+      },
+      "inherited_physical_validator": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\validate_astra_l02_hybrid_field.py",
+        "sha256": "fd28d5a3eef17d7d85e0fab52de1a88e1910faa2ad46a4cde3b16d3607c8abd9",
+        "size_bytes": 19406
+      },
+      "inherited_transfer": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-hybrid-p1-transfer-01\\p1-hybrid-transfer.npz",
+        "sha256": "7db244bf196f7c2195a0ce79e7abed848ae0c2404809ea2c25dcedec23528a68",
+        "size_bytes": 16620587
+      },
+      "inherited_transfer_result": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-hybrid-p1-transfer-01\\result.json",
+        "sha256": "01e6634740daa33cbed0d25b076fe30c8a2502e8a77b4b7548a1de4ab48f9dd5",
+        "size_bytes": 2908
+      },
+      "low_memory_frozen": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-exact-low-memory-lgmres-01\\driver-at-run.py",
+        "sha256": "87366a4f36478a9fbb5181d82d5476d0075f91eba5700882928f7ffe2951512f",
+        "size_bytes": 4453
+      },
+      "low_memory_source": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l02_conditional_hybrid_exact_low_memory_lgmres.py",
+        "sha256": "87366a4f36478a9fbb5181d82d5476d0075f91eba5700882928f7ffe2951512f",
+        "size_bytes": 4453
+      },
+      "low_memory_stop": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-exact-low-memory-lgmres-01\\external-budget.json",
+        "sha256": "5fb05c755208f3205f8f1b9195858653c704b1966548c4257e6b48f2191a1eb0",
+        "size_bytes": 1051
+      },
+      "warm_final_driver": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-galerkin-sgs-lgmres-01\\driver-at-run.py",
+        "sha256": "0324a8992b0cee43a05cdd7f1f196710d8bd31603c804099dea6fb6c2e9d0d28",
+        "size_bytes": 14010
+      },
+      "warm_final_external": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-galerkin-sgs-lgmres-01\\external-budget.json",
+        "sha256": "d804739817012e470bb5c88f50f5a1499b19654dfba105f3f1cb49cef0b4b247",
+        "size_bytes": 878
+      },
+      "warm_final_factor": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-galerkin-sgs-lgmres-01\\factor-diagnostic.json",
+        "sha256": "3441f1ab54a6eb9fe59ad4fc56578ef6c6b69df21a65649c5fed9c538568395c",
+        "size_bytes": 1297
+      },
+      "warm_final_failure": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-galerkin-sgs-lgmres-01\\failure.json",
+        "sha256": "b92c269ee63991b2a8b2cfee93417ed852172b22c915b7638ecafcfe16fc2b04",
+        "size_bytes": 168
+      },
+      "warm_final_field": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-galerkin-sgs-lgmres-01\\unvalidated-field.npz",
+        "sha256": "1a8efde773057e73ee6a37e76d1131f79679be5e235c2a8a23c3a1e6624f2449",
+        "size_bytes": 41790459
+      },
+      "warm_final_json": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-galerkin-sgs-lgmres-01\\unvalidated-field.json",
+        "sha256": "08f0a9e115a6bdc27a4ebd86253b0575146f7bec6726d9ad5ea4b36006759ac6",
+        "size_bytes": 71106
+      }
+    },
+    "lgmres_lifetime_patch": {
+      "change": "Delete vs/zs after x+=dx, once their dx/ax/outer_v uses are finished. Retained outer_v owns its own references. No arithmetic or installed-file change.",
+      "original_source_sha256": "0c555fb496da5d8181b4a267f9a3260711794ce8a1308954aa4b59f88f67dcf6",
+      "parity": [
+        {
+          "all_iterates_and_outer_vectors_bitwise_equal": true,
+          "callbacks": 14,
+          "store_outer_Av": true
+        },
+        {
+          "all_iterates_and_outer_vectors_bitwise_equal": true,
+          "callbacks": 14,
+          "store_outer_Av": false
+        }
+      ],
+      "patched_function_source_sha256": "0c9f99fd1f0aff1af45cbabbed529df72c50e998b87e3b99032df3406a0fff1b",
+      "unchanged_fgmres_source_sha256": "e89928d6ed66d2f62bb078bb39a15ae97ea6ed67967682b0d91fa705bb63ded5"
+    },
+    "memory": {
+      "limit_bytes": 25769803776,
+      "measured_previous_peak_private_bytes": 25866141696,
+      "scope": "Finished Arnoldi basis lists no longer coexist with the next restart. Aliased loop/outer vectors may remain; no predicted peak or guarantee. External 600s/24GiB limit remains authoritative."
+    },
+    "program": "SPD Decap PI Evaluator",
+    "run_disabled": false,
+    "solver": {
+      "inner_m": 8,
+      "maxiter": 20,
+      "outer_k": 3,
+      "rtol": 1e-09,
+      "scipy": "1.18.1",
+      "warm_contract": "Pinned final SGS unvalidated field only; callback fields forbidden"
+    },
+    "status": "PASS_EXACT_L02_FROZEN_AE0_PREFLIGHT",
+    "transformed_core_sha256": "c1db227e295e040c3a56c25d00ff52ed4172e60023bce52384c1d8731fa36a6f",
+    "transformed_worker": {
+      "balanced_sheet_modes": 3,
+      "conditional_l02_factor": "exact COLAMD LU of scaled principal block",
+      "conditional_l02_matrix_nnz": 7917807,
+      "conditional_l02_rows": 1694809,
+      "native_l14_l25_factors": "unchanged frozen ae0 implementation",
+      "obsolete_auxiliary_archives_loaded": []
+    },
+    "version": "0.23.1"
+  },
+  "program": "SPD Decap PI Evaluator",
+  "resource_limits": {
+    "max_memory_bytes": 25769803776,
+    "max_runtime_s": 600.0
+  },
+  "solver_scope": "Numerical conditional hybrid solve only; physical acceptance is deferred to the pinned validator.",
+  "status": "UNVALIDATED_CONDITIONAL_HYBRID_BLOCK_LGMRES_FIELD_BEFORE_PHYSICAL_GATES",
+  "version": "0.23.1"
+}

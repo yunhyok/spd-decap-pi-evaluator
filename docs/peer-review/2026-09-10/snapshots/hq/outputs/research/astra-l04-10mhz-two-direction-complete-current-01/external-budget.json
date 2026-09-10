@@ -1,0 +1,27 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "COMPLETED_NATIVE_WORKER",
+  "owned_pid": 24272,
+  "exit_code": 0,
+  "elapsed_s": 363.84399999999914,
+  "sampled_peak_private_bytes": 22483271680,
+  "sampled_peak_working_set_bytes": 19978285056,
+  "max_runtime_s": 540.0,
+  "max_memory_bytes": 34359738368,
+  "driver_sha256": "6e7466c04d38c4db2d49bfbe6a73e07edb4e418fa582f58b3b192c47aa5c42b0",
+  "worker_command": [
+    "C:\\Users\\User\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+    "-B",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_l04_10mhz_two_direction_complete_current.py",
+    "--native-worker",
+    "--output",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-two-direction-complete-current-01"
+  ],
+  "memory_at_launch": {
+    "total_physical_bytes": 68374552576,
+    "available_physical_bytes": 51999023104,
+    "available_commit_bytes": 56981823488
+  },
+  "guard_failure": null
+}

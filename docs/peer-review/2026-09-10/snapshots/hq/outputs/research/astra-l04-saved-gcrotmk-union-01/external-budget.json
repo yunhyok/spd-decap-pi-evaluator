@@ -1,0 +1,27 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "COMPLETED_NATIVE_WORKER",
+  "owned_pid": 22252,
+  "exit_code": 0,
+  "elapsed_s": 13.514999999999418,
+  "sampled_peak_private_bytes": 4295335936,
+  "sampled_peak_working_set_bytes": 3534159872,
+  "max_runtime_s": 120.0,
+  "max_memory_bytes": 25769803776,
+  "sampling_interval_s": 0.5,
+  "driver_sha256": "2961d1606ec2d4583c37d990d238a6abc87a54d8e0b93f9d83397f3851536a25",
+  "driver_sha256_role": "guard helper, custom worker bound separately by its frozen driver and result",
+  "worker_command": [
+    "C:\\Users\\User\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+    "-B",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\screen_astra_l04_saved_gcrotmk_union.py",
+    "--native-worker",
+    "--baseline",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-complete-current-gcrotmk-01",
+    "--paired",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-closed-magnetic-gcrotmk-paired-01",
+    "--output",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-saved-gcrotmk-union-01"
+  ]
+}

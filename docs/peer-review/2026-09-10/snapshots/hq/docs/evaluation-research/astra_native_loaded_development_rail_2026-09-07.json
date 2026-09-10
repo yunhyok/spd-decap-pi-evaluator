@@ -1,0 +1,639 @@
+{
+  "bundle": {
+    "design_fingerprint": "73a0167ef13cadc885b0f97bcab00de4322095b1a25d9bfd014f32bb39b40dab",
+    "load_validated_all_declared_member_hashes": true,
+    "manifest_sha256": "7ceb7f1a94a7140c5f0c82a6a1252e2f96ba5f8543d75e9e9edae6ab12a5a82b",
+    "path": "D:\\SPD-Decap-PI-Evaluator-W7\\e2f219e71d8c8a397009f72242cce10d78cfc7ab\\260902-d115b-source-plane-ownership-materialization-04\\source_plane_ownership_candidate.spdpi",
+    "scenario_sha256": "2f5ae107221857f7f093ab8d6cbcff4c286a0c6cee5b6a9994de1c384cf39c83",
+    "size_bytes": 925278361,
+    "source_sha256": "40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2"
+  },
+  "device_port": {
+    "negative_node_id": "spd-finite-via-vertex:1e9e3a9fb6978e92411bce4c",
+    "port_id": "ADC_VDD_075_VTRIP_SRAM/0",
+    "positive_node_id": "spd-device-port-node:820d47f6bf1a0a52a37b4706"
+  },
+  "frequencies_hz": [
+    1000000.0,
+    10000000.0,
+    100000000.0,
+    1000000000.0
+  ],
+  "identities": {
+    "base_driver_sha256": "5f73464f9bd8aea1eac54bae7c7840134fbf19a63d62b28e1edb57e76ec844eb",
+    "base_substrate_identity_sha256": "ded5a0de451b0f195214f9f175c51ccb61af1b60f97f5a4b1052570125a84abc",
+    "driver_code_sha256": "3c1fd9c4cd2c3247e2b1f2ae41c78ed6310d25092a92e6b9751a7593e4fcdf52",
+    "loaded_scenario_identity_sha256": "061ba8053e25b2c1f8d4c778eecaa344ac8d47213143d32e210f49420d10e729",
+    "solver_profile": "layerwise_admittance_v1",
+    "source_model_evidence_sha256": "df253a8d51a5e135d5100a693efe187bf2ff7d4631e25b5126d7544e006c0bf5",
+    "termination_manifest_sha256": "c753669eacf83d3bfcf5c657e14e343a8c9ab5a0a2464039069a9053a293af75"
+  },
+  "limitations": [
+    "This is a source-selected non-holdout development rail, not a frozen W6 holdout score.",
+    "Only the saved source-mounted Scenario is solved; no unloaded state or AON rail is repeated.",
+    "No local trace shadow, new physical parameter, PowerSI response, or fit enters these native solves.",
+    "The four Device Zdd points diagnose this one rail and do not establish broadband accuracy."
+  ],
+  "points": {
+    "1000000": {
+      "device_zdd_magnitude_ohm": 0.00061400875122765,
+      "device_zdd_ohm": [
+        0.00010031137009881143,
+        -0.0006057593380320584
+      ],
+      "device_zdd_phase_deg": -80.59737054741048,
+      "device_zdd_real_nonnegative": true,
+      "diagnostics": {
+        "active_reduced_node_count": 756889,
+        "active_structural_component_count": 1,
+        "active_termination_cluster_count": 11050,
+        "active_termination_element_count": 11050,
+        "finite_via_link_count": 1692389,
+        "maximum_factor_pivot_ratio": 9031482.148991613,
+        "maximum_port_rhs_batch_size": 1,
+        "maximum_relative_residual": 8.094519079588471e-19,
+        "maximum_termination_kron_relative_residual": 0.0,
+        "physical_surface_count": 812988,
+        "pruned_portless_node_count": 0,
+        "reduced_node_count": 756889,
+        "solve_identity_sha256": "fc9f9b81cfe02e0f9f061c7061334ad5b8b5945080cd5e8cf4525b918ba000fd",
+        "structural_component_count": 1,
+        "termination_manifest_sha256": "c753669eacf83d3bfcf5c657e14e343a8c9ab5a0a2464039069a9053a293af75",
+        "topology_only_link_count": 56888
+      },
+      "effective_admittance_s": [
+        266.0731432731124,
+        1606.759941355236
+      ],
+      "frequency_hz": 1000000.0,
+      "resource_at_checkpoint": {
+        "elapsed_s": 1095.25,
+        "peak_private_bytes": 13089902592,
+        "peak_working_set_bytes": 10635218944
+      },
+      "status": "COMPLETED_ACTUAL_SOURCE_MOUNTED_DEVICE_POINT"
+    },
+    "10000000": {
+      "device_zdd_magnitude_ohm": 0.00011909998693839897,
+      "device_zdd_ohm": [
+        9.255113623396583e-05,
+        7.49606167966133e-05
+      ],
+      "device_zdd_phase_deg": 39.00530304246494,
+      "device_zdd_real_nonnegative": true,
+      "diagnostics": {
+        "active_reduced_node_count": 756889,
+        "active_structural_component_count": 1,
+        "active_termination_cluster_count": 11050,
+        "active_termination_element_count": 11050,
+        "finite_via_link_count": 1692389,
+        "maximum_factor_pivot_ratio": 210904.863961265,
+        "maximum_port_rhs_batch_size": 1,
+        "maximum_relative_residual": 1.2826954128065447e-18,
+        "maximum_termination_kron_relative_residual": 0.0,
+        "physical_surface_count": 812988,
+        "pruned_portless_node_count": 0,
+        "reduced_node_count": 756889,
+        "solve_identity_sha256": "7a1c3fe8afe8ccd228ef09f1518d625d521a3a51caee2c57e2b410ec7201b69b",
+        "structural_component_count": 1,
+        "termination_manifest_sha256": "c753669eacf83d3bfcf5c657e14e343a8c9ab5a0a2464039069a9053a293af75",
+        "topology_only_link_count": 56888
+      },
+      "effective_admittance_s": [
+        6524.666635223611,
+        -5284.570835869981
+      ],
+      "frequency_hz": 10000000.0,
+      "resource_at_checkpoint": {
+        "elapsed_s": 1169.1719999999914,
+        "peak_private_bytes": 13097136128,
+        "peak_working_set_bytes": 10635218944
+      },
+      "status": "COMPLETED_ACTUAL_SOURCE_MOUNTED_DEVICE_POINT"
+    },
+    "100000000": {
+      "device_zdd_magnitude_ohm": 0.0009220713006008781,
+      "device_zdd_ohm": [
+        0.00011885382968568422,
+        0.0009143791612678196
+      ],
+      "device_zdd_phase_deg": 82.59404058962365,
+      "device_zdd_real_nonnegative": true,
+      "diagnostics": {
+        "active_reduced_node_count": 756889,
+        "active_structural_component_count": 1,
+        "active_termination_cluster_count": 11050,
+        "active_termination_element_count": 11050,
+        "finite_via_link_count": 1692389,
+        "maximum_factor_pivot_ratio": 36413.22336157207,
+        "maximum_port_rhs_batch_size": 1,
+        "maximum_relative_residual": 4.503153910957011e-19,
+        "maximum_termination_kron_relative_residual": 0.0,
+        "physical_surface_count": 812988,
+        "pruned_portless_node_count": 0,
+        "reduced_node_count": 756889,
+        "solve_identity_sha256": "f8150349e0644b008fcb74debe43bce855dfc17f6d2376b3b38e3969d114762b",
+        "structural_component_count": 1,
+        "termination_manifest_sha256": "c753669eacf83d3bfcf5c657e14e343a8c9ab5a0a2464039069a9053a293af75",
+        "topology_only_link_count": 56888
+      },
+      "effective_admittance_s": [
+        139.7925961210873,
+        -1075.4675480856386
+      ],
+      "frequency_hz": 100000000.0,
+      "resource_at_checkpoint": {
+        "elapsed_s": 1237.2969999999914,
+        "peak_private_bytes": 13207990272,
+        "peak_working_set_bytes": 10635218944
+      },
+      "status": "COMPLETED_ACTUAL_SOURCE_MOUNTED_DEVICE_POINT"
+    },
+    "1000000000": {
+      "device_zdd_magnitude_ohm": 0.010173297990439964,
+      "device_zdd_ohm": [
+        0.0006112607615812399,
+        0.010154917640416436
+      ],
+      "device_zdd_phase_deg": 86.55531871645496,
+      "device_zdd_real_nonnegative": true,
+      "diagnostics": {
+        "active_reduced_node_count": 756889,
+        "active_structural_component_count": 1,
+        "active_termination_cluster_count": 11050,
+        "active_termination_element_count": 11050,
+        "finite_via_link_count": 1692389,
+        "maximum_factor_pivot_ratio": 36651.90856007403,
+        "maximum_port_rhs_batch_size": 1,
+        "maximum_relative_residual": 2.3603943324137963e-18,
+        "maximum_termination_kron_relative_residual": 0.0,
+        "physical_surface_count": 812988,
+        "pruned_portless_node_count": 0,
+        "reduced_node_count": 756889,
+        "solve_identity_sha256": "5c0337a376266d552e1d3c6860779dd1ff2176ac2131b91b68058159c784569e",
+        "structural_component_count": 1,
+        "termination_manifest_sha256": "c753669eacf83d3bfcf5c657e14e343a8c9ab5a0a2464039069a9053a293af75",
+        "topology_only_link_count": 56888
+      },
+      "effective_admittance_s": [
+        5.906129790685189,
+        -98.11894590267576
+      ],
+      "frequency_hz": 1000000000.0,
+      "resource_at_checkpoint": {
+        "elapsed_s": 1305.3280000000086,
+        "peak_private_bytes": 13207990272,
+        "peak_working_set_bytes": 10635218944
+      },
+      "status": "COMPLETED_ACTUAL_SOURCE_MOUNTED_DEVICE_POINT"
+    }
+  },
+  "program": "SPD Decap PI Evaluator v0.23.1",
+  "rail_id": "ADC_VDD_075_VTRIP_SRAM/0",
+  "resource": {
+    "elapsed_s": 1306.7810000000172,
+    "max_rss_bytes": 25769803776,
+    "max_runtime_s": 2100.0,
+    "peak_private_bytes": 13207990272,
+    "peak_working_set_bytes": 10635218944
+  },
+  "scenario_population": {
+    "decap_count": 11050,
+    "enabled_source_mounted_by_rail": {
+      "ADC_VDD_050_VDDQ_DDRH/0": 35,
+      "ADC_VDD_050_VDDQ_DDRH/1": 35,
+      "ADC_VDD_050_VDDQ_DDRL/0": 35,
+      "ADC_VDD_050_VDDQ_DDRL/1": 35,
+      "ADC_VDD_055_VTRIP/0": 3166,
+      "ADC_VDD_055_VTRIP/1": 3166,
+      "ADC_VDD_070_VAON/0": 113,
+      "ADC_VDD_070_VAON/1": 113,
+      "ADC_VDD_070_VDDA_DDRH_REF_CLK/0": 4,
+      "ADC_VDD_070_VDDA_DDRH_REF_CLK/1": 4,
+      "ADC_VDD_070_VDDA_DDRL_REF_CLK/0": 4,
+      "ADC_VDD_070_VDDA_DDRL_REF_CLK/1": 4,
+      "ADC_VDD_070_VINT/0": 1034,
+      "ADC_VDD_070_VINT/1": 1034,
+      "ADC_VDD_070_VPDIG_PHY_PCI/0": 6,
+      "ADC_VDD_070_VPDIG_PHY_PCI/1": 6,
+      "ADC_VDD_070_VP_AON/0": 4,
+      "ADC_VDD_070_VP_AON/1": 4,
+      "ADC_VDD_070_VP_CAM0/0": 4,
+      "ADC_VDD_070_VP_CAM0/1": 4,
+      "ADC_VDD_070_VP_CAM12/0": 4,
+      "ADC_VDD_070_VP_CAM12/1": 4,
+      "ADC_VDD_070_VP_HSIO/0": 4,
+      "ADC_VDD_070_VP_HSIO/1": 4,
+      "ADC_VDD_070_VP_PCI/0": 54,
+      "ADC_VDD_070_VP_PCI/1": 54,
+      "ADC_VDD_075_VAON_SRAM/0": 35,
+      "ADC_VDD_075_VAON_SRAM/1": 35,
+      "ADC_VDD_075_VCPU/0": 293,
+      "ADC_VDD_075_VCPU/1": 293,
+      "ADC_VDD_075_VINT_SRAM/0": 106,
+      "ADC_VDD_075_VINT_SRAM/1": 106,
+      "ADC_VDD_075_VP_UFS/0": 4,
+      "ADC_VDD_075_VP_UFS/1": 4,
+      "ADC_VDD_075_VTRIP_SRAM/0": 421,
+      "ADC_VDD_075_VTRIP_SRAM/1": 421,
+      "ADC_VDD_105_VAA_DDRH/0": 4,
+      "ADC_VDD_105_VAA_DDRH/1": 4,
+      "ADC_VDD_105_VAA_DDRL/0": 4,
+      "ADC_VDD_105_VAA_DDRL/1": 4,
+      "ADC_VDD_105_VDD2H_DDRH/0": 4,
+      "ADC_VDD_105_VDD2H_DDRH/1": 4,
+      "ADC_VDD_105_VDD2H_DDRL/0": 4,
+      "ADC_VDD_105_VDD2H_DDRL/1": 4,
+      "ADC_VDD_120_VDDA_LSIO/0": 4,
+      "ADC_VDD_120_VDDA_LSIO/1": 4,
+      "ADC_VDD_120_VDDA_P_CL1_M/0": 4,
+      "ADC_VDD_120_VDDA_P_CL1_M/1": 4,
+      "ADC_VDD_120_VDDA_P_CL1_P/0": 4,
+      "ADC_VDD_120_VDDA_P_CL1_P/1": 4,
+      "ADC_VDD_120_VDDA_P_CL2_M/0": 4,
+      "ADC_VDD_120_VDDA_P_CL2_M/1": 4,
+      "ADC_VDD_120_VDDA_P_CL2_P/0": 4,
+      "ADC_VDD_120_VDDA_P_CL2_P/1": 4,
+      "ADC_VDD_120_VDDA_P_CL3_M/0": 4,
+      "ADC_VDD_120_VDDA_P_CL3_M/1": 4,
+      "ADC_VDD_120_VDDA_P_CL3_P/0": 4,
+      "ADC_VDD_120_VDDA_P_CL3_P/1": 4,
+      "ADC_VDD_120_VDDA_P_CL4_M/0": 6,
+      "ADC_VDD_120_VDDA_P_CL4_M/1": 6,
+      "ADC_VDD_120_VDDA_P_CL4_P/0": 4,
+      "ADC_VDD_120_VDDA_P_CL4_P/1": 4,
+      "ADC_VDD_120_VDDA_P_CL5_M/0": 4,
+      "ADC_VDD_120_VDDA_P_CL5_M/1": 4,
+      "ADC_VDD_120_VDDA_P_CL5_P/0": 4,
+      "ADC_VDD_120_VDDA_P_CL5_P/1": 4,
+      "ADC_VDD_120_VPH_AON/0": 4,
+      "ADC_VDD_120_VPH_AON/1": 4,
+      "ADC_VDD_120_VPH_CAM/0": 4,
+      "ADC_VDD_120_VPH_CAM/1": 4,
+      "ADC_VDD_120_VPH_HSIO/0": 4,
+      "ADC_VDD_120_VPH_HSIO/1": 4,
+      "ADC_VDD_120_VPH_PCI/0": 54,
+      "ADC_VDD_120_VPH_PCI/1": 54,
+      "ADC_VDD_120_VPH_UFS/0": 4,
+      "ADC_VDD_120_VPH_UFS/1": 4,
+      "ADC_VDD_120_VP_OD_PCI/0": 47,
+      "ADC_VDD_120_VP_OD_PCI/1": 47,
+      "ADC_VDD_180_VIO_AON/0": 11,
+      "ADC_VDD_180_VIO_AON/1": 11,
+      "ADC_VDD_180_VIO_LSIO/0": 9,
+      "ADC_VDD_180_VIO_LSIO/1": 9
+    },
+    "enabled_source_mounted_count": 11050
+  },
+  "selection": {
+    "all_excluded_holdout_rails": [
+      "ADC_VDD_055_VTRIP/0",
+      "ADC_VDD_055_VTRIP/1",
+      "ADC_VDD_070_VINT/0",
+      "ADC_VDD_070_VINT/1",
+      "ADC_VDD_075_VCPU/0",
+      "ADC_VDD_075_VCPU/1",
+      "ADC_VDD_180_VQPS_OTP_TOP_AON/1",
+      "ADC_VDD_180_VQPS_SYS_0_AON/1",
+      "ADC_VDD_180_VQPS_SYS_1_AON/1",
+      "ADC_VDD_180_VQPS_SYS_2_AON/1",
+      "ADC_VDD_180_VQPS_SYS_3_AON/1"
+    ],
+    "eligible_ranked_counts": [
+      {
+        "count": 421,
+        "rail_id": "ADC_VDD_075_VTRIP_SRAM/0"
+      },
+      {
+        "count": 421,
+        "rail_id": "ADC_VDD_075_VTRIP_SRAM/1"
+      },
+      {
+        "count": 113,
+        "rail_id": "ADC_VDD_070_VAON/0"
+      },
+      {
+        "count": 113,
+        "rail_id": "ADC_VDD_070_VAON/1"
+      },
+      {
+        "count": 106,
+        "rail_id": "ADC_VDD_075_VINT_SRAM/0"
+      },
+      {
+        "count": 106,
+        "rail_id": "ADC_VDD_075_VINT_SRAM/1"
+      },
+      {
+        "count": 54,
+        "rail_id": "ADC_VDD_070_VP_PCI/0"
+      },
+      {
+        "count": 54,
+        "rail_id": "ADC_VDD_070_VP_PCI/1"
+      },
+      {
+        "count": 54,
+        "rail_id": "ADC_VDD_120_VPH_PCI/0"
+      },
+      {
+        "count": 54,
+        "rail_id": "ADC_VDD_120_VPH_PCI/1"
+      },
+      {
+        "count": 47,
+        "rail_id": "ADC_VDD_120_VP_OD_PCI/0"
+      },
+      {
+        "count": 47,
+        "rail_id": "ADC_VDD_120_VP_OD_PCI/1"
+      },
+      {
+        "count": 35,
+        "rail_id": "ADC_VDD_050_VDDQ_DDRH/0"
+      },
+      {
+        "count": 35,
+        "rail_id": "ADC_VDD_050_VDDQ_DDRH/1"
+      },
+      {
+        "count": 35,
+        "rail_id": "ADC_VDD_050_VDDQ_DDRL/0"
+      },
+      {
+        "count": 35,
+        "rail_id": "ADC_VDD_050_VDDQ_DDRL/1"
+      },
+      {
+        "count": 35,
+        "rail_id": "ADC_VDD_075_VAON_SRAM/0"
+      },
+      {
+        "count": 35,
+        "rail_id": "ADC_VDD_075_VAON_SRAM/1"
+      },
+      {
+        "count": 11,
+        "rail_id": "ADC_VDD_180_VIO_AON/0"
+      },
+      {
+        "count": 11,
+        "rail_id": "ADC_VDD_180_VIO_AON/1"
+      },
+      {
+        "count": 9,
+        "rail_id": "ADC_VDD_180_VIO_LSIO/0"
+      },
+      {
+        "count": 9,
+        "rail_id": "ADC_VDD_180_VIO_LSIO/1"
+      },
+      {
+        "count": 6,
+        "rail_id": "ADC_VDD_070_VPDIG_PHY_PCI/0"
+      },
+      {
+        "count": 6,
+        "rail_id": "ADC_VDD_070_VPDIG_PHY_PCI/1"
+      },
+      {
+        "count": 6,
+        "rail_id": "ADC_VDD_120_VDDA_P_CL4_M/0"
+      },
+      {
+        "count": 6,
+        "rail_id": "ADC_VDD_120_VDDA_P_CL4_M/1"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_070_VDDA_DDRH_REF_CLK/0"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_070_VDDA_DDRH_REF_CLK/1"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_070_VDDA_DDRL_REF_CLK/0"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_070_VDDA_DDRL_REF_CLK/1"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_070_VP_AON/0"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_070_VP_AON/1"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_070_VP_CAM0/0"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_070_VP_CAM0/1"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_070_VP_CAM12/0"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_070_VP_CAM12/1"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_070_VP_HSIO/0"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_070_VP_HSIO/1"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_075_VP_UFS/0"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_075_VP_UFS/1"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_105_VAA_DDRH/0"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_105_VAA_DDRH/1"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_105_VAA_DDRL/0"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_105_VAA_DDRL/1"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_105_VDD2H_DDRH/0"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_105_VDD2H_DDRH/1"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_105_VDD2H_DDRL/0"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_105_VDD2H_DDRL/1"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_120_VDDA_LSIO/0"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_120_VDDA_LSIO/1"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_120_VDDA_P_CL1_M/0"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_120_VDDA_P_CL1_M/1"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_120_VDDA_P_CL1_P/0"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_120_VDDA_P_CL1_P/1"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_120_VDDA_P_CL2_M/0"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_120_VDDA_P_CL2_M/1"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_120_VDDA_P_CL2_P/0"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_120_VDDA_P_CL2_P/1"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_120_VDDA_P_CL3_M/0"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_120_VDDA_P_CL3_M/1"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_120_VDDA_P_CL3_P/0"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_120_VDDA_P_CL3_P/1"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_120_VDDA_P_CL4_P/0"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_120_VDDA_P_CL4_P/1"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_120_VDDA_P_CL5_M/0"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_120_VDDA_P_CL5_M/1"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_120_VDDA_P_CL5_P/0"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_120_VDDA_P_CL5_P/1"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_120_VPH_AON/0"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_120_VPH_AON/1"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_120_VPH_CAM/0"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_120_VPH_CAM/1"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_120_VPH_HSIO/0"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_120_VPH_HSIO/1"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_120_VPH_UFS/0"
+      },
+      {
+        "count": 4,
+        "rail_id": "ADC_VDD_120_VPH_UFS/1"
+      }
+    ],
+    "loaded_final_holdout": [
+      "ADC_VDD_055_VTRIP/0",
+      "ADC_VDD_055_VTRIP/1",
+      "ADC_VDD_070_VINT/0",
+      "ADC_VDD_070_VINT/1",
+      "ADC_VDD_075_VCPU/0",
+      "ADC_VDD_075_VCPU/1"
+    ],
+    "prior_selection_receipt": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_loaded_development_selection_2026-09-07.json",
+      "reference_port_one_based": 18,
+      "sha256": "99d0f77fcceb9d07b97aa65953dd42b8d106b7f2485f42f11ee643134d64b8f9",
+      "size_bytes": 1702,
+      "written_before_target_reference_extraction": true
+    },
+    "rule": "maximize enabled-and-source-mounted decap count over rails outside the pinned W6 holdout sets; break ties by casefolded rail id",
+    "score_contract": {
+      "path": "D:\\SPD-Decap-PI-Evaluator-W6\\fb36288781dcc0b884950ef5a486c474090ceebd\\260729\\correlation\\correlation_report.json",
+      "schema_version": "powersi-correlation-report-v5",
+      "sha256": "969e40046e3a099d09557ba7500693460362336d76b067962436bd3b5177abc4",
+      "size_bytes": 823047
+    },
+    "selected_before_project_compile_or_response_solve": true,
+    "selected_enabled_source_mounted_count": 421,
+    "selected_is_not_loaded_final_holdout": true,
+    "selected_rail_id": "ADC_VDD_075_VTRIP_SRAM/0"
+  },
+  "state": "source_mounted_scenario_manifest",
+  "status": "COMPLETED_ACTUAL_SOURCE_MOUNTED_DEVELOPMENT_RAIL_FOUR_POINT",
+  "termination_cluster_count": 11050,
+  "version": "0.23.1"
+}

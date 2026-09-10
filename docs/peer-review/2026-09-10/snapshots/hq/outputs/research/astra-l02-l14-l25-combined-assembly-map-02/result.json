@@ -1,0 +1,221 @@
+{
+  "coordinate_contract": {
+    "combined_mixed_unknown_count": 2944100,
+    "combined_potential_count": 2340069,
+    "gauge_eliminated_unknown_count": 2944099,
+    "l02_new_potential_range_half_open": [
+      1483296,
+      2340069
+    ],
+    "l02_sheet_coordinate_count_including_native_target": 856774,
+    "l14_new_potential_range_half_open": [
+      756889,
+      903945
+    ],
+    "l14_sheet_coordinate_count_including_native_target": 147057,
+    "l25_coordinate_count_including_native_target": 579352,
+    "l25_current_count": 604031,
+    "l25_new_potential_range_half_open": [
+      903945,
+      1483296
+    ],
+    "native_potential_count": 756889,
+    "saved_coordinate_array_sha256": {
+      "l02_combined_sheet_active_indices": "2a6444b9b9c06e2ce64e2f03314d6083fe983afb86e77ccafbe984e6b0d3a6e9",
+      "l02_saved_sheet_active_indices": "4bf33f687c834aa56f068d8a1fcf1a9a1981246ac2cd504f4f8796f5f72fdaf8",
+      "l14_sheet_active_indices": "346e0c1caf3108f7f01b60191ad03ba9ecfb0938e4a388854b924cc2c4fcae2f",
+      "l25_potential_active_indices": "4491be534b7af14834f8fb5fc2f83d7359005d6d6ec5eb66b7c61a55a288186c"
+    },
+    "source_targets_remain_native_coordinates": {
+      "l02": 349710,
+      "l14": 718402,
+      "l25": 258027
+    }
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-assembly-map-02\\driver-at-run.py",
+    "sha256": "2e28deb06c9807d60ffc11af3d2248c7c603128a9d5004ca5bb5aee8a14b1a43",
+    "size_bytes": 31347
+  },
+  "elapsed_s": 8.660644599993248,
+  "finite_branch_contract": {
+    "all_admittances_finite_positive_real": true,
+    "all_branches_nonself": true,
+    "all_endpoints_in_range": true,
+    "branch_provenance": "Each final row stores its native active-finite row; split_leg=-1 is unsplit,0/1 are the ordered L02 composite legs.",
+    "collapse_matches_corrected_native_branch_list_exactly": true,
+    "final_branch_count": 1692409,
+    "l02_composite_rows_removed": 20,
+    "l02_native_endpoint_rows": 76139,
+    "l02_positive_rl_legs_added": 40,
+    "l14_endpoint_rows": 2110,
+    "l14_numerically_changed_rows": 2109,
+    "l25_endpoint_rows": 350,
+    "native_branch_count": 1692389,
+    "pairwise_row_intersection_counts": {
+      "l02_composite__l25": 0,
+      "l02_native__l02_composite": 0,
+      "l02_native__l25": 0,
+      "l14__l02_composite": 0,
+      "l14__l02_native": 0,
+      "l14__l25": 0
+    },
+    "single_final_branch_list": true
+  },
+  "frequency_hz": 1000000.0,
+  "inputs": {
+    "l02_binding": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-circuit-contact-binding-01\\circuit-contact-binding.npz",
+      "sha256": "61ed51f68ae0cc39cdd5ee07e919e105fd15aee5a6b4c8374b063f7d72221020",
+      "size_bytes": 2182451
+    },
+    "l02_binding_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-circuit-contact-binding-01\\result.json",
+      "sha256": "1ef00f9c88553faf71f6cd87b4899c23d4a1be598a18a08c19b8776148690efc",
+      "size_bytes": 155267
+    },
+    "l02_field": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-sheet-r-board-1mhz-01\\epsilon-1-field.npz",
+      "sha256": "40ff6697ba5a0b1f21c558d71c788b49a37d6ccc878dfd12e3aa7c3aafbac18a",
+      "size_bytes": 14882129
+    },
+    "l02_frozen_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-sheet-r-board-1mhz-01\\driver-at-run.py",
+      "sha256": "8437a7eb0398fdef919704c33a6ba2e9498c810b79e04b5df533462c8ce55105",
+      "size_bytes": 47796
+    },
+    "l02_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-sheet-r-board-1mhz-01\\result.json",
+      "sha256": "a491c951b7ec8c209fb194cb8dfa82d25a94230abefffbb97c94af55179b0e9b",
+      "size_bytes": 12186
+    },
+    "l14_field": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-sheet-r-shadow-01\\epsilon-1-field.npz",
+      "sha256": "15265003d3d93e3765cc22f4985c6a5edda77628fa57912b9676f4952dcc9f9a",
+      "size_bytes": 5732075
+    },
+    "l14_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\run_astra_l14_sheet_r_shadow.py",
+      "sha256": "ff234c89be9bb6828f4efa3e559116c903d62b463f9f9fec6893abf71a369803",
+      "size_bytes": 25205
+    },
+    "l14_inventory": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\l14-gc-projection-inventory.json",
+      "sha256": "4409cdccc3b3d488d8f3abdd2f1e8b09a488d3c18a5bace010c765a240bc397f",
+      "size_bytes": 604254
+    },
+    "l14_mass_receipt": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-gc-mass-05\\receipt.json",
+      "sha256": "dd41a5a2772a280d98a73943eb276b94d3eeadd502c981f328eb7548cfb5cdeb",
+      "size_bytes": 4774
+    },
+    "l14_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-sheet-r-shadow-01\\result.json",
+      "sha256": "b0401b240cd855dc4beffbc2f8920c2f285022885c2940660601cc41aa2adca5",
+      "size_bytes": 9846
+    },
+    "l25_binding": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-dual-cell-source-binding-01\\native-source-binding.npz",
+      "sha256": "c9d41f1e2b870dd854affa1db2c31bb86f24c472866fcd2125f313cb29981c6a",
+      "size_bytes": 4911
+    },
+    "l25_binding_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-dual-cell-source-binding-01\\result.json",
+      "sha256": "874f36da7dc906171d7761510902432752a3164b4ec055835064e389c4d427e6",
+      "size_bytes": 6696
+    },
+    "l25_field": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-rt0-board-1mhz-01\\field.npz",
+      "sha256": "be2a3515dca426a45a5fe8c0eb696e3aa59544ee32e2d93971917e19c32b5ce1",
+      "size_bytes": 21430540
+    },
+    "l25_frozen_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-rt0-board-1mhz-01\\driver-at-run.py",
+      "sha256": "4a6bf51cf37c64e3e86c1ad982ad7f73cf77d1990a40f011381b4238707ab8ae",
+      "size_bytes": 22560
+    },
+    "l25_inventory": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-source-sheet-01\\l25-gc-projection-inventory.json",
+      "sha256": "703e8cdf9988805a2fb05a40ff659bc9890ba999e2eef00c741a112aa5976a77",
+      "size_bytes": 20467
+    },
+    "l25_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-rt0-board-1mhz-01\\result.json",
+      "sha256": "61a48c10c054e65accc32203429d6b1c49b215693e12d439493a106d7c9e1752",
+      "size_bytes": 12131
+    },
+    "raw": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\raw-field-snapshot.npz",
+      "sha256": "6eac098738598a78b2068ce4f80e46fd70e17010a89bfb5949ec8a68124df4a7",
+      "size_bytes": 145099492
+    }
+  },
+  "limitations": [
+    "The L02 and L14 contact contractions and the L25 RT0/P0 sheet remain their previously qualified conditional approximations.",
+    "This artifact proves disjoint source ownership and executable coordinate/branch composition; it does not certify the combined physical field or explain the remaining PowerSI difference.",
+    "The full conditional G current/charge and magnetic coupling are separate pending operators; no return path is clamped, removed or newly grounded here."
+  ],
+  "next_assembly": "Place the existing L14/L02 nodal sheet blocks and L25 R/B blocks on these coordinates, distribute partials0/6/7/13/14 exactly once, and construct finite branch_action/Laplacian once from the saved final list before any guarded solve.",
+  "output": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-assembly-map-02\\combined-assembly-map.npz",
+    "sha256": "a6ccff514fe788396eb9d7620ebc828f966efbea3f7899e7a73991c17f8a2469",
+    "size_bytes": 16919703
+  },
+  "owner_contract": {
+    "finite_row_ownership_is_distinct_from_gc_matrix_support": true,
+    "l02_distributed_gc_partial_ordinals": [
+      0
+    ],
+    "l14_distributed_gc_partial_ordinals": [
+      6,
+      7
+    ],
+    "l25_distributed_gc_partial_ordinals": [
+      13,
+      14
+    ],
+    "owner_partial_sets_pairwise_disjoint": true,
+    "retained_native_gc_partial_ordinals": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      8,
+      9,
+      10,
+      11,
+      12,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35
+    ]
+  },
+  "port_contract": {
+    "gauge_active_index": 0,
+    "negative_active_index": 2656,
+    "positive_active_index": 2699
+  },
+  "program": "SPD Decap PI Evaluator",
+  "scope": "Pinned coordinate, owner and single finite-branch composition for the existing conditional L02, L14 and L25 assemblies. No sparse combined matrix, LU, field, FMM, new G/C projection or PowerSI comparison is computed.",
+  "status": "PASS_L02_L14_L25_COMBINED_ASSEMBLY_MAP_NO_LU",
+  "version": "0.23.1"
+}

@@ -1,0 +1,3959 @@
+{
+  "coincident_contact_count": 175,
+  "conditional_contact_contract": {
+    "barrel_radius_um": 75.0,
+    "model": "conditional drill-radius equipotential footprint from source receipt",
+    "source_hollow_barrel_is_filled_contact_claim": false
+  },
+  "conductance_nnz": 2579132,
+  "contact_binding": [
+    {
+      "active_finite_indices": [
+        893163,
+        1288599
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 0,
+      "native_link_ids": [
+        "spd-finite-via-edge:872ff5bc4f66e33722e4462e",
+        "spd-finite-via-edge:c3068c9f9ad1d7f135673012"
+      ],
+      "owner_id": "conditional-contact:Via501169+Via501170",
+      "receipt_group_index": 0,
+      "via_ids": [
+        "Via501169",
+        "Via501170"
+      ],
+      "xy_um": [
+        33800.0,
+        22750.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        31545,
+        1063445
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 1,
+      "native_link_ids": [
+        "spd-finite-via-edge:04c1efd312de5ff8a681b470",
+        "spd-finite-via-edge:a1050dacda4edc267ece46a4"
+      ],
+      "owner_id": "conditional-contact:Via501225+Via501226",
+      "receipt_group_index": 1,
+      "via_ids": [
+        "Via501225",
+        "Via501226"
+      ],
+      "xy_um": [
+        33150.0,
+        22750.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        799191,
+        811477
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 2,
+      "native_link_ids": [
+        "spd-finite-via-edge:78ff51ac266383025f4904e2",
+        "spd-finite-via-edge:7adf2e13ca808b116bf31736"
+      ],
+      "owner_id": "conditional-contact:Via502353+Via502354",
+      "receipt_group_index": 10,
+      "via_ids": [
+        "Via502353",
+        "Via502354"
+      ],
+      "xy_um": [
+        32500.0,
+        21450.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        165878,
+        1190411
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 3,
+      "native_link_ids": [
+        "spd-finite-via-edge:19185de9d9fd665d6fd4c502",
+        "spd-finite-via-edge:b44062f2fa860c22f195141d"
+      ],
+      "owner_id": "conditional-contact:Via519271+Via519272",
+      "receipt_group_index": 100,
+      "via_ids": [
+        "Via519271",
+        "Via519272"
+      ],
+      "xy_um": [
+        27950.0,
+        14950.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        388475,
+        984751
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 4,
+      "native_link_ids": [
+        "spd-finite-via-edge:3abf968a69595fbcc1579ca6",
+        "spd-finite-via-edge:951b2178d42828f8786d3f66"
+      ],
+      "owner_id": "conditional-contact:Via519353+Via519354",
+      "receipt_group_index": 101,
+      "via_ids": [
+        "Via519353",
+        "Via519354"
+      ],
+      "xy_um": [
+        27300.0,
+        14950.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1637687,
+        535040
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 5,
+      "native_link_ids": [
+        "spd-finite-via-edge:f7d93c82bbd3ab8438ef4d70",
+        "spd-finite-via-edge:50f758ec431ff3f84fbed450"
+      ],
+      "owner_id": "conditional-contact:Via519604+Via519605",
+      "receipt_group_index": 102,
+      "via_ids": [
+        "Via519604",
+        "Via519605"
+      ],
+      "xy_um": [
+        33800.0,
+        13650.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1299295,
+        196864
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 6,
+      "native_link_ids": [
+        "spd-finite-via-edge:c4a4c3e25cccb83b62d16f49",
+        "spd-finite-via-edge:1dd0909a67c18e27f95170c5"
+      ],
+      "owner_id": "conditional-contact:Via519660+Via519661",
+      "receipt_group_index": 103,
+      "via_ids": [
+        "Via519660",
+        "Via519661"
+      ],
+      "xy_um": [
+        33150.0,
+        13650.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        700464,
+        210463
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 7,
+      "native_link_ids": [
+        "spd-finite-via-edge:6a0ffb2666052ba282940578",
+        "spd-finite-via-edge:1fe28423ba843982ffc22f62"
+      ],
+      "owner_id": "conditional-contact:Via519742+Via519743",
+      "receipt_group_index": 104,
+      "via_ids": [
+        "Via519742",
+        "Via519743"
+      ],
+      "xy_um": [
+        32500.0,
+        13650.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1341656,
+        508387
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 8,
+      "native_link_ids": [
+        "spd-finite-via-edge:cb13f2e5b9dd005cfea5fc3b",
+        "spd-finite-via-edge:4cefa6a078dd1659a3af6bfd"
+      ],
+      "owner_id": "conditional-contact:Via519824+Via519825",
+      "receipt_group_index": 105,
+      "via_ids": [
+        "Via519824",
+        "Via519825"
+      ],
+      "xy_um": [
+        31850.0,
+        13650.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        274879,
+        122855
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 9,
+      "native_link_ids": [
+        "spd-finite-via-edge:299f45b6cd5a55b9098302f2",
+        "spd-finite-via-edge:1285389f1273985e40c9b5b4"
+      ],
+      "owner_id": "conditional-contact:Via519906+Via519907",
+      "receipt_group_index": 106,
+      "via_ids": [
+        "Via519906",
+        "Via519907"
+      ],
+      "xy_um": [
+        31200.0,
+        13650.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        445258,
+        895869
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 10,
+      "native_link_ids": [
+        "spd-finite-via-edge:4359caede3c7229a381254ef",
+        "spd-finite-via-edge:879d20b534de48f5b91826d3"
+      ],
+      "owner_id": "conditional-contact:Via519988+Via519989",
+      "receipt_group_index": 107,
+      "via_ids": [
+        "Via519988",
+        "Via519989"
+      ],
+      "xy_um": [
+        30550.0,
+        13650.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        482009,
+        846857
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 11,
+      "native_link_ids": [
+        "spd-finite-via-edge:48ed7d4551ad41d5e877cef5",
+        "spd-finite-via-edge:80384bf825d64f0a62137461"
+      ],
+      "owner_id": "conditional-contact:Via520070+Via520071",
+      "receipt_group_index": 108,
+      "via_ids": [
+        "Via520070",
+        "Via520071"
+      ],
+      "xy_um": [
+        29900.0,
+        13650.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1047284,
+        939164
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 12,
+      "native_link_ids": [
+        "spd-finite-via-edge:9e967bc99f390821b6b1642f",
+        "spd-finite-via-edge:8e3a232b8ec4ba3f296493f3"
+      ],
+      "owner_id": "conditional-contact:Via520152+Via520153",
+      "receipt_group_index": 109,
+      "via_ids": [
+        "Via520152",
+        "Via520153"
+      ],
+      "xy_um": [
+        29250.0,
+        13650.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        625875,
+        47419
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 13,
+      "native_link_ids": [
+        "spd-finite-via-edge:5ebd7c6273ba343e3bdaa156",
+        "spd-finite-via-edge:0723d638d01a505a62269811"
+      ],
+      "owner_id": "conditional-contact:Via502435+Via502436",
+      "receipt_group_index": 11,
+      "via_ids": [
+        "Via502435",
+        "Via502436"
+      ],
+      "xy_um": [
+        31850.0,
+        21450.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1000258,
+        1106121
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 14,
+      "native_link_ids": [
+        "spd-finite-via-edge:976bd3bc9649586f37cb0e00",
+        "spd-finite-via-edge:a784b32ed2f193188bd11256"
+      ],
+      "owner_id": "conditional-contact:Via520234+Via520235",
+      "receipt_group_index": 110,
+      "via_ids": [
+        "Via520234",
+        "Via520235"
+      ],
+      "xy_um": [
+        28600.0,
+        13650.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        791699,
+        1099202
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 15,
+      "native_link_ids": [
+        "spd-finite-via-edge:77dddb69916d0042ec70a14c",
+        "spd-finite-via-edge:a6772c60f74dece39e6864a5"
+      ],
+      "owner_id": "conditional-contact:Via520316+Via520317",
+      "receipt_group_index": 111,
+      "via_ids": [
+        "Via520316",
+        "Via520317"
+      ],
+      "xy_um": [
+        27950.0,
+        13650.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        391787,
+        1595573
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 16,
+      "native_link_ids": [
+        "spd-finite-via-edge:3b40ff4183b020fdd4e8559f",
+        "spd-finite-via-edge:f16a92d1c81cd7b76e205f36"
+      ],
+      "owner_id": "conditional-contact:Via520398+Via520399",
+      "receipt_group_index": 112,
+      "via_ids": [
+        "Via520398",
+        "Via520399"
+      ],
+      "xy_um": [
+        27300.0,
+        13650.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1489193,
+        1096017
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 17,
+      "native_link_ids": [
+        "spd-finite-via-edge:e1583dda5aadabb2302c580a",
+        "spd-finite-via-edge:a5fac129515a33da915d052a"
+      ],
+      "owner_id": "conditional-contact:Via520480+Via520481",
+      "receipt_group_index": 113,
+      "via_ids": [
+        "Via520480",
+        "Via520481"
+      ],
+      "xy_um": [
+        26650.0,
+        13650.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        292109,
+        863049
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 18,
+      "native_link_ids": [
+        "spd-finite-via-edge:2c34819b701f0bbf9db25164",
+        "spd-finite-via-edge:82ad298e1f41a5254edbec77"
+      ],
+      "owner_id": "conditional-contact:Via523835+Via523836",
+      "receipt_group_index": 114,
+      "via_ids": [
+        "Via523835",
+        "Via523836"
+      ],
+      "xy_um": [
+        -650.0,
+        14353.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        497783,
+        665767
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 19,
+      "native_link_ids": [
+        "spd-finite-via-edge:4b50fe3731112bfcf0aee947",
+        "spd-finite-via-edge:64c781a94bad34bb3bcedc9b"
+      ],
+      "owner_id": "conditional-contact:Via524033+Via524034",
+      "receipt_group_index": 115,
+      "via_ids": [
+        "Via524033",
+        "Via524034"
+      ],
+      "xy_um": [
+        12350.0,
+        14353.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        658786,
+        880687
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 20,
+      "native_link_ids": [
+        "spd-finite-via-edge:63b87b3383d0e10b2e8015d8",
+        "spd-finite-via-edge:854becd29d8a13af9e18020e"
+      ],
+      "owner_id": "conditional-contact:Via524061+Via524062",
+      "receipt_group_index": 116,
+      "via_ids": [
+        "Via524061",
+        "Via524062"
+      ],
+      "xy_um": [
+        11700.0,
+        14353.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        80583,
+        868866
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 21,
+      "native_link_ids": [
+        "spd-finite-via-edge:0c256b7747a416fb3cb4b8a2",
+        "spd-finite-via-edge:838961577b64abfe21117dc2"
+      ],
+      "owner_id": "conditional-contact:Via524088+Via524089",
+      "receipt_group_index": 117,
+      "via_ids": [
+        "Via524088",
+        "Via524089"
+      ],
+      "xy_um": [
+        11050.0,
+        14353.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        594464,
+        993483
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 22,
+      "native_link_ids": [
+        "spd-finite-via-edge:5a0253c22b2c6e602ecbe9cc",
+        "spd-finite-via-edge:9668dec3a26c999cae306ca4"
+      ],
+      "owner_id": "conditional-contact:Via524116+Via524117",
+      "receipt_group_index": 118,
+      "via_ids": [
+        "Via524116",
+        "Via524117"
+      ],
+      "xy_um": [
+        10400.0,
+        14353.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        937660,
+        1559260
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 23,
+      "native_link_ids": [
+        "spd-finite-via-edge:8dfdc1a2a49a34d070271ac5",
+        "spd-finite-via-edge:ebf49c2ec0af5ff477a661d0"
+      ],
+      "owner_id": "conditional-contact:Via524144+Via524145",
+      "receipt_group_index": 119,
+      "via_ids": [
+        "Via524144",
+        "Via524145"
+      ],
+      "xy_um": [
+        9750.0,
+        14353.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1143767,
+        902713
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 24,
+      "native_link_ids": [
+        "spd-finite-via-edge:ad29d5861b59d0f97f40837b",
+        "spd-finite-via-edge:88a77c789e0ec5357e76cbc2"
+      ],
+      "owner_id": "conditional-contact:Via502517+Via502518",
+      "receipt_group_index": 12,
+      "via_ids": [
+        "Via502517",
+        "Via502518"
+      ],
+      "xy_um": [
+        31200.0,
+        21450.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1050307,
+        1209198
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 25,
+      "native_link_ids": [
+        "spd-finite-via-edge:9f095183c3f134b6f8e8735c",
+        "spd-finite-via-edge:b71232ea00c7098aa19b5bab"
+      ],
+      "owner_id": "conditional-contact:Via524171+Via524172",
+      "receipt_group_index": 120,
+      "via_ids": [
+        "Via524171",
+        "Via524172"
+      ],
+      "xy_um": [
+        9100.0,
+        14353.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        754424,
+        692672
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 26,
+      "native_link_ids": [
+        "spd-finite-via-edge:723205fd6c8550449e8d231f",
+        "spd-finite-via-edge:68df5159d56f02e58215fccf"
+      ],
+      "owner_id": "conditional-contact:Via524199+Via524200",
+      "receipt_group_index": 121,
+      "via_ids": [
+        "Via524199",
+        "Via524200"
+      ],
+      "xy_um": [
+        8450.0,
+        14353.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        768566,
+        1111531
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 27,
+      "native_link_ids": [
+        "spd-finite-via-edge:7456308dde9fa0ee8cd55ac1",
+        "spd-finite-via-edge:a855645e37a2ff006f6cf371"
+      ],
+      "owner_id": "conditional-contact:Via524226+Via524227",
+      "receipt_group_index": 122,
+      "via_ids": [
+        "Via524226",
+        "Via524227"
+      ],
+      "xy_um": [
+        7800.0,
+        14353.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        709665,
+        1400401
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 28,
+      "native_link_ids": [
+        "spd-finite-via-edge:6b6d54d15b320d27fa2e23af",
+        "spd-finite-via-edge:d3f8c4091c6f3eb7d94077a6"
+      ],
+      "owner_id": "conditional-contact:Via524254+Via524255",
+      "receipt_group_index": 123,
+      "via_ids": [
+        "Via524254",
+        "Via524255"
+      ],
+      "xy_um": [
+        7150.0,
+        14353.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1630476,
+        1206172
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 29,
+      "native_link_ids": [
+        "spd-finite-via-edge:f6c2722f0dce3f7624e65076",
+        "spd-finite-via-edge:b69cfd427d7c9f8765fe8ea4"
+      ],
+      "owner_id": "conditional-contact:Via524282+Via524283",
+      "receipt_group_index": 124,
+      "via_ids": [
+        "Via524282",
+        "Via524283"
+      ],
+      "xy_um": [
+        6500.0,
+        14353.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        196231,
+        1372389
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 30,
+      "native_link_ids": [
+        "spd-finite-via-edge:1db9021601c6725d939ec4d4",
+        "spd-finite-via-edge:cfbb32b67c1afecbe97bf04d"
+      ],
+      "owner_id": "conditional-contact:Via524309+Via524310",
+      "receipt_group_index": 125,
+      "via_ids": [
+        "Via524309",
+        "Via524310"
+      ],
+      "xy_um": [
+        5850.0,
+        14353.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1481836,
+        488733
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 31,
+      "native_link_ids": [
+        "spd-finite-via-edge:e0373e296143000514294d29",
+        "spd-finite-via-edge:49f122268c172064ba8f54f1"
+      ],
+      "owner_id": "conditional-contact:Via524337+Via524338",
+      "receipt_group_index": 126,
+      "via_ids": [
+        "Via524337",
+        "Via524338"
+      ],
+      "xy_um": [
+        5200.0,
+        14353.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        178197,
+        346205
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 32,
+      "native_link_ids": [
+        "spd-finite-via-edge:1af80ccc87709a29714c5654",
+        "spd-finite-via-edge:3460be56d529c63812fa5d30"
+      ],
+      "owner_id": "conditional-contact:Via524365+Via524366",
+      "receipt_group_index": 127,
+      "via_ids": [
+        "Via524365",
+        "Via524366"
+      ],
+      "xy_um": [
+        4550.0,
+        14353.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1518094,
+        723587
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 33,
+      "native_link_ids": [
+        "spd-finite-via-edge:e5c3058115c5ff38edb8ecdf",
+        "spd-finite-via-edge:6d88a006a546d88232c1a89f"
+      ],
+      "owner_id": "conditional-contact:Via524392+Via524393",
+      "receipt_group_index": 128,
+      "via_ids": [
+        "Via524392",
+        "Via524393"
+      ],
+      "xy_um": [
+        3900.0,
+        14353.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1376106,
+        509170
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 34,
+      "native_link_ids": [
+        "spd-finite-via-edge:d04ac8bd5fc90a1e907f4f2b",
+        "spd-finite-via-edge:4d0e50ffb081f63f464f283a"
+      ],
+      "owner_id": "conditional-contact:Via524420+Via524421",
+      "receipt_group_index": 129,
+      "via_ids": [
+        "Via524420",
+        "Via524421"
+      ],
+      "xy_um": [
+        3250.0,
+        14353.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1175195,
+        12320
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 35,
+      "native_link_ids": [
+        "spd-finite-via-edge:b1ecca58c7ceaa377af27b34",
+        "spd-finite-via-edge:01e2365d2f8cef49cfdab292"
+      ],
+      "owner_id": "conditional-contact:Via502599+Via502600",
+      "receipt_group_index": 13,
+      "via_ids": [
+        "Via502599",
+        "Via502600"
+      ],
+      "xy_um": [
+        30550.0,
+        21450.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        344537,
+        1056295
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 36,
+      "native_link_ids": [
+        "spd-finite-via-edge:341f9acb6c57896c6bc00449",
+        "spd-finite-via-edge:9fee857e337d3935f7507e39"
+      ],
+      "owner_id": "conditional-contact:Via524448+Via524449",
+      "receipt_group_index": 130,
+      "via_ids": [
+        "Via524448",
+        "Via524449"
+      ],
+      "xy_um": [
+        2600.0,
+        14353.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1463173,
+        379580
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 37,
+      "native_link_ids": [
+        "spd-finite-via-edge:dd6cb1f2a9d2b3c5e3b777f4",
+        "spd-finite-via-edge:396effe39453fb6b947df9a0"
+      ],
+      "owner_id": "conditional-contact:Via524475+Via524476",
+      "receipt_group_index": 131,
+      "via_ids": [
+        "Via524475",
+        "Via524476"
+      ],
+      "xy_um": [
+        1950.0,
+        14353.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        252617,
+        919399
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 38,
+      "native_link_ids": [
+        "spd-finite-via-edge:2643ae89a5365e6475025d40",
+        "spd-finite-via-edge:8b34e6ccb5259d34a91de7d4"
+      ],
+      "owner_id": "conditional-contact:Via524503+Via524504",
+      "receipt_group_index": 132,
+      "via_ids": [
+        "Via524503",
+        "Via524504"
+      ],
+      "xy_um": [
+        1300.0,
+        14353.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1600321,
+        516331
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 39,
+      "native_link_ids": [
+        "spd-finite-via-edge:f2277806fb84d66b0c74163a",
+        "spd-finite-via-edge:4e21fc00723cbc4f86c8b900"
+      ],
+      "owner_id": "conditional-contact:Via524530+Via524531",
+      "receipt_group_index": 133,
+      "via_ids": [
+        "Via524530",
+        "Via524531"
+      ],
+      "xy_um": [
+        650.0,
+        14353.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1031316,
+        1086291
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 40,
+      "native_link_ids": [
+        "spd-finite-via-edge:9c27b5cdace1e03b8c498bb0",
+        "spd-finite-via-edge:a47eab759e3929e1ae331673"
+      ],
+      "owner_id": "conditional-contact:Via524554+Via524555",
+      "receipt_group_index": 134,
+      "via_ids": [
+        "Via524554",
+        "Via524555"
+      ],
+      "xy_um": [
+        12350.0,
+        13703.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1147456,
+        820369
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 41,
+      "native_link_ids": [
+        "spd-finite-via-edge:adb9d2d8fadfe7b42cff7bd8",
+        "spd-finite-via-edge:7c36bda5d8a1b4bd2c236afe"
+      ],
+      "owner_id": "conditional-contact:Via527256+Via527257",
+      "receipt_group_index": 135,
+      "via_ids": [
+        "Via527256",
+        "Via527257"
+      ],
+      "xy_um": [
+        -1950.0,
+        15003.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1184163,
+        654006
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 42,
+      "native_link_ids": [
+        "spd-finite-via-edge:b34658e98d077bf75377cece",
+        "spd-finite-via-edge:63038da93ae302c7bcf8770a"
+      ],
+      "owner_id": "conditional-contact:Via527303+Via527304",
+      "receipt_group_index": 136,
+      "via_ids": [
+        "Via527303",
+        "Via527304"
+      ],
+      "xy_um": [
+        -2600.0,
+        15003.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        794928,
+        1579109
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 43,
+      "native_link_ids": [
+        "spd-finite-via-edge:785a1db6ea3c36b4b8d552fe",
+        "spd-finite-via-edge:eeefd57162e9c7f0d3b9634f"
+      ],
+      "owner_id": "conditional-contact:Via527327+Via527328",
+      "receipt_group_index": 137,
+      "via_ids": [
+        "Via527327",
+        "Via527328"
+      ],
+      "xy_um": [
+        -1950.0,
+        14353.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        367884,
+        1187092
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 44,
+      "native_link_ids": [
+        "spd-finite-via-edge:37acc3a0646b9451cef6845f",
+        "spd-finite-via-edge:b3bc2d718d64ddfffc69fd29"
+      ],
+      "owner_id": "conditional-contact:Via527378+Via527379",
+      "receipt_group_index": 138,
+      "via_ids": [
+        "Via527378",
+        "Via527379"
+      ],
+      "xy_um": [
+        -2600.0,
+        14353.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        331170,
+        1613351
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 45,
+      "native_link_ids": [
+        "spd-finite-via-edge:3220cd9654a9846a04ecc310",
+        "spd-finite-via-edge:f423e99a80e34c7237738c04"
+      ],
+      "owner_id": "conditional-contact:Via527405+Via527406",
+      "receipt_group_index": 139,
+      "via_ids": [
+        "Via527405",
+        "Via527406"
+      ],
+      "xy_um": [
+        -3250.0,
+        14353.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1668635,
+        213459
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 46,
+      "native_link_ids": [
+        "spd-finite-via-edge:fc70e5629dd0bf877c0d2c5c",
+        "spd-finite-via-edge:2057d63c514eceeb1c0b4e1d"
+      ],
+      "owner_id": "conditional-contact:Via502681+Via502682",
+      "receipt_group_index": 14,
+      "via_ids": [
+        "Via502681",
+        "Via502682"
+      ],
+      "xy_um": [
+        29900.0,
+        21450.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1180456,
+        1068721
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 47,
+      "native_link_ids": [
+        "spd-finite-via-edge:b2b9564e228b64ac26513e2e",
+        "spd-finite-via-edge:a1d3cef305311b9e9009f144"
+      ],
+      "owner_id": "conditional-contact:Via527793+Via527794",
+      "receipt_group_index": 140,
+      "via_ids": [
+        "Via527793",
+        "Via527794"
+      ],
+      "xy_um": [
+        33800.0,
+        12350.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        957632,
+        1229584
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 48,
+      "native_link_ids": [
+        "spd-finite-via-edge:90ff08b53069717085a5a30d",
+        "spd-finite-via-edge:ba23c0a7a1ce484c533b8b8e"
+      ],
+      "owner_id": "conditional-contact:Via527849+Via527850",
+      "receipt_group_index": 141,
+      "via_ids": [
+        "Via527849",
+        "Via527850"
+      ],
+      "xy_um": [
+        33150.0,
+        12350.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1479740,
+        1636576
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 49,
+      "native_link_ids": [
+        "spd-finite-via-edge:dfe5f519185e0123131b6830",
+        "spd-finite-via-edge:f7add6943e60b0f9e04b1922"
+      ],
+      "owner_id": "conditional-contact:Via527931+Via527932",
+      "receipt_group_index": 142,
+      "via_ids": [
+        "Via527931",
+        "Via527932"
+      ],
+      "xy_um": [
+        32500.0,
+        12350.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1130992,
+        657131
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 50,
+      "native_link_ids": [
+        "spd-finite-via-edge:ab3e88b7b076b4ac4405bc16",
+        "spd-finite-via-edge:6378deb7d5d63dad295ea8cb"
+      ],
+      "owner_id": "conditional-contact:Via528013+Via528014",
+      "receipt_group_index": 143,
+      "via_ids": [
+        "Via528013",
+        "Via528014"
+      ],
+      "xy_um": [
+        31850.0,
+        12350.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        642848,
+        434185
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 51,
+      "native_link_ids": [
+        "spd-finite-via-edge:615675b19cb9b081c137afcd",
+        "spd-finite-via-edge:41b05acb287f19c449a169d6"
+      ],
+      "owner_id": "conditional-contact:Via528095+Via528096",
+      "receipt_group_index": 144,
+      "via_ids": [
+        "Via528095",
+        "Via528096"
+      ],
+      "xy_um": [
+        31200.0,
+        12350.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        362041,
+        1163930
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 52,
+      "native_link_ids": [
+        "spd-finite-via-edge:36c84ab04f585ae9824d645e",
+        "spd-finite-via-edge:b039aa727b74e81140f59f7b"
+      ],
+      "owner_id": "conditional-contact:Via528177+Via528178",
+      "receipt_group_index": 145,
+      "via_ids": [
+        "Via528177",
+        "Via528178"
+      ],
+      "xy_um": [
+        30550.0,
+        12350.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1593990,
+        87890
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 53,
+      "native_link_ids": [
+        "spd-finite-via-edge:f12c219a544cad51327f684f",
+        "spd-finite-via-edge:0d35d863987a86b612454d11"
+      ],
+      "owner_id": "conditional-contact:Via528259+Via528260",
+      "receipt_group_index": 146,
+      "via_ids": [
+        "Via528259",
+        "Via528260"
+      ],
+      "xy_um": [
+        29900.0,
+        12350.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1071641,
+        582729
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 54,
+      "native_link_ids": [
+        "spd-finite-via-edge:a2446c4abaa8b913f5de94af",
+        "spd-finite-via-edge:583753a832eab11d0f2e8a1e"
+      ],
+      "owner_id": "conditional-contact:Via528341+Via528342",
+      "receipt_group_index": 147,
+      "via_ids": [
+        "Via528341",
+        "Via528342"
+      ],
+      "xy_um": [
+        29250.0,
+        12350.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1332651,
+        1017921
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 55,
+      "native_link_ids": [
+        "spd-finite-via-edge:c9b73b897806f5c929ee0834",
+        "spd-finite-via-edge:9a196d85525ba708c557df1e"
+      ],
+      "owner_id": "conditional-contact:Via528423+Via528424",
+      "receipt_group_index": 148,
+      "via_ids": [
+        "Via528423",
+        "Via528424"
+      ],
+      "xy_um": [
+        28600.0,
+        12350.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        862460,
+        206230
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 56,
+      "native_link_ids": [
+        "spd-finite-via-edge:829615da2022d661636d50b8",
+        "spd-finite-via-edge:1f3d059873e50bffed18138c"
+      ],
+      "owner_id": "conditional-contact:Via528505+Via528506",
+      "receipt_group_index": 149,
+      "via_ids": [
+        "Via528505",
+        "Via528506"
+      ],
+      "xy_um": [
+        27950.0,
+        12350.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1521142,
+        1601875
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 57,
+      "native_link_ids": [
+        "spd-finite-via-edge:e63be22dbb6918d8be208969",
+        "spd-finite-via-edge:f262f94bd9dfb73ce6a530cf"
+      ],
+      "owner_id": "conditional-contact:Via502763+Via502764",
+      "receipt_group_index": 15,
+      "via_ids": [
+        "Via502763",
+        "Via502764"
+      ],
+      "xy_um": [
+        29250.0,
+        21450.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        726449,
+        649790
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 58,
+      "native_link_ids": [
+        "spd-finite-via-edge:6df5fcd9d38b9a8868c7e3e9",
+        "spd-finite-via-edge:6261ffddf7a90d1958f1b8d3"
+      ],
+      "owner_id": "conditional-contact:Via528587+Via528588",
+      "receipt_group_index": 150,
+      "via_ids": [
+        "Via528587",
+        "Via528588"
+      ],
+      "xy_um": [
+        27300.0,
+        12350.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1209185,
+        787647
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 59,
+      "native_link_ids": [
+        "spd-finite-via-edge:b7119fc2b84f41d3dba9385d",
+        "spd-finite-via-edge:7742135ac689660a8431b40c"
+      ],
+      "owner_id": "conditional-contact:Via528669+Via528670",
+      "receipt_group_index": 151,
+      "via_ids": [
+        "Via528669",
+        "Via528670"
+      ],
+      "xy_um": [
+        26650.0,
+        12350.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        337729,
+        77360
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 60,
+      "native_link_ids": [
+        "spd-finite-via-edge:33173ae9fd42abd5a709a891",
+        "spd-finite-via-edge:0ba88ebe7b09180fdc559a1f"
+      ],
+      "owner_id": "conditional-contact:Via528996+Via528997",
+      "receipt_group_index": 152,
+      "via_ids": [
+        "Via528996",
+        "Via528997"
+      ],
+      "xy_um": [
+        -1950.0,
+        11753.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        746659,
+        1186012
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 61,
+      "native_link_ids": [
+        "spd-finite-via-edge:710ad198cbb3c4e76c526ba7",
+        "spd-finite-via-edge:b390c742cc15ce57e4ee9dc4"
+      ],
+      "owner_id": "conditional-contact:Via529173+Via529174",
+      "receipt_group_index": 153,
+      "via_ids": [
+        "Via529173",
+        "Via529174"
+      ],
+      "xy_um": [
+        -2600.0,
+        11753.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1241052,
+        1530858
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 62,
+      "native_link_ids": [
+        "spd-finite-via-edge:bbd8ed08481ed232b3e32e8b",
+        "spd-finite-via-edge:e7abf9e9a5e24f43658c9b47"
+      ],
+      "owner_id": "conditional-contact:Via529350+Via529351",
+      "receipt_group_index": 154,
+      "via_ids": [
+        "Via529350",
+        "Via529351"
+      ],
+      "xy_um": [
+        -3250.0,
+        11753.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1553648,
+        270725
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 63,
+      "native_link_ids": [
+        "spd-finite-via-edge:eb19db5f8bb1cc7cd8c6e992",
+        "spd-finite-via-edge:2900a4a5a11474b1c7c319f8"
+      ],
+      "owner_id": "conditional-contact:Via529477+Via529478",
+      "receipt_group_index": 155,
+      "via_ids": [
+        "Via529477",
+        "Via529478"
+      ],
+      "xy_um": [
+        33800.0,
+        11050.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        3741,
+        859545
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 64,
+      "native_link_ids": [
+        "spd-finite-via-edge:0090eca8df00ff59e8742c30",
+        "spd-finite-via-edge:8224f4c0cfc36c3de5cc55aa"
+      ],
+      "owner_id": "conditional-contact:Via529533+Via529534",
+      "receipt_group_index": 156,
+      "via_ids": [
+        "Via529533",
+        "Via529534"
+      ],
+      "xy_um": [
+        33150.0,
+        11050.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1265225,
+        15263
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 65,
+      "native_link_ids": [
+        "spd-finite-via-edge:bf7910724c3e326feb6d3c9a",
+        "spd-finite-via-edge:0250711124e06cf40f48c005"
+      ],
+      "owner_id": "conditional-contact:Via529589+Via529590",
+      "receipt_group_index": 157,
+      "via_ids": [
+        "Via529589",
+        "Via529590"
+      ],
+      "xy_um": [
+        31850.0,
+        11050.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        752098,
+        146721
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 66,
+      "native_link_ids": [
+        "spd-finite-via-edge:71d87d8d351be4db0fd35e77",
+        "spd-finite-via-edge:1628af405a813f4cde3351e2"
+      ],
+      "owner_id": "conditional-contact:Via529645+Via529646",
+      "receipt_group_index": 158,
+      "via_ids": [
+        "Via529645",
+        "Via529646"
+      ],
+      "xy_um": [
+        31200.0,
+        11050.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1391323,
+        895710
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 67,
+      "native_link_ids": [
+        "spd-finite-via-edge:d295fd0e95bc62dc05b46003",
+        "spd-finite-via-edge:8797f9b54646855361315d9b"
+      ],
+      "owner_id": "conditional-contact:Via529701+Via529702",
+      "receipt_group_index": 159,
+      "via_ids": [
+        "Via529701",
+        "Via529702"
+      ],
+      "xy_um": [
+        29900.0,
+        11050.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1243171,
+        163637
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 68,
+      "native_link_ids": [
+        "spd-finite-via-edge:bc2c10dec3973949fd828bc2",
+        "spd-finite-via-edge:18bc32ff782bb827b3475196"
+      ],
+      "owner_id": "conditional-contact:Via502845+Via502846",
+      "receipt_group_index": 16,
+      "via_ids": [
+        "Via502845",
+        "Via502846"
+      ],
+      "xy_um": [
+        28600.0,
+        21450.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        854849,
+        972682
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 69,
+      "native_link_ids": [
+        "spd-finite-via-edge:816cf41a292368f196c6b1ba",
+        "spd-finite-via-edge:9346feb83fe3a708b5382e51"
+      ],
+      "owner_id": "conditional-contact:Via529757+Via529758",
+      "receipt_group_index": 160,
+      "via_ids": [
+        "Via529757",
+        "Via529758"
+      ],
+      "xy_um": [
+        29250.0,
+        11050.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        958015,
+        39480
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 70,
+      "native_link_ids": [
+        "spd-finite-via-edge:910cd4b3599b7363068ce7af",
+        "spd-finite-via-edge:05efa11e1f07eece3668f87a"
+      ],
+      "owner_id": "conditional-contact:Via529813+Via529814",
+      "receipt_group_index": 161,
+      "via_ids": [
+        "Via529813",
+        "Via529814"
+      ],
+      "xy_um": [
+        27950.0,
+        11050.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1634684,
+        1043571
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 71,
+      "native_link_ids": [
+        "spd-finite-via-edge:f765c1927bf3b6af0bd9f37f",
+        "spd-finite-via-edge:9e0464606d56bec040a3face"
+      ],
+      "owner_id": "conditional-contact:Via529869+Via529870",
+      "receipt_group_index": 162,
+      "via_ids": [
+        "Via529869",
+        "Via529870"
+      ],
+      "xy_um": [
+        27300.0,
+        11050.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1123118,
+        1243869
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 72,
+      "native_link_ids": [
+        "spd-finite-via-edge:aa123aaab7e92773d139abd7",
+        "spd-finite-via-edge:bc45fc98cb54a1046af2e85c"
+      ],
+      "owner_id": "conditional-contact:Via530442+Via530443",
+      "receipt_group_index": 163,
+      "via_ids": [
+        "Via530442",
+        "Via530443"
+      ],
+      "xy_um": [
+        33800.0,
+        9750.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1479221,
+        1361976
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 73,
+      "native_link_ids": [
+        "spd-finite-via-edge:dfd2c84c71177722ad8ce2e8",
+        "spd-finite-via-edge:ce26cee8c1eefa9ee390eba5"
+      ],
+      "owner_id": "conditional-contact:Via530498+Via530499",
+      "receipt_group_index": 164,
+      "via_ids": [
+        "Via530498",
+        "Via530499"
+      ],
+      "xy_um": [
+        33150.0,
+        9750.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        477751,
+        1123564
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 74,
+      "native_link_ids": [
+        "spd-finite-via-edge:4844e7a220da5909cb8fa6ad",
+        "spd-finite-via-edge:aa23a6cb5f4cf193248bb82a"
+      ],
+      "owner_id": "conditional-contact:Via530580+Via530581",
+      "receipt_group_index": 165,
+      "via_ids": [
+        "Via530580",
+        "Via530581"
+      ],
+      "xy_um": [
+        32500.0,
+        9750.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        181667,
+        1554307
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 75,
+      "native_link_ids": [
+        "spd-finite-via-edge:1b7d9534cf975865e7e39e6d",
+        "spd-finite-via-edge:eb34cbf87630f72bbb3259bd"
+      ],
+      "owner_id": "conditional-contact:Via530662+Via530663",
+      "receipt_group_index": 166,
+      "via_ids": [
+        "Via530662",
+        "Via530663"
+      ],
+      "xy_um": [
+        31850.0,
+        9750.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1146881,
+        477931
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 76,
+      "native_link_ids": [
+        "spd-finite-via-edge:ada3ecbeb60137cab46238ee",
+        "spd-finite-via-edge:484bcc16bbd3f88786bc7958"
+      ],
+      "owner_id": "conditional-contact:Via530744+Via530745",
+      "receipt_group_index": 167,
+      "via_ids": [
+        "Via530744",
+        "Via530745"
+      ],
+      "xy_um": [
+        31200.0,
+        9750.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        628656,
+        1647730
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 77,
+      "native_link_ids": [
+        "spd-finite-via-edge:5f25c06ad19b777f6a89af18",
+        "spd-finite-via-edge:f9570d559e3f099cd2326722"
+      ],
+      "owner_id": "conditional-contact:Via530826+Via530827",
+      "receipt_group_index": 168,
+      "via_ids": [
+        "Via530826",
+        "Via530827"
+      ],
+      "xy_um": [
+        30550.0,
+        9750.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1478714,
+        321288
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 78,
+      "native_link_ids": [
+        "spd-finite-via-edge:dfbf074660c981b1bdc8b450",
+        "spd-finite-via-edge:30a3b31dbebaa528fa2689f7"
+      ],
+      "owner_id": "conditional-contact:Via530908+Via530909",
+      "receipt_group_index": 169,
+      "via_ids": [
+        "Via530908",
+        "Via530909"
+      ],
+      "xy_um": [
+        29900.0,
+        9750.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1387867,
+        597069
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 79,
+      "native_link_ids": [
+        "spd-finite-via-edge:d210b62803bd6ab60def891c",
+        "spd-finite-via-edge:5a676f83781efb3eee7f27c1"
+      ],
+      "owner_id": "conditional-contact:Via502927+Via502928",
+      "receipt_group_index": 17,
+      "via_ids": [
+        "Via502927",
+        "Via502928"
+      ],
+      "xy_um": [
+        27950.0,
+        21450.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1301136,
+        1112017
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 80,
+      "native_link_ids": [
+        "spd-finite-via-edge:c4eb9631efb41f4b8c2ce40e",
+        "spd-finite-via-edge:a86846c0a706e08eb07e51f1"
+      ],
+      "owner_id": "conditional-contact:Via530990+Via530991",
+      "receipt_group_index": 170,
+      "via_ids": [
+        "Via530990",
+        "Via530991"
+      ],
+      "xy_um": [
+        29250.0,
+        9750.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1519837,
+        1304698
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 81,
+      "native_link_ids": [
+        "spd-finite-via-edge:e607a13b145a8b3b4783b045",
+        "spd-finite-via-edge:c5764943272c5de87d0612a2"
+      ],
+      "owner_id": "conditional-contact:Via531072+Via531073",
+      "receipt_group_index": 171,
+      "via_ids": [
+        "Via531072",
+        "Via531073"
+      ],
+      "xy_um": [
+        28600.0,
+        9750.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        509674,
+        102062
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 82,
+      "native_link_ids": [
+        "spd-finite-via-edge:4d2162ea85350725b30957c6",
+        "spd-finite-via-edge:0f5dcbd679d5e7d56dcc0ab2"
+      ],
+      "owner_id": "conditional-contact:Via531154+Via531155",
+      "receipt_group_index": 172,
+      "via_ids": [
+        "Via531154",
+        "Via531155"
+      ],
+      "xy_um": [
+        27950.0,
+        9750.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        563761,
+        389084
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 83,
+      "native_link_ids": [
+        "spd-finite-via-edge:5556ff362609672ae9a4cf26",
+        "spd-finite-via-edge:3ad7710ffaa70ab58b489e94"
+      ],
+      "owner_id": "conditional-contact:Via531236+Via531237",
+      "receipt_group_index": 173,
+      "via_ids": [
+        "Via531236",
+        "Via531237"
+      ],
+      "xy_um": [
+        27300.0,
+        9750.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1691933,
+        956815
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 84,
+      "native_link_ids": [
+        "spd-finite-via-edge:ffee6ab4d077e70666cba53b",
+        "spd-finite-via-edge:90e000cd159032921513de3b"
+      ],
+      "owner_id": "conditional-contact:Via531318+Via531319",
+      "receipt_group_index": 174,
+      "via_ids": [
+        "Via531318",
+        "Via531319"
+      ],
+      "xy_um": [
+        26650.0,
+        9750.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        514721,
+        961100
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 85,
+      "native_link_ids": [
+        "spd-finite-via-edge:4de33a3e49e5ae8c0b1a4dfc",
+        "spd-finite-via-edge:91853d5e0ed748a40aa90e32"
+      ],
+      "owner_id": "conditional-contact:Via503009+Via503010",
+      "receipt_group_index": 18,
+      "via_ids": [
+        "Via503009",
+        "Via503010"
+      ],
+      "xy_um": [
+        27300.0,
+        21450.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        116435,
+        964519
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 86,
+      "native_link_ids": [
+        "spd-finite-via-edge:118d46acb82e4f80564c0499",
+        "spd-finite-via-edge:920936c70f97eab92920bcaf"
+      ],
+      "owner_id": "conditional-contact:Via503091+Via503092",
+      "receipt_group_index": 19,
+      "via_ids": [
+        "Via503091",
+        "Via503092"
+      ],
+      "xy_um": [
+        26650.0,
+        21450.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1196681,
+        1240506
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 87,
+      "native_link_ids": [
+        "spd-finite-via-edge:b536f48f7a65e28b1b44f259",
+        "spd-finite-via-edge:bbc46e51e01eeb0e553e16ee"
+      ],
+      "owner_id": "conditional-contact:Via501281+Via501282",
+      "receipt_group_index": 2,
+      "via_ids": [
+        "Via501281",
+        "Via501282"
+      ],
+      "xy_um": [
+        31850.0,
+        22750.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        115715,
+        250691
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 88,
+      "native_link_ids": [
+        "spd-finite-via-edge:1170aee45878524172022ce4",
+        "spd-finite-via-edge:25fd23b3e123423684ed94ad"
+      ],
+      "owner_id": "conditional-contact:Via503813+Via503814",
+      "receipt_group_index": 20,
+      "via_ids": [
+        "Via503813",
+        "Via503814"
+      ],
+      "xy_um": [
+        8450.0,
+        20853.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1065024,
+        464979
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 89,
+      "native_link_ids": [
+        "spd-finite-via-edge:a141c1ffda19d75df25ac0ab",
+        "spd-finite-via-edge:4651eb29cd466001e6dd5fd1"
+      ],
+      "owner_id": "conditional-contact:Via503855+Via503856",
+      "receipt_group_index": 21,
+      "via_ids": [
+        "Via503855",
+        "Via503856"
+      ],
+      "xy_um": [
+        7800.0,
+        20853.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        262876,
+        917606
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 90,
+      "native_link_ids": [
+        "spd-finite-via-edge:27ce4a62620a7393e331b724",
+        "spd-finite-via-edge:8aeea2466538424055ce56e2"
+      ],
+      "owner_id": "conditional-contact:Via504150+Via504151",
+      "receipt_group_index": 22,
+      "via_ids": [
+        "Via504150",
+        "Via504151"
+      ],
+      "xy_um": [
+        5850.0,
+        20853.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1316241,
+        463903
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 91,
+      "native_link_ids": [
+        "spd-finite-via-edge:c73b32e4b2dbb37e54419716",
+        "spd-finite-via-edge:4629147a8f2436f48032e5c2"
+      ],
+      "owner_id": "conditional-contact:Via504334+Via504335",
+      "receipt_group_index": 23,
+      "via_ids": [
+        "Via504334",
+        "Via504335"
+      ],
+      "xy_um": [
+        4550.0,
+        20853.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        471696,
+        267602
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 92,
+      "native_link_ids": [
+        "spd-finite-via-edge:47593f48f42826407913e081",
+        "spd-finite-via-edge:2883c997eca4a981af4ef3da"
+      ],
+      "owner_id": "conditional-contact:Via504599+Via504600",
+      "receipt_group_index": 24,
+      "via_ids": [
+        "Via504599",
+        "Via504600"
+      ],
+      "xy_um": [
+        2600.0,
+        20853.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1184704,
+        1301806
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 93,
+      "native_link_ids": [
+        "spd-finite-via-edge:b35b1b7799764982b8566d71",
+        "spd-finite-via-edge:c5064943f04ff04ca70117c5"
+      ],
+      "owner_id": "conditional-contact:Via504621+Via504622",
+      "receipt_group_index": 25,
+      "via_ids": [
+        "Via504621",
+        "Via504622"
+      ],
+      "xy_um": [
+        1950.0,
+        20853.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        225905,
+        842224
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 94,
+      "native_link_ids": [
+        "spd-finite-via-edge:22386db65e325154dec62575",
+        "spd-finite-via-edge:7f86f6565b78882fef9fdcb9"
+      ],
+      "owner_id": "conditional-contact:Via505108+Via505109",
+      "receipt_group_index": 26,
+      "via_ids": [
+        "Via505108",
+        "Via505109"
+      ],
+      "xy_um": [
+        -650.0,
+        20853.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1063711,
+        776721
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 95,
+      "native_link_ids": [
+        "spd-finite-via-edge:a10e83f5fa5f72821736042c",
+        "spd-finite-via-edge:7597a914a59bb4eb9ef08de4"
+      ],
+      "owner_id": "conditional-contact:Via505409+Via505410",
+      "receipt_group_index": 27,
+      "via_ids": [
+        "Via505409",
+        "Via505410"
+      ],
+      "xy_um": [
+        33800.0,
+        20150.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        783434,
+        1644251
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 96,
+      "native_link_ids": [
+        "spd-finite-via-edge:76a18b9dffcb6d4c6ef8e129",
+        "spd-finite-via-edge:f8d0090196d5ecc97b5909f7"
+      ],
+      "owner_id": "conditional-contact:Via505465+Via505466",
+      "receipt_group_index": 28,
+      "via_ids": [
+        "Via505465",
+        "Via505466"
+      ],
+      "xy_um": [
+        33150.0,
+        20150.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        98049,
+        753281
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 97,
+      "native_link_ids": [
+        "spd-finite-via-edge:0ec37ccc61c11eff478a02d4",
+        "spd-finite-via-edge:720532762609216018fbad2f"
+      ],
+      "owner_id": "conditional-contact:Via505547+Via505548",
+      "receipt_group_index": 29,
+      "via_ids": [
+        "Via505547",
+        "Via505548"
+      ],
+      "xy_um": [
+        32500.0,
+        20150.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1240623,
+        466943
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 98,
+      "native_link_ids": [
+        "spd-finite-via-edge:bbc83189fcc018ec813c2cc5",
+        "spd-finite-via-edge:469f655ea5ccc2e6c20b3a45"
+      ],
+      "owner_id": "conditional-contact:Via501337+Via501338",
+      "receipt_group_index": 3,
+      "via_ids": [
+        "Via501337",
+        "Via501338"
+      ],
+      "xy_um": [
+        31200.0,
+        22750.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        122208,
+        1322162
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 99,
+      "native_link_ids": [
+        "spd-finite-via-edge:126b648f357415741631d258",
+        "spd-finite-via-edge:c8259f4b08a2f3e827e20a5e"
+      ],
+      "owner_id": "conditional-contact:Via505629+Via505630",
+      "receipt_group_index": 30,
+      "via_ids": [
+        "Via505629",
+        "Via505630"
+      ],
+      "xy_um": [
+        31850.0,
+        20150.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        137366,
+        223956
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 100,
+      "native_link_ids": [
+        "spd-finite-via-edge:14bc6a86758470319a45c8b6",
+        "spd-finite-via-edge:21eca726efdab90e941d6947"
+      ],
+      "owner_id": "conditional-contact:Via505711+Via505712",
+      "receipt_group_index": 31,
+      "via_ids": [
+        "Via505711",
+        "Via505712"
+      ],
+      "xy_um": [
+        31200.0,
+        20150.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        510385,
+        1107352
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 101,
+      "native_link_ids": [
+        "spd-finite-via-edge:4d3d4a7f934667f371d30fe5",
+        "spd-finite-via-edge:a7b5fcad8ea97da8cf77eb16"
+      ],
+      "owner_id": "conditional-contact:Via505793+Via505794",
+      "receipt_group_index": 32,
+      "via_ids": [
+        "Via505793",
+        "Via505794"
+      ],
+      "xy_um": [
+        30550.0,
+        20150.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1598387,
+        220949
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 102,
+      "native_link_ids": [
+        "spd-finite-via-edge:f1d9db35a0272472fe053fe5",
+        "spd-finite-via-edge:2177a95e76ba58d127cc516b"
+      ],
+      "owner_id": "conditional-contact:Via505875+Via505876",
+      "receipt_group_index": 33,
+      "via_ids": [
+        "Via505875",
+        "Via505876"
+      ],
+      "xy_um": [
+        29900.0,
+        20150.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1095370,
+        1102171
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 103,
+      "native_link_ids": [
+        "spd-finite-via-edge:a5e2895112e7b0a799523d8f",
+        "spd-finite-via-edge:a6ea3d7d0b45ea211afdb422"
+      ],
+      "owner_id": "conditional-contact:Via505957+Via505958",
+      "receipt_group_index": 34,
+      "via_ids": [
+        "Via505957",
+        "Via505958"
+      ],
+      "xy_um": [
+        29250.0,
+        20150.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1084411,
+        221540
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 104,
+      "native_link_ids": [
+        "spd-finite-via-edge:a43850820ce53155f1f17f26",
+        "spd-finite-via-edge:218df411536d94977ee5a65f"
+      ],
+      "owner_id": "conditional-contact:Via506039+Via506040",
+      "receipt_group_index": 35,
+      "via_ids": [
+        "Via506039",
+        "Via506040"
+      ],
+      "xy_um": [
+        28600.0,
+        20150.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1522993,
+        1363270
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 105,
+      "native_link_ids": [
+        "spd-finite-via-edge:e68326bc1e2e698d44bb30f8",
+        "spd-finite-via-edge:ce5c32d0f64eac91340563df"
+      ],
+      "owner_id": "conditional-contact:Via506121+Via506122",
+      "receipt_group_index": 36,
+      "via_ids": [
+        "Via506121",
+        "Via506122"
+      ],
+      "xy_um": [
+        27950.0,
+        20150.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1518866,
+        763564
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 106,
+      "native_link_ids": [
+        "spd-finite-via-edge:e5e1154db9cd91e62d1cb14b",
+        "spd-finite-via-edge:73910866238165ca788d507b"
+      ],
+      "owner_id": "conditional-contact:Via506203+Via506204",
+      "receipt_group_index": 37,
+      "via_ids": [
+        "Via506203",
+        "Via506204"
+      ],
+      "xy_um": [
+        27300.0,
+        20150.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1517434,
+        980985
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 107,
+      "native_link_ids": [
+        "spd-finite-via-edge:e5aa16dea8593e2106d28f3b",
+        "spd-finite-via-edge:948cf84bc0536190fa6af312"
+      ],
+      "owner_id": "conditional-contact:Via506285+Via506286",
+      "receipt_group_index": 38,
+      "via_ids": [
+        "Via506285",
+        "Via506286"
+      ],
+      "xy_um": [
+        26650.0,
+        20150.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1414537,
+        1301313
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 108,
+      "native_link_ids": [
+        "spd-finite-via-edge:d61fb3569ddc06c6c4f89fd9",
+        "spd-finite-via-edge:c4f26243794b1e716c019c71"
+      ],
+      "owner_id": "conditional-contact:Via509136+Via509137",
+      "receipt_group_index": 39,
+      "via_ids": [
+        "Via509136",
+        "Via509137"
+      ],
+      "xy_um": [
+        33800.0,
+        18850.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1286186,
+        720430
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 109,
+      "native_link_ids": [
+        "spd-finite-via-edge:c2a78b9db7acc615dcb0f4e5",
+        "spd-finite-via-edge:6d0f77b09df15b91497bea04"
+      ],
+      "owner_id": "conditional-contact:Via501393+Via501394",
+      "receipt_group_index": 4,
+      "via_ids": [
+        "Via501393",
+        "Via501394"
+      ],
+      "xy_um": [
+        29900.0,
+        22750.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        883279,
+        1062233
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 110,
+      "native_link_ids": [
+        "spd-finite-via-edge:85acfc7638d362db3e2c77f0",
+        "spd-finite-via-edge:a0d67f7bb9ab2d5064b3a2a9"
+      ],
+      "owner_id": "conditional-contact:Via509192+Via509193",
+      "receipt_group_index": 40,
+      "via_ids": [
+        "Via509192",
+        "Via509193"
+      ],
+      "xy_um": [
+        33150.0,
+        18850.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        922969,
+        478095
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 111,
+      "native_link_ids": [
+        "spd-finite-via-edge:8bc0a4a887ae0837d28710d3",
+        "spd-finite-via-edge:4853b7a7c199f17cff840be9"
+      ],
+      "owner_id": "conditional-contact:Via509300+Via509301",
+      "receipt_group_index": 41,
+      "via_ids": [
+        "Via509300",
+        "Via509301"
+      ],
+      "xy_um": [
+        31850.0,
+        18850.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1184121,
+        540315
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 112,
+      "native_link_ids": [
+        "spd-finite-via-edge:b344c27d6a28994f6229b796",
+        "spd-finite-via-edge:51c62775d6a670ca5666c5ed"
+      ],
+      "owner_id": "conditional-contact:Via509382+Via509383",
+      "receipt_group_index": 42,
+      "via_ids": [
+        "Via509382",
+        "Via509383"
+      ],
+      "xy_um": [
+        31200.0,
+        18850.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        36527,
+        437990
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 113,
+      "native_link_ids": [
+        "spd-finite-via-edge:057e13d2547059bd56f9ef29",
+        "spd-finite-via-edge:4244399150d599a20224f21b"
+      ],
+      "owner_id": "conditional-contact:Via509490+Via509491",
+      "receipt_group_index": 43,
+      "via_ids": [
+        "Via509490",
+        "Via509491"
+      ],
+      "xy_um": [
+        29900.0,
+        18850.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        460749,
+        1184196
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 114,
+      "native_link_ids": [
+        "spd-finite-via-edge:45af64ebf66578ce2a56de26",
+        "spd-finite-via-edge:b34788f31cef2d65d31c661e"
+      ],
+      "owner_id": "conditional-contact:Via509572+Via509573",
+      "receipt_group_index": 44,
+      "via_ids": [
+        "Via509572",
+        "Via509573"
+      ],
+      "xy_um": [
+        29250.0,
+        18850.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        872307,
+        605361
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 115,
+      "native_link_ids": [
+        "spd-finite-via-edge:840ba2169ad9d31d3e6839a6",
+        "spd-finite-via-edge:5ba52e8e9b26890b44b348a5"
+      ],
+      "owner_id": "conditional-contact:Via509680+Via509681",
+      "receipt_group_index": 45,
+      "via_ids": [
+        "Via509680",
+        "Via509681"
+      ],
+      "xy_um": [
+        27950.0,
+        18850.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        876951,
+        812501
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 116,
+      "native_link_ids": [
+        "spd-finite-via-edge:84bc6dc41788be2a0c927618",
+        "spd-finite-via-edge:7b05dd99afbcd47af0adb30d"
+      ],
+      "owner_id": "conditional-contact:Via509762+Via509763",
+      "receipt_group_index": 46,
+      "via_ids": [
+        "Via509762",
+        "Via509763"
+      ],
+      "xy_um": [
+        27300.0,
+        18850.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1024900,
+        748950
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 117,
+      "native_link_ids": [
+        "spd-finite-via-edge:9b2f8eddba7b617820d11427",
+        "spd-finite-via-edge:7160f7714faea233ec1fd661"
+      ],
+      "owner_id": "conditional-contact:Via510156+Via510157",
+      "receipt_group_index": 47,
+      "via_ids": [
+        "Via510156",
+        "Via510157"
+      ],
+      "xy_um": [
+        33800.0,
+        17550.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1614273,
+        288608
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 118,
+      "native_link_ids": [
+        "spd-finite-via-edge:f44680a1e906f1b36d7a8ec8",
+        "spd-finite-via-edge:2bae9de8b09c890e22477192"
+      ],
+      "owner_id": "conditional-contact:Via510212+Via510213",
+      "receipt_group_index": 48,
+      "via_ids": [
+        "Via510212",
+        "Via510213"
+      ],
+      "xy_um": [
+        33150.0,
+        17550.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        356797,
+        826444
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 119,
+      "native_link_ids": [
+        "spd-finite-via-edge:35fd807794fcbe84d75c4e9e",
+        "spd-finite-via-edge:7d1f728dbf5e2f46667a392f"
+      ],
+      "owner_id": "conditional-contact:Via510268+Via510269",
+      "receipt_group_index": 49,
+      "via_ids": [
+        "Via510268",
+        "Via510269"
+      ],
+      "xy_um": [
+        32500.0,
+        17550.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1599470,
+        938685
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 120,
+      "native_link_ids": [
+        "spd-finite-via-edge:f20697ba5daa6cf7aad327f7",
+        "spd-finite-via-edge:8e271ac1d6c4ab212ebbc659"
+      ],
+      "owner_id": "conditional-contact:Via501449+Via501450",
+      "receipt_group_index": 5,
+      "via_ids": [
+        "Via501449",
+        "Via501450"
+      ],
+      "xy_um": [
+        29250.0,
+        22750.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1674419,
+        809904
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 121,
+      "native_link_ids": [
+        "spd-finite-via-edge:fd5059434ccc0a53828b71be",
+        "spd-finite-via-edge:7aa3426611be42e616055580"
+      ],
+      "owner_id": "conditional-contact:Via510324+Via510325",
+      "receipt_group_index": 50,
+      "via_ids": [
+        "Via510324",
+        "Via510325"
+      ],
+      "xy_um": [
+        31850.0,
+        17550.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        946749,
+        837751
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 122,
+      "native_link_ids": [
+        "spd-finite-via-edge:8f5f0c5d30052bc3fd23a2c2",
+        "spd-finite-via-edge:7ed88124bf113fd3ccf6e7c5"
+      ],
+      "owner_id": "conditional-contact:Via510380+Via510381",
+      "receipt_group_index": 51,
+      "via_ids": [
+        "Via510380",
+        "Via510381"
+      ],
+      "xy_um": [
+        31200.0,
+        17550.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1494400,
+        311365
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 123,
+      "native_link_ids": [
+        "spd-finite-via-edge:e2223c832f0513e01511aa01",
+        "spd-finite-via-edge:2f206bf49d7c0a6891c1cbb8"
+      ],
+      "owner_id": "conditional-contact:Via510436+Via510437",
+      "receipt_group_index": 52,
+      "via_ids": [
+        "Via510436",
+        "Via510437"
+      ],
+      "xy_um": [
+        30550.0,
+        17550.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1577626,
+        677681
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 124,
+      "native_link_ids": [
+        "spd-finite-via-edge:eeb63e5b981f029eb9eb4988",
+        "spd-finite-via-edge:669723d19dd3e0d9f2251882"
+      ],
+      "owner_id": "conditional-contact:Via510492+Via510493",
+      "receipt_group_index": 53,
+      "via_ids": [
+        "Via510492",
+        "Via510493"
+      ],
+      "xy_um": [
+        29900.0,
+        17550.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        824792,
+        423181
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 125,
+      "native_link_ids": [
+        "spd-finite-via-edge:7cdfe7757043b178049f4e27",
+        "spd-finite-via-edge:400216a23c2d27159b3454fa"
+      ],
+      "owner_id": "conditional-contact:Via510548+Via510549",
+      "receipt_group_index": 54,
+      "via_ids": [
+        "Via510548",
+        "Via510549"
+      ],
+      "xy_um": [
+        29250.0,
+        17550.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        239821,
+        417584
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 126,
+      "native_link_ids": [
+        "spd-finite-via-edge:24547db187a0cc00669954dd",
+        "spd-finite-via-edge:3f2ab787d7882f43cf722178"
+      ],
+      "owner_id": "conditional-contact:Via510604+Via510605",
+      "receipt_group_index": 55,
+      "via_ids": [
+        "Via510604",
+        "Via510605"
+      ],
+      "xy_um": [
+        28600.0,
+        17550.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        567963,
+        129048
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 127,
+      "native_link_ids": [
+        "spd-finite-via-edge:55f666fa5e4a46b67e2705a4",
+        "spd-finite-via-edge:13767ff5a07f6cd5cff86fc6"
+      ],
+      "owner_id": "conditional-contact:Via510660+Via510661",
+      "receipt_group_index": 56,
+      "via_ids": [
+        "Via510660",
+        "Via510661"
+      ],
+      "xy_um": [
+        27950.0,
+        17550.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1232040,
+        1117974
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 128,
+      "native_link_ids": [
+        "spd-finite-via-edge:ba835ab233b9ac7220135358",
+        "spd-finite-via-edge:a94f3adf1453a62d7cfdcabb"
+      ],
+      "owner_id": "conditional-contact:Via510716+Via510717",
+      "receipt_group_index": 57,
+      "via_ids": [
+        "Via510716",
+        "Via510717"
+      ],
+      "xy_um": [
+        27300.0,
+        17550.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1037140,
+        207184
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 129,
+      "native_link_ids": [
+        "spd-finite-via-edge:9d0b3d8ab7bbe269a1d0160e",
+        "spd-finite-via-edge:1f6326e61ded35db61319f46"
+      ],
+      "owner_id": "conditional-contact:Via510772+Via510773",
+      "receipt_group_index": 58,
+      "via_ids": [
+        "Via510772",
+        "Via510773"
+      ],
+      "xy_um": [
+        26650.0,
+        17550.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        502374,
+        259609
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 130,
+      "native_link_ids": [
+        "spd-finite-via-edge:4c046cff8ef2e94ba6883c02",
+        "spd-finite-via-edge:274fe63e5c85b0eb7d774bb6"
+      ],
+      "owner_id": "conditional-contact:Via511452+Via511453",
+      "receipt_group_index": 59,
+      "via_ids": [
+        "Via511452",
+        "Via511453"
+      ],
+      "xy_um": [
+        -1950.0,
+        17603.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        567022,
+        1158631
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 131,
+      "native_link_ids": [
+        "spd-finite-via-edge:55d23cea8c898f3ed5487dca",
+        "spd-finite-via-edge:af692fc911afec181221fd5f"
+      ],
+      "owner_id": "conditional-contact:Via501505+Via501506",
+      "receipt_group_index": 6,
+      "via_ids": [
+        "Via501505",
+        "Via501506"
+      ],
+      "xy_um": [
+        27950.0,
+        22750.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        800484,
+        706850
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 132,
+      "native_link_ids": [
+        "spd-finite-via-edge:79339204c6070926df20c78b",
+        "spd-finite-via-edge:6b01cee406da2e27081bae7a"
+      ],
+      "owner_id": "conditional-contact:Via511480+Via511481",
+      "receipt_group_index": 60,
+      "via_ids": [
+        "Via511480",
+        "Via511481"
+      ],
+      "xy_um": [
+        -2600.0,
+        17603.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1035194,
+        922187
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 133,
+      "native_link_ids": [
+        "spd-finite-via-edge:9cbe6a1e7677f82bcb175d6d",
+        "spd-finite-via-edge:8ba12d3632ff0817638779b4"
+      ],
+      "owner_id": "conditional-contact:Via511488+Via511489",
+      "receipt_group_index": 61,
+      "via_ids": [
+        "Via511488",
+        "Via511489"
+      ],
+      "xy_um": [
+        -3250.0,
+        17603.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        581380,
+        670146
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 134,
+      "native_link_ids": [
+        "spd-finite-via-edge:5800cb63260f1387d9dd0736",
+        "spd-finite-via-edge:6570b334f75a1430ac824470"
+      ],
+      "owner_id": "conditional-contact:Via515622+Via515623",
+      "receipt_group_index": 62,
+      "via_ids": [
+        "Via515622",
+        "Via515623"
+      ],
+      "xy_um": [
+        -650.0,
+        17603.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        161930,
+        749130
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 135,
+      "native_link_ids": [
+        "spd-finite-via-edge:1876b96eba9ae52261825843",
+        "spd-finite-via-edge:71671642f793479c4e421f7b"
+      ],
+      "owner_id": "conditional-contact:Via515892+Via515893",
+      "receipt_group_index": 63,
+      "via_ids": [
+        "Via515892",
+        "Via515893"
+      ],
+      "xy_um": [
+        12350.0,
+        17603.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        454675,
+        552378
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 136,
+      "native_link_ids": [
+        "spd-finite-via-edge:44c5af19d62dbc2362bbcffb",
+        "spd-finite-via-edge:539b25a78d420e5957f43c9a"
+      ],
+      "owner_id": "conditional-contact:Via515916+Via515917",
+      "receipt_group_index": 64,
+      "via_ids": [
+        "Via515916",
+        "Via515917"
+      ],
+      "xy_um": [
+        11700.0,
+        17603.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1359098,
+        840654
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 137,
+      "native_link_ids": [
+        "spd-finite-via-edge:cdb6d5de14ba4b90af3d036a",
+        "spd-finite-via-edge:7f4a567915db04171bae7062"
+      ],
+      "owner_id": "conditional-contact:Via515940+Via515941",
+      "receipt_group_index": 65,
+      "via_ids": [
+        "Via515940",
+        "Via515941"
+      ],
+      "xy_um": [
+        11050.0,
+        17603.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        561133,
+        327650
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 138,
+      "native_link_ids": [
+        "spd-finite-via-edge:54f222fa975aee1c9cd4f1a8",
+        "spd-finite-via-edge:3199801ed486a130bdc6c8ee"
+      ],
+      "owner_id": "conditional-contact:Via515964+Via515965",
+      "receipt_group_index": 66,
+      "via_ids": [
+        "Via515964",
+        "Via515965"
+      ],
+      "xy_um": [
+        10400.0,
+        17603.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        812299,
+        768488
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 139,
+      "native_link_ids": [
+        "spd-finite-via-edge:7afe20943a2c1ad3299220d1",
+        "spd-finite-via-edge:745333472804e1e5318ab3c7"
+      ],
+      "owner_id": "conditional-contact:Via515988+Via515989",
+      "receipt_group_index": 67,
+      "via_ids": [
+        "Via515988",
+        "Via515989"
+      ],
+      "xy_um": [
+        9750.0,
+        17603.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1510043,
+        170931
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 140,
+      "native_link_ids": [
+        "spd-finite-via-edge:e4875e9bbada31a87d216b27",
+        "spd-finite-via-edge:19d98ec5d74801e3fc21795c"
+      ],
+      "owner_id": "conditional-contact:Via516012+Via516013",
+      "receipt_group_index": 68,
+      "via_ids": [
+        "Via516012",
+        "Via516013"
+      ],
+      "xy_um": [
+        9100.0,
+        17603.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        717214,
+        666736
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 141,
+      "native_link_ids": [
+        "spd-finite-via-edge:6c91626676de731e4853faa1",
+        "spd-finite-via-edge:64eda61256e255390ca77bbb"
+      ],
+      "owner_id": "conditional-contact:Via516036+Via516037",
+      "receipt_group_index": 69,
+      "via_ids": [
+        "Via516036",
+        "Via516037"
+      ],
+      "xy_um": [
+        8450.0,
+        17603.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1101898,
+        1333893
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 142,
+      "native_link_ids": [
+        "spd-finite-via-edge:a6df1f8256b8d8741a3d433d",
+        "spd-finite-via-edge:c9e91d35514c53003914d00c"
+      ],
+      "owner_id": "conditional-contact:Via501561+Via501562",
+      "receipt_group_index": 7,
+      "via_ids": [
+        "Via501561",
+        "Via501562"
+      ],
+      "xy_um": [
+        27300.0,
+        22750.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1267971,
+        632248
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 143,
+      "native_link_ids": [
+        "spd-finite-via-edge:bfe4771cb06f94830815190b",
+        "spd-finite-via-edge:5fb2901c454eb3f1781633a6"
+      ],
+      "owner_id": "conditional-contact:Via516060+Via516061",
+      "receipt_group_index": 70,
+      "via_ids": [
+        "Via516060",
+        "Via516061"
+      ],
+      "xy_um": [
+        7800.0,
+        17603.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1434508,
+        1598411
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 144,
+      "native_link_ids": [
+        "spd-finite-via-edge:d91ffaff7bd3cd1669c655e4",
+        "spd-finite-via-edge:f1dab08c9de46a5398c4a8bd"
+      ],
+      "owner_id": "conditional-contact:Via516084+Via516085",
+      "receipt_group_index": 71,
+      "via_ids": [
+        "Via516084",
+        "Via516085"
+      ],
+      "xy_um": [
+        7150.0,
+        17603.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        980182,
+        673345
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 145,
+      "native_link_ids": [
+        "spd-finite-via-edge:946c19d0a8b9bd455e27717b",
+        "spd-finite-via-edge:65ec6984ec16155cd10cf6b4"
+      ],
+      "owner_id": "conditional-contact:Via516108+Via516109",
+      "receipt_group_index": 72,
+      "via_ids": [
+        "Via516108",
+        "Via516109"
+      ],
+      "xy_um": [
+        6500.0,
+        17603.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        441857,
+        1348802
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 146,
+      "native_link_ids": [
+        "spd-finite-via-edge:42d85358e8cd080099509638",
+        "spd-finite-via-edge:cc2b5d324e4de16e9525555a"
+      ],
+      "owner_id": "conditional-contact:Via516132+Via516133",
+      "receipt_group_index": 73,
+      "via_ids": [
+        "Via516132",
+        "Via516133"
+      ],
+      "xy_um": [
+        5850.0,
+        17603.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1225350,
+        1686706
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 147,
+      "native_link_ids": [
+        "spd-finite-via-edge:b97eecc0c61e63c86042e6f7",
+        "spd-finite-via-edge:ff244e82a90ba12c331df3d9"
+      ],
+      "owner_id": "conditional-contact:Via516156+Via516157",
+      "receipt_group_index": 74,
+      "via_ids": [
+        "Via516156",
+        "Via516157"
+      ],
+      "xy_um": [
+        5200.0,
+        17603.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        303308,
+        301789
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 148,
+      "native_link_ids": [
+        "spd-finite-via-edge:2dea6cc736fcf62c9671d9ff",
+        "spd-finite-via-edge:2dad6672202a4ce895d5fac7"
+      ],
+      "owner_id": "conditional-contact:Via516180+Via516181",
+      "receipt_group_index": 75,
+      "via_ids": [
+        "Via516180",
+        "Via516181"
+      ],
+      "xy_um": [
+        4550.0,
+        17603.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        97492,
+        1101068
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 149,
+      "native_link_ids": [
+        "spd-finite-via-edge:0ead0f0b83e5d541b7fc5f3c",
+        "spd-finite-via-edge:a6bea4be20aa6a63fd173605"
+      ],
+      "owner_id": "conditional-contact:Via516204+Via516205",
+      "receipt_group_index": 76,
+      "via_ids": [
+        "Via516204",
+        "Via516205"
+      ],
+      "xy_um": [
+        3900.0,
+        17603.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        917476,
+        1558736
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 150,
+      "native_link_ids": [
+        "spd-finite-via-edge:8ae92d6bc1a49128818cf401",
+        "spd-finite-via-edge:ebe0d5fa22b0205d8217f471"
+      ],
+      "owner_id": "conditional-contact:Via516228+Via516229",
+      "receipt_group_index": 77,
+      "via_ids": [
+        "Via516228",
+        "Via516229"
+      ],
+      "xy_um": [
+        3250.0,
+        17603.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        822292,
+        955066
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 151,
+      "native_link_ids": [
+        "spd-finite-via-edge:7c810194a4c93149f86b2211",
+        "spd-finite-via-edge:909da70d4d2c8a99ce843b77"
+      ],
+      "owner_id": "conditional-contact:Via516252+Via516253",
+      "receipt_group_index": 78,
+      "via_ids": [
+        "Via516252",
+        "Via516253"
+      ],
+      "xy_um": [
+        2600.0,
+        17603.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        643979,
+        1445042
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 152,
+      "native_link_ids": [
+        "spd-finite-via-edge:61828ec8c20b1e0d1757f22c",
+        "spd-finite-via-edge:dab5e57ff025d016d19d692b"
+      ],
+      "owner_id": "conditional-contact:Via516276+Via516277",
+      "receipt_group_index": 79,
+      "via_ids": [
+        "Via516276",
+        "Via516277"
+      ],
+      "xy_um": [
+        1950.0,
+        17603.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        656864,
+        1512966
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 153,
+      "native_link_ids": [
+        "spd-finite-via-edge:636f1edf94b8465a28043d01",
+        "spd-finite-via-edge:e4fcbbdca2ed4b75c1e3a54a"
+      ],
+      "owner_id": "conditional-contact:Via502215+Via502216",
+      "receipt_group_index": 8,
+      "via_ids": [
+        "Via502215",
+        "Via502216"
+      ],
+      "xy_um": [
+        33800.0,
+        21450.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1074747,
+        1622644
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 154,
+      "native_link_ids": [
+        "spd-finite-via-edge:a2bfa9a64879647a099fcc51",
+        "spd-finite-via-edge:f58f99e898f88d3e02840067"
+      ],
+      "owner_id": "conditional-contact:Via516300+Via516301",
+      "receipt_group_index": 80,
+      "via_ids": [
+        "Via516300",
+        "Via516301"
+      ],
+      "xy_um": [
+        1300.0,
+        17603.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        81325,
+        1155509
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 155,
+      "native_link_ids": [
+        "spd-finite-via-edge:0c422e7918ae51557339eabd",
+        "spd-finite-via-edge:aef2ae5eec6898ebc3448e52"
+      ],
+      "owner_id": "conditional-contact:Via516324+Via516325",
+      "receipt_group_index": 81,
+      "via_ids": [
+        "Via516324",
+        "Via516325"
+      ],
+      "xy_um": [
+        650.0,
+        17603.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        756613,
+        709061
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 156,
+      "native_link_ids": [
+        "spd-finite-via-edge:7284e55270e9e809308bd871",
+        "spd-finite-via-edge:6b56e0f82895f359b7f2976e"
+      ],
+      "owner_id": "conditional-contact:Via516547+Via516548",
+      "receipt_group_index": 82,
+      "via_ids": [
+        "Via516547",
+        "Via516548"
+      ],
+      "xy_um": [
+        33800.0,
+        16250.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        644189,
+        1686551
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 157,
+      "native_link_ids": [
+        "spd-finite-via-edge:618a8dcf85c1aae082ba9724",
+        "spd-finite-via-edge:ff1ea7d76f726fda5ef789ac"
+      ],
+      "owner_id": "conditional-contact:Via516603+Via516604",
+      "receipt_group_index": 83,
+      "via_ids": [
+        "Via516603",
+        "Via516604"
+      ],
+      "xy_um": [
+        33150.0,
+        16250.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1546518,
+        877895
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 158,
+      "native_link_ids": [
+        "spd-finite-via-edge:ea0368148ac8325b8f2c50b2",
+        "spd-finite-via-edge:84e077a1bd723bae8d377aaf"
+      ],
+      "owner_id": "conditional-contact:Via516659+Via516660",
+      "receipt_group_index": 84,
+      "via_ids": [
+        "Via516659",
+        "Via516660"
+      ],
+      "xy_um": [
+        32500.0,
+        16250.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        355462,
+        1085805
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 159,
+      "native_link_ids": [
+        "spd-finite-via-edge:35c5ac2c003b0f382d11f844",
+        "spd-finite-via-edge:a46c3db12a8c1eabdd4c2906"
+      ],
+      "owner_id": "conditional-contact:Via516715+Via516716",
+      "receipt_group_index": 85,
+      "via_ids": [
+        "Via516715",
+        "Via516716"
+      ],
+      "xy_um": [
+        31850.0,
+        16250.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        569307,
+        235700
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 160,
+      "native_link_ids": [
+        "spd-finite-via-edge:562c3904f200172d75d1f19e",
+        "spd-finite-via-edge:23b74cbd68f037f3a84d4a61"
+      ],
+      "owner_id": "conditional-contact:Via516771+Via516772",
+      "receipt_group_index": 86,
+      "via_ids": [
+        "Via516771",
+        "Via516772"
+      ],
+      "xy_um": [
+        31200.0,
+        16250.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1191566,
+        332682
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 161,
+      "native_link_ids": [
+        "spd-finite-via-edge:b46c56360281cc9303c5ca04",
+        "spd-finite-via-edge:325739cd303c0db4c7547d6a"
+      ],
+      "owner_id": "conditional-contact:Via516827+Via516828",
+      "receipt_group_index": 87,
+      "via_ids": [
+        "Via516827",
+        "Via516828"
+      ],
+      "xy_um": [
+        30550.0,
+        16250.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1258332,
+        113975
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 162,
+      "native_link_ids": [
+        "spd-finite-via-edge:be6f7c96a1b52834b637f1e8",
+        "spd-finite-via-edge:112e56ecd0a04763f678fd38"
+      ],
+      "owner_id": "conditional-contact:Via516883+Via516884",
+      "receipt_group_index": 88,
+      "via_ids": [
+        "Via516883",
+        "Via516884"
+      ],
+      "xy_um": [
+        29900.0,
+        16250.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        943597,
+        599695
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 163,
+      "native_link_ids": [
+        "spd-finite-via-edge:8ee408ac4109dd489df1b752",
+        "spd-finite-via-edge:5acb6384db68cbbacea36ad1"
+      ],
+      "owner_id": "conditional-contact:Via516939+Via516940",
+      "receipt_group_index": 89,
+      "via_ids": [
+        "Via516939",
+        "Via516940"
+      ],
+      "xy_um": [
+        29250.0,
+        16250.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1361670,
+        340618
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 164,
+      "native_link_ids": [
+        "spd-finite-via-edge:ce1a1ff494fe0136fe5c45bc",
+        "spd-finite-via-edge:3385589bbd6a6072cb84f863"
+      ],
+      "owner_id": "conditional-contact:Via502271+Via502272",
+      "receipt_group_index": 9,
+      "via_ids": [
+        "Via502271",
+        "Via502272"
+      ],
+      "xy_um": [
+        33150.0,
+        21450.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1439384,
+        969055
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 165,
+      "native_link_ids": [
+        "spd-finite-via-edge:d9d9e456fb72e41417504929",
+        "spd-finite-via-edge:92bbd6c161cd54ffefd6cac1"
+      ],
+      "owner_id": "conditional-contact:Via516995+Via516996",
+      "receipt_group_index": 90,
+      "via_ids": [
+        "Via516995",
+        "Via516996"
+      ],
+      "xy_um": [
+        28600.0,
+        16250.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1228677,
+        1406466
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 166,
+      "native_link_ids": [
+        "spd-finite-via-edge:b9fec62ff43dfbe550fcdb58",
+        "spd-finite-via-edge:d4e6428d1d5325961f010d91"
+      ],
+      "owner_id": "conditional-contact:Via517051+Via517052",
+      "receipt_group_index": 91,
+      "via_ids": [
+        "Via517051",
+        "Via517052"
+      ],
+      "xy_um": [
+        27950.0,
+        16250.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        959688,
+        1065384
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 167,
+      "native_link_ids": [
+        "spd-finite-via-edge:914dfd89b91735c70bfba6df",
+        "spd-finite-via-edge:a14f8615a16c17716022beb4"
+      ],
+      "owner_id": "conditional-contact:Via517107+Via517108",
+      "receipt_group_index": 92,
+      "via_ids": [
+        "Via517107",
+        "Via517108"
+      ],
+      "xy_um": [
+        27300.0,
+        16250.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1004353,
+        1477255
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 168,
+      "native_link_ids": [
+        "spd-finite-via-edge:980af4dd0360c0e7c1d43e62",
+        "spd-finite-via-edge:df8521d510fba6f500a025ec"
+      ],
+      "owner_id": "conditional-contact:Via517163+Via517164",
+      "receipt_group_index": 93,
+      "via_ids": [
+        "Via517163",
+        "Via517164"
+      ],
+      "xy_um": [
+        26650.0,
+        16250.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        664378,
+        495588
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 169,
+      "native_link_ids": [
+        "spd-finite-via-edge:64909e0870f158079a3e3227",
+        "spd-finite-via-edge:4af94aeac47d7a9c1d566abe"
+      ],
+      "owner_id": "conditional-contact:Via518727+Via518728",
+      "receipt_group_index": 94,
+      "via_ids": [
+        "Via518727",
+        "Via518728"
+      ],
+      "xy_um": [
+        33800.0,
+        14950.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        714022,
+        808029
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 170,
+      "native_link_ids": [
+        "spd-finite-via-edge:6c16da6c7a04915e4fa93d66",
+        "spd-finite-via-edge:7a5a7a71c6732125c3f99cd9"
+      ],
+      "owner_id": "conditional-contact:Via518783+Via518784",
+      "receipt_group_index": 95,
+      "via_ids": [
+        "Via518783",
+        "Via518784"
+      ],
+      "xy_um": [
+        33150.0,
+        14950.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        608534,
+        909655
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 171,
+      "native_link_ids": [
+        "spd-finite-via-edge:5c1f8fd36db2c71667353cb3",
+        "spd-finite-via-edge:89b596a8d96ae5cdbc9ded50"
+      ],
+      "owner_id": "conditional-contact:Via518891+Via518892",
+      "receipt_group_index": 96,
+      "via_ids": [
+        "Via518891",
+        "Via518892"
+      ],
+      "xy_um": [
+        31850.0,
+        14950.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        319121,
+        1334811
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 172,
+      "native_link_ids": [
+        "spd-finite-via-edge:305059d86a01b5787c333f00",
+        "spd-finite-via-edge:ca0d816c6874841b84702f0c"
+      ],
+      "owner_id": "conditional-contact:Via518973+Via518974",
+      "receipt_group_index": 97,
+      "via_ids": [
+        "Via518973",
+        "Via518974"
+      ],
+      "xy_um": [
+        31200.0,
+        14950.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        1318924,
+        564084
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 173,
+      "native_link_ids": [
+        "spd-finite-via-edge:c7a8f15a8f8a2a436c153e87",
+        "spd-finite-via-edge:556394862040b1e84074b1e0"
+      ],
+      "owner_id": "conditional-contact:Via519081+Via519082",
+      "receipt_group_index": 98,
+      "via_ids": [
+        "Via519081",
+        "Via519082"
+      ],
+      "xy_um": [
+        29900.0,
+        14950.0
+      ]
+    },
+    {
+      "active_finite_indices": [
+        433214,
+        355483
+      ],
+      "island_id": "spd-surface-island:279609d3a8c5969250977818",
+      "mesh_electrode_ordinal": 174,
+      "native_link_ids": [
+        "spd-finite-via-edge:418b4f4512ad8e454dae8b68",
+        "spd-finite-via-edge:35c6b0d1ea08bbad85c7aeb3"
+      ],
+      "owner_id": "conditional-contact:Via519163+Via519164",
+      "receipt_group_index": 99,
+      "via_ids": [
+        "Via519163",
+        "Via519164"
+      ],
+      "xy_um": [
+        29250.0,
+        14950.0
+      ]
+    }
+  ],
+  "contracted_node_count": 532524,
+  "elapsed_s": 2.0,
+  "frequency_hz": 1000000.0,
+  "full_node_count": 535149,
+  "input_sha256": {
+    "mesh_stiffness": "09e79fcbdac766603a3e2f451e2079c3c6b8b588026d0aa47f532f1e98d78134",
+    "rejected_drive_01_json": "dfac410700afd86c538e493c178629e7c3f691e1c355abcc765dfd47600825d7",
+    "rejected_drive_01_npz": "c1e3c522938923959f3beebb31f1d190a9d5b5039b11057dcfad739c7c909044",
+    "saved_derived_field": "be5a83dff88db545de4625414e46dcc360364eb0a29077c91848a6ac805cb6c0",
+    "saved_l14_epsilon_1_field": "15265003d3d93e3765cc22f4985c6a5edda77628fa57912b9676f4952dcc9f9a",
+    "saved_raw_field": "6eac098738598a78b2068ce4f80e46fd70e17010a89bfb5949ec8a68124df4a7",
+    "source_sheet_receipt": "a45f6601bae33dc72f9c56190cd85a42037c4046c460bedbdd7cecbc9e85851b"
+  },
+  "layer": "Signal$L25(MAIN_POWER4)",
+  "limitations": [
+    "No voltage solve is performed; saved L14 epsilon-1 voltage is used for exact 350-link drive and saved-stamp KCL arithmetic only.",
+    "The L25 hollow plated barrel remains a conditional equipotential footprint contract; it is not asserted to be filled copper.",
+    "GC nodal load, replacement, physical current sharing and PowerSI correlation remain pending."
+  ],
+  "native_via_count": 350,
+  "physical_sheet_conductance_s": 1906.8799999999999,
+  "program": "SPD Decap PI Evaluator v0.23.1",
+  "rail_id": "ADC_VDD_075_VTRIP_SRAM/0",
+  "rejected_drive_01": {
+    "artifact": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-sheet-drive-01",
+    "reason": "Input injection used source-positive-to-negative current for every link and receipt group order instead of mesh lexical electrode order; its mesh/K arrays remain reusable."
+  },
+  "saved_field_kcl": {
+    "contact_vs_raw_finite_residual_a": 1.3985787785349405e-16,
+    "full_active_node": {
+      "direct_port_target_count": 0,
+      "other_stamp_incoming_a": [
+        -4.568265556782165e-06,
+        -9.749542902640428e-07
+      ],
+      "raw_finite_incidence_count": 350,
+      "raw_finite_incoming_a": [
+        4.56826553030254e-06,
+        9.749542829728952e-07
+      ],
+      "residual_a": 2.7465094219183698e-14,
+      "termination_outgoing_a": [
+        0.0,
+        0.0
+      ],
+      "termination_target_count": 0,
+      "tolerance_a": 1e-09
+    },
+    "scalar_gc": {
+      "contact_incoming_a": [
+        4.568265530441318e-06,
+        9.749542829902424e-07
+      ],
+      "gc_outgoing_a": [
+        4.568265556782165e-06,
+        9.749542902640428e-07
+      ],
+      "partial_rows": [
+        {
+          "outgoing_current_a": [
+            2.341242530833099e-06,
+            4.99665600263774e-07
+          ],
+          "partial_index": 13,
+          "row_count": 5,
+          "target_rows": [
+            0
+          ]
+        },
+        {
+          "outgoing_current_a": [
+            2.2270230259490665e-06,
+            4.7528869000026886e-07
+          ],
+          "partial_index": 14,
+          "row_count": 12,
+          "target_rows": [
+            2
+          ]
+        }
+      ],
+      "residual_a": 2.7326698039004104e-14,
+      "tolerance_a": 1e-09
+    },
+    "target_active_index": 258027
+  },
+  "saved_l14_voltage_size": 903945,
+  "script_sha256": "e91dd10e9b69f1792445d086ba307a5d8b724c786528f72fc81715a93ad55a58",
+  "status": "COMPLETED_L25_SHEET_VIA_DRIVE_CORRECTED_SAVED_FIELD_KCL",
+  "target_orientation_counts": {
+    "first_endpoint_is_target": 59,
+    "second_endpoint_is_target": 291
+  },
+  "total_contact_injection_a": [
+    4.568265530441318e-06,
+    9.749542829902424e-07
+  ],
+  "valid_reused_k_sha256": "2f241d6a45a310d8ca511166acbb45686edd7503ed5707b4d323cbc45a1c3b0c"
+}

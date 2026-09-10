@@ -1,0 +1,150 @@
+{
+  "accepted_power_current_provenance": {
+    "absolute_error_ohm": 0.0,
+    "accepted_physical_finite_category_ohm": [
+      7.59910002005268e-05,
+      4.167873218150023e-05
+    ],
+    "limit_ohm": 8.667034572293851e-17,
+    "passed": true,
+    "recomputed_from_stored_i_and_z_ohm": [
+      7.59910002005268e-05,
+      4.167873218150023e-05
+    ]
+  },
+  "artifact": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-source-contact-current-rebind-01\\l04-source-contact-current-rebind.npz",
+    "sha256": "2cf4dcb6d97a31a01d818bbd600906a3f5f1dbcec8f0a7d0b3105f22b23635f7",
+    "size_bytes": 4749774
+  },
+  "budget": {
+    "cooperative_checks": true,
+    "elapsed_s": 1.577999999979511,
+    "kind": "pinned reconstruct _Budget.create(60,4)",
+    "max_rss_bytes": 4294967296,
+    "max_runtime_s": 60,
+    "peak_rss_bytes": 1644400640
+  },
+  "counts": {
+    "hidden_child_records": 20,
+    "hidden_child_unique_present_parents": 10,
+    "records_by_category": [
+      76136,
+      10,
+      20
+    ],
+    "unique_parent_rows_by_category": [
+      76136,
+      10,
+      10
+    ],
+    "unique_parent_rows_total": 76156
+  },
+  "current_totals_a": {
+    "child_record_sum_is_not_throughput": true,
+    "record_sum_by_category": [
+      [
+        -0.28617582408390874,
+        0.005444775259416512
+      ],
+      [
+        0.0003678774086465625,
+        -4.531727179979076e-06
+      ],
+      [
+        0.00034098116870429806,
+        -6.040467876896782e-06
+      ]
+    ],
+    "unique_parent_sum_by_category": [
+      [
+        -0.28617582408390874,
+        0.005444775259416512
+      ],
+      [
+        0.0003678774086465625,
+        -4.531727179979076e-06
+      ],
+      [
+        0.000170490584352149,
+        -3.020233938448391e-06
+      ]
+    ]
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-source-contact-current-rebind-01\\driver-at-run.py",
+    "sha256": "e881e1194203f1201694ad999fac8081be85d077856e39e1a8d92bbc70905ee3",
+    "size_bytes": 18401
+  },
+  "identity_gates": {
+    "accepted_current_and_a6_full_identity": true,
+    "category_counts_exact": true,
+    "exception_original_junction_path_identity": true,
+    "hidden_children_pair_per_parent_with_opposite_l04_orientation": true,
+    "hidden_pair_present_parent_current_equal": true,
+    "ordinary_native_unsplit_identity": true,
+    "selected_parent_identity": true,
+    "source_record_ids_unique": true,
+    "source_via_ordinals_unique": true
+  },
+  "inputs": {
+    "accepted_all_finite_currents": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-all-finite-current-l-ownership-01\\all-finite-current-l-ownership.npz",
+      "sha256": "1b908c62e385ea1c227e77b1ccc37dd5c4b3376cce6f67d7b4e5c4a0c20508e6",
+      "size_bytes": 42593028
+    },
+    "accepted_all_finite_qualification": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-all-finite-current-l-ownership-02\\result.json",
+      "sha256": "52f77a11fd723f3d013edcb4331c5ba040d6a1148a50edf57b5f487095231052",
+      "size_bytes": 15928
+    },
+    "accepted_all_finite_qualification_artifact": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-all-finite-current-l-ownership-02\\corrected-units-and-power-metadata.npz",
+      "sha256": "73c011f0ae4cf650a3294e00ac9ab560324bbd296ca031aeac6abde902390f4a",
+      "size_bytes": 1500
+    },
+    "accepted_all_finite_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-all-finite-current-l-ownership-01\\result.json",
+      "sha256": "b9641892dd80cbbecd48ea1a30e58b7afee9ab589878ed613f797e863cb75e7f",
+      "size_bytes": 13528
+    },
+    "budget_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\reconstruct_astra_native_loaded_field.py",
+      "sha256": "354d9e004b189cf8193c2922c8fa4dc1903b407bebb295a4576673200ce6b213",
+      "size_bytes": 33457
+    },
+    "combined_map": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-assembly-map-02\\combined-assembly-map.npz",
+      "sha256": "a6ccff514fe788396eb9d7620ebc828f966efbea3f7899e7a73991c17f8a2469",
+      "size_bytes": 16919703
+    },
+    "l04_contact_independent_review": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-source-contact-inputs-review-01\\independent-review.json",
+      "sha256": "3b144bee81a2ef83ed906968cf91240176e54f4f93d9e2e851cb5e58b9875240",
+      "size_bytes": 2926
+    },
+    "l04_contact_ledger": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-source-contact-inputs-01\\contact-ledger-inputs.npz",
+      "sha256": "6e5886f81a14c1f1fec43a4af64a175bca518486cfd74fbc7794c551bd74ec4a",
+      "size_bytes": 9993208
+    },
+    "l04_contact_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-source-contact-inputs-01\\result.json",
+      "sha256": "96c7396b9c4d8cba85677ca18e643bad1376e7f3047614c5a9b158071662861d",
+      "size_bytes": 68394
+    }
+  },
+  "native_l04_boundary_current": {
+    "absolute_incident_sum_a": 1.9816360358227967,
+    "half_absolute_incident_sum_a": 0.9908180179113983,
+    "record_count": 76146,
+    "signed_outward_sum_a": [
+      -3.5176722645857694e-14,
+      -2.7764682913877792e-14
+    ]
+  },
+  "program": "SPD Decap PI Evaluator",
+  "scope": "Saved-array current rebind only. Category0 binds 76,136 ordinary unique native-unsplit rows; category1 binds 10 existing L02 first-leg split-leg0 endpoint remaps; category2 retains 20 explicitly named future L04 series child ownership records paired on 10 present split-leg0 parent currents with opposite L04 endpoint orientation. Child records are not summed as port, cut, net, or throughput current. No source database query, original composite re-addition, source geometry work, R/L change, field load, solve, or magnetic action was performed.",
+  "status": "COMPLETED_L04_SAVED_SOURCE_CONTACT_CURRENT_REBIND",
+  "version": "0.23.1"
+}

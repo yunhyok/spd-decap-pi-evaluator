@@ -1,0 +1,85 @@
+{
+  "algorithm_identity": {
+    "canonical_action_sha256": "e9108a481308335d3f442a53652468ec9b8507204537c6d96d6f730de2bfbde8",
+    "contact_ntd_ast_sha256": "fec55f625d94912a7f2a6df9ee56d086efa5750b29896462f217cf962f5db3ef",
+    "frozen_driver_sha256": "c12c9f9bfb40c0fa6549a38953a10e0ee7806c970802a06e8fd3cf3d670932fe",
+    "normalized_source_equals_frozen_probe02": true,
+    "permitted_text_replacements": [
+      "\"dual_rq_relative_lte\": 1.2e-10 -> \"dual_rq_relative_lte\": 1e-7",
+      "replay.metrics[\"dual_rq_relative\"] <= 1.2e-10 -> replay.metrics[\"dual_rq_relative\"] <= 1e-7"
+    ]
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-contact-ntd-action-03\\driver-at-run.py",
+    "sha256": "6eb11fcb97289aed527b3ce36f671bf5a776a390f4cadd84781a98f90e3f14eb",
+    "size_bytes": 7971
+  },
+  "external_observation": {
+    "elapsed_s": 6.532000000006519,
+    "sampled_peak_private_bytes": 3359879168
+  },
+  "factor_timing": {
+    "available": false,
+    "reason": "saved diagnostic has no factor timing receipt"
+  },
+  "inputs": {
+    "corrected_canonical_action": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l04_contact_ntd_action.py",
+      "sha256": "e9108a481308335d3f442a53652468ec9b8507204537c6d96d6f730de2bfbde8",
+      "size_bytes": 28847
+    },
+    "probe02_diagnostics": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-contact-ntd-action-02\\saved-rhs-replay-diagnostics.json",
+      "sha256": "4d20a2542666f5b8e122712d4849307d7ce4132f64cc6ca8f51476adfca0d02e",
+      "size_bytes": 1831
+    },
+    "probe02_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-contact-ntd-action-02\\driver-at-run.py",
+      "sha256": "c12c9f9bfb40c0fa6549a38953a10e0ee7806c970802a06e8fd3cf3d670932fe",
+      "size_bytes": 28853
+    },
+    "probe02_external": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-contact-ntd-action-02\\external-budget.json",
+      "sha256": "d51acba383cb5bda0d09fcf10793be6a31de4a048567911bcef020d6bd124266",
+      "size_bytes": 1007
+    },
+    "probe02_failure": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-contact-ntd-action-02\\failure.json",
+      "sha256": "18e24d23858cdc91d86b3297d2f306eccffd4e96f0eafa44175118488896bb20",
+      "size_bytes": 1145
+    }
+  },
+  "observed_apply_phase_timings_s": {
+    "apply_seconds": 3.2377129000378773,
+    "dual_seconds": 1.1496385000064038,
+    "r_c_h_correction_seconds": 0.5539961999747902,
+    "tree_lift_seconds": 1.3739582999842241
+  },
+  "program": "SPD Decap PI Evaluator",
+  "saved_rhs_replay": {
+    "apply_seconds": 3.2377129000378773,
+    "branch_current_relative": 2.8608230124812476e-13,
+    "contact_dual_max_abs_v": 1.7115765066936101e-15,
+    "contact_dual_relative": 1.2302303042499186e-12,
+    "dual_reader_result": "PASS_SAVED_L04_RT0_CONTACT_DUAL_POTENTIALS",
+    "dual_rq_relative": 1.26037518220899e-10,
+    "dual_seconds": 1.1496385000064038,
+    "energy_scaled_stationarity_relative": 7.73509383488034e-14,
+    "independent_constraint_max_a": 5.551115123125783e-17,
+    "joule_energy_real": 0.0004742739539035998,
+    "kcl_max_abs_a": 6.436180616093476e-17,
+    "kcl_relative": 3.5270591082367626e-16,
+    "preserved_original_root_target_residual_a": [
+      3.5181926816285625e-14,
+      2.7765116594746786e-14
+    ],
+    "r_c_h_correction_seconds": 0.5539961999747902,
+    "raw_ct_rq_max_abs": 7.049664983610858e-16,
+    "raw_ct_rq_norm_ratio": 2.167146662102796e-12,
+    "root_constraint_abs_a": 6.436180616093478e-17,
+    "tree_lift_seconds": 1.3739582999842241
+  },
+  "scope": "Saved-diagnostic qualification only. No R/H load, NtD action replay, mesh, global circuit, or worker rerun.",
+  "status": "QUALIFIED_SAVED_L04_CONTACT_NTD_DIAGNOSTIC_NO_REPLAY",
+  "version": "0.23.1"
+}

@@ -1,0 +1,12 @@
+{
+  "budget": {
+    "elapsed_s": 73.28200000000652,
+    "max_rss_bytes": 25769803776,
+    "max_runtime_s": 210.0,
+    "peak_rss_bytes": 1380777984
+  },
+  "program": "SPD Decap PI Evaluator",
+  "status": "STOP_HYBRID_AUX_COMPACT_FACTOR",
+  "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_l04_hybrid_aux_native_compact_factor.py\", line 119, in worker\n    assert metrics[\"pivot_finite\"] and metrics[\"pivot_nonzero\"] and metrics[\"n_parity_gate_lte_2e_8\"] and metrics[\"t_parity_gate_lte_2e_8\"] and metrics[\"n_residual_gate_lte_2e_8\"] and metrics[\"t_residual_gate_lte_2e_8\"]\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n",
+  "version": "0.23.1"
+}

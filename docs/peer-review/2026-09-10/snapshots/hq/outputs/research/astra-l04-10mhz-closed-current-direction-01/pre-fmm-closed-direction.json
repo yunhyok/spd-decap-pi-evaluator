@@ -1,0 +1,32 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "PRE_FMM_CLOSED_DIRECTION_STRUCTURAL_CHECKPOINT",
+  "artifact": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-closed-current-direction-01\\pre-fmm-closed-direction.npz",
+    "sha256": "a77edf773b90c8cd729892e79ce70922420300b2fa85245f5326ddebd0760dde",
+    "size_bytes": 113603329
+  },
+  "metrics": {
+    "saved_rhs_action_relative": 0.0,
+    "saved_scaled_to_physical_relative": 0.0,
+    "bc_dpsi_norm": 1.5059189398104942e-16,
+    "pt_r_c_dpsi_relative": 1.1045501502021058e-10,
+    "projected_r_c_dpsi_relative": 2.2730340273264067e-12,
+    "h_scaled_identity_relative": 6.028139014849171e-13,
+    "h_solve_rhs_identity_relative": 6.623707233407492e-13,
+    "pt_full04_gradient_relative": 2.5382443218816742e-11,
+    "pt_rc_gradient_diagnostic": 19.148037705709015
+  },
+  "gates": {
+    "rhs_minus_saved_action_matches_saved_residual": true,
+    "saved_scaled_to_physical_matches": true,
+    "bc_dpsi": true,
+    "pt_r_c_dpsi": true,
+    "projected_r_c_dpsi": true,
+    "h_scaled_identity": true,
+    "h_solve_rhs_identity": true,
+    "pt_full04_gradient": true,
+    "finite_initial_direction": true
+  }
+}

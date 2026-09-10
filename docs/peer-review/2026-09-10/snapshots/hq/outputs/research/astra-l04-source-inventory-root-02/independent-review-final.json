@@ -1,0 +1,47 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "PASS",
+  "scope": "Superseding addendum to the independent cached SQLite/NPZ review; no raw SPD/scenario replay, geometry decode, mesh/LU, or accuracy_parse access.",
+  "supersedes": {
+    "path": "outputs/research/astra-l04-source-inventory-root-02/independent-review.json",
+    "sha256": "de316673ae9159431d857807cf05e5df9cd86943b5e2b81ba6b0acff8813240b",
+    "prior_status": "PASS_WITH_MISSING_DECLARED_GUARD"
+  },
+  "correction": {
+    "initial_mislookup": "The initial review looked for an unpromised file named astra-l04-source-inventory-root-02/guard.json.",
+    "correct_guard_path": "outputs/research/astra-l04-source-inventory-root-02-guard/external-budget.json",
+    "expected_sha256": "1ec7d9c0c147dead28ef1ca0111cd02877d6e984d76da2fc2a990aa28c30a55b",
+    "actual_sha256": "1ec7d9c0c147dead28ef1ca0111cd02877d6e984d76da2fc2a990aa28c30a55b",
+    "hash_matches": true,
+    "guard_status": "COMPLETED_NATIVE_WORKER",
+    "exit_code": 0,
+    "finding": null
+  },
+  "retained_findings": {
+    "audit_sha256": "055f52d88dc8d389d00dedde0f921c3a01102b5fb037aaee404c26bc2bad81ff",
+    "result_sha256": "c86cf3410188e5386bfa8b5f4b57faddc6c219456e59a4ba8ac1d8e9b5f041d1",
+    "active_index": 71610,
+    "islands": 289,
+    "native_incident_links": 76146,
+    "orientation_first_second": [
+      66878,
+      9268
+    ],
+    "external_nodes": 59735,
+    "whole_l04_touching_owners": 76166,
+    "target_native_owners": 76166,
+    "l04_owners_outside_target": 20,
+    "non_l04_owners_inside_target": 20,
+    "zero_target_names_across_36_partial_tables": true,
+    "l02_ledger_membership": 20,
+    "l02_triples": 10,
+    "l02_outside_paths": 10,
+    "outside_owner_arities": [
+      5,
+      7,
+      12
+    ],
+    "outside_paths_have_exactly_two_l04_owners": true
+  }
+}

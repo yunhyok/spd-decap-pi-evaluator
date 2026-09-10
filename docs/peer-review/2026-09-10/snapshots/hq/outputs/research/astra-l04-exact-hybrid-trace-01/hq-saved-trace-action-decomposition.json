@@ -1,0 +1,59 @@
+{
+  "budget": {
+    "elapsed_s": 1.875,
+    "max_rss_bytes": 4294967296,
+    "max_runtime_s": 60,
+    "peak_rss_bytes": 484655104
+  },
+  "equation": "raw H*lambda-direct_expected = scatter(q_original-q_shared) + scatter((H_local*1)*shifted_cell_voltage) + remaining floating arithmetic",
+  "inputs": {
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-exact-hybrid-cells-01\\l04-exact-hybrid-cells.npz": "8f51d808397cf5ba5764e0df51b41e44ed9af82924dc1a766b515524279cb5c0",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-exact-hybrid-trace-01\\equivalence-preacceptance.json": "bf94a73d04939a853df63f6eafdee5de87a7c66636fca0e809a6580ae727f0ba",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-exact-hybrid-trace-01\\saved-field-equivalence.npz": "1396cc1334ac4583c4e9cebda94b4a141802623d456ee4aabcd001cecab5b97b",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-exact-hybrid-trace-01\\structural-checkpoint.npz": "23bbdd3b62f5541ee1f762b5d0552902d41bdb4255cc6a9baef74305bfdb8aad"
+  },
+  "norms": {
+    "from_shared_current_error": {
+      "contact_l2_a": 1.4213530901551161e-10,
+      "internal_l2_a": 9.391765296427978e-09,
+      "l2_a": 9.392840775253126e-09,
+      "max_abs_a": 3.0321111214688306e-09,
+      "relative_to_contact_drive": 1.413125309004078e-07
+    },
+    "raw": {
+      "contact_l2_a": 1.421398841309946e-10,
+      "internal_l2_a": 9.39149443248901e-09,
+      "l2_a": 9.39257001156409e-09,
+      "max_abs_a": 3.0319212888516965e-09,
+      "relative_to_contact_drive": 1.4130845734022627e-07
+    },
+    "remaining_floating_arithmetic": {
+      "contact_l2_a": 1.9141592008393953e-13,
+      "internal_l2_a": 3.3446789435418503e-11,
+      "l2_a": 3.3447337167429103e-11,
+      "max_abs_a": 6.809966032934976e-12,
+      "relative_to_contact_drive": 5.032053646072064e-10
+    },
+    "stored_constant_row_times_cell_voltage": {
+      "contact_l2_a": 1.43584612107957e-13,
+      "internal_l2_a": 3.795807672428272e-11,
+      "l2_a": 3.795834829319327e-11,
+      "max_abs_a": 7.42714871977713e-12,
+      "relative_to_contact_drive": 5.710722021651392e-10
+    }
+  },
+  "program": "SPD Decap PI Evaluator",
+  "raw_and_current_error_alignment": 0.9999862696492098,
+  "scope": "Saved-array arithmetic only. No H/R reassembly, tree recovery, NtD action, factor, field solve, changed gate or qualification. Original trace01 failure remains.",
+  "sparse": {
+    "gauged_nnz": 7860127,
+    "gauged_shape": [
+      1698803,
+      1698803
+    ]
+  },
+  "status": "MEASURED_SAVED_TRACE_ACTION_ERROR_DECOMPOSITION_NO_REPLAY",
+  "version": "0.23.1",
+  "worst_trace_kind": "internal",
+  "worst_trace_row": 15929
+}

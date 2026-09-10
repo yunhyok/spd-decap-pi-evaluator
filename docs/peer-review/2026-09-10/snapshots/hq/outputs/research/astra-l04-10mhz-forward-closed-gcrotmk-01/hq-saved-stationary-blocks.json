@@ -1,0 +1,153 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "runs": {
+    "real_h": {
+      "result_sha256": "17eec05e5f710020703a40ec62916d3a01c563fa895d3cde1463979e1a2c4f25",
+      "final_sha256": "85e8db88de6a07024a7076549d53e7fc4060789cffbca39f229e025ff4fdaa91",
+      "blocks": {
+        "potential": {
+          "bilinear_ohm": [
+            4.217363557507573e-05,
+            -6.922864901147809e-05
+          ],
+          "absolute_ohm": 8.106307039320507e-05,
+          "residual_norm": 0.000898549639362623,
+          "residual_squared_share": 8.253242195589782e-07
+        },
+        "l25": {
+          "bilinear_ohm": [
+            1.3647459082288853e-05,
+            0.0001555803612388438
+          ],
+          "absolute_ohm": 0.00015617778953043186,
+          "residual_norm": 0.0068715701825847325,
+          "residual_squared_share": 4.826723428902674e-05
+        },
+        "contact": {
+          "bilinear_ohm": [
+            -2.5469606497610393e-05,
+            4.2864398423493025e-06
+          ],
+          "absolute_ohm": 2.5827783909294213e-05,
+          "residual_norm": 0.9890337789608873,
+          "residual_squared_share": 0.9999140954026937
+        },
+        "closed": {
+          "bilinear_ohm": [
+            5.77848544894858e-05,
+            2.867210355399984e-06
+          ],
+          "absolute_ohm": 5.785594441017414e-05,
+          "residual_norm": 0.00600101503460951,
+          "residual_squared_share": 3.681203880012448e-05
+        }
+      },
+      "total_j_minus_z_ohm": [
+        8.813634264924e-05,
+        9.350536242511499e-05
+      ],
+      "gap_ohm": 0.0001284961777557463,
+      "sum_absolute_terms_over_gap": 2.4975419023991448
+    },
+    "diagonal_homega": {
+      "result_sha256": "ef23ddf9c0a81f5ef0e234932592ea6403685f022c7e3dc1c04bd4517c488f03",
+      "final_sha256": "db4a1c4a1d1b1a1279616419900b2a98380c4ac2d8a3a25727f97fb108dc07f1",
+      "blocks": {
+        "potential": {
+          "bilinear_ohm": [
+            4.228737299448828e-05,
+            -6.909771712868144e-05
+          ],
+          "absolute_ohm": 8.101059453658054e-05,
+          "residual_norm": 0.0008984581123671976,
+          "residual_squared_share": 1.6963931210044252e-06
+        },
+        "l25": {
+          "bilinear_ohm": [
+            9.736538041559983e-07,
+            0.00015712579104510026
+          ],
+          "absolute_ohm": 0.0001571288077129043,
+          "residual_norm": 0.009763764527418931,
+          "residual_squared_share": 0.00020033896599942473
+        },
+        "contact": {
+          "bilinear_ohm": [
+            -2.25392878019805e-05,
+            6.715797472848182e-06
+          ],
+          "absolute_ohm": 2.3518533762052875e-05,
+          "residual_norm": 0.6896787426043994,
+          "residual_squared_share": 0.999596011417376
+        },
+        "closed": {
+          "bilinear_ohm": [
+            0.00020730904845757782,
+            -3.185585545386642e-05
+          ],
+          "absolute_ohm": 0.00020974231117989518,
+          "residual_norm": 0.009803022012451233,
+          "residual_squared_share": 0.00020195322350702639
+        }
+      },
+      "total_j_minus_z_ohm": [
+        0.0002280307874542416,
+        6.288801593540058e-05
+      ],
+      "gap_ohm": 0.000236543743471039,
+      "sum_absolute_terms_over_gap": 1.9928671131779407
+    },
+    "forward_homega": {
+      "result_sha256": "30045d8ac4540b096f9b26c75238c5d9e98e1375efc3fb1c5f4b888141fd2128",
+      "final_sha256": "f971eacc2f05b8cc4508960dc56b219a0de9ab9fb03e1d19bf0252d73b5ea2f2",
+      "blocks": {
+        "potential": {
+          "bilinear_ohm": [
+            4.22818455252661e-05,
+            -6.909308625363674e-05
+          ],
+          "absolute_ohm": 8.100375935149524e-05,
+          "residual_norm": 0.0008984161322114156,
+          "residual_squared_share": 1.5953748361988367e-06
+        },
+        "l25": {
+          "bilinear_ohm": [
+            6.732523788470344e-07,
+            0.0001570593518998547
+          ],
+          "absolute_ohm": 0.00015706079487882397,
+          "residual_norm": 0.009989406195432635,
+          "residual_squared_share": 0.00019723636973663857
+        },
+        "contact": {
+          "bilinear_ohm": [
+            -2.295183661009687e-05,
+            7.449480279091509e-06
+          ],
+          "absolute_ohm": 2.4130510981020613e-05,
+          "residual_norm": 0.7111468749321156,
+          "residual_squared_share": 0.999600043162212
+        },
+        "closed": {
+          "bilinear_ohm": [
+            0.0002186989904929654,
+            -4.0185858684210714e-05
+          ],
+          "absolute_ohm": 0.00022236040942764414,
+          "residual_norm": 0.010087401383655015,
+          "residual_squared_share": 0.00020112509321717502
+        }
+      },
+      "total_j_minus_z_ohm": [
+        0.00023870225178698165,
+        5.522988724109874e-05
+      ],
+      "gap_ohm": 0.00024500837833192575,
+      "sum_absolute_terms_over_gap": 1.977709815223262
+    }
+  },
+  "status": "PASS_SAVED_BILINEAR_ATTRIBUTION",
+  "elapsed_s": 3.7018486999986635,
+  "scope": "Algebraic attribution only; no causal isolation, physical acceptance, or accuracy claim. No new H/FMM/full A."
+}

@@ -1,0 +1,195 @@
+{
+  "artifacts": {
+    "derived_field_observation_npz": {
+      "path": "derived-field-observation.npz",
+      "sha256": "be5a83dff88db545de4625414e46dcc360364eb0a29077c91848a6ac805cb6c0",
+      "size_bytes": 22990365,
+      "zip_crc_bad_member": null,
+      "zip_members": 15
+    },
+    "field_json_auxiliary": {
+      "json_error": "Expecting ',' delimiter",
+      "json_error_column": 148,
+      "json_error_line": 190,
+      "json_error_position": 8304,
+      "path": "field.json",
+      "sha256": "1864f9920d43fb110788d7986d86c1acac97d4fe931af5a51d5384c5dcd18830",
+      "size_bytes": 8304,
+      "valid_json": false
+    },
+    "numeric_capture_checkpoint_npz": {
+      "path": "numeric-capture-checkpoint.npz",
+      "sha256": "c54d9e73a47a862396e6f70347ad9e319a6fbc1a3310e95feeeedf2b3cf1e292",
+      "size_bytes": 16297774,
+      "zip_crc_bad_member": null,
+      "zip_members": 16
+    },
+    "raw_field_snapshot_npz": {
+      "path": "raw-field-snapshot.npz",
+      "sha256": "6eac098738598a78b2068ce4f80e46fd70e17010a89bfb5949ec8a68124df4a7",
+      "size_bytes": 145099492,
+      "zip_crc_bad_member": null,
+      "zip_members": 367
+    }
+  },
+  "findings": [
+    {
+      "artifact": "field.json",
+      "detail": "The JSON was truncated at EOF after the native success path. It is auxiliary only; independently verified NPZ artifacts remain intact and were not repaired.",
+      "priority": "P2"
+    }
+  ],
+  "finite_and_field_power": {
+    "active_finite_link_count": 1692389,
+    "active_original_index_is_identity": true,
+    "finite_complex_contribution_ohm": [
+      3.240780158732434e-05,
+      1.31864687791299e-05
+    ],
+    "finite_formula_max_abs_residual": {
+      "admittance_s": 0.0,
+      "complex_contribution_ohm": 0.0,
+      "current_a": 0.0,
+      "delta_v": 0.0
+    },
+    "finite_metadata_order_exact": true,
+    "full_finite_link_count": 1692389,
+    "partial_complex_contribution_ohm": [
+      6.445060851894075e-11,
+      -1.1584162921273057e-08
+    ],
+    "pass": true,
+    "sum_absolute_error_ohm": 2.4790646994966693e-14,
+    "sum_complex_contribution_ohm": [
+      0.00010031137012261865,
+      -0.0006057593380389717
+    ],
+    "sum_minus_zdd_ohm": [
+      2.3807223011561296e-14,
+      -6.913198312419322e-15
+    ],
+    "sum_tolerance_ohm": 6.140087512276501e-10,
+    "termination_complex_contribution_ohm": [
+      6.79035040846858e-05,
+      -0.0006189342226551803
+    ],
+    "termination_count": 11050,
+    "termination_formula_max_abs_residual": {
+      "complex_contribution_ohm": 2.6469779601696886e-23,
+      "current_a": 8.673617379884035e-19
+    }
+  },
+  "l14_endpoint_center_join": {
+    "census_declared_link_count": 2110,
+    "census_is_subset_not_whole_ledger": true,
+    "census_path": "../astra-step6e-loaded-boundary-01/l14-endpoint-polygon-census.json",
+    "duplicate_in_census_count": 0,
+    "duplicate_in_full_finite_ledger_for_census_count": 0,
+    "full_finite_ledger_link_count": 1692389,
+    "largest_polygon_group": {
+      "abs_current_a": {
+        "max": 0.015032149369595547,
+        "min": 4.280853888811873e-09,
+        "p50": 0.0010224948875292273,
+        "p95": 0.0028574938210742637
+      },
+      "count": 1930,
+      "island_id": "spd-surface-island:ceba86cca5e71ee242ee45a9"
+    },
+    "missing_active_current_count": 0,
+    "missing_from_full_finite_ledger_count": 0,
+    "polygon_group_count": 18,
+    "single_polygon_match_per_census_link": true,
+    "span_abs_current_a": {
+      "Signal$L13(DGND) -> Signal$L14(MAIN_POWER4)": {
+        "count": 1428,
+        "max": 0.015032149369595547,
+        "min": 0.0002964310597300289,
+        "p50": 0.001022494887529265,
+        "p95": 0.0028574938210743825
+      },
+      "Signal$L14(MAIN_POWER4) -> Signal$L15(MAIN_POWER5)": {
+        "count": 682,
+        "max": 1.082286695851989e-08,
+        "min": 4.280853888811873e-09,
+        "p50": 5.920716614788695e-09,
+        "p95": 1.0822866936954004e-08
+      }
+    },
+    "unique_census_link_count": 2110
+  },
+  "limitations": [
+    "Endpoint center-to-polygon membership is not finite-electrode coverage, physical current-injection, current-sharing, or replacement certification.",
+    "This receipt verifies saved artifacts only and does not establish a source-trace shadow, a source-bound replacement, AC convergence, or PowerSI agreement.",
+    "No full global Y matrix or solver factor was persisted by this review."
+  ],
+  "mapping_and_voltage": {
+    "absolute_difference_ohm": 1.0842021724855044e-19,
+    "active_node_count": 756889,
+    "device_active_nodes": [
+      2699,
+      2656
+    ],
+    "device_batch_port_id": "ADC_VDD_075_VTRIP_SRAM/0",
+    "device_global_reduced_nodes": [
+      2699,
+      2656
+    ],
+    "gauge_active_index": 0,
+    "gauge_global_reduced_index": 0,
+    "gauge_voltage_exact_zero": true,
+    "global_to_active_inverse_exact": true,
+    "numeric_checkpoint_raw_shared_arrays_byte_exact": true,
+    "prior_zdd_ohm": [
+      0.00010031137009881143,
+      -0.0006057593380320584
+    ],
+    "retained_node_count": 756888,
+    "retained_solution_placement_exact": true,
+    "shared_array_count": 13,
+    "unscaled_solution_equals_row_scale_times_scaled_solution_exact": true,
+    "zdd_from_physical_vdiff_ohm": [
+      0.00010031137009881143,
+      -0.0006057593380320585
+    ]
+  },
+  "npz_integrity": {
+    "allow_pickle": false,
+    "derived_text_encoding": {
+      "scalar": "utf8_json_uint8_scalar",
+      "schema_version": 1,
+      "vector": "utf8_json_uint8"
+    },
+    "object_or_unicode_dtype_count": 0,
+    "packed_text_roundtrip": {
+      "longest_reduced_node_id_characters": 98831,
+      "packed_all_reduced_node_ids_bytes": 39438498,
+      "raw_and_derived_text_vectors_decode_to_string_lists": true
+    },
+    "raw_text_encoding": {
+      "scalar": "utf8_json_uint8_scalar",
+      "schema_version": 1,
+      "vector": "utf8_json_uint8"
+    }
+  },
+  "program": "SPD Decap PI Evaluator",
+  "scope": "Read-only independent verification of Run02 persisted artifacts. No native rerun, source expansion, solver compilation, or artifact repair was performed.",
+  "status": "COMPLETED_INDEPENDENT_ARTIFACT_REVIEW",
+  "surface_and_partials": {
+    "one_mhz_dispersion_count": 36,
+    "one_mhz_dispersion_finite": true,
+    "partial_count": 36,
+    "partial_csc_shape_index_finiteness_valid": true,
+    "partial_indices_complete_00_through_35": true,
+    "partial_net_name_count_range": [
+      2,
+      2065
+    ],
+    "partial_net_names_all_resolve_to_surface_ids": true,
+    "partial_nominal_c_total_nnz": 22355,
+    "surface_alias_count": 56099,
+    "surface_node_count": 812988,
+    "surface_to_reduced_bounds_valid": true,
+    "surface_to_reduced_unique_count": 756889
+  }
+}

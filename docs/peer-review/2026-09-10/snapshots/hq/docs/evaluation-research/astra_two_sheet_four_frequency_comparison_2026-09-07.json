@@ -1,0 +1,153 @@
+{
+  "inputs": {
+    "higher_f": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-two-sheet-frequency-shadow-01\\result.json",
+      "sha256": "f580a47697385efdd234f6c8738119285bc3cac94a4ad1827ffd5e7b449f4372"
+    },
+    "native": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_native_loaded_development_rail_2026-09-07.json",
+      "sha256": "e2c1f16ce4ff3998445e09c6cde2d1b23cdbc4d2c5e102e32c5f3d915e51790d"
+    },
+    "one_mhz": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-l25-sheet-r-shadow-01\\result.json",
+      "sha256": "d5a9873fb81c21773dbca79b96a83496078bdbfaa3b345478d0d21a4448e0530"
+    },
+    "port_zdd_review": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-two-sheet-frequency-shadow-01\\one-mhz-field-zdd-check.json",
+      "sha256": "afecf2f13d39567e1ea1fff5935e7561cdf450ab7290029baf9794824c643be7"
+    },
+    "reference": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_loaded_development_reference_2026-09-07.json",
+      "sha256": "761d61334678ceaca0db55bc8c5539bb080ee36363eae33a2c419a1ea5c06430"
+    }
+  },
+  "limitations": [
+    "Conditional DC-sheet replacement; original sampled caps and per-gap dispersion retained, no PowerSI parameter fit.",
+    "Four development samples only; no dense-band, mesh/contact convergence, magnetic/skin/proximity or unseen validation.",
+    "Magnitude agreement alone does not certify complex impedance accuracy."
+  ],
+  "points": [
+    {
+      "complex_gap_reduction_fraction": 0.6138276520697044,
+      "frequency_hz": 1000000.0,
+      "native_error": {
+        "complex_gap_ohm": 0.0006180322719598752,
+        "complex_relative_error": 0.7610323044211814,
+        "magnitude_error_db": -2.428670003508578,
+        "phase_error_deg": -48.97890346256608
+      },
+      "native_frequency_status_and_finite_baseline_binding_checked": true,
+      "native_zdd_ohm": [
+        0.00010031137009881143,
+        -0.0006057593380320584
+      ],
+      "reference_zdd_ohm": [
+        0.0006915479466520245,
+        -0.0004257504501139287
+      ],
+      "two_sheet_error": {
+        "complex_gap_ohm": 0.00023866697355944,
+        "complex_relative_error": 0.29388963184913114,
+        "magnitude_error_db": -0.3663985855593993,
+        "phase_error_deg": -17.09013811230245
+      },
+      "two_sheet_zdd_ohm": [
+        0.0005137583675450426,
+        -0.0005849760442531394
+      ]
+    },
+    {
+      "complex_gap_reduction_fraction": 0.2968922520618634,
+      "frequency_hz": 10000000.0,
+      "native_error": {
+        "complex_gap_ohm": 0.0014784638901228291,
+        "complex_relative_error": 0.9258218988414498,
+        "magnitude_error_db": -22.547431177075975,
+        "phase_error_deg": 5.732461590875697
+      },
+      "native_frequency_status_and_finite_baseline_binding_checked": true,
+      "native_zdd_ohm": [
+        9.255113623396583e-05,
+        7.49606167966133e-05
+      ],
+      "reference_zdd_ohm": [
+        0.0013351332705258876,
+        0.0008761129830389292
+      ],
+      "two_sheet_error": {
+        "complex_gap_ohm": 0.001039519416192119,
+        "complex_relative_error": 0.6509525502862211,
+        "magnitude_error_db": -8.304131340936532,
+        "phase_error_deg": -19.653151304532244
+      },
+      "two_sheet_zdd_ohm": [
+        0.0005966084647432856,
+        0.0001445518250458507
+      ]
+    },
+    {
+      "complex_gap_reduction_fraction": 0.049616217974106314,
+      "frequency_hz": 100000000.0,
+      "native_error": {
+        "complex_gap_ohm": 0.009741241248346017,
+        "complex_relative_error": 0.9135924871082506,
+        "magnitude_error_db": -21.26194549417672,
+        "phase_error_deg": 2.2021265534632546
+      },
+      "native_frequency_status_and_finite_baseline_binding_checked": true,
+      "native_zdd_ohm": [
+        0.00011885382968568422,
+        0.0009143791612678196
+      ],
+      "reference_zdd_ohm": [
+        0.001779666643964065,
+        0.010512997908483828
+      ],
+      "two_sheet_error": {
+        "complex_gap_ohm": 0.009257917699229725,
+        "complex_relative_error": 0.8682634831283816,
+        "magnitude_error_db": -16.755374288297514,
+        "phase_error_deg": -23.125980815057236
+      },
+      "two_sheet_zdd_ohm": [
+        0.0008376874678580425,
+        0.001303127368813163
+      ]
+    },
+    {
+      "complex_gap_reduction_fraction": 0.004284149736011433,
+      "frequency_hz": 1000000000.0,
+      "native_error": {
+        "complex_gap_ohm": 0.10131320022640695,
+        "complex_relative_error": 0.9092278660186301,
+        "magnitude_error_db": -20.790630610487927,
+        "phase_error_deg": 5.873935113223192
+      },
+      "native_frequency_status_and_finite_baseline_binding_checked": true,
+      "native_zdd_ohm": [
+        0.0006112607615812399,
+        0.010154917640416436
+      ],
+      "reference_zdd_ohm": [
+        0.0180428754633343,
+        0.10995723900122274
+      ],
+      "two_sheet_error": {
+        "complex_gap_ohm": 0.10087915930640252,
+        "complex_relative_error": 0.9053325976964522,
+        "magnitude_error_db": -20.46948532590957,
+        "phase_error_deg": -2.1096414724527293
+      },
+      "two_sheet_zdd_ohm": [
+        0.0020916686934944182,
+        0.01034718034772955
+      ]
+    }
+  ],
+  "program": "SPD Decap PI Evaluator",
+  "rail_id": "ADC_VDD_075_VTRIP_SRAM/0",
+  "reference_port_one_based": 18,
+  "script_sha256": "c93375a3253e7b3260b16e4f583f15e133e0be50fe78a4a43b986e9ea584c679",
+  "status": "COMPLETED_CONDITIONAL_TWO_SHEET_FOUR_POINT_COMPARISON",
+  "version": "0.23.1"
+}

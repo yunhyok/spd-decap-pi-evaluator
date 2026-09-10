@@ -1,0 +1,10 @@
+{
+  "status": "UNVALIDATED_POST_SOLVE_COMPARISON",
+  "elapsed_s": 1075.4689999999973,
+  "fmm_elapsed_s": 829.7945710999993,
+  "fmm_wall_share": 0.7715653088094602,
+  "raw_complex_relative_error_percent": 54.59315123234427,
+  "raw_phase_difference_degrees": -22.72859196183298,
+  "recognized_accuracy_gain_percentage_points": 0,
+  "scope": "Frozen loaded nonblind development reference used after solve only. Original numerical convergence failed; no accuracy acceptance. No original Touchstone access."
+}

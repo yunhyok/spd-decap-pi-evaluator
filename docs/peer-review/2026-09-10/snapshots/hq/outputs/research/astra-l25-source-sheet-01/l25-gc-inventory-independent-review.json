@@ -1,0 +1,160 @@
+{
+  "cross_check": {
+    "inventory_C_Y_match": true,
+    "inventory_fingerprints_match": true,
+    "l14_data_inputs_read": [],
+    "ownership_ir_zero_rows_not_source_input_blocker": true,
+    "receipt_finite_boundary_count": 350,
+    "receipt_source_trace_count": 0,
+    "recorded_l14_method_reference_only": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\audit_astra_l14_gc_projection.py",
+      "role": "method-only; no L14 owner or data input is read",
+      "sha256": "20b33f0c5ce216bd13a2714beaf8e28abf8e612e23ded4b446e5d984e5250320",
+      "size_bytes": 21947
+    }
+  },
+  "direct_saved_touch_counts": {
+    "device_port_global_reduced_touch_count": 0,
+    "finite_active_touch_count": 350,
+    "termination_negative_active_touch_count": 0,
+    "termination_positive_active_touch_count": 0
+  },
+  "elapsed_s": 1.0901914000278339,
+  "findings": {
+    "P1": [],
+    "P2": []
+  },
+  "independent_active_mapping": {
+    "source_surface_aliases": [
+      "spd-finite-via-vertex:56c65b8bc616f0d5a4cfecf9",
+      "spd-surface-island:279609d3a8c5969250977818"
+    ],
+    "target_global_reduced_index": 258027,
+    "target_reduced_node_id": "spd-finite-via-vertex:56c65b8bc616f0d5a4cfecf9 = spd-surface-island:279609d3a8c5969250977818"
+  },
+  "independent_original_gc": {
+    "external_terminal_count": 4,
+    "incident_actual_1mhz_admittance_total_s": [
+      7.568193885254347e-05,
+      0.0075681938852543455
+    ],
+    "incident_nominal_capacitance_total_f": 1.1020035124679083e-09,
+    "partial_ordinals": [
+      13,
+      14
+    ],
+    "partials": [
+      {
+        "external_mappings": [
+          {
+            "external_active_index": 725157,
+            "external_global_reduced_index": 725157,
+            "external_island_id": "spd-surface-island:4f23b7e65a7e9bd8ae00819d",
+            "external_surface_index": 808795,
+            "fingerprint": "924e8e16018d8ec9d77f29498aa8426818730a5ce3de08ecce1c146895dfc273",
+            "nominal_capacitance_f": 5.647780157516188e-10
+          }
+        ],
+        "incident_actual_1mhz_admittance_total_s": [
+          3.8787077146108085e-05,
+          0.0038787077146108084
+        ],
+        "incident_nominal_capacitance_total_f": 5.647780157516188e-10,
+        "incident_source_edge_count": 1,
+        "matrix_offdiagonal_edge_count": 4,
+        "offdiagonal_edge_fingerprints": [
+          "924e8e16018d8ec9d77f29498aa8426818730a5ce3de08ecce1c146895dfc273"
+        ],
+        "ordinal": 13,
+        "retained_nonincident_source_edge_count": 3
+      },
+      {
+        "external_mappings": [
+          {
+            "external_active_index": 126094,
+            "external_global_reduced_index": 126094,
+            "external_island_id": "spd-surface-island:44241f41cf5c8c1bdde7e497",
+            "external_surface_index": 808511,
+            "fingerprint": "5776b2c1a763d33b89bc512c109cbd08726cf0a1c343959573bbeb6a84fbf59b",
+            "nominal_capacitance_f": 5.318361646944361e-10
+          },
+          {
+            "external_active_index": 744014,
+            "external_global_reduced_index": 744014,
+            "external_island_id": "spd-surface-island:a2c304cddf22d1d3c73478bf",
+            "external_surface_index": 810725,
+            "fingerprint": "c954833ee80a07df419f342a5543c5a02b1d144cfbc0b496ae8b2d17962a0645",
+            "nominal_capacitance_f": 2.6382456901752656e-12
+          },
+          {
+            "external_active_index": 163769,
+            "external_global_reduced_index": 163769,
+            "external_island_id": "spd-surface-island:eb8cda32904cb6ff17fbad49",
+            "external_surface_index": 812458,
+            "fingerprint": "6ea83bab6eb091d1207ebd49a72ceddb37cf3edb72ec0338fdbf3c1c255cb278",
+            "nominal_capacitance_f": 2.751086331678092e-12
+          }
+        ],
+        "incident_actual_1mhz_admittance_total_s": [
+          3.689486170643538e-05,
+          0.003689486170643537
+        ],
+        "incident_nominal_capacitance_total_f": 5.372254967162895e-10,
+        "incident_source_edge_count": 3,
+        "matrix_offdiagonal_edge_count": 14,
+        "offdiagonal_edge_fingerprints": [
+          "5776b2c1a763d33b89bc512c109cbd08726cf0a1c343959573bbeb6a84fbf59b",
+          "6ea83bab6eb091d1207ebd49a72ceddb37cf3edb72ec0338fdbf3c1c255cb278",
+          "c954833ee80a07df419f342a5543c5a02b1d144cfbc0b496ae8b2d17962a0645"
+        ],
+        "ordinal": 14,
+        "retained_nonincident_source_edge_count": 11
+      }
+    ],
+    "source_owner_edge_count": 4,
+    "source_owner_fingerprint_set_sha256": "be7097076babc8ccbb46920a4d39f0dc78981962d99767947f22a60b54de2986"
+  },
+  "limitations": [
+    "No geometry, SPD, native compile, matrix solve, or physical electrode/current-sharing inference was performed.",
+    "Current L25 ownership.sqlite coverage is zero, but exact source-edge fingerprints, external mappings, retained counts, and overlap binding can form a future replace-once ledger; that contract is not established here.",
+    "The frozen inventory records an L14 helper only as method metadata; this calculation read no L14 owner or data input."
+  ],
+  "program": "SPD Decap PI Evaluator",
+  "review": "independent frozen L25 G/C4 source-edge receipt review",
+  "reviewed_artifact_hashes": {
+    "audit_astra_l25_gc_projection.py": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\audit_astra_l25_gc_projection.py",
+      "sha256": "0c6f2beeea2c1359786eea5bb288b9eff2573a99941b81afc7cac9f79de046af",
+      "size_bytes": 34445
+    },
+    "derived-field-observation.npz": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\derived-field-observation.npz",
+      "sha256": "be5a83dff88db545de4625414e46dcc360364eb0a29077c91848a6ac805cb6c0",
+      "size_bytes": 22990365
+    },
+    "l25-gc-projection-inventory.json": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-source-sheet-01\\l25-gc-projection-inventory.json",
+      "sha256": "703e8cdf9988805a2fb05a40ff659bc9890ba999e2eef00c741a112aa5976a77",
+      "size_bytes": 20467
+    },
+    "raw-field-snapshot.npz": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\raw-field-snapshot.npz",
+      "sha256": "6eac098738598a78b2068ce4f80e46fd70e17010a89bfb5949ec8a68124df4a7",
+      "size_bytes": 145099492
+    },
+    "receipt.json": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-source-sheet-01\\receipt.json",
+      "sha256": "a45f6601bae33dc72f9c56190cd85a42037c4046c460bedbdd7cecbc9e85851b",
+      "size_bytes": 774113
+    }
+  },
+  "source_identity": {
+    "active_index": 258027,
+    "component_id": "spd-surface-equivalence-component:bac83a28024314b3236e570a",
+    "rail_id": "ADC_VDD_075_VTRIP_SRAM/0",
+    "source_island_id": "spd-surface-island:279609d3a8c5969250977818",
+    "source_receipt_geometry_asset_sha256": "c80867ceb7f82d7ba4f886c63c68dbdc88c55fc3c1d9cc703d8fdea4a25ca711",
+    "source_sha256": "40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2"
+  },
+  "status": "ACCEPT_CONDITIONAL_L25_SOURCE_GC4_INVENTORY"
+}

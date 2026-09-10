@@ -1,0 +1,47 @@
+{
+  "inventory_sha256": "703e8cdf9988805a2fb05a40ff659bc9890ba999e2eef00c741a112aa5976a77",
+  "members": [
+    {
+      "archive_member": "attachments/geometry/0253-b7f8d21325bdcb1a.spdgeom.zlib",
+      "external_island_id": "spd-surface-island:44241f41cf5c8c1bdde7e497",
+      "layer": "Signal$L26(MAIN_POWER5)",
+      "net": "ADC_VDD_055_VTRIP/0",
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-source-sheet-01\\source-gc-assets\\0253-b7f8d21325bdcb1a.spdgeom.zlib",
+      "sha256": "b7f8d21325bdcb1a27bb4aaa6c3a355322ad23d03c25cacc5acf72c48521bb8d",
+      "size_bytes": 26384
+    },
+    {
+      "archive_member": "attachments/geometry/0244-6b70d5635899822f.spdgeom.zlib",
+      "external_island_id": "spd-surface-island:4f23b7e65a7e9bd8ae00819d",
+      "layer": "Signal$L24(DGND)",
+      "net": "DGND",
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-source-sheet-01\\source-gc-assets\\0244-6b70d5635899822f.spdgeom.zlib",
+      "sha256": "6b70d5635899822f888040f33828ec2e19cc12eaa67e5e0840f3a032261b9519",
+      "size_bytes": 27965
+    },
+    {
+      "archive_member": "attachments/geometry/0251-d7b85bc9e38dfe9a.spdgeom.zlib",
+      "external_island_id": "spd-surface-island:a2c304cddf22d1d3c73478bf",
+      "layer": "Signal$L26(MAIN_POWER5)",
+      "net": "ADC_VDD_050_VDDQ_DDRL/0",
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-source-sheet-01\\source-gc-assets\\0251-d7b85bc9e38dfe9a.spdgeom.zlib",
+      "sha256": "d7b85bc9e38dfe9adddd12e693e8a664f17c43bd85225aef2aba6c06420ff19d",
+      "size_bytes": 10106
+    },
+    {
+      "archive_member": "attachments/geometry/0249-16fccda39197cd97.spdgeom.zlib",
+      "external_island_id": "spd-surface-island:eb8cda32904cb6ff17fbad49",
+      "layer": "Signal$L26(MAIN_POWER5)",
+      "net": "ADC_VDD_050_VDDQ_DDRH/0",
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-source-sheet-01\\source-gc-assets\\0249-16fccda39197cd97.spdgeom.zlib",
+      "sha256": "16fccda39197cd97ee5aefe7ca10d7b9ca1b7337e578e773417c2b8f7ebca28b",
+      "size_bytes": 10943
+    }
+  ],
+  "program": "SPD Decap PI Evaluator",
+  "scope": "Four exact ZIP members verified against compiled source assets; no scenario decode or geometry integration.",
+  "script_sha256": "d9177e091c44cffa2fc7147ded5c29fc060f2f4708bba32976a2d87798de871f",
+  "source_sha256": "40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2",
+  "status": "MATERIALIZED_EXACT_L25_GC_EXTERNAL_GEOMETRY_MEMBERS",
+  "version": "0.23.1"
+}

@@ -1,0 +1,94 @@
+{
+  "independent_closure": {
+    "recomputed_lowband_gap_abs_s_per_f": 0.0,
+    "recomputed_lowband_gap_rel": 0.0,
+    "recomputed_lowband_termination_abs_s": 0.0,
+    "recomputed_lowband_termination_rel": 0.0,
+    "saved_1mhz_gap_abs_s_per_f": 0.0,
+    "saved_1mhz_gap_rel": 0.0,
+    "saved_1mhz_termination_abs_s": 0.0,
+    "saved_1mhz_termination_rel": 0.0
+  },
+  "inputs_sha256": {
+    "outputs\\research\\astra-native-frequency-stamps-01\\frequency-stamps.npz": "bf2903c044423ea7429ce907567250528903c53eedddd9fffe3265a2669cba3b",
+    "outputs\\research\\astra-native-frequency-stamps-01\\receipt.json": "4d93c4a89a02c7bc6295c27e8aa430ce3711edb2d2102576fbc7cf7535a52856",
+    "outputs\\research\\astra-native-frequency-stamps-01\\source-frequency-inputs.json": "61390c0ef9c7554b83d55f91b2e81a59f9453690f783b747f2906c475be5f6dc",
+    "outputs\\research\\astra-native-low-band-stamps-01\\frequency-stamps.npz": "4ba1c4922dca764a57646a5bb30c0d43ccfe51434776d5d6bacc42c40a2f745b",
+    "outputs\\research\\astra-native-low-band-stamps-01\\receipt.json": "1968b9091d7eab184c2c0ad195fdc847661377484624a4ac4985d06e42216299",
+    "tools\\research\\prepare_astra_frequency_stamps.py": "204c10c9e2885c3843967be572ff03eacf6679996b357951a95ec0394055e202"
+  },
+  "limitations": [
+    "Saved-source stamp verification only; no scenario, geometry, LU, PowerSI, or broadband accuracy inference.",
+    "The endpoint-clamped dielectric behavior is source-table semantics, not independently measured sub-1MHz material characterization."
+  ],
+  "npz": {
+    "allow_pickle": false,
+    "high_crc_ok": true,
+    "high_zip_members": [
+      "frequencies_hz.npy",
+      "partial_dispersion_s_per_f_by_frequency.npy",
+      "termination_admittance_s_by_frequency.npy",
+      "termination_bindings_json_utf8.npy"
+    ],
+    "low_crc_ok": true,
+    "low_shapes": {
+      "frequencies": [
+        4
+      ],
+      "gap_scales": [
+        4,
+        36
+      ],
+      "termination_y": [
+        4,
+        11050
+      ]
+    },
+    "low_zip_members": [
+      "frequencies_hz.npy",
+      "partial_dispersion_s_per_f_by_frequency.npy",
+      "termination_admittance_s_by_frequency.npy",
+      "termination_bindings_json_utf8.npy"
+    ]
+  },
+  "p1_findings": [],
+  "p2_findings": [],
+  "program": "SPD Decap PI Evaluator",
+  "semantics": {
+    "dielectric": "Each source material Dk/Df is log10-frequency-linearly interpolated with endpoint clamp; source rows are combined as a complex-permittivity harmonic mean before 1j*2*pi*f*Dk*(1-1j*max(Df,0))/nominal.",
+    "dielectric_source_query_counts": {
+      "above_or_at_upper": 0,
+      "below_or_at_lower": 144,
+      "inside": 0
+    },
+    "lowband_limit": "Below-source dielectric queries use the imported lower endpoint, not a fitted or extrapolated low-frequency dielectric law.",
+    "sampled_cap": "Real and imaginary Z are log-frequency-linearly interpolated; requested 1kHz through 1MHz lies within every 1kHz\u20131GHz source table, so the no-extrapolation guard is satisfied."
+  },
+  "source_binding": {
+    "cap_model_ranges_hz": {
+      "CAP_0402_100NF": [
+        1000.0,
+        1000000000.0
+      ],
+      "CAP_0603_1UF": [
+        1000.0,
+        1000000000.0
+      ],
+      "CAP_1608_10UF": [
+        1000.0,
+        1000000000.0
+      ]
+    },
+    "cap_models": [
+      "CAP_0402_100NF",
+      "CAP_0603_1UF",
+      "CAP_1608_10UF"
+    ],
+    "direct_refdes_model_rail_join": "all 11050",
+    "scenario_sha256": "2f5ae107221857f7f093ab8d6cbcff4c286a0c6cee5b6a9994de1c384cf39c83",
+    "target421": 421,
+    "target_rail": "ADC_VDD_075_VTRIP_SRAM/0",
+    "termination_bindings": 11050
+  },
+  "status": "ACCEPT_SAVED_LOW_BAND_FREQUENCY_STAMPS"
+}

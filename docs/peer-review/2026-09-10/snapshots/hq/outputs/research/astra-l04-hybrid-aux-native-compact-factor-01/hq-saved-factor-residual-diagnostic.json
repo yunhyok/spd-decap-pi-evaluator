@@ -1,0 +1,102 @@
+{
+  "budget": {
+    "elapsed_s": 5.438000000023749,
+    "max_rss_bytes": 4294967296,
+    "max_runtime_s": 60,
+    "peak_rss_bytes": 1010044928
+  },
+  "inputs": {
+    "compact-factor-diagnostic.json": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-hybrid-aux-native-compact-factor-01\\compact-factor-diagnostic.json",
+      "sha256": "c6ab690e2c33606fd8eb90e18f2c4e3b30edbaa2bf9d38b1ca33309bb8754a65",
+      "size_bytes": 4511
+    },
+    "driver-at-run.py": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-hybrid-aux-native-compact-factor-01\\driver-at-run.py",
+      "sha256": "5b2345074c299c4b7eab20f880a23b9a853952fe5d97ac0e1e24f7f01f92eddd",
+      "size_bytes": 12410
+    },
+    "external-budget.json": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-hybrid-aux-native-compact-factor-01\\external-budget.json",
+      "sha256": "0caa1d368b4a0db2c26fd2e1936dcf00e5a5a7b42c249c7c3c2d76f7ddb3563a",
+      "size_bytes": 1035
+    },
+    "failure.json": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-hybrid-aux-native-compact-factor-01\\failure.json",
+      "sha256": "2e25d4a763857241536dfd0a19ab29f5f0d86e55bd448557c43be3a2f32d3366",
+      "size_bytes": 954
+    },
+    "probe": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-hybrid-aux-native-compact-factor-01\\compact-factor-probe.npz",
+      "sha256": "71164954cf18983e5eb848bd19d4fd59949c57406650896223e0c5914be5411d",
+      "size_bytes": 292824734
+    },
+    "static": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-hybrid-aux-native-block-01\\native-l04-hybrid-aux-block.npz",
+      "sha256": "32d4c9f040c980d91a58e5d51d39e80839a8098a7dfebd950e46e8b7c811dc3b",
+      "size_bytes": 52158778
+    }
+  },
+  "metrics": {
+    "public_normal": {
+      "componentwise_backward_error": 4.3607377225280134e-10,
+      "conservative_complex_spmv_roundoff_l2_over_rhs": 1.9033453095366773e-05,
+      "max_row_nnz": 98017,
+      "native_residual_l2": 8.554846234095847e-05,
+      "normwise_backward_error_infinity": 2.4991920649767265e-15,
+      "operand_l2_over_rhs": 4777277.275944434,
+      "relative_residual": 3.860093673393934e-08,
+      "residual_l2": 8.555066986900707e-05,
+      "solution_l2": 10593423652.238325,
+      "trace_residual_l2": 6.145780124801156e-07,
+      "worst_row": 71609,
+      "worst_row_block": "native"
+    },
+    "public_transpose": {
+      "componentwise_backward_error": 3.568678570106699e-10,
+      "conservative_complex_spmv_roundoff_l2_over_rhs": 1.903345309536706e-05,
+      "max_row_nnz": 98017,
+      "native_residual_l2": 8.515998746475814e-05,
+      "normwise_backward_error_infinity": 2.4958533229474864e-15,
+      "operand_l2_over_rhs": 4777277.275944411,
+      "relative_residual": 3.842542008033121e-08,
+      "residual_l2": 8.516167497510494e-05,
+      "solution_l2": 10593423652.238268,
+      "trace_residual_l2": 5.361152563143479e-07,
+      "worst_row": 71609,
+      "worst_row_block": "native"
+    },
+    "reference_normal": {
+      "componentwise_backward_error": 4.3614712802607794e-10,
+      "conservative_complex_spmv_roundoff_l2_over_rhs": 1.903345309536685e-05,
+      "max_row_nnz": 98017,
+      "native_residual_l2": 8.558040072845791e-05,
+      "normwise_backward_error_infinity": 2.500160499198463e-15,
+      "operand_l2_over_rhs": 4777277.27594445,
+      "relative_residual": 3.861498948144586e-08,
+      "residual_l2": 8.558181475989325e-05,
+      "solution_l2": 10593423652.238192,
+      "trace_residual_l2": 4.919641787750683e-07,
+      "worst_row": 71609,
+      "worst_row_block": "native"
+    },
+    "reference_transpose": {
+      "componentwise_backward_error": 3.568794972189294e-10,
+      "conservative_complex_spmv_roundoff_l2_over_rhs": 1.9033453095367055e-05,
+      "max_row_nnz": 98017,
+      "native_residual_l2": 8.517064781908963e-05,
+      "normwise_backward_error_infinity": 2.4961606526982733e-15,
+      "operand_l2_over_rhs": 4777277.275944407,
+      "relative_residual": 3.843023988694497e-08,
+      "residual_l2": 8.517235703930686e-05,
+      "solution_l2": 10593423652.238098,
+      "trace_residual_l2": 5.39586608178883e-07,
+      "worst_row": 71609,
+      "worst_row_block": "native"
+    }
+  },
+  "program": "SPD Decap PI Evaluator",
+  "scope": "Saved matrix and saved reference/public solutions only; one deterministic RHS reconstruction. No new factor, solve, NtD, iterative refinement, threshold change, physical qualification or true-MNA action. Arithmetic bounds are diagnostic only and do not turn the failed 2e-8 gates into PASS.",
+  "status": "DIAGNOSED_SAVED_AUXILIARY_FACTOR_RESIDUAL_NO_REFACTOR",
+  "version": "0.23.1"
+}

@@ -1,0 +1,148 @@
+{
+  "artifact": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-cdt-local-coalescence-witness-02\\l04-local-coalescence-witness.npz",
+    "sha256": "c9754633834d5195ffb5b9c98dd53c798ad126fce7249c74e2dadfd283ca3412",
+    "size_bytes": 3765
+  },
+  "budget": {
+    "elapsed_s": 4.187999999965541,
+    "kind": "pinned reconstruct _Budget.create(60,4)",
+    "max_rss_bytes": 4294967296,
+    "max_runtime_s": 60.0,
+    "peak_rss_bytes": 2850848768
+  },
+  "contact_controls": {
+    "contact_vertex_exact_coordinate_remap_count": 0,
+    "drill_support_count": 38278,
+    "selected_contact_count": 1,
+    "selected_covered_after": 1,
+    "selected_covered_before": 1,
+    "source_current_group_identity_bitwise": true,
+    "unselected_aabb_disjoint": true,
+    "unselected_contact_count": 38277
+  },
+  "coordinate_map": {
+    "affected_raw_occurrence_count": 10,
+    "affected_raw_triangle_count": 5,
+    "affected_raw_triangle_indices": [
+      807731,
+      896310,
+      976112,
+      1043262,
+      1102499
+    ],
+    "removed_triangle_rows": [
+      807731,
+      976112
+    ],
+    "replacement_coordinate_um": [
+      -12596.3,
+      13546.3
+    ],
+    "ring_index": 563,
+    "ring_positions": [
+      42,
+      44
+    ]
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-cdt-local-coalescence-witness-02\\driver-at-run.py",
+    "sha256": "4226a917c23e61526d158fb3123f038d4910d7f3cbe0047ce4722cf88f1faaed",
+    "size_bytes": 23041
+  },
+  "identity_checkpoint": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-cdt-local-coalescence-witness-02\\l04-local-coalescence-source-identity-checkpoint.npz",
+    "sha256": "cf2995a00cf32100b6cdcc2886dc52e68a675216d795152b274394b27bd7b061",
+    "size_bytes": 1092525
+  },
+  "inputs": {
+    "budget_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\reconstruct_astra_native_loaded_field.py",
+      "sha256": "354d9e004b189cf8193c2922c8fa4dc1903b407bebb295a4576673200ce6b213",
+      "size_bytes": 33457
+    },
+    "degeneracy": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-cdt-degeneracy-diagnostic-01\\l04-raw-cdt-degeneracy.npz",
+      "sha256": "9b434bdac976cef35257388217848c4ee5cb139e0ebc6651dc629646eaa2878c",
+      "size_bytes": 2312
+    },
+    "fixed_current": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-currents-01\\l04-fixed-contact-currents.npz",
+      "sha256": "5c2fd3bd30a45d9d92ccc47a5ad2d553f0d122acb4282a1046be09d7b4e51adb",
+      "size_bytes": 3013247
+    },
+    "guarded_source_worker": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_fmm3d_runtime.py",
+      "sha256": "2961d1606ec2d4583c37d990d238a6abc87a54d8e0b93f9d83397f3851536a25",
+      "size_bytes": 16465
+    },
+    "pad_domain": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-pad-conductor-domain-01\\l04-pad-augmented-conductor-domain.wkb",
+      "sha256": "0eeaffc34a6b9759fd285f28d35ebd59042e6bcd909a697fad3f18a5d2eafa68",
+      "size_bytes": 14024197
+    },
+    "persistence": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\project_astra_l14_gc_mass.py",
+      "sha256": "f2c668fd090db5c4606eec27558c9bdbbdde6552d2f82c3b64b8837bd7350dc3",
+      "size_bytes": 61282
+    },
+    "raw_cdt": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-conditional-sheet-mesh-01\\unvalidated-l04-large-face-cdt.wkb",
+      "sha256": "ec2850aafd627f40368872b20276b0e1c38ecc0db9513550c34d484079542e96",
+      "size_bytes": 122416842
+    },
+    "support_map": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-pad-conductor-domain-01\\l04-pad-drill-support-map.npz",
+      "sha256": "7c76d3e61680d2092bdb3ebe53a03fd52030de478da570a35c4ce09baafc92ff",
+      "size_bytes": 2307665
+    },
+    "witness01_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-cdt-local-coalescence-witness-01\\driver-at-run.py",
+      "sha256": "79c75cf72e46f2ad98e1e4ef7cc2e531e5ff79e81ee9e4e7ee583feb6297f26e",
+      "size_bytes": 13109
+    },
+    "witness01_failure": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-cdt-local-coalescence-witness-01\\failure.json",
+      "sha256": "a0896265c2a8b364fcef4a60509f71af305e1c4ab5c086dd932c20f702a0adb8",
+      "size_bytes": 696
+    }
+  },
+  "local_geometry_change": {
+    "bounds_equal": true,
+    "changed_domain_wkb_sha256": "8dbfbb75d87efa7c9504b1ab521a78687ef97b45d1eb0e6a8d5ff6007658c674",
+    "component_count_equal": true,
+    "domain_area_delta_um2": 0.0,
+    "domain_valid": true,
+    "hole_count_equal": true,
+    "local_operand_bound_um2": 8.694186220736867e-10,
+    "max_vertex_displacement_um": 1.473493695890548e-10,
+    "patch_symmetric_difference_area_um2": 2.1573214325785256e-11,
+    "ring_hausdorff_distance_um": 1.8189894035458565e-12,
+    "ring_symmetric_difference_area_um2": 2.1573214325785256e-11
+  },
+  "local_geometry_checkpoint": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-cdt-local-coalescence-witness-02\\l04-local-coalescence-geometry-checkpoint.npz",
+    "sha256": "f060a545b41818d3403c9e8417a054f949a1dbf620bd2a50183b5b409d24b3e0",
+    "size_bytes": 3070
+  },
+  "local_geometry_metrics": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-cdt-local-coalescence-witness-02\\l04-local-coalescence-geometry-metrics.json",
+    "sha256": "02446b93cb795a67c35b0b14e6175ebe7aabe7995220b4048b49604e17066038",
+    "size_bytes": 1134
+  },
+  "program": "SPD Decap PI Evaluator",
+  "removed_raw_triangle_indices": [
+    807731,
+    976112
+  ],
+  "retained_gates": {
+    "global_domain_scale_um": 99400.0,
+    "native_area_gate_um2": 1.874101850983222e-07,
+    "next_minimum_area_triangle_index": 74212,
+    "next_minimum_area_um2": 0.006032676888298349,
+    "stiffness_area_gate_um2": 7.020418024694663e-05
+  },
+  "scope": "Conditional exact two-coordinate coalescence witness only. It writes no patched domain/CDT, regenerates no mesh, assembles no stiffness, solves no current, and does not qualify a mesh.",
+  "status": "COMPLETED_CONDITIONAL_L04_LOCAL_COALESCENCE_WITNESS",
+  "version": "0.23.1"
+}

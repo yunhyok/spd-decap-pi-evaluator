@@ -1,0 +1,135 @@
+{
+  "budget": {
+    "elapsed_s": 12.65600000001723,
+    "max_rss_bytes": 8589934592,
+    "max_runtime_s": 180,
+    "peak_rss_bytes": 0
+  },
+  "checkpoint": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-exact-hybrid-trace-01\\structural-checkpoint.npz",
+    "sha256": "23bbdd3b62f5541ee1f762b5d0552902d41bdb4255cc6a9baef74305bfdb8aad",
+    "size_bytes": 91607431
+  },
+  "counts": {
+    "contact_trace_rows": 38278,
+    "full_trace_rows": 1698804,
+    "gauged_trace_rows": 1698803,
+    "internal_trace_rows": 1660526,
+    "local_coo_entries": 10314116,
+    "rim_branches": 612448
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-exact-hybrid-trace-01\\driver-at-run.py",
+    "sha256": "d2ba043b93d09590796b67274052e835d612123670df902528f15a65dbf21a3e",
+    "size_bytes": 32931
+  },
+  "gates": {
+    "connected": true,
+    "finite": true,
+    "no_zero_rows": true,
+    "positive_diagonal": true,
+    "row_sum_scatter": true,
+    "symmetry": true
+  },
+  "inputs": {
+    "budget": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\reconstruct_astra_native_loaded_field.py",
+      "sha256": "354d9e004b189cf8193c2922c8fa4dc1903b407bebb295a4576673200ce6b213",
+      "size_bytes": 33457
+    },
+    "conditional_scatter_pattern": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\assemble_astra_l02_conditional_hybrid_operator.py",
+      "sha256": "79ab74ff53bef21347038a8ab0c243260049cd97dfea5e707320f84de19210d3",
+      "size_bytes": 29539
+    },
+    "local_rt0": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\assemble_astra_l25_rt0_resistance.py",
+      "sha256": "ec299b76564463bcea09a54aea4391cb2659e5267375cb7b3b2175d1fe475010",
+      "size_bytes": 18360
+    },
+    "mesh": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-conditional-sheet-mesh-02\\l04-conditional-sheet-mesh-before-stiffness.npz",
+      "sha256": "6f2f396fe2319d60ad4b1586fd7043960e42f1d85c29f28a1d9c082302a3a211",
+      "size_bytes": 19845932
+    },
+    "saved_dual_artifact": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-saved-contact-potentials-01\\l04-saved-contact-dual-potentials.npz",
+      "sha256": "d638dcf046a22709111bceea53f720477430c78d46ed2f79d8dc1b60b52f0fd2",
+      "size_bytes": 1223786
+    },
+    "saved_dual_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-saved-contact-potentials-01\\driver-at-run.py",
+      "sha256": "e3b0ff15c28b2ecd9f132e311a843225cd9ac6834915c63cc61ef84df57c2c39",
+      "size_bytes": 9649
+    },
+    "saved_dual_external": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-saved-contact-potentials-01\\external-budget.json",
+      "sha256": "60676fd4b5f5d937f0668d21dae39d9e78f6f9d22338ce02dae9dc039a1ecb41",
+      "size_bytes": 1016
+    },
+    "saved_dual_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-saved-contact-potentials-01\\result.json",
+      "sha256": "97e36e08295f2d8eeeb15c508598842d552ee6f7c2601fdac51d8ba5aa6eb6b4",
+      "size_bytes": 5937
+    },
+    "static_cells_artifact": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-exact-hybrid-cells-01\\l04-exact-hybrid-cells.npz",
+      "sha256": "8f51d808397cf5ba5764e0df51b41e44ed9af82924dc1a766b515524279cb5c0",
+      "size_bytes": 42743816
+    },
+    "static_cells_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-exact-hybrid-cells-01\\driver-at-run.py",
+      "sha256": "cd925c921034fa84762ca887f02a05faa01a0fa2c0576b446a8217de4c332d39",
+      "size_bytes": 15871
+    },
+    "static_cells_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-exact-hybrid-cells-01\\result.json",
+      "sha256": "fddf240b045663dce7ce61f2bc258976f4499b8e5b1b4d20d5b8e81c0cfa95b9",
+      "size_bytes": 6133
+    },
+    "stream_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\driver-at-run.py",
+      "sha256": "65c48fe18db408a9c38ee28a86b50f57c470e3286b7dab975ca0a77f1c6b8c27",
+      "size_bytes": 24864
+    },
+    "stream_external": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\external-budget.json",
+      "sha256": "016bd3039ada75e8475a23ab328b2b0f135f641235bf5c9088e62636c0d04efc",
+      "size_bytes": 1634
+    },
+    "stream_field": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\l04-fixed-contact-current.npz",
+      "sha256": "dec07e1681c8400c43b6c79ab7a25ef37f7c19443441ad369016f6daefbfe9fd",
+      "size_bytes": 63886278
+    },
+    "stream_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\result.json",
+      "sha256": "3e5417fa1a2db0308208449896c2aa1650beff5051d2ee03b60a8b4a11fe2bf1",
+      "size_bytes": 8797
+    },
+    "stream_space": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\l04-fixed-contact-rt0-space.npz",
+      "sha256": "5d31b3c6183eb4f43723eb80d1a545953a42fb2c9320be425d3ebc034cb51bb6",
+      "size_bytes": 79222436
+    },
+    "stream_system": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\l04-fixed-contact-stream-system.npz",
+      "sha256": "b299d67995b58b7fa698b080380cda495032472d0f426ed2dd9e4b78542fb34a",
+      "size_bytes": 21072655
+    },
+    "tree_potential_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\recover_astra_l04_saved_contact_potentials.py",
+      "sha256": "e3b0ff15c28b2ecd9f132e311a843225cd9ac6834915c63cc61ef84df57c2c39",
+      "size_bytes": 9649
+    }
+  },
+  "program": "SPD Decap PI Evaluator",
+  "status": "MEASURED_L04_EXACT_TRACE_STRUCTURAL_CHECKPOINT",
+  "structural": {
+    "hypergraph_components": 1,
+    "nullity_certificate": "exact-formula connectivity/nullity certificate only; no eigenvalue was measured",
+    "row_sum_scatter_roundoff_ratio": 0.04370918290010871,
+    "symmetry_relative": 0.0
+  },
+  "version": "0.23.1"
+}

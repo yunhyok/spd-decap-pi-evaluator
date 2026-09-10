@@ -1,0 +1,210 @@
+{
+  "allowed_next_steps": [
+    "bounded native+hybrid-H auxiliary static assembly",
+    "isolated factor and probe with resource guard",
+    "one frozen restart6 true-MNA residual/preconditioner/action comparison"
+  ],
+  "created_at_utc": "2026-09-09T13:47:40.641720+00:00",
+  "decision_owners": [
+    "Astra HQ",
+    "Sol independent supervisor"
+  ],
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-exact-hybrid-trace-01\\driver-at-run.py",
+    "sha256": "d2ba043b93d09590796b67274052e835d612123670df902528f15a65dbf21a3e",
+    "size_bytes": 32931
+  },
+  "equivalence_gates": {
+    "bilinear_corrected_relative": true,
+    "contact_potentials": true,
+    "direct_vs_original_target_relative": true,
+    "energy_matrix_corrected_relative": true,
+    "finite_arrays": true,
+    "full_r_dual_relative": true,
+    "hermitian_corrected_relative": true,
+    "independent_cell_u_relative": true,
+    "local_q_reconstruction_relative": true,
+    "raw_hlambda_minus_direct_relative": false,
+    "shared_trace_q_reconstruction_relative": true,
+    "trace_occurrences": true
+  },
+  "geometry_approximation": {
+    "domain": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-conditional-sheet-mesh-02\\l04-coalesced-conductor-domain.wkb",
+      "sha256": "8dbfbb75d87efa7c9504b1ab521a78687ef97b45d1eb0e6a8d5ff6007658c674",
+      "size_bytes": 14024197
+    },
+    "max_vertex_displacement_um": 1.473493695890548e-10,
+    "method": "EXACT_TWO_SOURCE_VERTEX_COALESCENCE_L04_RING563",
+    "source_domain": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-pad-conductor-domain-01\\l04-pad-augmented-conductor-domain.wkb",
+      "sha256": "0eeaffc34a6b9759fd285f28d35ebd59042e6bcd909a697fad3f18a5d2eafa68",
+      "size_bytes": 14024197
+    },
+    "unchanged_source_geometry": false,
+    "witness_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-cdt-local-coalescence-witness-02\\result.json",
+      "sha256": "3e097e7086f6bd10e009afbcdb6b98ca8029f6555273f4e7b1f92c3059a216ce",
+      "size_bytes": 6819
+    }
+  },
+  "material": {
+    "conductivity_s_per_m": 59590000.0,
+    "sheet_conductance_s": 1191.8000000000002,
+    "thickness_m": 2e-05
+  },
+  "metrics": {
+    "bilinear_corrected_difference": [
+      2.177701378600072e-14,
+      -3.064053595265917e-15
+    ],
+    "bilinear_corrected_relative": 4.677467201326201e-11,
+    "contact_average_vs_saved_max_abs_v": 3.285260423029036e-15,
+    "direct_cell_residual_l2_a": 1.379112636711383e-16,
+    "direct_contact_residual_l2_a": 4.488352729173385e-14,
+    "direct_minus_ideal_max_abs_a": 4.4883063189797685e-14,
+    "direct_root_residual_a": [
+      -3.526692826660849e-14,
+      -2.7762080828663827e-14
+    ],
+    "direct_vs_original_target_relative": 6.75262673967221e-13,
+    "energy_corrected_difference_max_abs": 2.19524919076175e-14,
+    "energy_full": [
+      [
+        0.0004720310817191742,
+        -9.329673378496443e-06
+      ],
+      [
+        -9.329673378496455e-06,
+        2.2428721844235775e-06
+      ]
+    ],
+    "energy_hybrid": [
+      [
+        0.0004720310816972217,
+        -9.329673376703188e-06
+      ],
+      [
+        -9.329673377225704e-06,
+        2.242872184248145e-06
+      ]
+    ],
+    "energy_matrix_corrected_relative": 4.672165996692751e-11,
+    "energy_rho_correction": [
+      [
+        1.9375213500288427e-33,
+        5.54575919800467e-37
+      ],
+      [
+        5.54575919800467e-37,
+        1.0073430960224001e-36
+      ]
+    ],
+    "full_r_bilinear": [
+      0.00046978820953475257,
+      -1.8659346756992873e-05
+    ],
+    "full_r_dual_relative": 9.879896034364875e-11,
+    "full_r_hermitian": [
+      0.00047427395390359976,
+      -3.049318610115481e-20
+    ],
+    "hermitian_corrected_difference": [
+      2.212786160901703e-14,
+      -5.225837530721186e-16
+    ],
+    "hermitian_corrected_relative": 4.666929604577958e-11,
+    "hybrid_h_bilinear": [
+      0.00046978820951297555,
+      -1.865934675392882e-05
+    ],
+    "hybrid_h_hermitian": [
+      0.0004742739538814719,
+      5.225532598860175e-16
+    ],
+    "independent_cell_u_relative": 1.4802813664815985e-15,
+    "lambda_occurrence_max_abs_v": 5.021296620776053e-15,
+    "local_q_reconstruction_relative": 4.3608755443388184e-10,
+    "raw_hlambda_minus_direct_max_abs_a": 3.0319212888516965e-09,
+    "raw_hlambda_minus_direct_relative": 1.4130845734022627e-07,
+    "raw_q_common_voltage_cancellation_max_abs_a": 4.458432167522889e-10,
+    "rho_correction_bilinear": [
+      1.9365140069328156e-33,
+      1.109151839600934e-36
+    ],
+    "rho_correction_hermitian": 1.938528693124864e-33,
+    "saved_full_r_dual_max_abs_v": 5.362562546342743e-15,
+    "shared_trace_q_reconstruction_max_abs_a": 2.6812927575406914e-09,
+    "shared_trace_q_reconstruction_relative": 3.072398945483237e-09,
+    "shifted_q_replay_max_abs_a": 4.415251801760256e-10,
+    "trace_arithmetic_bound_v": 9.38244695449534e-16,
+    "trace_bound_operation_count": 58,
+    "trace_comparison_bound_v": 1.1663370570569179e-14,
+    "u_identity_max_abs_v": 4.1189483600513554e-16
+  },
+  "physical_operator_replacement_accepted": false,
+  "preconditioner_candidate_only": true,
+  "preserved_failed_gates": [
+    "raw_hlambda_minus_direct_relative"
+  ],
+  "program": "SPD Decap PI Evaluator",
+  "reason": "Structure and eleven field gates pass. The remaining action defect is mainly shared-current reconstruction error. This warrants an approximate preconditioner experiment only; it does not qualify an exact physical trace operator, alter the threshold, or establish effectiveness.",
+  "relative_threshold": 1e-07,
+  "scope": "Saved-artifact interpretation only. Original exit1/failure and absence of result.json are preserved. No replay, new H/R, factor, field, physical replacement, Krylov continuation or accuracy claim.",
+  "source_cells": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-exact-hybrid-cells-01\\result.json",
+    "sha256": "fddf240b045663dce7ce61f2bc258976f4499b8e5b1b4d20d5b8e81c0cfa95b9",
+    "size_bytes": 6133
+  },
+  "source_decomposition": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-exact-hybrid-trace-01\\hq-saved-trace-action-decomposition.json",
+    "sha256": "75c6f1808ea1d376e4a10bd90192b595152e5e9333b7491b6756c50f31bd10b3",
+    "size_bytes": 2873
+  },
+  "source_equivalence_artifact": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-exact-hybrid-trace-01\\saved-field-equivalence.npz",
+    "sha256": "1396cc1334ac4583c4e9cebda94b4a141802623d456ee4aabcd001cecab5b97b",
+    "size_bytes": 285585398
+  },
+  "source_failure": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-exact-hybrid-trace-01\\failure.json",
+    "sha256": "8cee8c6320b74098de24b6d97634fd5c150abc241ab7150a6f73e3c926fd1647",
+    "size_bytes": 1073
+  },
+  "source_preacceptance": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-exact-hybrid-trace-01\\equivalence-preacceptance.json",
+    "sha256": "bf94a73d04939a853df63f6eafdee5de87a7c66636fca0e809a6580ae727f0ba",
+    "size_bytes": 4669
+  },
+  "source_structure": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-exact-hybrid-trace-01\\structural-checkpoint.json",
+    "sha256": "25c2b9acba0e50908cd3c7b74e3308ac5285815a1e490421650122612bd34a1d",
+    "size_bytes": 7037
+  },
+  "status": "QUALIFIED_SAVED_L04_HYBRID_H_AUXILIARY_ONLY",
+  "structural": {
+    "hypergraph_components": 1,
+    "nullity_certificate": "exact-formula connectivity/nullity certificate only; no eigenvalue was measured",
+    "row_sum_scatter_roundoff_ratio": 0.04370918290010871,
+    "symmetry_relative": 0.0
+  },
+  "structural_checkpoint": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-exact-hybrid-trace-01\\structural-checkpoint.npz",
+    "sha256": "23bbdd3b62f5541ee1f762b5d0552902d41bdb4255cc6a9baef74305bfdb8aad",
+    "size_bytes": 91607431
+  },
+  "structural_gates": {
+    "connected": true,
+    "finite": true,
+    "no_zero_rows": true,
+    "positive_diagonal": true,
+    "row_sum_scatter": true,
+    "symmetry": true
+  },
+  "true_operator_contract": {
+    "helper": "tools/research/prepare_astra_l04_contact_ntd_action.py",
+    "requirement": "Keep original full-R ContactNtD in every true-MNA residual/action and final physical validation.",
+    "sha256": "e9108a481308335d3f442a53652468ec9b8507204537c6d96d6f730de2bfbde8"
+  },
+  "version": "0.23.1"
+}

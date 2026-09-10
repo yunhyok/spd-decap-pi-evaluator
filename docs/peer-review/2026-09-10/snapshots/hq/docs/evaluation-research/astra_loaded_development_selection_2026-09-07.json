@@ -1,0 +1,34 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "PINNED_SOURCE_SELECTED_LOADED_DEVELOPMENT_CASE",
+  "rail_id": "ADC_VDD_075_VTRIP_SRAM/0",
+  "source_enabled_decap_count": 421,
+  "port_one_based": 18,
+  "selection_rule": "Largest positive source-enabled decap count among represented non-holdout rails; casefold rail-id tie-break. No PowerSI error/response used to select.",
+  "excluded_holdout_rails": [
+    "ADC_VDD_055_VTRIP/0",
+    "ADC_VDD_055_VTRIP/1",
+    "ADC_VDD_070_VINT/0",
+    "ADC_VDD_070_VINT/1",
+    "ADC_VDD_075_VCPU/0",
+    "ADC_VDD_075_VCPU/1",
+    "ADC_VDD_180_VQPS_OTP_TOP_AON/1",
+    "ADC_VDD_180_VQPS_SYS_0_AON/1",
+    "ADC_VDD_180_VQPS_SYS_1_AON/1",
+    "ADC_VDD_180_VQPS_SYS_2_AON/1",
+    "ADC_VDD_180_VQPS_SYS_3_AON/1"
+  ],
+  "native_population_input": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_native_device_branch_2port_2026-09-07.json",
+    "sha256": "ca736c0c593f75def6dc309607b3a5d97bbf478ce2f23c0edeab5a27ffff2568"
+  },
+  "split_and_port_manifest_input": {
+    "path": "D:\\SPD-Decap-PI-Evaluator-W6\\fb36288781dcc0b884950ef5a486c474090ceebd\\260729\\correlation\\correlation_report.json",
+    "sha256": "969e40046e3a099d09557ba7500693460362336d76b067962436bd3b5177abc4"
+  },
+  "source_spd_sha256": "40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2",
+  "reference_touchstone_sha256": "c5fca21da6f3b1f1e097ac6fc4c2c4f40a44201617502a9e5bf864e2a5fe7a11",
+  "selection_written_before_target_reference_extraction": true,
+  "scope": "New development case; does not alter frozen holdout membership or claim unseen validation."
+}

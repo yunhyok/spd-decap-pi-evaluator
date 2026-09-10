@@ -1,0 +1,213 @@
+{
+  "affected_old_parent_count": 76156,
+  "artifact": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-full-contact-circuit-bridge-01\\l04-full-contact-circuit-bridge.npz",
+    "sha256": "02508f2e1588fe5e6ad4231b9c128a3324a88baf0229293d6a8b70ea10380e57",
+    "size_bytes": 1702061
+  },
+  "budget": {
+    "elapsed_s": 1.5320000000065193,
+    "max_rss_bytes": 4294967296,
+    "max_runtime_s": 60,
+    "peak_rss_bytes": 255205376
+  },
+  "changed_paths": [
+    {
+      "appended_finite_row": 1692409,
+      "contact_index": 38268,
+      "original_active_finite_index": 186263,
+      "parent_row": 1692370,
+      "retained_leg1_row": 1692390
+    },
+    {
+      "appended_finite_row": 1692410,
+      "contact_index": 38269,
+      "original_active_finite_index": 466710,
+      "parent_row": 1692373,
+      "retained_leg1_row": 1692393
+    },
+    {
+      "appended_finite_row": 1692411,
+      "contact_index": 38270,
+      "original_active_finite_index": 551039,
+      "parent_row": 1692375,
+      "retained_leg1_row": 1692395
+    },
+    {
+      "appended_finite_row": 1692412,
+      "contact_index": 38271,
+      "original_active_finite_index": 754981,
+      "parent_row": 1692376,
+      "retained_leg1_row": 1692396
+    },
+    {
+      "appended_finite_row": 1692413,
+      "contact_index": 38272,
+      "original_active_finite_index": 1024973,
+      "parent_row": 1692378,
+      "retained_leg1_row": 1692398
+    },
+    {
+      "appended_finite_row": 1692414,
+      "contact_index": 38273,
+      "original_active_finite_index": 1254243,
+      "parent_row": 1692381,
+      "retained_leg1_row": 1692401
+    },
+    {
+      "appended_finite_row": 1692415,
+      "contact_index": 38274,
+      "original_active_finite_index": 1336715,
+      "parent_row": 1692382,
+      "retained_leg1_row": 1692402
+    },
+    {
+      "appended_finite_row": 1692416,
+      "contact_index": 38275,
+      "original_active_finite_index": 1392846,
+      "parent_row": 1692383,
+      "retained_leg1_row": 1692403
+    },
+    {
+      "appended_finite_row": 1692417,
+      "contact_index": 38276,
+      "original_active_finite_index": 1521556,
+      "parent_row": 1692385,
+      "retained_leg1_row": 1692405
+    },
+    {
+      "appended_finite_row": 1692418,
+      "contact_index": 38277,
+      "original_active_finite_index": 1690188,
+      "parent_row": 1692388,
+      "retained_leg1_row": 1692408
+    }
+  ],
+  "contacts": 38278,
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-full-contact-circuit-bridge-01\\driver-at-run.py",
+    "sha256": "4d283db3256201714011a0c059e91e295ddc9b96b58f59de07324d7a9de3ef0f",
+    "size_bytes": 17020
+  },
+  "frequency_hz": 1000000.0,
+  "geometry_approximation": {
+    "domain": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-conditional-sheet-mesh-02\\l04-coalesced-conductor-domain.wkb",
+      "sha256": "8dbfbb75d87efa7c9504b1ab521a78687ef97b45d1eb0e6a8d5ff6007658c674",
+      "size_bytes": 14024197
+    },
+    "max_vertex_displacement_um": 1.473493695890548e-10,
+    "method": "EXACT_TWO_SOURCE_VERTEX_COALESCENCE_L04_RING563",
+    "source_domain": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-pad-conductor-domain-01\\l04-pad-augmented-conductor-domain.wkb",
+      "sha256": "0eeaffc34a6b9759fd285f28d35ebd59042e6bcd909a697fad3f18a5d2eafa68",
+      "size_bytes": 14024197
+    },
+    "unchanged_source_geometry": false,
+    "witness_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-cdt-local-coalescence-witness-02\\result.json",
+      "sha256": "3e097e7086f6bd10e009afbcdb6b98ca8029f6555273f4e7b1f92c3059a216ce",
+      "size_bytes": 6819
+    }
+  },
+  "independent_contacts": 38277,
+  "inputs": {
+    "current_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-currents-01\\result.json",
+      "sha256": "6c03c997c724da002e12bef0845a08cdae409f76d33428ab1bfba2f875a3a46f",
+      "size_bytes": 4621
+    },
+    "currents": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-currents-01\\l04-fixed-contact-currents.npz",
+      "sha256": "5c2fd3bd30a45d9d92ccc47a5ad2d553f0d122acb4282a1046be09d7b4e51adb",
+      "size_bytes": 3013247
+    },
+    "mass": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\project_astra_l14_gc_mass.py",
+      "sha256": "f2c668fd090db5c4606eec27558c9bdbbdde6552d2f82c3b64b8837bd7350dc3",
+      "size_bytes": 61282
+    },
+    "owners": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-all-finite-current-l-ownership-01\\all-finite-current-l-ownership.npz",
+      "sha256": "1b908c62e385ea1c227e77b1ccc37dd5c4b3376cce6f67d7b4e5c4a0c20508e6",
+      "size_bytes": 42593028
+    },
+    "pack": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-full-face-hybrid-operator-06\\hybrid-operator-pack.npz",
+      "sha256": "01ff4236af30621ca6cc4b87c4688c28ee23c22ed99b15aadd047f91a25c0b2c",
+      "size_bytes": 101366745
+    },
+    "recon": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\reconstruct_astra_native_loaded_field.py",
+      "sha256": "354d9e004b189cf8193c2922c8fa4dc1903b407bebb295a4576673200ce6b213",
+      "size_bytes": 33457
+    },
+    "space": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\l04-fixed-contact-rt0-space.npz",
+      "sha256": "5d31b3c6183eb4f43723eb80d1a545953a42fb2c9320be425d3ebc034cb51bb6",
+      "size_bytes": 79222436
+    },
+    "split_review": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-cached-path-splits-02\\independent-review.json",
+      "sha256": "79d4810633fc84655914be1c2a7abc5ed3e5ff6997e2b9a2b90a896967a83103",
+      "size_bytes": 4166
+    },
+    "splits": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-cached-path-splits-02\\result.json",
+      "sha256": "17ca350bbb4913283315812e746b547d3ee01c4fec85133d411fb0e8602fe48d",
+      "size_bytes": 63496
+    },
+    "stream": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\result.json",
+      "sha256": "3e5417fa1a2db0308208449896c2aa1650beff5051d2ee03b60a8b4a11fe2bf1",
+      "size_bytes": 8797
+    },
+    "stream_guard": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\external-budget.json",
+      "sha256": "016bd3039ada75e8475a23ab328b2b0f135f641235bf5c9088e62636c0d04efc",
+      "size_bytes": 1634
+    }
+  },
+  "inserted_subleg_count": 20,
+  "metrics": {
+    "original_impedance_relative": 2.232899782222342e-16,
+    "split_parameter_relative": 1.8011119642494976e-16,
+    "u_nnz": 114441
+  },
+  "new_affected_branch_count": 76166,
+  "new_finite_count": 1692419,
+  "nonfinite_71610": {
+    "l14_distributed_gc": {
+      "column_nnz": 0,
+      "row_nnz": 0
+    },
+    "l14_sheet_dc": {
+      "column_nnz": 0,
+      "row_nnz": 0
+    },
+    "l25_distributed_gc": {
+      "column_nnz": 0,
+      "row_nnz": 0
+    },
+    "retained_gc": {
+      "column_nnz": 0,
+      "row_nnz": 0
+    },
+    "termination": {
+      "column_nnz": 0,
+      "row_nnz": 0
+    }
+  },
+  "old_finite_count": 1692409,
+  "potential_count": 3178104,
+  "program": "SPD Decap PI Evaluator",
+  "removed_old_leg0_count": 10,
+  "retained_leg1_count": 10,
+  "root_contact_index": 25440,
+  "scope": "Source finite endpoint bridge for full conditional L04 contacts, not a solve. Ten old leg0 rows become twenty sublegs; their leg1 rows and all source R/L remain once-owned. A future circuit must replace the ten uniform-coordinate stars as well as adding U/contact D. Stored nonfinite71610 blocks are zero; missing physical G/C is not zero by inference. No reduced-contact projection, NtD approximation, new board Z, magnetics or accuracy claim.",
+  "self_check": "PASS_FINITE_CONTACT_BLOCK_SCATTER_CHECK",
+  "status": "PASS_L04_FULL_CONTACT_FINITE_CIRCUIT_BRIDGE",
+  "terminal_incidence_count": 76146,
+  "uniform_active_index": 71610,
+  "version": "0.23.1"
+}

@@ -1,0 +1,72 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "PASS_ORIGINAL_COMBINED_SOURCE_CATEGORY_PACK_NO_SOLVE",
+  "input_sha256": {
+    "assembly_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\assemble_astra_l02_l14_l25_combined_operator.py",
+      "sha256": "f938bdf5fb3ead1c5cafaf380404f97c204ecf5eb6d1e441cbb858cd0f1a9c6a"
+    },
+    "combined": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-operator-02\\combined-operator.npz",
+      "sha256": "45cc79706849631e9c33dc2f0d0e3c7910fe7dcce817585c728f6f1e3c30a1e8"
+    },
+    "assembly_map_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-assembly-map-02\\result.json",
+      "sha256": "cdbb80f3412732f614c1d482a3cc8288c5c6134b5dfb1de2376711309039ae81"
+    },
+    "assembly_map": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-assembly-map-02\\combined-assembly-map.npz",
+      "sha256": "a6ccff514fe788396eb9d7620ebc828f966efbea3f7899e7a73991c17f8a2469"
+    },
+    "assembly_map_review": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-assembly-map-review-01\\independent-review.json",
+      "sha256": "5f0436c3f574e5eafd7f9d957d5aca56d283ef562fe1105132356008da36eaad"
+    },
+    "l02_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\run_astra_l02_sheet_r_shadow.py",
+      "sha256": "8437a7eb0398fdef919704c33a6ba2e9498c810b79e04b5df533462c8ce55105"
+    },
+    "l02_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-sheet-r-board-1mhz-01\\result.json",
+      "sha256": "a491c951b7ec8c209fb194cb8dfa82d25a94230abefffbb97c94af55179b0e9b"
+    },
+    "l25_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\run_astra_l25_rt0_board_shadow.py",
+      "sha256": "edb0d82ff2b9af9b44259541cca0d2abdef7e52c4c1ebd29ba2c990e7d65ef98"
+    },
+    "l25_gc_receipt": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-refined-gc-areas-02\\result.json",
+      "sha256": "8c0cd86b78ac647eadbf15962eadb5ad4d7a2ab385e41488982771a2432a69ef"
+    }
+  },
+  "driver_sha256": "739759114e7f459fe09293147c66f176f1313d5d2e96b4dda96f7042eadac196",
+  "artifact_sha256": "f9253786da9eb88367c6bde51e78c64b647528e2856358b1fdd204ade1db6e9f",
+  "elapsed_s": 24.35999999998603,
+  "budget": {
+    "elapsed_s": 24.35999999998603,
+    "peak_rss_bytes": 820572160,
+    "max_runtime_s": 120,
+    "max_rss_bytes": 8589934592
+  },
+  "category_names": [
+    "l02_distributed_gc",
+    "l02_sheet_dc",
+    "l14_distributed_gc",
+    "l14_sheet_dc",
+    "l25_distributed_gc",
+    "retained_gc",
+    "termination"
+  ],
+  "category_nnz": {
+    "retained_gc": 5437,
+    "termination": 5312,
+    "l14_sheet_dc": 773755,
+    "l14_distributed_gc": 1196872,
+    "l25_distributed_gc": 2821635,
+    "l02_distributed_gc": 2003377,
+    "l02_sheet_dc": 4512062
+  },
+  "one_owned_branch_and_category_action_vs_saved_y_relative": 1.085310739364179e-12,
+  "scope": "Original seven nonfinite source categories, with only owned partial-0 GC replacement, for source-current and per-category power checks. Final finite branch arrays stay in the pinned assembly map. No Y-minus-finite recovery, LU, field solve or PowerSI comparison."
+}

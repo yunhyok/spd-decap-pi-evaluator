@@ -1,0 +1,97 @@
+{
+  "checks": {
+    "changed_composites": 20,
+    "csc_matvec_residual_max_abs_a": 5.1520030153126646e-11,
+    "finite_branch_count": 1692409,
+    "gauge_active_index": 0,
+    "junction_active_index": 349710,
+    "negative_active_index": 2656,
+    "numerical_scope": {
+      "absolute_device_change_ohm": 1.616945332457346e-11,
+      "change_over_original_powersi_gap": 2.6162797734328082e-08,
+      "change_over_saved_native_reconstruction_difference": 1511.8044832653918,
+      "saved_native_reconstruction_difference_ohm": 1.0695465917423775e-14
+    },
+    "physical_kcl_max_abs_a": 5.471838585509797e-11,
+    "positive_active_index": 2699,
+    "post_freeze_errors_recomputed": [
+      {
+        "complex_gap_ohm": 0.0006180322719598752,
+        "complex_relative_error": 0.7610323044211814,
+        "magnitude_error_db": -2.428670003508577,
+        "phase_error_deg": -48.97890346256609
+      },
+      {
+        "complex_gap_ohm": 0.0006180322881077713,
+        "complex_relative_error": 0.7610323243053705,
+        "magnitude_error_db": -2.428669985275903,
+        "phase_error_deg": -48.9789049666058
+      }
+    ],
+    "potential_count": 756889,
+    "power_closure_abs_ohm": 3.171636873988198e-14,
+    "power_contributions_ohm": {
+      "finite_via": [
+        3.240778590451076e-05,
+        1.3186464873664049e-05
+      ],
+      "original_gc": [
+        6.445060868152497e-11,
+        -1.1584162950361855e-08
+      ],
+      "sheet_dc": [
+        0.0,
+        0.0
+      ],
+      "termination": [
+        6.790350408427815e-05,
+        -0.0006189342226514655
+      ]
+    },
+    "replacement_currents": {
+      "all_20_leg_currents_finite": true,
+      "first_leg_current_max_abs_a": 2.065912620467515e-10,
+      "first_leg_real_loss_sum_ohm": 1.7591195950976767e-21,
+      "full_finite_action_at_junction_a": [
+        1.7223838266143846e-10,
+        -7.011634722133375e-10
+      ],
+      "minimum_leg_real_loss_ohm": 4.6419210052379893e-23,
+      "second_leg_current_max_abs_a": 3.874167054751784e-05,
+      "second_leg_real_loss_sum_ohm": 2.104566906012018e-11,
+      "split_leg_junction_injection_max_abs_a": 3.8741489326057505e-05,
+      "split_leg_junction_injection_sum_a": [
+        0.0007748297606560714,
+        -8.788053476813278e-10
+      ]
+    },
+    "source_vias_in_changed_composites": 93
+  },
+  "findings": [],
+  "program": "SPD Decap PI Evaluator",
+  "reviewed": {
+    "comparison_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-ideal-junction-board-1mhz-01\\post-freeze-comparison.py",
+      "sha256": "db1314f059b4edaf4b9bd9d7d4ae85297e612cfe3425f4ad4c655ad0798c982d"
+    },
+    "field": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-ideal-junction-board-1mhz-01\\epsilon-1-field.npz",
+      "sha256": "ab584c9a56403a1cfb42e70a2aa6d86ff03c36b38aabb191724e1a783c1d0854"
+    },
+    "frozen_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-ideal-junction-board-1mhz-01\\driver-at-run.py",
+      "sha256": "213183fe06b9688a21e2851db67f9e4b32a785773d8b0a44e26a662450cbc2d0"
+    },
+    "post_freeze_comparison": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-ideal-junction-board-1mhz-01\\post-freeze-comparison.json",
+      "sha256": "1a4527dab78d1a834db8f775cc4fdc82f841facdd93d315cdeb2bb0a2587f505"
+    },
+    "result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-ideal-junction-board-1mhz-01\\result.json",
+      "sha256": "24b607363552baa6518f79f972335da378e833d852e8290c7659e07fba7b541c"
+    }
+  },
+  "scope": "Independent no-LU readback of the saved voltage using all 1,692,409 finite branches, original G/C and terminations, plus all 20 split-current pairs, passive leg losses, KCL, CSC residual, complex power and post-freeze PowerSI arithmetic. The observed junction effect exceeds the saved-native reconstruction discrepancy but is only 2.616e-8 of the original reference gap; the reconstruction discrepancy is not a rigorous error bound. This remains an ideal-L02 topology ablation, not a finite sheet/contact-current model or accuracy improvement.",
+  "status": "ACCEPT_CONDITIONAL_L02_IDEAL_JUNCTION_FIELD_INDEPENDENT_REVIEW",
+  "version": "0.23.1"
+}
