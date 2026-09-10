@@ -1,0 +1,47 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "ACCEPT_CONDITIONAL_L04_LOCAL_PAD_TRACE_ARTWORK_WITNESSES",
+  "reviewer_script_sha256": "c1bca3d8ca37cf4c9963c0d4f4a9f6d1038c0c22f397a7d1235f01e2b10482a3",
+  "reviewed": {
+    "result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-hidden-pad-trace-artwork-01\\result.json",
+      "sha256": "fb62a6d0417955cac31fb1758edcc00f59c78e8c0062b5cae313b99805d0eaac"
+    },
+    "producer": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-hidden-pad-trace-artwork-01\\audit.py",
+      "sha256": "b12e15d689692b38f4d11f5b84b9c21249432c0767ffefcaaa7a430102fd8bee"
+    },
+    "islands": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-hidden-pad-trace-artwork-01\\l04-source-islands.npz",
+      "sha256": "e8536def5005b9f3664ad8c006cb06d4bca39b6c3631f364bf5ba761f6dc573c"
+    },
+    "trace_contacts": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-hidden-pad-trace-01\\result.json",
+      "sha256": "cd568cd786581817a96d2cf557acd855e2106c64afb406fe8c9798ef02eb5d94"
+    },
+    "inventory": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-source-inventory-root-02\\result.json",
+      "sha256": "c86cf3410188e5386bfa8b5f4b57faddc6c219456e59a4ba8ac1d8e9b5f041d1"
+    },
+    "guard": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-hidden-pad-trace-artwork-01-guard\\external-budget.json",
+      "sha256": "b25e68ee0a839ad8cd170af4d59fba348dbad18c3c0c1269bb3ed45226a89405"
+    }
+  },
+  "checks": {
+    "site_count": 10,
+    "pad_contact_trace_count": 58,
+    "positive_contiguous_bridge_count": 26,
+    "distinct_positive_source_island_count": 9,
+    "per_site_positive_bridge_histogram": {
+      "1": 2,
+      "3": 8
+    },
+    "maximum_direct_area_relative_difference": 3.236874428140355e-16,
+    "independent_candidate_method": "numeric bounding-box filter over every cached island, followed by direct trace-body intersection with each candidate; no STRtree query",
+    "guard_exit_code": 0
+  },
+  "scope": "Accepted only as ten local polygon-material witnesses under the inherited 60 um, 256-edge pad and exact-width flat trace convention. This does not establish the full L04 conductor union, native contact ledger, drill-electrode policy, mesh, G/C, or a board-ready joint circuit.",
+  "elapsed_s": 3.312999999965541
+}

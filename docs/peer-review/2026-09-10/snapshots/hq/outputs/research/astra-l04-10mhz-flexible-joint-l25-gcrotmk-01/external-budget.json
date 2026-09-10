@@ -1,0 +1,26 @@
+{
+  "driver_sha256": "a53845330850500040a19cae813e2ebe5eaa5621995428d7ed17d60b63608f77",
+  "elapsed_s": 189.1720000000205,
+  "exit_code": 0,
+  "max_memory_bytes": 34359738368,
+  "max_runtime_s": 210.0,
+  "memory_at_launch": {
+    "available_commit_bytes": 42655682560,
+    "available_physical_bytes": 38589124608,
+    "total_physical_bytes": 68374552576
+  },
+  "owned_pid": 42880,
+  "program": "SPD Decap PI Evaluator",
+  "sampled_peak_private_bytes": 25343066112,
+  "sampled_peak_working_set_bytes": 8894418944,
+  "status": "COMPLETED_NATIVE_WORKER",
+  "version": "0.23.1",
+  "worker_command": [
+    "C:\\Users\\User\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+    "-B",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\continue_astra_l04_10mhz_flexible_joint_l25_gcrotmk.py",
+    "--native-worker",
+    "--output",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-flexible-joint-l25-gcrotmk-01"
+  ]
+}

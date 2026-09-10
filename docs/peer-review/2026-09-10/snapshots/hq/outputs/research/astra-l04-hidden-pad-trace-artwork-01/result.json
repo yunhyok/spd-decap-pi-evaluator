@@ -1,0 +1,740 @@
+{
+  "elapsed_s": 19.21799999999348,
+  "inputs": {
+    "artwork": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-exception-pad-artwork-01\\0001-f7ddeb208553e127.spdgeom.zlib",
+      "sha256": "f7ddeb208553e1279e4a4ca36333d2b5e0180b7ea6391b3a3705afccc3a896f3"
+    },
+    "inventory": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-source-inventory-root-02\\result.json",
+      "sha256": "c86cf3410188e5386bfa8b5f4b57faddc6c219456e59a4ba8ac1d8e9b5f041d1"
+    },
+    "polygon_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\project_astra_l14_gc_mass.py",
+      "sha256": "f2c668fd090db5c4606eec27558c9bdbbdde6552d2f82c3b64b8837bd7350dc3"
+    },
+    "trace_contacts": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-hidden-pad-trace-01\\result.json",
+      "sha256": "cd568cd786581817a96d2cf557acd855e2106c64afb406fe8c9798ef02eb5d94"
+    }
+  },
+  "program": "SPD Decap PI Evaluator",
+  "rows": [
+    {
+      "original_active_finite_index": 186263,
+      "pad_trace_candidates": [
+        {
+          "artwork_overlap_area_um2": 0.0,
+          "pad_overlap_area_um2": 164.21846077669414,
+          "positive_artwork_islands": [],
+          "source_sha256": "c9b38912c70e137557f64ee30ec6d007ddbed3cae3ea39ba48f0731507c55db5",
+          "trace_id": "Trace1248334",
+          "trace_ordinal": 275924
+        },
+        {
+          "artwork_overlap_area_um2": 0.0,
+          "pad_overlap_area_um2": 162.0537608584603,
+          "positive_artwork_islands": [],
+          "source_sha256": "e7d070b0636368bcde7147075a6f1709359bfffbcc6201b4fc917afa179d554a",
+          "trace_id": "Trace781747",
+          "trace_ordinal": 1170105
+        },
+        {
+          "artwork_overlap_area_um2": 1405.0401668752693,
+          "pad_overlap_area_um2": 162.65629476590388,
+          "positive_artwork_islands": [
+            {
+              "area_um2": 1405.0401668752693,
+              "island_id": "spd-surface-island:0284e805fcb69d835563bc5f"
+            }
+          ],
+          "source_sha256": "576e61b4ab52e89d1eccc723126a83e4fc06d90972c5e0e3e0b7b8a8770513d0",
+          "trace_id": "Trace793084",
+          "trace_ordinal": 1182702
+        },
+        {
+          "artwork_overlap_area_um2": 1565.5973940265262,
+          "pad_overlap_area_um2": 4.59637746986569,
+          "positive_artwork_islands": [
+            {
+              "area_um2": 1565.5973940265262,
+              "island_id": "spd-surface-island:133edc3eb679ba93b7107e26"
+            }
+          ],
+          "source_sha256": "6f5fa37727695294cdfe8b690fd8125e0adf3536149ae6d02fa995756762c665",
+          "trace_id": "Trace793085",
+          "trace_ordinal": 1182703
+        },
+        {
+          "artwork_overlap_area_um2": 1658.7542732317577,
+          "pad_overlap_area_um2": 90.21772789328503,
+          "positive_artwork_islands": [
+            {
+              "area_um2": 1658.7542732317577,
+              "island_id": "spd-surface-island:0284e805fcb69d835563bc5f"
+            }
+          ],
+          "source_sha256": "92d0dfc446971d7f56e478c1b4fd3d8a582fc017f9741fa44faba9004dcac9f6",
+          "trace_id": "Trace793089",
+          "trace_ordinal": 1182707
+        }
+      ],
+      "positive_contiguous_bridge_count": 3,
+      "source_node": "node2556771",
+      "xy_pm": [
+        -7437000000,
+        10458700000
+      ]
+    },
+    {
+      "original_active_finite_index": 466710,
+      "pad_trace_candidates": [
+        {
+          "artwork_overlap_area_um2": 0.0,
+          "pad_overlap_area_um2": 162.05376085841223,
+          "positive_artwork_islands": [],
+          "source_sha256": "8ca6eb34d1d9eb79e3bc5ca029e7432669fff43b08ee1b7144e7bffb25250260",
+          "trace_id": "Trace1247433",
+          "trace_ordinal": 274923
+        },
+        {
+          "artwork_overlap_area_um2": 0.0,
+          "pad_overlap_area_um2": 162.65629476585804,
+          "positive_artwork_islands": [],
+          "source_sha256": "2acb0662f844847a20a37e67cf426f0bd2b39fa0e3824fa5f1c19929e25efeec",
+          "trace_id": "Trace781398",
+          "trace_ordinal": 1169717
+        },
+        {
+          "artwork_overlap_area_um2": 0.0,
+          "pad_overlap_area_um2": 164.21846077666765,
+          "positive_artwork_islands": [],
+          "source_sha256": "1fbff58f26c0d8350a9cd64216213f41c3e5632678ef83447c4abf5743825264",
+          "trace_id": "Trace781399",
+          "trace_ordinal": 1169718
+        },
+        {
+          "artwork_overlap_area_um2": 1403.2975176227355,
+          "pad_overlap_area_um2": 162.6562947659035,
+          "positive_artwork_islands": [
+            {
+              "area_um2": 1403.2975176227355,
+              "island_id": "spd-surface-island:0284e805fcb69d835563bc5f"
+            }
+          ],
+          "source_sha256": "4d84e645e8d1d78a067e9ee497d4952d408e5b160841d21691ae4a32b563f8d4",
+          "trace_id": "Trace793700",
+          "trace_ordinal": 1183387
+        },
+        {
+          "artwork_overlap_area_um2": 1404.2085684454964,
+          "pad_overlap_area_um2": 162.05377098356257,
+          "positive_artwork_islands": [
+            {
+              "area_um2": 1404.2085684454964,
+              "island_id": "spd-surface-island:7aa87348872998e5dca18439"
+            }
+          ],
+          "source_sha256": "8d16cbb57a6b0efc6a96f0bb8de1c5d381022f7a83a2f72e46e15da40b4758a4",
+          "trace_id": "Trace793705",
+          "trace_ordinal": 1183392
+        },
+        {
+          "artwork_overlap_area_um2": 1403.9682280792,
+          "pad_overlap_area_um2": 164.21834342888317,
+          "positive_artwork_islands": [
+            {
+              "area_um2": 1403.9682280792,
+              "island_id": "spd-surface-island:eb97dac49fb6d5068d819c57"
+            }
+          ],
+          "source_sha256": "b4fe43db7eff1cc484a526156918c85dd72aa51b820017d00099a224a0286685",
+          "trace_id": "Trace793708",
+          "trace_ordinal": 1183395
+        }
+      ],
+      "positive_contiguous_bridge_count": 3,
+      "source_node": "node2564979",
+      "xy_pm": [
+        -12096900000,
+        9097100000
+      ]
+    },
+    {
+      "original_active_finite_index": 551039,
+      "pad_trace_candidates": [
+        {
+          "artwork_overlap_area_um2": 0.0,
+          "pad_overlap_area_um2": 162.0537608584123,
+          "positive_artwork_islands": [],
+          "source_sha256": "6519d4b42b6263473fd2e48a26961298b5f167839dacb93b9576fe9cd85b1dbd",
+          "trace_id": "Trace1248140",
+          "trace_ordinal": 275709
+        },
+        {
+          "artwork_overlap_area_um2": 0.0,
+          "pad_overlap_area_um2": 162.053806242832,
+          "positive_artwork_islands": [],
+          "source_sha256": "e855c726e55b5a786478595a1e849763953c7e11b2329a45c12b2c19bb55435e",
+          "trace_id": "Trace1248141",
+          "trace_ordinal": 275710
+        },
+        {
+          "artwork_overlap_area_um2": 0.0,
+          "pad_overlap_area_um2": 164.21846077666765,
+          "positive_artwork_islands": [],
+          "source_sha256": "fdd0baefcca2b5cbb80d5316ff74142d41599913dbed5a2410dea72c37630025",
+          "trace_id": "Trace1248164",
+          "trace_ordinal": 275735
+        },
+        {
+          "artwork_overlap_area_um2": 0.0,
+          "pad_overlap_area_um2": 164.21833372657076,
+          "positive_artwork_islands": [],
+          "source_sha256": "3d7dbc0cc011f6fee2018525bbb9728d51c5ec543585d4eced03c07450a4297f",
+          "trace_id": "Trace781841",
+          "trace_ordinal": 1170210
+        },
+        {
+          "artwork_overlap_area_um2": 0.0,
+          "pad_overlap_area_um2": 162.65629476585806,
+          "positive_artwork_islands": [],
+          "source_sha256": "ac2e1e32b033eefebe6ea30ada45fbae5c01083568e5e25e1bc015cf490d3ea4",
+          "trace_id": "Trace781843",
+          "trace_ordinal": 1170212
+        },
+        {
+          "artwork_overlap_area_um2": 1403.2967564262726,
+          "pad_overlap_area_um2": 162.6562947659035,
+          "positive_artwork_islands": [
+            {
+              "area_um2": 1403.2967564262726,
+              "island_id": "spd-surface-island:0284e805fcb69d835563bc5f"
+            }
+          ],
+          "source_sha256": "70bb583a5ff8ab2c173fc82d67c217599efa05e3d98cfa2d221d4d2b281a1bbe",
+          "trace_id": "Trace792989",
+          "trace_ordinal": 1182595
+        }
+      ],
+      "positive_contiguous_bridge_count": 1,
+      "source_node": "node2553526",
+      "xy_pm": [
+        12190600000,
+        10549800000
+      ]
+    },
+    {
+      "original_active_finite_index": 754981,
+      "pad_trace_candidates": [
+        {
+          "artwork_overlap_area_um2": 0.0,
+          "pad_overlap_area_um2": 162.05376085841226,
+          "positive_artwork_islands": [],
+          "source_sha256": "8bccf2b166f63c3a1ee9b1235c3ea066ab6118ea975a4c25d111a69a53ca00a6",
+          "trace_id": "Trace781424",
+          "trace_ordinal": 1169747
+        },
+        {
+          "artwork_overlap_area_um2": 0.0,
+          "pad_overlap_area_um2": 164.2183337265708,
+          "positive_artwork_islands": [],
+          "source_sha256": "99158636b4069f39c69d5060b23e24f7d5002cf305bf76b385d5df448c50bf2f",
+          "trace_id": "Trace781519",
+          "trace_ordinal": 1169852
+        },
+        {
+          "artwork_overlap_area_um2": 0.0,
+          "pad_overlap_area_um2": 162.05380624283202,
+          "positive_artwork_islands": [],
+          "source_sha256": "9e5fb542b68a5461e4c0eaf02fe73f7a90083029cc5cb0d2eaab63e9d0ed5779",
+          "trace_id": "Trace781521",
+          "trace_ordinal": 1169855
+        },
+        {
+          "artwork_overlap_area_um2": 1403.2884432078233,
+          "pad_overlap_area_um2": 162.65629476585804,
+          "positive_artwork_islands": [
+            {
+              "area_um2": 1403.2884432078233,
+              "island_id": "spd-surface-island:7aa87348872998e5dca18439"
+            }
+          ],
+          "source_sha256": "d591209d7f9ff2e3667ea8ebedb9978db8d98302a7ad1436b9d8f064e5f29e64",
+          "trace_id": "Trace793670",
+          "trace_ordinal": 1183353
+        },
+        {
+          "artwork_overlap_area_um2": 1405.0884432078262,
+          "pad_overlap_area_um2": 162.6562947658582,
+          "positive_artwork_islands": [
+            {
+              "area_um2": 1405.0884432078262,
+              "island_id": "spd-surface-island:0284e805fcb69d835563bc5f"
+            }
+          ],
+          "source_sha256": "494343db90f94e91ecb5ea678d2f09aabba410457b2badb73af88d25a9a25e29",
+          "trace_id": "Trace793748",
+          "trace_ordinal": 1183439
+        },
+        {
+          "artwork_overlap_area_um2": 1404.8964857364726,
+          "pad_overlap_area_um2": 164.21834342886095,
+          "positive_artwork_islands": [
+            {
+              "area_um2": 1404.8964857364726,
+              "island_id": "spd-surface-island:39f5aceba963880a51ddd024"
+            }
+          ],
+          "source_sha256": "e4da948a300e9e6b281ed639d6db712c14ba3cdfeddb4d7ccf803a50670a368d",
+          "trace_id": "Trace793750",
+          "trace_ordinal": 1183442
+        }
+      ],
+      "positive_contiguous_bridge_count": 3,
+      "source_node": "node2567283",
+      "xy_pm": [
+        -10211900000,
+        8984500000
+      ]
+    },
+    {
+      "original_active_finite_index": 1024973,
+      "pad_trace_candidates": [
+        {
+          "artwork_overlap_area_um2": 0.0,
+          "pad_overlap_area_um2": 164.2183337265558,
+          "positive_artwork_islands": [],
+          "source_sha256": "453003167807092cb17d8e8e0938cf8b4f225031403440a0d24158de31c038d6",
+          "trace_id": "Trace1377064",
+          "trace_ordinal": 418957
+        },
+        {
+          "artwork_overlap_area_um2": 0.0,
+          "pad_overlap_area_um2": 164.21846077666382,
+          "positive_artwork_islands": [],
+          "source_sha256": "3a584be68296a4bb754ca2f3e586ebf7d9f69e3174c036c6038dda305942ef88",
+          "trace_id": "Trace780167",
+          "trace_ordinal": 1168350
+        },
+        {
+          "artwork_overlap_area_um2": 0.0,
+          "pad_overlap_area_um2": 162.65629476582814,
+          "positive_artwork_islands": [],
+          "source_sha256": "97ac0a0d4354893e741fa5136c00c4d2344b825231d2b3eaa66080ffe79ade1b",
+          "trace_id": "Trace780168",
+          "trace_ordinal": 1168351
+        },
+        {
+          "artwork_overlap_area_um2": 1404.4966176929697,
+          "pad_overlap_area_um2": 162.05377098354563,
+          "positive_artwork_islands": [
+            {
+              "area_um2": 1404.4966176929697,
+              "island_id": "spd-surface-island:0284e805fcb69d835563bc5f"
+            }
+          ],
+          "source_sha256": "5724c794f290be24d5552e5b2d4cac45e683a948e198f853efee64fcbf3a8c86",
+          "trace_id": "Trace802751",
+          "trace_ordinal": 1193444
+        },
+        {
+          "artwork_overlap_area_um2": 1404.8734027590651,
+          "pad_overlap_area_um2": 162.05377098350473,
+          "positive_artwork_islands": [
+            {
+              "area_um2": 1404.8734027590651,
+              "island_id": "spd-surface-island:0284e805fcb69d835563bc5f"
+            }
+          ],
+          "source_sha256": "d7d6c2b7c862f4b3e667d2703f52b1ac5a0ea16b6ea6042b4c4d4c985a385ecc",
+          "trace_id": "Trace802752",
+          "trace_ordinal": 1193445
+        },
+        {
+          "artwork_overlap_area_um2": 1403.796152610285,
+          "pad_overlap_area_um2": 162.65629476591909,
+          "positive_artwork_islands": [
+            {
+              "area_um2": 1403.796152610285,
+              "island_id": "spd-surface-island:238a6a5ac59aed5cf1434954"
+            }
+          ],
+          "source_sha256": "ee46734d138ff76f4bd4cfbc55490372c699e2f0a4887e12e02f83c3afbfaa66",
+          "trace_id": "Trace802757",
+          "trace_ordinal": 1193450
+        }
+      ],
+      "positive_contiguous_bridge_count": 3,
+      "source_node": "node2741205",
+      "xy_pm": [
+        -8911900000,
+        -23621400000
+      ]
+    },
+    {
+      "original_active_finite_index": 1254243,
+      "pad_trace_candidates": [
+        {
+          "artwork_overlap_area_um2": 0.0,
+          "pad_overlap_area_um2": 162.05376085843034,
+          "positive_artwork_islands": [],
+          "source_sha256": "c9cb4bb3560320816d2de3bc16ea0a7cd6caab18af0c5ba7f00c2ec63e8b0578",
+          "trace_id": "Trace1378294",
+          "trace_ordinal": 420323
+        },
+        {
+          "artwork_overlap_area_um2": 0.0,
+          "pad_overlap_area_um2": 164.21846077670708,
+          "positive_artwork_islands": [],
+          "source_sha256": "dd6bd85bbf8f8d2c965c5b8948938d5d4ea7c12d88b41b71a796121bb769d298",
+          "trace_id": "Trace780205",
+          "trace_ordinal": 1168393
+        },
+        {
+          "artwork_overlap_area_um2": 0.0,
+          "pad_overlap_area_um2": 162.65629476591909,
+          "positive_artwork_islands": [],
+          "source_sha256": "66a5bab70b820d97673921510ed0111152bde91b8ee8d98e867a2e9a88730ddc",
+          "trace_id": "Trace780207",
+          "trace_ordinal": 1168395
+        },
+        {
+          "artwork_overlap_area_um2": 1403.798411729343,
+          "pad_overlap_area_um2": 162.65629476591909,
+          "positive_artwork_islands": [
+            {
+              "area_um2": 1403.798411729343,
+              "island_id": "spd-surface-island:0284e805fcb69d835563bc5f"
+            }
+          ],
+          "source_sha256": "fee5e6b8fdf0f9e7485d3a33479f793b252b600604bf6b9f810d39cc2872e6a9",
+          "trace_id": "Trace802790",
+          "trace_ordinal": 1193487
+        },
+        {
+          "artwork_overlap_area_um2": 1404.4571075315596,
+          "pad_overlap_area_um2": 162.05377098354563,
+          "positive_artwork_islands": [
+            {
+              "area_um2": 1404.4571075315596,
+              "island_id": "spd-surface-island:238a6a5ac59aed5cf1434954"
+            }
+          ],
+          "source_sha256": "0407601102ccb4436e8ca032f97fa4a859511bea6b040adba61c7208c2809ce3",
+          "trace_id": "Trace802794",
+          "trace_ordinal": 1193491
+        },
+        {
+          "artwork_overlap_area_um2": 1404.208146832834,
+          "pad_overlap_area_um2": 164.21834342887018,
+          "positive_artwork_islands": [
+            {
+              "area_um2": 1404.208146832834,
+              "island_id": "spd-surface-island:7b1feb1f44b63cee3a1ed8d5"
+            }
+          ],
+          "source_sha256": "75be4e777798e23189429a79876bf14b8a5a226ff9142f135f120f2e90a45a01",
+          "trace_id": "Trace802796",
+          "trace_ordinal": 1193493
+        }
+      ],
+      "positive_contiguous_bridge_count": 3,
+      "source_node": "node2739103",
+      "xy_pm": [
+        -12096900000,
+        -23508800000
+      ]
+    },
+    {
+      "original_active_finite_index": 1336715,
+      "pad_trace_candidates": [
+        {
+          "artwork_overlap_area_um2": 0.0,
+          "pad_overlap_area_um2": 164.21846077667695,
+          "positive_artwork_islands": [],
+          "source_sha256": "358faad7093cce489d207d6d4fbe3be4f98581fb75d6b06ebb043673b3dcc96b",
+          "trace_id": "Trace1377826",
+          "trace_ordinal": 419803
+        },
+        {
+          "artwork_overlap_area_um2": 0.0,
+          "pad_overlap_area_um2": 162.05380624287056,
+          "positive_artwork_islands": [],
+          "source_sha256": "9ccfb14a74151ff336aa2293d71c8647f79595629b4cf73f65c7540d488da8c1",
+          "trace_id": "Trace1377833",
+          "trace_ordinal": 419811
+        },
+        {
+          "artwork_overlap_area_um2": 0.0,
+          "pad_overlap_area_um2": 164.2183337265796,
+          "positive_artwork_islands": [],
+          "source_sha256": "8c2fe1950ac3e273fd6656a24980d5ab31ebf807143b54fb6f27cc48a47023ce",
+          "trace_id": "Trace780572",
+          "trace_ordinal": 1168800
+        },
+        {
+          "artwork_overlap_area_um2": 0.0,
+          "pad_overlap_area_um2": 162.65629476586224,
+          "positive_artwork_islands": [],
+          "source_sha256": "bce95583fc02730169431cfc25f0c3c9bd0357cac3d771678ed9f6076294b725",
+          "trace_id": "Trace780575",
+          "trace_ordinal": 1168803
+        },
+        {
+          "artwork_overlap_area_um2": 0.0,
+          "pad_overlap_area_um2": 162.05376085846274,
+          "positive_artwork_islands": [],
+          "source_sha256": "5b83bdf1f4ad1c98467067aced56a01bc74372825b9ecd9ff5206b30b33c2b8f",
+          "trace_id": "Trace780747",
+          "trace_ordinal": 1168994
+        },
+        {
+          "artwork_overlap_area_um2": 1403.2986702335581,
+          "pad_overlap_area_um2": 162.65629476590772,
+          "positive_artwork_islands": [
+            {
+              "area_um2": 1403.2986702335581,
+              "island_id": "spd-surface-island:0284e805fcb69d835563bc5f"
+            }
+          ],
+          "source_sha256": "21432e89de2c99d2dac4ee9dd237bb3fba6f7a94eff126c93915e8c59d657dd5",
+          "trace_id": "Trace802075",
+          "trace_ordinal": 1192693
+        }
+      ],
+      "positive_contiguous_bridge_count": 1,
+      "source_node": "node2727888",
+      "xy_pm": [
+        12190600000,
+        -22056100000
+      ]
+    },
+    {
+      "original_active_finite_index": 1392846,
+      "pad_trace_candidates": [
+        {
+          "artwork_overlap_area_um2": 0.0,
+          "pad_overlap_area_um2": 164.21846077666765,
+          "positive_artwork_islands": [],
+          "source_sha256": "6f907b76475567e5e3f530c281c7ce65dc993afd99827e69c88da3ce5cc904ef",
+          "trace_id": "Trace1247448",
+          "trace_ordinal": 274939
+        },
+        {
+          "artwork_overlap_area_um2": 0.0,
+          "pad_overlap_area_um2": 164.2183337265708,
+          "positive_artwork_islands": [],
+          "source_sha256": "d0859f06b746dd496fba2c70307528e5ab9d6cae47fc7a7d2b0daa89368a2e70",
+          "trace_id": "Trace1248464",
+          "trace_ordinal": 276068
+        },
+        {
+          "artwork_overlap_area_um2": 0.0,
+          "pad_overlap_area_um2": 162.65629476585804,
+          "positive_artwork_islands": [],
+          "source_sha256": "89ff47236c5a3741245e9040883c5be8aad5afff1189dcbb69a0873f9e1be0d9",
+          "trace_id": "Trace781430",
+          "trace_ordinal": 1169754
+        },
+        {
+          "artwork_overlap_area_um2": 1404.2565990643845,
+          "pad_overlap_area_um2": 162.05377098356257,
+          "positive_artwork_islands": [
+            {
+              "area_um2": 1404.2565990643845,
+              "island_id": "spd-surface-island:0284e805fcb69d835563bc5f"
+            }
+          ],
+          "source_sha256": "ab875dd7c21b850a540cb7af4912952a93592a3a5321da6c0ed20452d0fa5759",
+          "trace_id": "Trace793642",
+          "trace_ordinal": 1183322
+        },
+        {
+          "artwork_overlap_area_um2": 1403.295010123728,
+          "pad_overlap_area_um2": 162.65629476585804,
+          "positive_artwork_islands": [
+            {
+              "area_um2": 1403.295010123728,
+              "island_id": "spd-surface-island:7aa87348872998e5dca18439"
+            }
+          ],
+          "source_sha256": "5a649287d318d1c9cea876ab45e9cf7cbc5b77a12045aae52c78838c8f0c3966",
+          "trace_id": "Trace793645",
+          "trace_ordinal": 1183325
+        },
+        {
+          "artwork_overlap_area_um2": 1405.152353778239,
+          "pad_overlap_area_um2": 162.05377098354032,
+          "positive_artwork_islands": [
+            {
+              "area_um2": 1405.152353778239,
+              "island_id": "spd-surface-island:0284e805fcb69d835563bc5f"
+            }
+          ],
+          "source_sha256": "ce40c355234bc7070be984e12636622058c4b4af96599824206a99f8d23f2930",
+          "trace_id": "Trace793741",
+          "trace_ordinal": 1183432
+        }
+      ],
+      "positive_contiguous_bridge_count": 3,
+      "source_node": "node2567081",
+      "xy_pm": [
+        -8911900000,
+        8984500000
+      ]
+    },
+    {
+      "original_active_finite_index": 1521556,
+      "pad_trace_candidates": [
+        {
+          "artwork_overlap_area_um2": 1404.6176220339003,
+          "pad_overlap_area_um2": 164.21834342882084,
+          "positive_artwork_islands": [
+            {
+              "area_um2": 1404.6176220339003,
+              "island_id": "spd-surface-island:09744eef5ef438af255a7621"
+            }
+          ],
+          "source_sha256": "827bf89a6b571a743427a0ddde736f325eb467be9c83af77be1dbf38dd4dfb39",
+          "trace_id": "Trace1378280",
+          "trace_ordinal": 420308
+        },
+        {
+          "artwork_overlap_area_um2": 0.0,
+          "pad_overlap_area_um2": 162.05376085838762,
+          "positive_artwork_islands": [],
+          "source_sha256": "d49883cb36207b35010d66c43de43eb918352fe8e7163afbded9a2ec9631cef1",
+          "trace_id": "Trace780164",
+          "trace_ordinal": 1168347
+        },
+        {
+          "artwork_overlap_area_um2": 0.0,
+          "pad_overlap_area_um2": 164.21833372655584,
+          "positive_artwork_islands": [],
+          "source_sha256": "44766bd739219c7b7f3450c6f2f0aed74639c5ca65f4dfe61237b6deee11d62e",
+          "trace_id": "Trace780222",
+          "trace_ordinal": 1168412
+        },
+        {
+          "artwork_overlap_area_um2": 0.0,
+          "pad_overlap_area_um2": 162.0538062428132,
+          "positive_artwork_islands": [],
+          "source_sha256": "d798cbb3ffe8617c33b756ec07cebe37ab30e292f8f22cefb1480c00641bc507",
+          "trace_id": "Trace780227",
+          "trace_ordinal": 1168417
+        },
+        {
+          "artwork_overlap_area_um2": 1403.789587508253,
+          "pad_overlap_area_um2": 162.65629476591909,
+          "positive_artwork_islands": [
+            {
+              "area_um2": 1403.789587508253,
+              "island_id": "spd-surface-island:238a6a5ac59aed5cf1434954"
+            }
+          ],
+          "source_sha256": "5f89a91ffa093fdfabc049440919bf9ef2cb8b7f1b9a3c92c04648abe2d4144f",
+          "trace_id": "Trace802773",
+          "trace_ordinal": 1193468
+        },
+        {
+          "artwork_overlap_area_um2": 1404.539587508224,
+          "pad_overlap_area_um2": 162.65629476582814,
+          "positive_artwork_islands": [
+            {
+              "area_um2": 1404.539587508224,
+              "island_id": "spd-surface-island:0284e805fcb69d835563bc5f"
+            }
+          ],
+          "source_sha256": "031f38bd13fe9677860f4c0ac4537812778871a76f749367dc1138c5a469f150",
+          "trace_id": "Trace802826",
+          "trace_ordinal": 1193527
+        }
+      ],
+      "positive_contiguous_bridge_count": 3,
+      "source_node": "node2738684",
+      "xy_pm": [
+        -10211900000,
+        -23621400000
+      ]
+    },
+    {
+      "original_active_finite_index": 1690188,
+      "pad_trace_candidates": [
+        {
+          "artwork_overlap_area_um2": 0.0,
+          "pad_overlap_area_um2": 162.05376085845705,
+          "positive_artwork_islands": [],
+          "source_sha256": "633341438f683bd4b104827883bdc49ac32294d75f75aaf3dab082c7f81df579",
+          "trace_id": "Trace780489",
+          "trace_ordinal": 1168707
+        },
+        {
+          "artwork_overlap_area_um2": 0.0,
+          "pad_overlap_area_um2": 164.21846077670423,
+          "positive_artwork_islands": [],
+          "source_sha256": "41daf63ed5647022af3507cb246e7a3084ce7612bef6222cd7f5ab8a5803339c",
+          "trace_id": "Trace780495",
+          "trace_ordinal": 1168714
+        },
+        {
+          "artwork_overlap_area_um2": 1404.5401668752745,
+          "pad_overlap_area_um2": 162.6562947659201,
+          "positive_artwork_islands": [
+            {
+              "area_um2": 1404.5401668752745,
+              "island_id": "spd-surface-island:0284e805fcb69d835563bc5f"
+            }
+          ],
+          "source_sha256": "d2ec4937bf85a4271c12a84e60acf87944f09ea1827851d91257ed8f65642a6e",
+          "trace_id": "Trace802305",
+          "trace_ordinal": 1192949
+        },
+        {
+          "artwork_overlap_area_um2": 1565.8082623503735,
+          "pad_overlap_area_um2": 4.59637746985694,
+          "positive_artwork_islands": [
+            {
+              "area_um2": 1565.8082623503735,
+              "island_id": "spd-surface-island:732938db1f26f6b17aead345"
+            }
+          ],
+          "source_sha256": "f7252a872a54f8c713172b90529455684a10afbccf175835e89b51c7e3d3e242",
+          "trace_id": "Trace802311",
+          "trace_ordinal": 1192956
+        },
+        {
+          "artwork_overlap_area_um2": 1658.996448227963,
+          "pad_overlap_area_um2": 90.21772789323757,
+          "positive_artwork_islands": [
+            {
+              "area_um2": 1658.996448227963,
+              "island_id": "spd-surface-island:0284e805fcb69d835563bc5f"
+            }
+          ],
+          "source_sha256": "d9b34d05329f2ad7d42a7f67b3839fcb152f3355222597c6a43dbc1f08f1cc97",
+          "trace_id": "Trace802318",
+          "trace_ordinal": 1192963
+        }
+      ],
+      "positive_contiguous_bridge_count": 3,
+      "source_node": "node2731133",
+      "xy_pm": [
+        -7437000000,
+        -22147200000
+      ]
+    }
+  ],
+  "scope": "A single connected exact-width flat trace polygon has positive area overlap with both the source pad polygon and one of the289 original L04 component islands. This certifies a local polygon-material path under the inherited circle/flat-cap convention. No full conductor union, contact coalescence, drill electrode, mesh, G/C or joint-circuit assembly is certified. Source island WKBs are cached verbatim without union or repair for later source qualification.",
+  "script_sha256": "b12e15d689692b38f4d11f5b84b9c21249432c0767ffefcaaa7a430102fd8bee",
+  "site_count": 10,
+  "sites_with_positive_contiguous_bridge": 10,
+  "source_islands": {
+    "bytes": 3905750,
+    "count": 289,
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-hidden-pad-trace-artwork-01\\l04-source-islands.npz",
+    "sha256": "e8536def5005b9f3664ad8c006cb06d4bca39b6c3631f364bf5ba761f6dc573c"
+  },
+  "status": "COMPLETED_CONDITIONAL_L04_LOCAL_PAD_TRACE_ARTWORK_WITNESSES",
+  "version": "0.23.1"
+}

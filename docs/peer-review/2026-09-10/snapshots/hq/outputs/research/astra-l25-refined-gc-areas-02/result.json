@@ -1,0 +1,160 @@
+{
+  "ancestry": {
+    "changed_child_count": 42417,
+    "changed_contact_child_count": 108,
+    "changed_contact_parent_count": 20,
+    "changed_noncontact_parent_count": 2773,
+    "changed_parent_count": 2793,
+    "coordinate_units": "node_xy_um; triangle areas are um2",
+    "missing_parent_count": 0,
+    "old_node_prefix_exact": true,
+    "original_node_count": 535149,
+    "original_triangle_count": 542091,
+    "parent_area_max_relative_error": 1.6202448916871038e-12,
+    "refined_contact_triangle_count": 2538,
+    "refined_node_count": 554965,
+    "refined_triangle_count": 581715,
+    "triangle_contact_tag_inherited": true,
+    "unchanged_child_count": 539298,
+    "unchanged_parent_count": 539298,
+    "winding_mismatch_count": 0
+  },
+  "budget": {
+    "max_rss_bytes": 25769803776,
+    "max_runtime_s": 240.0,
+    "peak_private_bytes": 551243776,
+    "peak_working_set_bytes": 526422016
+  },
+  "capacitance_relative_error": 1.1295582356867148e-13,
+  "checks": [
+    {
+      "changed_child_count": 42417,
+      "changed_parent_count": 2793,
+      "child_collapse_relative_to_parent_area": 1.6200306302626542e-12,
+      "owner": 0,
+      "parent_vs_saved_relative_to_parent_area": 2.0286640898095743e-13
+    },
+    {
+      "changed_child_count": 42417,
+      "changed_parent_count": 2793,
+      "child_collapse_relative_to_parent_area": 1.6200306302626542e-12,
+      "owner": 1,
+      "parent_vs_saved_relative_to_parent_area": 2.0286640898095743e-13
+    },
+    {
+      "changed_child_count": 42417,
+      "changed_parent_count": 2793,
+      "child_collapse_relative_to_parent_area": 0.0,
+      "owner": 2,
+      "parent_vs_saved_relative_to_parent_area": 0.0
+    },
+    {
+      "changed_child_count": 42417,
+      "changed_parent_count": 2793,
+      "child_collapse_relative_to_parent_area": 0.0,
+      "owner": 3,
+      "parent_vs_saved_relative_to_parent_area": 0.0
+    }
+  ],
+  "driver": {
+    "bytes": 26967,
+    "path": "driver-at-run.py",
+    "sha256": "650f64338e270d988e32a7b28359747c6bf1912274239dfbe978c8b5514f9892"
+  },
+  "elapsed_s": 91.12990040000295,
+  "geometry_array_sha256": {
+    "node_xy_um": "e2de8b7fbc9cbb8000d116b8fab0a8d74c780f7d46353b0e222739d43b33dd26",
+    "triangles": "4e8f5686ff9a754cd559ee59e81b5b6994baf985021579ddaabce172c1c3fa22"
+  },
+  "geometry_inputs": [
+    {
+      "island": "spd-surface-island:279609d3a8c5969250977818",
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-source-sheet-01\\0247-c80867ceb7f82d7b.spdgeom.zlib",
+      "sha256": "c80867ceb7f82d7ba4f886c63c68dbdc88c55fc3c1d9cc703d8fdea4a25ca711"
+    },
+    {
+      "island": "spd-surface-island:4f23b7e65a7e9bd8ae00819d",
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-source-sheet-01\\source-gc-assets\\0244-6b70d5635899822f.spdgeom.zlib",
+      "sha256": "6b70d5635899822f888040f33828ec2e19cc12eaa67e5e0840f3a032261b9519"
+    },
+    {
+      "island": "spd-surface-island:44241f41cf5c8c1bdde7e497",
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-source-sheet-01\\source-gc-assets\\0253-b7f8d21325bdcb1a.spdgeom.zlib",
+      "sha256": "b7f8d21325bdcb1a27bb4aaa6c3a355322ad23d03c25cacc5acf72c48521bb8d"
+    },
+    {
+      "island": "spd-surface-island:eb8cda32904cb6ff17fbad49",
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-source-sheet-01\\source-gc-assets\\0249-16fccda39197cd97.spdgeom.zlib",
+      "sha256": "16fccda39197cd97ee5aefe7ca10d7b9ca1b7337e578e773417c2b8f7ebca28b"
+    },
+    {
+      "island": "spd-surface-island:a2c304cddf22d1d3c73478bf",
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-source-sheet-01\\source-gc-assets\\0251-d7b85bc9e38dfe9a.spdgeom.zlib",
+      "sha256": "d7b85bc9e38dfe9adddd12e693e8a664f17c43bd85225aef2aba6c06420ff19d"
+    }
+  ],
+  "inputs": {
+    "legacy": {
+      "areas": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-dual-cell-inputs-02\\owner-cell-area.npz",
+        "sha256": "5c6b1f1a0d71ec7d8688e80f0aff192a6f9849b200e70e8ccf98ee0149515239"
+      },
+      "assets": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-source-sheet-01\\source-gc-assets\\receipt.json",
+        "sha256": "91f6dbfa0fed88b040dc84444110112dd1bd4a445a7ff9affc27536b8d835c5c"
+      },
+      "budget": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_l25_rt0_p1_pair.py",
+        "sha256": "35b1fb7c485b31cab4ea26beba52765ad6cfcbc2a60504d96194aa3b183eee20"
+      },
+      "decoder": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\project_astra_l14_gc_mass.py",
+        "sha256": "f2c668fd090db5c4606eec27558c9bdbbdde6552d2f82c3b64b8837bd7350dc3"
+      },
+      "inventory": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-source-sheet-01\\l25-gc-projection-inventory.json",
+        "sha256": "703e8cdf9988805a2fb05a40ff659bc9890ba999e2eef00c741a112aa5976a77"
+      },
+      "mesh": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-sheet-mesh-preflight-01\\mesh-stiffness.npz",
+        "sha256": "09e79fcbdac766603a3e2f451e2079c3c6b8b588026d0aa47f532f1e98d78134"
+      },
+      "refiner": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\refine_astra_l25_pair_mesh.py",
+        "sha256": "2ceb44814ec1d9655a0a3e70d3cbd16f354c6a8b757a35868b1ef29db89f7393"
+      },
+      "selection": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-rt0-p1-gap-inputs-02\\cell-gap-selection.npz",
+        "sha256": "2f749e9623af96816a1d56ae6fee402789e0539d1e5d77761e586150183dff6f"
+      }
+    },
+    "refined": {
+      "adaptive_driver": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-adaptive-longest-pair-01\\driver-at-run.py",
+        "sha256": "8ba3f885906dc4b23867012b5a2da707cfe08cbc7c041d27ba2d86eac82f0e31"
+      },
+      "adaptive_result": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-adaptive-longest-pair-01\\result.json",
+        "sha256": "bb418b0ea06d9ea71a0316a55ed107cd77f323b3ea8fec2fa3ba8cd58b987eba"
+      },
+      "mesh": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-adaptive-longest-pair-01\\step-06\\mesh.npz",
+        "sha256": "20b52d26783bf98197524c56f22d9872aee3b67b7e526ff20a02e396f39e89cb"
+      },
+      "step_result": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-adaptive-longest-pair-01\\step-06\\result.json",
+        "sha256": "9734d6b5222ad72488a07bea7a901874cb983c2a6710d862faaee07233865217"
+      }
+    }
+  },
+  "limitations": [
+    "Exact source-overlap area transfer for every changed original parent and all refined children in this frozen saved mesh; no new global G/C matrix, frequency solve, magnetic operator or PowerSI accuracy result."
+  ],
+  "output": {
+    "bytes": 4457106,
+    "path": "owner-cell-area.npz",
+    "sha256": "9a67c1a84ea08b8de2bd8cb9dcd315dab6d8831de540f2f53ace567d5a8baf3f"
+  },
+  "program": "SPD Decap PI Evaluator v0.23.1",
+  "status": "COMPLETED_SOURCE_CLIPPED_L25_REFINED_GC_AREAS_GENERIC_ANCESTRY"
+}

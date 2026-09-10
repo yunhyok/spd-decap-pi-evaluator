@@ -1,0 +1,121 @@
+{
+  "findings": {
+    "bridges": {
+      "ideal_count": 5
+    },
+    "hashes": {
+      "../astra-l04-cached-path-splits-02-guard/external-budget.json": {
+        "actual": "bc8e3a3fd115ba1651fca590dfc0a505721e214c2a38a0ea95955249cf907b2e",
+        "expected": "bc8e3a3fd115ba1651fca590dfc0a505721e214c2a38a0ea95955249cf907b2e",
+        "matches": true
+      },
+      "astra-l02-composite-source-paths-03/result.json": {
+        "actual": "e534da4f465ecb081ae3ec0bcdf96a1ba5329bd4f5c1353b6dfa262ef4f858ff",
+        "expected": "e534da4f465ecb081ae3ec0bcdf96a1ba5329bd4f5c1353b6dfa262ef4f858ff",
+        "matches": true
+      },
+      "astra-l04-source-inventory-root-02/independent-review-final.json": {
+        "actual": "1759b05d10147e4571bb3d9589782295ad808aa9b924ba16529079489b2e921f",
+        "expected": "1759b05d10147e4571bb3d9589782295ad808aa9b924ba16529079489b2e921f",
+        "matches": true
+      },
+      "astra-l04-source-inventory-root-02/result.json": {
+        "actual": "c86cf3410188e5386bfa8b5f4b57faddc6c219456e59a4ba8ac1d8e9b5f041d1",
+        "expected": "c86cf3410188e5386bfa8b5f4b57faddc6c219456e59a4ba8ac1d8e9b5f041d1",
+        "matches": true
+      },
+      "audit.py": {
+        "actual": "88193895a287987d70ed1bb52d61b0e35148bb78dbfe312ae2497cfefd3aa762",
+        "expected": "88193895a287987d70ed1bb52d61b0e35148bb78dbfe312ae2497cfefd3aa762",
+        "matches": true
+      },
+      "result.json": {
+        "actual": "17ca350bbb4913283315812e746b547d3ee01c4fec85133d411fb0e8602fe48d",
+        "expected": "17ca350bbb4913283315812e746b547d3ee01c4fec85133d411fb0e8602fe48d",
+        "matches": true
+      }
+    },
+    "membership": {
+      "endpoint_remaps": 10,
+      "exact_paths": 20,
+      "first_leg_splits": 10,
+      "outside_indices": 10,
+      "triple_indices": 10,
+      "unique_owners": 93
+    },
+    "schur_coupons": {
+      "all_small_coupon_count": 60,
+      "max_relative_error": 1.1366322846367028e-16,
+      "split_paths": [
+        {
+          "coupon_count": 6,
+          "index": 186263,
+          "max_schur_relative_error": 8.132715668785253e-17
+        },
+        {
+          "coupon_count": 6,
+          "index": 466710,
+          "max_schur_relative_error": 1.1366322846367028e-16
+        },
+        {
+          "coupon_count": 6,
+          "index": 551039,
+          "max_schur_relative_error": 1.1366322846367028e-16
+        },
+        {
+          "coupon_count": 6,
+          "index": 754981,
+          "max_schur_relative_error": 7.87974692581901e-17
+        },
+        {
+          "coupon_count": 6,
+          "index": 1024973,
+          "max_schur_relative_error": 1.1366322846367028e-16
+        },
+        {
+          "coupon_count": 6,
+          "index": 1254243,
+          "max_schur_relative_error": 1.1366322846367028e-16
+        },
+        {
+          "coupon_count": 6,
+          "index": 1336715,
+          "max_schur_relative_error": 1.1366322846367028e-16
+        },
+        {
+          "coupon_count": 6,
+          "index": 1392846,
+          "max_schur_relative_error": 1.1366322846367028e-16
+        },
+        {
+          "coupon_count": 6,
+          "index": 1521556,
+          "max_schur_relative_error": 8.132715668785253e-17
+        },
+        {
+          "coupon_count": 6,
+          "index": 1690188,
+          "max_schur_relative_error": 8.132715668785253e-17
+        }
+      ],
+      "threshold": 1e-14
+    },
+    "scope": {
+      "conductor_attachment_qualified": false,
+      "statement": "Cached series path identity/R/L is qualified; conductor/contact/pad attachment remains unqualified."
+    },
+    "series_conservation": {
+      "accepted_l02_legs": 40,
+      "all_20_verified": true,
+      "prospective_joint_legs": 50
+    },
+    "source_rows": {
+      "out_of_scope_count": 1,
+      "out_of_scope_owner": "via1497311"
+    }
+  },
+  "program": "SPD Decap PI Evaluator",
+  "scope": "Frozen cached JSON paths and small analytic series/Schur coupons only; no raw SPD, DB, geometry, board solve, or accuracy_parse access.",
+  "status": "PASS",
+  "version": "0.23.1"
+}

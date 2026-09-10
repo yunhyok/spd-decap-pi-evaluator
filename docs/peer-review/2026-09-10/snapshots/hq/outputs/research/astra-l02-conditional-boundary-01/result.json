@@ -1,0 +1,39 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "QUALIFIED_CONDITIONAL_2D_L02_INSULATING_LATERAL_BOUNDARY",
+  "driver_sha256": "7d0d1cd5fdaaeb58ae8663b802c5e12e4c6d0c7adc31a36654444a355bc6c926",
+  "inputs": {
+    "boundary": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-rt0-boundary-continuations-04\\boundary-continuation-map.npz",
+      "sha256": "bee3df63c4178620aa330c19e06c4d8351d7bd2531a7d724f33abdddeb0cb24e"
+    },
+    "binding": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-circuit-contact-binding-01\\circuit-contact-binding.npz",
+      "sha256": "61ed51f68ae0cc39cdd5ee07e919e105fd15aee5a6b4c8374b063f7d72221020"
+    },
+    "binding_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-circuit-contact-binding-01\\result.json",
+      "sha256": "1ef00f9c88553faf71f6cd87b4899c23d4a1be598a18a08c19b8776148690efc"
+    },
+    "combined": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-assembly-map-02\\combined-assembly-map.npz",
+      "sha256": "a6ccff514fe788396eb9d7620ebc828f966efbea3f7899e7a73991c17f8a2469"
+    }
+  },
+  "checks": {
+    "exact_exterior_segments": 817918,
+    "rim_segments_disjoint": 621696,
+    "native_rl_terminal_joins": 76139,
+    "composite_leg_joins": 40,
+    "all_drill_contacts_bound": 38856,
+    "excluded_owner_count": 42
+  },
+  "decision": "For the existing finite 2D conductor domain, prescribe zero normal sheet conduction on these source-ring exterior facets. Retain every drill terminal and voltage-dependent G/C owner. This is an explicit conditional modelling law, not a flux value inferred from geometry alone.",
+  "limitations": [
+    "Two source leaf vias retain their inherited circuit exclusion; no claim of electromagnetic irrelevance.",
+    "Ideal contact interiors, finite-domain geometry, P0 G/C projection and missing 3D/fringing/magnetic physics remain conditional.",
+    "No global field, factorization, mesh convergence or PowerSI accuracy acceptance."
+  ],
+  "elapsed_s": 1.0939493000041693
+}

@@ -1,0 +1,381 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "PASS_SAVED_ADJACENT_GC_SOURCE_COVERAGE_AUDIT",
+  "audit_sha256": "eb249149510af4335e925a90efe583bd3ca841e958fd39144dca54cf6f9a27d5",
+  "inputs": {
+    "compiled": {
+      "path": "astra-step4-basis-01/indexes/compiled-topology.sqlite",
+      "sha256": "5a4fd917e0c415a50d75e1e52be22580d0c9c88423e6e93c5eb69f62f0aa849b"
+    },
+    "raw": {
+      "path": "astra-step4-basis-01/indexes/raw-spatial.sqlite",
+      "sha256": "287c1850a113b23b89c97c38941502f866131d938773c1b346d0e4972733d3a7"
+    },
+    "field": {
+      "path": "astra-native-loaded-vtrip-field-02/raw-field-snapshot.npz",
+      "sha256": "6eac098738598a78b2068ce4f80e46fd70e17010a89bfb5949ec8a68124df4a7"
+    }
+  },
+  "source_code_sha256": {
+    "src/spd_decap_pi/_core/solver/layerwise_network.py": "dde4d562b47cc0103037b1efc5ff350a560cddffd53d9f3aaebc2579ad702b2b",
+    "src/spd_decap_pi/_core/solver/multilayer_capacitance.py": "56b01319194ed0e8253eb1d60efed3e4ba5dcae34e22c8a70c19cebad6fc30b2"
+  },
+  "conductor_layer_count": 48,
+  "retained_artwork_layer_count": 42,
+  "retained_artwork_asset_count": 371,
+  "physical_adjacent_gap_count": 47,
+  "saved_partial_count": 36,
+  "retained_layers_with_no_adjacent_partial": [
+    "Signal$L04(DGND)",
+    "Signal$L06(DGND)",
+    "Signal$L18(DGND)"
+  ],
+  "layers_without_retained_artwork": [
+    "Signal$L03(SIG1)",
+    "Signal$L05(SIG2)",
+    "Signal$L07(SIG3)",
+    "Signal$L17(SIG4)",
+    "Signal$L19(SIG5)",
+    "Signal$BOTTOM"
+  ],
+  "excluded_physical_adjacent_pairs": [
+    [
+      "Signal$L02(DGND)",
+      "Signal$L03(SIG1)"
+    ],
+    [
+      "Signal$L03(SIG1)",
+      "Signal$L04(DGND)"
+    ],
+    [
+      "Signal$L04(DGND)",
+      "Signal$L05(SIG2)"
+    ],
+    [
+      "Signal$L05(SIG2)",
+      "Signal$L06(DGND)"
+    ],
+    [
+      "Signal$L06(DGND)",
+      "Signal$L07(SIG3)"
+    ],
+    [
+      "Signal$L07(SIG3)",
+      "Signal$L08(DGND)"
+    ],
+    [
+      "Signal$L16(DGND)",
+      "Signal$L17(SIG4)"
+    ],
+    [
+      "Signal$L17(SIG4)",
+      "Signal$L18(DGND)"
+    ],
+    [
+      "Signal$L18(DGND)",
+      "Signal$L19(SIG5)"
+    ],
+    [
+      "Signal$L19(SIG5)",
+      "Signal$L20(DGND)"
+    ],
+    [
+      "Signal$L47(DGND)",
+      "Signal$BOTTOM"
+    ]
+  ],
+  "saved_partials": [
+    {
+      "index": 0,
+      "upper": "Signal$TOP",
+      "lower": "Signal$L02(DGND)",
+      "island_count": 2065,
+      "edge_count": 2064,
+      "same_net_edge_count": 1217
+    },
+    {
+      "index": 1,
+      "upper": "Signal$L08(DGND)",
+      "lower": "Signal$L09(MAIN_POWER1)",
+      "island_count": 351,
+      "edge_count": 338,
+      "same_net_edge_count": 0
+    },
+    {
+      "index": 2,
+      "upper": "Signal$L09(MAIN_POWER1)",
+      "lower": "Signal$L10(DGND)",
+      "island_count": 421,
+      "edge_count": 409,
+      "same_net_edge_count": 0
+    },
+    {
+      "index": 3,
+      "upper": "Signal$L10(DGND)",
+      "lower": "Signal$L11(MAIN_POWER2)",
+      "island_count": 450,
+      "edge_count": 439,
+      "same_net_edge_count": 0
+    },
+    {
+      "index": 4,
+      "upper": "Signal$L11(MAIN_POWER2)",
+      "lower": "Signal$L12(MAIN_POWER3)",
+      "island_count": 761,
+      "edge_count": 525,
+      "same_net_edge_count": 226
+    },
+    {
+      "index": 5,
+      "upper": "Signal$L12(MAIN_POWER3)",
+      "lower": "Signal$L13(DGND)",
+      "island_count": 453,
+      "edge_count": 422,
+      "same_net_edge_count": 0
+    },
+    {
+      "index": 6,
+      "upper": "Signal$L13(DGND)",
+      "lower": "Signal$L14(MAIN_POWER4)",
+      "island_count": 477,
+      "edge_count": 446,
+      "same_net_edge_count": 0
+    },
+    {
+      "index": 7,
+      "upper": "Signal$L14(MAIN_POWER4)",
+      "lower": "Signal$L15(MAIN_POWER5)",
+      "island_count": 734,
+      "edge_count": 526,
+      "same_net_edge_count": 0
+    },
+    {
+      "index": 8,
+      "upper": "Signal$L15(MAIN_POWER5)",
+      "lower": "Signal$L16(DGND)",
+      "island_count": 335,
+      "edge_count": 328,
+      "same_net_edge_count": 0
+    },
+    {
+      "index": 9,
+      "upper": "Signal$L20(DGND)",
+      "lower": "Signal$L21(DGND)",
+      "island_count": 744,
+      "edge_count": 913,
+      "same_net_edge_count": 265
+    },
+    {
+      "index": 10,
+      "upper": "Signal$L21(DGND)",
+      "lower": "Signal$L22(MAIN_POWER2)",
+      "island_count": 659,
+      "edge_count": 718,
+      "same_net_edge_count": 58
+    },
+    {
+      "index": 11,
+      "upper": "Signal$L22(MAIN_POWER2)",
+      "lower": "Signal$L23(MAIN_POWER3)",
+      "island_count": 18,
+      "edge_count": 26,
+      "same_net_edge_count": 4
+    },
+    {
+      "index": 12,
+      "upper": "Signal$L23(MAIN_POWER3)",
+      "lower": "Signal$L24(DGND)",
+      "island_count": 9,
+      "edge_count": 8,
+      "same_net_edge_count": 0
+    },
+    {
+      "index": 13,
+      "upper": "Signal$L24(DGND)",
+      "lower": "Signal$L25(MAIN_POWER4)",
+      "island_count": 5,
+      "edge_count": 4,
+      "same_net_edge_count": 0
+    },
+    {
+      "index": 14,
+      "upper": "Signal$L25(MAIN_POWER4)",
+      "lower": "Signal$L26(MAIN_POWER5)",
+      "island_count": 12,
+      "edge_count": 14,
+      "same_net_edge_count": 0
+    },
+    {
+      "index": 15,
+      "upper": "Signal$L26(MAIN_POWER5)",
+      "lower": "Signal$L27(DGND)",
+      "island_count": 9,
+      "edge_count": 8,
+      "same_net_edge_count": 0
+    },
+    {
+      "index": 16,
+      "upper": "Signal$L27(DGND)",
+      "lower": "Signal$L28(DGND)",
+      "island_count": 2,
+      "edge_count": 1,
+      "same_net_edge_count": 1
+    },
+    {
+      "index": 17,
+      "upper": "Signal$L28(DGND)",
+      "lower": "Signal$L29(DGND)",
+      "island_count": 2,
+      "edge_count": 1,
+      "same_net_edge_count": 1
+    },
+    {
+      "index": 18,
+      "upper": "Signal$L29(DGND)",
+      "lower": "Signal$L30(OTHER_POWER1)",
+      "island_count": 8,
+      "edge_count": 7,
+      "same_net_edge_count": 1
+    },
+    {
+      "index": 19,
+      "upper": "Signal$L30(OTHER_POWER1)",
+      "lower": "Signal$L31(OTHER_POWER2)",
+      "island_count": 14,
+      "edge_count": 14,
+      "same_net_edge_count": 1
+    },
+    {
+      "index": 20,
+      "upper": "Signal$L31(OTHER_POWER2)",
+      "lower": "Signal$L32(DGND)",
+      "island_count": 8,
+      "edge_count": 7,
+      "same_net_edge_count": 1
+    },
+    {
+      "index": 21,
+      "upper": "Signal$L32(DGND)",
+      "lower": "Signal$L33(OTHER_POWER3)",
+      "island_count": 8,
+      "edge_count": 7,
+      "same_net_edge_count": 1
+    },
+    {
+      "index": 22,
+      "upper": "Signal$L33(OTHER_POWER3)",
+      "lower": "Signal$L34(OTHER_POWER4)",
+      "island_count": 14,
+      "edge_count": 13,
+      "same_net_edge_count": 1
+    },
+    {
+      "index": 23,
+      "upper": "Signal$L34(OTHER_POWER4)",
+      "lower": "Signal$L35(DGND)",
+      "island_count": 8,
+      "edge_count": 7,
+      "same_net_edge_count": 1
+    },
+    {
+      "index": 24,
+      "upper": "Signal$L35(DGND)",
+      "lower": "Signal$L36(OTHER_POWER5)",
+      "island_count": 8,
+      "edge_count": 7,
+      "same_net_edge_count": 1
+    },
+    {
+      "index": 25,
+      "upper": "Signal$L36(OTHER_POWER5)",
+      "lower": "Signal$L37(OTHER_POWER6)",
+      "island_count": 14,
+      "edge_count": 9,
+      "same_net_edge_count": 1
+    },
+    {
+      "index": 26,
+      "upper": "Signal$L37(OTHER_POWER6)",
+      "lower": "Signal$L38(DGND)",
+      "island_count": 8,
+      "edge_count": 7,
+      "same_net_edge_count": 1
+    },
+    {
+      "index": 27,
+      "upper": "Signal$L38(DGND)",
+      "lower": "Signal$L39(OTHER_POWER7)",
+      "island_count": 8,
+      "edge_count": 7,
+      "same_net_edge_count": 1
+    },
+    {
+      "index": 28,
+      "upper": "Signal$L39(OTHER_POWER7)",
+      "lower": "Signal$L40(OTHER_POWER8)",
+      "island_count": 14,
+      "edge_count": 11,
+      "same_net_edge_count": 1
+    },
+    {
+      "index": 29,
+      "upper": "Signal$L40(OTHER_POWER8)",
+      "lower": "Signal$L41(DGND)",
+      "island_count": 8,
+      "edge_count": 7,
+      "same_net_edge_count": 1
+    },
+    {
+      "index": 30,
+      "upper": "Signal$L41(DGND)",
+      "lower": "Signal$L42(OTHER_POWER9)",
+      "island_count": 8,
+      "edge_count": 7,
+      "same_net_edge_count": 1
+    },
+    {
+      "index": 31,
+      "upper": "Signal$L42(OTHER_POWER9)",
+      "lower": "Signal$L43(OTHER_POWER10)",
+      "island_count": 14,
+      "edge_count": 14,
+      "same_net_edge_count": 1
+    },
+    {
+      "index": 32,
+      "upper": "Signal$L43(OTHER_POWER10)",
+      "lower": "Signal$L44(DGND)",
+      "island_count": 8,
+      "edge_count": 7,
+      "same_net_edge_count": 1
+    },
+    {
+      "index": 33,
+      "upper": "Signal$L44(DGND)",
+      "lower": "Signal$L45(OTHER_POWER11)",
+      "island_count": 6,
+      "edge_count": 5,
+      "same_net_edge_count": 1
+    },
+    {
+      "index": 34,
+      "upper": "Signal$L45(OTHER_POWER11)",
+      "lower": "Signal$L46(OTHER_POWER12)",
+      "island_count": 10,
+      "edge_count": 7,
+      "same_net_edge_count": 1
+    },
+    {
+      "index": 35,
+      "upper": "Signal$L46(OTHER_POWER12)",
+      "lower": "Signal$L47(DGND)",
+      "island_count": 6,
+      "edge_count": 5,
+      "same_net_edge_count": 1
+    }
+  ],
+  "same_net_edge_count": 1790,
+  "elapsed_s": 2.2810000000172295,
+  "scope": "Metadata and saved CSC audit only. Production island extractor retains same-NET overlaps. L04 has no adjacent partial because L03/L05 lack retained artwork. Missing artwork does not mean absent copper or zero C/G. Trace/pad geometry, opening/fringing, same-layer and nonadjacent electric fields are not qualified by this audit. Existing projected G/C conserves the old model; it does not establish complete reference physics."
+}

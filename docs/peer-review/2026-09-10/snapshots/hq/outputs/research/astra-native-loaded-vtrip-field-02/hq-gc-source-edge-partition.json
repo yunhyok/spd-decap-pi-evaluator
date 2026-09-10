@@ -1,0 +1,29 @@
+{
+  "partials": [
+    {
+      "edge_restamp_max_error_f": 0.0,
+      "edge_restamp_relative_error": 0.0,
+      "original_edges": 446,
+      "owner_capacitance_bitwise_match": true,
+      "partial": "partial_06",
+      "removed_owner_edges": 110,
+      "retained_nonincident_edges": 336,
+      "retained_target_incidence": 0
+    },
+    {
+      "edge_restamp_max_error_f": 4.1359030627651384e-25,
+      "edge_restamp_relative_error": 1.4769770774201137e-16,
+      "original_edges": 526,
+      "owner_capacitance_bitwise_match": true,
+      "partial": "partial_07",
+      "removed_owner_edges": 114,
+      "retained_nonincident_edges": 412,
+      "retained_target_incidence": 0
+    }
+  ],
+  "program": "SPD Decap PI Evaluator",
+  "scope": "Original nominal C-edge partition only; no new mass matrix, solve, or accuracy claim.",
+  "script_sha256": "2bb35653fca8facb48efa11feddb42c305c7fe0ad272d36987a81d7dd38c47c7",
+  "status": "VERIFIED_ORIGINAL_L14_GC_SOURCE_EDGE_PARTITION",
+  "version": "0.23.1"
+}

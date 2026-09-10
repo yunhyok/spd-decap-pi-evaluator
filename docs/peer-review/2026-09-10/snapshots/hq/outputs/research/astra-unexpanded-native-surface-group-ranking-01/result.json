@@ -1,0 +1,859 @@
+{
+  "artifact": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-unexpanded-native-surface-group-ranking-01\\unexpanded-native-surface-group-ranking.npz",
+    "sha256": "5ecb3515ceb502919e2b698fec0ce69e63c0523ac805cff2e8da876ef720c737",
+    "size_bytes": 59787
+  },
+  "budget": {
+    "cooperative_checks": true,
+    "elapsed_s": 1.25,
+    "kind": "pinned reconstruct _Budget.create(60,4)",
+    "max_rss_bytes": 4294967296,
+    "max_runtime_s": 60,
+    "peak_rss_bytes": 1527230464
+  },
+  "coverage": {
+    "cached_groups": 1323,
+    "expanded_l02_l14_l25_rebound_groups": 3,
+    "included_finite_incident_row_appearances": 962466,
+    "included_groups_with_finite_incident_rows": 444,
+    "native_prefix_groups": 1323,
+    "source_port_groups_excluded": 1,
+    "still_unexpanded_native_surface_groups": 1319
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-unexpanded-native-surface-group-ranking-01\\driver-at-run.py",
+    "sha256": "30c56ac7cea978909f01afa09e3c05a291345282a68aeec3c0857f843baa953e",
+    "size_bytes": 11898
+  },
+  "inputs": {
+    "allfinite01_arrays": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-all-finite-current-l-ownership-01\\all-finite-current-l-ownership.npz",
+      "sha256": "1b908c62e385ea1c227e77b1ccc37dd5c4b3376cce6f67d7b4e5c4a0c20508e6",
+      "size_bytes": 42593028
+    },
+    "allfinite01_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-all-finite-current-l-ownership-01\\driver-at-run.py",
+      "sha256": "4da0d49c62b1271d11fc80dded974c528078380eed42f41636a717009adab79e",
+      "size_bytes": 13105
+    },
+    "allfinite01_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-all-finite-current-l-ownership-01\\result.json",
+      "sha256": "b9641892dd80cbbecd48ea1a30e58b7afee9ab589878ed613f797e863cb75e7f",
+      "size_bytes": 13528
+    },
+    "budget_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\reconstruct_astra_native_loaded_field.py",
+      "sha256": "354d9e004b189cf8193c2922c8fa4dc1903b407bebb295a4576673200ce6b213",
+      "size_bytes": 33457
+    },
+    "cached_group_labels": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\source-sheet-current-ranking.json",
+      "sha256": "0a47ddd43d0e31a61eb31f285531976f24f5a63696bc4a9a682349ec5994786a",
+      "size_bytes": 934179
+    },
+    "combined_map": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-assembly-map-02\\combined-assembly-map.npz",
+      "sha256": "a6ccff514fe788396eb9d7620ebc828f966efbea3f7899e7a73991c17f8a2469",
+      "size_bytes": 16919703
+    },
+    "combined_map_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-assembly-map-02\\result.json",
+      "sha256": "cdbb80f3412732f614c1d482a3cc8288c5c6134b5dfb1de2376711309039ae81",
+      "size_bytes": 9732
+    },
+    "qualification02_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-all-finite-current-l-ownership-02\\result.json",
+      "sha256": "52f77a11fd723f3d013edcb4331c5ba040d6a1148a50edf57b5f487095231052",
+      "size_bytes": 15928
+    }
+  },
+  "native_prefix_identity": {
+    "accepted_final_rows_and_endpoints_match_a6_map": true,
+    "accepted_native_rows_and_split_legs_match_a6_map": true,
+    "all_cached_group_indices_in_prefix": true,
+    "native_potential_count": 756889
+  },
+  "program": "SPD Decap PI Evaluator",
+  "rebound_groups_excluded": [
+    {
+      "active_index": 349710,
+      "reason": "expanded L02/L14/L25 native target"
+    },
+    {
+      "active_index": 718402,
+      "reason": "expanded L02/L14/L25 native target"
+    },
+    {
+      "active_index": 258027,
+      "reason": "expanded L02/L14/L25 native target"
+    }
+  ],
+  "scope": "Accepted stored finite-current throughput/imbalance ranked by cached native layer/net/source-component identity labels only. Cached historical current values are not read or used. This is neither a cut, KCL closure, full return, magnetic action, nor an error bound; no SPD/SQLite, old field/potential, or new current calculation is used.",
+  "status": "COMPLETED_ACCEPTED_UNEXPANDED_NATIVE_SURFACE_GROUP_RANKING",
+  "top_groups_by_finite_incident_absolute_current": [
+    {
+      "active_index": 71610,
+      "finite_incident_absolute_current_a": 1.981636035821522,
+      "finite_incident_imbalance_a": [
+        1.1714418226681927e-14,
+        -2.999378664570067e-14
+      ],
+      "finite_incident_imbalance_abs_a": 3.220023030565821e-14,
+      "finite_incident_row_count": 76146,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:f012924eacbc6682cbfaf6f2",
+          "contact_status": "complete",
+          "island_count": 289,
+          "layer": "Signal$L04(DGND)",
+          "net": "dgnd"
+        }
+      ]
+    },
+    {
+      "active_index": 539837,
+      "finite_incident_absolute_current_a": 0.5385810226193736,
+      "finite_incident_imbalance_a": [
+        -5.507086790063065e-09,
+        -5.0120092026846065e-09
+      ],
+      "finite_incident_imbalance_abs_a": 7.4463575767674695e-09,
+      "finite_incident_row_count": 337,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:bc1db814d56b06472701e56d",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L20(DGND)",
+          "net": "adc_vdd_075_vtrip_sram/0"
+        }
+      ]
+    },
+    {
+      "active_index": 392696,
+      "finite_incident_absolute_current_a": 0.3979909890754783,
+      "finite_incident_imbalance_a": [
+        -1.0348136952800097e-08,
+        -9.128825657558773e-09
+      ],
+      "finite_incident_imbalance_abs_a": 1.3799253468213788e-08,
+      "finite_incident_row_count": 148,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:1226783f18ddc9d57f447777",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L21(DGND)",
+          "net": "adc_vdd_075_vtrip_sram/0"
+        }
+      ]
+    },
+    {
+      "active_index": 666407,
+      "finite_incident_absolute_current_a": 0.37387151557514703,
+      "finite_incident_imbalance_a": [
+        -1.5872089120447241e-09,
+        -1.485883214835974e-09
+      ],
+      "finite_incident_imbalance_abs_a": 2.1741851481889683e-09,
+      "finite_incident_row_count": 177,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:d1fef124857e1b22dd4c7274",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L20(DGND)",
+          "net": "adc_vdd_075_vtrip_sram/0"
+        }
+      ]
+    },
+    {
+      "active_index": 506817,
+      "finite_incident_absolute_current_a": 0.32810999653251727,
+      "finite_incident_imbalance_a": [
+        -9.454148811038898e-09,
+        -8.362531151925867e-09
+      ],
+      "finite_incident_imbalance_abs_a": 1.2621919703761342e-08,
+      "finite_incident_row_count": 75,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:5ccc6bad90812d22fb038d44",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L21(DGND)",
+          "net": "adc_vdd_075_vtrip_sram/0"
+        }
+      ]
+    },
+    {
+      "active_index": 290966,
+      "finite_incident_absolute_current_a": 0.03558761134076504,
+      "finite_incident_imbalance_a": [
+        -3.1048256951549114e-09,
+        -2.7779474705801055e-09
+      ],
+      "finite_incident_imbalance_abs_a": 4.166165472781486e-09,
+      "finite_incident_row_count": 6,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:58782dff609f86c553bc8a55",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L21(DGND)",
+          "net": "adc_vdd_075_vtrip_sram/0"
+        }
+      ]
+    },
+    {
+      "active_index": 394793,
+      "finite_incident_absolute_current_a": 0.016394904665314108,
+      "finite_incident_imbalance_a": [
+        -2.313609878332179e-09,
+        -2.124762050074243e-09
+      ],
+      "finite_incident_imbalance_abs_a": 3.1412424991636573e-09,
+      "finite_incident_row_count": 36,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:0301c15b0d98df9718f2b47d",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L21(DGND)",
+          "net": "adc_vdd_075_vtrip_sram/0"
+        }
+      ]
+    },
+    {
+      "active_index": 160191,
+      "finite_incident_absolute_current_a": 0.016379217974000018,
+      "finite_incident_imbalance_a": [
+        -1.5148604233081224e-09,
+        -1.409196461513954e-09
+      ],
+      "finite_incident_imbalance_abs_a": 2.068969977850987e-09,
+      "finite_incident_row_count": 77,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:63242e175b6fc2a6beff3b00",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L20(DGND)",
+          "net": "adc_vdd_075_vtrip_sram/0"
+        }
+      ]
+    },
+    {
+      "active_index": 200200,
+      "finite_incident_absolute_current_a": 0.01134432472483886,
+      "finite_incident_imbalance_a": [
+        -2.1755179572418605e-10,
+        -2.033525176996535e-10
+      ],
+      "finite_incident_imbalance_abs_a": 2.977936034867201e-10,
+      "finite_incident_row_count": 39,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:6fa47d309586f39469e8834f",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L20(DGND)",
+          "net": "adc_vdd_075_vtrip_sram/0"
+        }
+      ]
+    },
+    {
+      "active_index": 85272,
+      "finite_incident_absolute_current_a": 0.011278380640549238,
+      "finite_incident_imbalance_a": [
+        -1.3491246815457852e-09,
+        -1.2409980223082508e-09
+      ],
+      "finite_incident_imbalance_abs_a": 1.83308851333726e-09,
+      "finite_incident_row_count": 18,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:a06a62afcdcabbab8a5a10ae",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L21(DGND)",
+          "net": "adc_vdd_075_vtrip_sram/0"
+        }
+      ]
+    },
+    {
+      "active_index": 116282,
+      "finite_incident_absolute_current_a": 0.010539480270964552,
+      "finite_incident_imbalance_a": [
+        -2.6991423744508747e-09,
+        -2.4889670411639775e-09
+      ],
+      "finite_incident_imbalance_abs_a": 3.6715564124165205e-09,
+      "finite_incident_row_count": 10,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:031d7ee0c1a7c5782f3a4301",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L21(DGND)",
+          "net": "adc_vdd_075_vtrip_sram/0"
+        }
+      ]
+    },
+    {
+      "active_index": 27003,
+      "finite_incident_absolute_current_a": 0.00936416822474405,
+      "finite_incident_imbalance_a": [
+        -1.526482818186431e-09,
+        -1.392938427471381e-09
+      ],
+      "finite_incident_imbalance_abs_a": 2.0665012114549636e-09,
+      "finite_incident_row_count": 3,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:c0c425a352473e3e036da99f",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L21(DGND)",
+          "net": "adc_vdd_075_vtrip_sram/0"
+        }
+      ]
+    },
+    {
+      "active_index": 486724,
+      "finite_incident_absolute_current_a": 0.0082652198052435,
+      "finite_incident_imbalance_a": [
+        -3.5545618881844317e-09,
+        -3.289453964052454e-09
+      ],
+      "finite_incident_imbalance_abs_a": 4.8430793508421555e-09,
+      "finite_incident_row_count": 17,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:479f8b5f748ab8fc5836a590",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L21(DGND)",
+          "net": "adc_vdd_075_vtrip_sram/0"
+        }
+      ]
+    },
+    {
+      "active_index": 301045,
+      "finite_incident_absolute_current_a": 0.00791312133715968,
+      "finite_incident_imbalance_a": [
+        -7.146096122614617e-10,
+        -6.390197640785897e-10
+      ],
+      "finite_incident_imbalance_abs_a": 9.586517390687471e-10,
+      "finite_incident_row_count": 8,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:72e8f1a535d99f0c3385c7ee",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L21(DGND)",
+          "net": "adc_vdd_075_vtrip_sram/0"
+        }
+      ]
+    },
+    {
+      "active_index": 43571,
+      "finite_incident_absolute_current_a": 0.006996816589215094,
+      "finite_incident_imbalance_a": [
+        -1.0619509716036646e-09,
+        -9.738233191434716e-10
+      ],
+      "finite_incident_imbalance_abs_a": 1.4408579815504285e-09,
+      "finite_incident_row_count": 4,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:ccfea1885017e4ae965dc251",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L21(DGND)",
+          "net": "adc_vdd_075_vtrip_sram/0"
+        }
+      ]
+    },
+    {
+      "active_index": 385625,
+      "finite_incident_absolute_current_a": 0.006332413743594202,
+      "finite_incident_imbalance_a": [
+        -4.813362009317701e-10,
+        -4.3127628530058304e-10
+      ],
+      "finite_incident_imbalance_abs_a": 6.462845910201629e-10,
+      "finite_incident_row_count": 3,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:7e313dd4457052293d2bed05",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L21(DGND)",
+          "net": "adc_vdd_075_vtrip_sram/0"
+        }
+      ]
+    },
+    {
+      "active_index": 574780,
+      "finite_incident_absolute_current_a": 0.004713582617861865,
+      "finite_incident_imbalance_a": [
+        -9.354773605058098e-10,
+        -8.648673442858542e-10
+      ],
+      "finite_incident_imbalance_abs_a": 1.2740146840719626e-09,
+      "finite_incident_row_count": 5,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:646ca4f5cf0173223534329d",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L21(DGND)",
+          "net": "adc_vdd_075_vtrip_sram/0"
+        }
+      ]
+    },
+    {
+      "active_index": 715373,
+      "finite_incident_absolute_current_a": 0.0003197801650794149,
+      "finite_incident_imbalance_a": [
+        -1.394888541331303e-14,
+        -1.6638234476443633e-14
+      ],
+      "finite_incident_imbalance_abs_a": 2.171179980487234e-14,
+      "finite_incident_row_count": 74164,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:1c0580c64307d2beb0d037e8",
+          "contact_status": "complete",
+          "island_count": 2,
+          "layer": "Signal$L06(DGND)",
+          "net": "dgnd"
+        }
+      ]
+    },
+    {
+      "active_index": 398531,
+      "finite_incident_absolute_current_a": 0.00015397867078085077,
+      "finite_incident_imbalance_a": [
+        -1.037596943284543e-10,
+        1.2126931167034043e-10
+      ],
+      "finite_incident_imbalance_abs_a": 1.5960050162869927e-10,
+      "finite_incident_row_count": 75680,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:d08dfe9ebef70ba5b9828704",
+          "contact_status": "complete",
+          "island_count": 83,
+          "layer": "Signal$L08(DGND)",
+          "net": "dgnd"
+        }
+      ]
+    },
+    {
+      "active_index": 50553,
+      "finite_incident_absolute_current_a": 3.0166138345692848e-05,
+      "finite_incident_imbalance_a": [
+        2.3398319550340177e-15,
+        3.555060754157783e-15
+      ],
+      "finite_incident_imbalance_abs_a": 4.2559688137427914e-15,
+      "finite_incident_row_count": 2,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:6624e8d157c279cf4bad2afd",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L06(DGND)",
+          "net": "dgnd"
+        }
+      ]
+    }
+  ],
+  "top_groups_by_finite_incident_imbalance": [
+    {
+      "active_index": 210280,
+      "finite_incident_absolute_current_a": 1.3879047720822787e-05,
+      "finite_incident_imbalance_a": [
+        6.977456358591458e-06,
+        1.7209729468893448e-06
+      ],
+      "finite_incident_imbalance_abs_a": 7.186560033839095e-06,
+      "finite_incident_row_count": 66774,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:d541968abd099cc69b5b221f",
+          "contact_status": "complete",
+          "island_count": 57,
+          "layer": "Signal$L13(DGND)",
+          "net": "dgnd"
+        }
+      ]
+    },
+    {
+      "active_index": 725157,
+      "finite_incident_absolute_current_a": 2.499312445499158e-06,
+      "finite_incident_imbalance_a": [
+        2.381521078490471e-06,
+        7.385822025749572e-07
+      ],
+      "finite_incident_imbalance_abs_a": 2.4934206057652793e-06,
+      "finite_incident_row_count": 14620,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:30400bc56e82e66e5894a22a",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L24(DGND)",
+          "net": "dgnd"
+        }
+      ]
+    },
+    {
+      "active_index": 480981,
+      "finite_incident_absolute_current_a": 5.0083581038105465e-06,
+      "finite_incident_imbalance_a": [
+        1.6427536384695125e-08,
+        1.497269889389446e-08
+      ],
+      "finite_incident_imbalance_abs_a": 2.222713800374917e-08,
+      "finite_incident_row_count": 40978,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:a49992780ce49224331fb0be",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L20(DGND)",
+          "net": "dgnd"
+        }
+      ]
+    },
+    {
+      "active_index": 392696,
+      "finite_incident_absolute_current_a": 0.3979909890754783,
+      "finite_incident_imbalance_a": [
+        -1.0348136952800097e-08,
+        -9.128825657558773e-09
+      ],
+      "finite_incident_imbalance_abs_a": 1.3799253468213788e-08,
+      "finite_incident_row_count": 148,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:1226783f18ddc9d57f447777",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L21(DGND)",
+          "net": "adc_vdd_075_vtrip_sram/0"
+        }
+      ]
+    },
+    {
+      "active_index": 506817,
+      "finite_incident_absolute_current_a": 0.32810999653251727,
+      "finite_incident_imbalance_a": [
+        -9.454148811038898e-09,
+        -8.362531151925867e-09
+      ],
+      "finite_incident_imbalance_abs_a": 1.2621919703761342e-08,
+      "finite_incident_row_count": 75,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:5ccc6bad90812d22fb038d44",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L21(DGND)",
+          "net": "adc_vdd_075_vtrip_sram/0"
+        }
+      ]
+    },
+    {
+      "active_index": 539837,
+      "finite_incident_absolute_current_a": 0.5385810226193736,
+      "finite_incident_imbalance_a": [
+        -5.507086790063065e-09,
+        -5.0120092026846065e-09
+      ],
+      "finite_incident_imbalance_abs_a": 7.4463575767674695e-09,
+      "finite_incident_row_count": 337,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:bc1db814d56b06472701e56d",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L20(DGND)",
+          "net": "adc_vdd_075_vtrip_sram/0"
+        }
+      ]
+    },
+    {
+      "active_index": 486724,
+      "finite_incident_absolute_current_a": 0.0082652198052435,
+      "finite_incident_imbalance_a": [
+        -3.5545618881844317e-09,
+        -3.289453964052454e-09
+      ],
+      "finite_incident_imbalance_abs_a": 4.8430793508421555e-09,
+      "finite_incident_row_count": 17,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:479f8b5f748ab8fc5836a590",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L21(DGND)",
+          "net": "adc_vdd_075_vtrip_sram/0"
+        }
+      ]
+    },
+    {
+      "active_index": 290966,
+      "finite_incident_absolute_current_a": 0.03558761134076504,
+      "finite_incident_imbalance_a": [
+        -3.1048256951549114e-09,
+        -2.7779474705801055e-09
+      ],
+      "finite_incident_imbalance_abs_a": 4.166165472781486e-09,
+      "finite_incident_row_count": 6,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:58782dff609f86c553bc8a55",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L21(DGND)",
+          "net": "adc_vdd_075_vtrip_sram/0"
+        }
+      ]
+    },
+    {
+      "active_index": 269073,
+      "finite_incident_absolute_current_a": 9.726906742827622e-09,
+      "finite_incident_imbalance_a": [
+        -1.9835231379105903e-09,
+        3.274437112117714e-09
+      ],
+      "finite_incident_imbalance_abs_a": 3.828355056658208e-09,
+      "finite_incident_row_count": 39000,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:e8d317827ae4f4cf5f7e6881",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L35(DGND)",
+          "net": "dgnd"
+        }
+      ]
+    },
+    {
+      "active_index": 116282,
+      "finite_incident_absolute_current_a": 0.010539480270964552,
+      "finite_incident_imbalance_a": [
+        -2.6991423744508747e-09,
+        -2.4889670411639775e-09
+      ],
+      "finite_incident_imbalance_abs_a": 3.6715564124165205e-09,
+      "finite_incident_row_count": 10,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:031d7ee0c1a7c5782f3a4301",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L21(DGND)",
+          "net": "adc_vdd_075_vtrip_sram/0"
+        }
+      ]
+    },
+    {
+      "active_index": 394793,
+      "finite_incident_absolute_current_a": 0.016394904665314108,
+      "finite_incident_imbalance_a": [
+        -2.313609878332179e-09,
+        -2.124762050074243e-09
+      ],
+      "finite_incident_imbalance_abs_a": 3.1412424991636573e-09,
+      "finite_incident_row_count": 36,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:0301c15b0d98df9718f2b47d",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L21(DGND)",
+          "net": "adc_vdd_075_vtrip_sram/0"
+        }
+      ]
+    },
+    {
+      "active_index": 692928,
+      "finite_incident_absolute_current_a": 4.783793412394853e-06,
+      "finite_incident_imbalance_a": [
+        1.8456469344898207e-09,
+        1.7533242700185945e-09
+      ],
+      "finite_incident_imbalance_abs_a": 2.5456941298254803e-09,
+      "finite_incident_row_count": 21354,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:e652d2b8651400353ad16588",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L21(DGND)",
+          "net": "dgnd"
+        }
+      ]
+    },
+    {
+      "active_index": 467988,
+      "finite_incident_absolute_current_a": 2.7526920643949198e-09,
+      "finite_incident_imbalance_a": [
+        -1.5107839526832286e-09,
+        1.960799875021371e-09
+      ],
+      "finite_incident_imbalance_abs_a": 2.4753190302603387e-09,
+      "finite_incident_row_count": 39000,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:66b1f18152a9a9a6e5d55689",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L41(DGND)",
+          "net": "dgnd"
+        }
+      ]
+    },
+    {
+      "active_index": 666407,
+      "finite_incident_absolute_current_a": 0.37387151557514703,
+      "finite_incident_imbalance_a": [
+        -1.5872089120447241e-09,
+        -1.485883214835974e-09
+      ],
+      "finite_incident_imbalance_abs_a": 2.1741851481889683e-09,
+      "finite_incident_row_count": 177,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:d1fef124857e1b22dd4c7274",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L20(DGND)",
+          "net": "adc_vdd_075_vtrip_sram/0"
+        }
+      ]
+    },
+    {
+      "active_index": 160191,
+      "finite_incident_absolute_current_a": 0.016379217974000018,
+      "finite_incident_imbalance_a": [
+        -1.5148604233081224e-09,
+        -1.409196461513954e-09
+      ],
+      "finite_incident_imbalance_abs_a": 2.068969977850987e-09,
+      "finite_incident_row_count": 77,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:63242e175b6fc2a6beff3b00",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L20(DGND)",
+          "net": "adc_vdd_075_vtrip_sram/0"
+        }
+      ]
+    },
+    {
+      "active_index": 27003,
+      "finite_incident_absolute_current_a": 0.00936416822474405,
+      "finite_incident_imbalance_a": [
+        -1.526482818186431e-09,
+        -1.392938427471381e-09
+      ],
+      "finite_incident_imbalance_abs_a": 2.0665012114549636e-09,
+      "finite_incident_row_count": 3,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:c0c425a352473e3e036da99f",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L21(DGND)",
+          "net": "adc_vdd_075_vtrip_sram/0"
+        }
+      ]
+    },
+    {
+      "active_index": 85272,
+      "finite_incident_absolute_current_a": 0.011278380640549238,
+      "finite_incident_imbalance_a": [
+        -1.3491246815457852e-09,
+        -1.2409980223082508e-09
+      ],
+      "finite_incident_imbalance_abs_a": 1.83308851333726e-09,
+      "finite_incident_row_count": 18,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:a06a62afcdcabbab8a5a10ae",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L21(DGND)",
+          "net": "adc_vdd_075_vtrip_sram/0"
+        }
+      ]
+    },
+    {
+      "active_index": 43571,
+      "finite_incident_absolute_current_a": 0.006996816589215094,
+      "finite_incident_imbalance_a": [
+        -1.0619509716036646e-09,
+        -9.738233191434716e-10
+      ],
+      "finite_incident_imbalance_abs_a": 1.4408579815504285e-09,
+      "finite_incident_row_count": 4,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:ccfea1885017e4ae965dc251",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L21(DGND)",
+          "net": "adc_vdd_075_vtrip_sram/0"
+        }
+      ]
+    },
+    {
+      "active_index": 670705,
+      "finite_incident_absolute_current_a": 1.4822575332608092e-08,
+      "finite_incident_imbalance_a": [
+        -8.430108347172168e-10,
+        1.078792385217788e-09
+      ],
+      "finite_incident_imbalance_abs_a": 1.3691093009159286e-09,
+      "finite_incident_row_count": 39000,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:563ab8ba3cb3ed6e5093b815",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L32(DGND)",
+          "net": "dgnd"
+        }
+      ]
+    },
+    {
+      "active_index": 574780,
+      "finite_incident_absolute_current_a": 0.004713582617861865,
+      "finite_incident_imbalance_a": [
+        -9.354773605058098e-10,
+        -8.648673442858542e-10
+      ],
+      "finite_incident_imbalance_abs_a": 1.2740146840719626e-09,
+      "finite_incident_row_count": 5,
+      "layer_net_sourcecomponent": [
+        {
+          "component_id": "spd-surface-equivalence-component:646ca4f5cf0173223534329d",
+          "contact_status": "complete",
+          "island_count": 1,
+          "layer": "Signal$L21(DGND)",
+          "net": "adc_vdd_075_vtrip_sram/0"
+        }
+      ]
+    }
+  ],
+  "version": "0.23.1"
+}

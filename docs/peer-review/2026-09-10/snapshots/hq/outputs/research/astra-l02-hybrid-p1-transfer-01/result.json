@@ -1,0 +1,54 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "PASS_ACTUAL_L02_P1_TO_FULL_FACE_HYBRID_TRANSFER",
+  "driver_sha256": "a10b073390ced96a32360d3b7f72a4ff1c46f44eadceb9cf59fcaf6bdec3ac64",
+  "inputs": {
+    "mesh": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-sheet-mesh-preflight-02\\mesh-stiffness.npz",
+      "sha256": "137b4952f739a75e7bf6f2e21684529a43c48558412df59faab0ad003ea10fb9"
+    },
+    "space": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-full-rt0-current-space-01\\l02-rt0-current-space.npz",
+      "sha256": "7cd77ee8b03fd0226596748a1913ee5a913381617498c9927ef12d8b080bc98f"
+    },
+    "pack": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-full-face-hybrid-operator-05\\hybrid-operator-pack.npz",
+      "sha256": "29be4c9e5b0fb586c94cc7e0bbeeb1c56738b3b96a0a4d0410e60aaa83a76756"
+    },
+    "map": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-assembly-map-02\\combined-assembly-map.npz",
+      "sha256": "a6ccff514fe788396eb9d7620ebc828f966efbea3f7899e7a73991c17f8a2469"
+    },
+    "p1_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\run_astra_l02_sheet_r_shadow.py",
+      "sha256": "8437a7eb0398fdef919704c33a6ba2e9498c810b79e04b5df533462c8ce55105"
+    }
+  },
+  "output": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-hybrid-p1-transfer-01\\p1-hybrid-transfer.npz",
+    "sha256": "7db244bf196f7c2195a0ce79e7abed848ae0c2404809ea2c25dcedec23528a68",
+    "size_bytes": 16620587
+  },
+  "shape": [
+    2512727,
+    856774
+  ],
+  "nnz": 4986598,
+  "checks": {
+    "all_constants_exact": true,
+    "all_contact_rims_endpoint_identity": true,
+    "actual_p1_energy": 13853513927.05462,
+    "actual_hybrid_energy": 13853513927.05457,
+    "actual_energy_relative_difference": 3.717353832183032e-15
+  },
+  "scope": "Auxiliary interpolation only: continuous P1 endpoint averages map to hybrid facet potentials, with exact contact identity. Transpose restricts residuals. Exterior rows remain explicit and can be selected out after qualified boundary elimination. This does not assert equality of P1 and P0 G/C or solve the hybrid equations.",
+  "solver_limit": "Reuse as an empirical preconditioner only; no mesh-independent bound for these skinny cells or complex coupled circuit, and no field/convergence/accuracy acceptance.",
+  "elapsed_s": 6.929654199979268,
+  "budget": {
+    "elapsed_s": 6.937999999965541,
+    "peak_rss_bytes": 529629184,
+    "max_runtime_s": 120.0,
+    "max_rss_bytes": 4294967296
+  }
+}

@@ -1,0 +1,352 @@
+{
+  "elapsed_s": 0.8344814999727532,
+  "formula": "Zsheet(alpha)=Rdc+alpha*(Zcommon_mode-Rdc); dZdd/dalpha at0=sum((Zcommon_mode/Rdc-1)*v.T*Gdc*v), for the saved unit-current reciprocal circuit.",
+  "inputs": {
+    "higher_f": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-two-sheet-frequency-shadow-01\\result.json",
+      "sha256": "f580a47697385efdd234f6c8738119285bc3cac94a4ad1827ffd5e7b449f4372"
+    },
+    "internal_kernel": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\src\\spd_decap_pi\\_core\\solver\\tri_fem_sheet.py",
+      "sha256": "16eb6fd122fb5cf8d7ab60bb4b0364b760cb354806c02651d2847ede633640e0"
+    },
+    "l14_drive": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-sheet-mesh-preflight-05\\sheet-electrode-drive.npz",
+      "sha256": "05a1102082a76cb2f83184576e4d1c4af5985824e134e3199b2ac06fa32c050d"
+    },
+    "l25_drive": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-sheet-drive-02\\sheet-electrode-drive.npz",
+      "sha256": "dd1e927ba48e86be331e9c5e0bb0a966dcee77f8bf47052aa94660654065a266"
+    },
+    "one_mhz": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-l25-sheet-r-shadow-01\\result.json",
+      "sha256": "d5a9873fb81c21773dbca79b96a83496078bdbfaa3b345478d0d21a4448e0530"
+    },
+    "port_review": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-two-sheet-frequency-shadow-01\\independent-comparison-review.json",
+      "sha256": "5ed7c6138d7bcaeab91eac28f7e56a24338afa326ac206a71151e5b7b0f32e56"
+    }
+  },
+  "limitations": [
+    "Symmetric two-face internal impedance only; no source evidence establishes equal physical face currents.",
+    "Derivative at the frozen DC model, not a finite-alpha1 response, error bound, or accuracy improvement.",
+    "No external magnetic/proximity/return operator or changed native via R/L; no PowerSI reference is used.",
+    "Saved meshes/voltages only; no geometry or global LU repeated. Fixed electrode and mesh limitations remain.",
+    "Derivative uses the frozen circuit gauge; finite-precision sheet row sums cause the separately reported local gauge-shift discrepancy."
+  ],
+  "points": [
+    {
+      "baseline_zdd_ohm": [
+        0.0005137583675450426,
+        -0.0005849760442531394
+      ],
+      "combined_device_direction_ohm_per_alpha": [
+        3.168144887923918e-07,
+        9.313105237564052e-06
+      ],
+      "field": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-l25-sheet-r-shadow-01\\epsilon-1-field.npz",
+        "sha256": "3874e0bd74365427b124cc31264956e925f8b5129da56f176f57a2362beeb6ae",
+        "size_bytes": 13939338
+      },
+      "frequency_hz": 1000000.0,
+      "sheets": {
+        "l14": {
+          "bilinear_gauge_shift_difference_ohm": 1.4855550073559044e-14,
+          "bilinear_gauge_shift_difference_over_joule": 6.774555875623871e-11,
+          "bilinear_sheet_coefficient_ohm": [
+            0.00021512065027740895,
+            1.3142815681776599e-05
+          ],
+          "conditional_internal_ohm_per_square": [
+            0.0008391082338835331,
+            1.3159287576220335e-05
+          ],
+          "conductivity_s_per_m": 59590000.0,
+          "dc_ohm_per_square": 0.0008390669575432118,
+          "device_direction_ohm_per_alpha": [
+            -1.9553945781295536e-07,
+            3.3744350941992525e-06
+          ],
+          "hermitian_joule_coefficient_ohm": [
+            0.00021928448663346498,
+            -1.2998779366801307e-15
+          ],
+          "relative_constitutive_direction": [
+            4.919314239493211e-05,
+            0.015683238933339397
+          ],
+          "relative_constitutive_direction_abs": 0.01568331608447242,
+          "saved_joule_difference_ohm": 2.5997694258874174e-15,
+          "thickness_m": 2e-05
+        },
+        "l25": {
+          "bilinear_gauge_shift_difference_ohm": 1.872298100195766e-13,
+          "bilinear_gauge_shift_difference_over_joule": 1.2083700700585548e-09,
+          "bilinear_sheet_coefficient_ohm": [
+            0.0001480199068918734,
+            -1.1573744760081135e-05
+          ],
+          "conditional_internal_ohm_per_square": [
+            0.0005245858965616484,
+            2.1053216865340498e-05
+          ],
+          "conductivity_s_per_m": 59590000.0,
+          "dc_ohm_per_square": 0.0005244168484645075,
+          "device_direction_ohm_per_alpha": [
+            5.123539466053472e-07,
+            5.9386701433648e-06
+          ],
+          "hermitian_joule_coefficient_ohm": [
+            0.00015494409755655722,
+            -4.949606534094403e-15
+          ],
+          "relative_constitutive_direction": [
+            0.0003223544354760133,
+            0.04014595817618048
+          ],
+          "relative_constitutive_direction_abs": 0.040147252337684375,
+          "saved_joule_difference_ohm": 9.899215609287648e-15,
+          "thickness_m": 3.2e-05
+        }
+      }
+    },
+    {
+      "baseline_zdd_ohm": [
+        0.0005966084647432856,
+        0.0001445518250458507
+      ],
+      "combined_device_direction_ohm_per_alpha": [
+        1.8378977376697105e-05,
+        9.40194632415558e-05
+      ],
+      "field": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-two-sheet-frequency-shadow-01\\10000000hz\\epsilon-1-field.npz",
+        "sha256": "38d9abb48f8175871953d453cf0f87efa70b804de66f9eb8096cee5dfb6f751a",
+        "size_bytes": 14433756
+      },
+      "frequency_hz": 10000000.0,
+      "sheets": {
+        "l14": {
+          "bilinear_gauge_shift_difference_ohm": 2.432586348552198e-16,
+          "bilinear_gauge_shift_difference_over_joule": 7.653241366100456e-13,
+          "bilinear_sheet_coefficient_ohm": [
+            0.00026893497488331825,
+            4.439245410050075e-05
+          ],
+          "conditional_internal_ohm_per_square": [
+            0.0008431859956914694,
+            0.0001314101753045392
+          ],
+          "conductivity_s_per_m": 59590000.0,
+          "dc_ohm_per_square": 0.0008390669575432118,
+          "device_direction_ohm_per_alpha": [
+            -5.632287998132818e-06,
+            4.233708178771176e-05
+          ],
+          "hermitian_joule_coefficient_ohm": [
+            0.0003178504678197115,
+            1.1982128071859333e-16
+          ],
+          "relative_constitutive_direction": [
+            0.004909069665093302,
+            0.15661464692794985
+          ],
+          "relative_constitutive_direction_abs": 0.15669156517612276,
+          "saved_joule_difference_ohm": 2.3964256143718665e-16,
+          "thickness_m": 2e-05
+        },
+        "l25": {
+          "bilinear_gauge_shift_difference_ohm": 1.1551338323396905e-14,
+          "bilinear_gauge_shift_difference_over_joule": 7.213431919888256e-11,
+          "bilinear_sheet_coefficient_ohm": [
+            0.00013387240168034293,
+            -4.965166716421968e-05
+          ],
+          "conditional_internal_ohm_per_square": [
+            0.0005410938013940666,
+            0.00020864009137619357
+          ],
+          "conductivity_s_per_m": 59590000.0,
+          "dc_ohm_per_square": 0.0005244168484645075,
+          "device_direction_ohm_per_alpha": [
+            2.4011265374829924e-05,
+            5.168238145384405e-05
+          ],
+          "hermitian_joule_coefficient_ohm": [
+            0.00016013651271246557,
+            6.53536740783528e-17
+          ],
+          "relative_constitutive_direction": [
+            0.03180094800231781,
+            0.39785161744343595
+          ],
+          "relative_constitutive_direction_abs": 0.3991205454448621,
+          "saved_joule_difference_ohm": 1.3076494920629665e-16,
+          "thickness_m": 3.2e-05
+        }
+      }
+    },
+    {
+      "baseline_zdd_ohm": [
+        0.0008376874678580425,
+        0.001303127368813163
+      ],
+      "combined_device_direction_ohm_per_alpha": [
+        -0.00015069100420202498,
+        0.0006501973091495557
+      ],
+      "field": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-two-sheet-frequency-shadow-01\\100000000hz\\epsilon-1-field.npz",
+        "sha256": "3ad071af5940a4b15cbfbebc318af8bc354767db399aeda09cc34d929f62e2e4",
+        "size_bytes": 14042680
+      },
+      "frequency_hz": 100000000.0,
+      "sheets": {
+        "l14": {
+          "bilinear_gauge_shift_difference_ohm": 2.579879602123894e-14,
+          "bilinear_gauge_shift_difference_over_joule": 3.911061939899701e-11,
+          "bilinear_sheet_coefficient_ohm": [
+            0.00041409014718640883,
+            0.00031871892086008204
+          ],
+          "conditional_internal_ohm_per_square": [
+            0.0011808679908135436,
+            0.0011646922177162018
+          ],
+          "conductivity_s_per_m": 59590000.0,
+          "dc_ohm_per_square": 0.0008390669575432118,
+          "device_direction_ohm_per_alpha": [
+            -0.0002737242892530864,
+            0.000704623180568161
+          ],
+          "hermitian_joule_coefficient_ohm": [
+            0.0006596366004344219,
+            3.2518746809900856e-15
+          ],
+          "relative_constitutive_direction": [
+            0.40735847145158144,
+            1.3880801850741695
+          ],
+          "relative_constitutive_direction_abs": 1.4466193433170005,
+          "saved_joule_difference_ohm": 6.5038035720887954e-15,
+          "thickness_m": 2e-05
+        },
+        "l25": {
+          "bilinear_gauge_shift_difference_ohm": 4.390806240375553e-13,
+          "bilinear_gauge_shift_difference_over_joule": 9.323960577445731e-09,
+          "bilinear_sheet_coefficient_ohm": [
+            4.7764803472391435e-06,
+            -4.6554917481086264e-05
+          ],
+          "conditional_internal_ohm_per_square": [
+            0.001271820639732752,
+            0.0013092229861008894
+          ],
+          "conductivity_s_per_m": 59590000.0,
+          "dc_ohm_per_square": 0.0005244168484645075,
+          "device_direction_ohm_per_alpha": [
+            0.00012303328505106144,
+            -5.442587141860528e-05
+          ],
+          "hermitian_joule_coefficient_ohm": [
+            4.7091643126384816e-05,
+            1.2581722366429918e-14
+          ],
+          "relative_constitutive_direction": [
+            1.4252093414935896,
+            2.4965311277360636
+          ],
+          "relative_constitutive_direction_abs": 2.8746981300365597,
+          "saved_joule_difference_ohm": 2.516350571923295e-14,
+          "thickness_m": 3.2e-05
+        }
+      }
+    },
+    {
+      "baseline_zdd_ohm": [
+        0.0020916686934944182,
+        0.01034718034772955
+      ],
+      "combined_device_direction_ohm_per_alpha": [
+        0.0035792504581820335,
+        0.008200819286974255
+      ],
+      "field": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-two-sheet-frequency-shadow-01\\1000000000hz\\epsilon-1-field.npz",
+        "sha256": "99e574942d72aa8c8fc025500b05a0f72e2749c0ceb045000f61c4e43de64acf",
+        "size_bytes": 13365558
+      },
+      "frequency_hz": 1000000000.0,
+      "sheets": {
+        "l14": {
+          "bilinear_gauge_shift_difference_ohm": 1.912905615201792e-12,
+          "bilinear_gauge_shift_difference_over_joule": 1.2953249218836485e-09,
+          "bilinear_sheet_coefficient_ohm": [
+            0.0013981092123903722,
+            0.00036970356147542386
+          ],
+          "conditional_internal_ohm_per_square": [
+            0.004069091941084983,
+            0.004069363405574946
+          ],
+          "conductivity_s_per_m": 59590000.0,
+          "dc_ohm_per_square": 0.0008390669575432118,
+          "device_direction_ohm_per_alpha": [
+            0.003589069399871945,
+            0.008203834204273357
+          ],
+          "hermitian_joule_coefficient_ohm": [
+            0.0014767766626616462,
+            -5.884412423474983e-14
+          ],
+          "relative_constitutive_direction": [
+            3.849543775385084,
+            4.849867306764222
+          ],
+          "relative_constitutive_direction_abs": 6.1919463960717955,
+          "saved_joule_difference_ohm": 1.1768819425939103e-13,
+          "thickness_m": 2e-05
+        },
+        "l25": {
+          "bilinear_gauge_shift_difference_ohm": 3.5945847984224525e-11,
+          "bilinear_gauge_shift_difference_over_joule": 1.6493665435110334e-05,
+          "bilinear_sheet_coefficient_ohm": [
+            -8.475328996537677e-07,
+            5.269347029101321e-07
+          ],
+          "conditional_internal_ohm_per_square": [
+            0.004069706166909715,
+            0.004069705616774129
+          ],
+          "conductivity_s_per_m": 59590000.0,
+          "dc_ohm_per_square": 0.0005244168484645075,
+          "device_direction_ohm_per_alpha": [
+            -9.818941689911145e-06,
+            -3.014917299102414e-06
+          ],
+          "hermitian_joule_coefficient_ohm": [
+            2.1793729311197264e-06,
+            1.1077176070462967e-13
+          ],
+          "relative_constitutive_direction": [
+            6.760441295556797,
+            7.760440246514251
+          ],
+          "relative_constitutive_direction_abs": 10.292132885383273,
+          "saved_joule_difference_ohm": 2.2154373803793566e-13,
+          "thickness_m": 3.2e-05
+        }
+      }
+    }
+  ],
+  "program": "SPD Decap PI Evaluator",
+  "rail_id": "ADC_VDD_075_VTRIP_SRAM/0",
+  "script_sha256": "7c6ba78a386e577c35e7efc62215fe0504b93fd59db18027c0f9fe829aa753cc",
+  "self_check": {
+    "complex_toy_derivative_error_ohm": 2.1920664579459914e-12,
+    "transpose_not_adjoint_checked": true
+  },
+  "status": "COMPLETED_CONDITIONAL_INTERNAL_SHEET_LOCAL_DIRECTION",
+  "version": "0.23.1"
+}

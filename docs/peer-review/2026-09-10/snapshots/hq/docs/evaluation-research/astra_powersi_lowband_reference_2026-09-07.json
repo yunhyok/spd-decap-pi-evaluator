@@ -1,0 +1,181 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "ACCEPT_EXISTING_LOWBAND_REFERENCE_POINTS_ONLY",
+  "rail_id": "ADC_VDD_075_VTRIP_SRAM/0",
+  "port_one_based": 18,
+  "port_header": "Port18_SITE0::ADC_VDD_075_VTRIP_SRAM/0",
+  "port_manifest": {
+    "1": "Port1_SITE0::ADC_VDD_050_VDDQ_DDRH/0",
+    "2": "Port2_SITE0::ADC_VDD_050_VDDQ_DDRL/0",
+    "3": "Port3_SITE0::ADC_VDD_055_VTRIP/0",
+    "4": "Port4_SITE0::ADC_VDD_070_VAON/0",
+    "5": "Port5_SITE0_1721::ADC_VDD_070_VDDA_DDRH_REF_CLK/0",
+    "6": "Port6_SITE0_19216::ADC_VDD_070_VDDA_DDRL_REF_CLK/0",
+    "7": "Port7_SITE0::ADC_VDD_070_VINT/0",
+    "8": "Port8_SITE0::ADC_VDD_070_VPDIG_PHY_PCI/0",
+    "9": "Port9_SITE0::ADC_VDD_070_VP_AON/0",
+    "10": "Port10_SITE0::ADC_VDD_070_VP_CAM0/0",
+    "11": "Port11_SITE0::ADC_VDD_070_VP_CAM12/0",
+    "12": "Port12_SITE0::ADC_VDD_070_VP_HSIO/0",
+    "13": "Port13_SITE0::ADC_VDD_070_VP_PCI/0",
+    "14": "Port14_SITE0::ADC_VDD_075_VAON_SRAM/0",
+    "15": "Port15_SITE0::ADC_VDD_075_VCPU/0",
+    "16": "Port16_SITE0::ADC_VDD_075_VINT_SRAM/0",
+    "17": "Port17_SITE0::ADC_VDD_075_VP_UFS/0",
+    "18": "Port18_SITE0::ADC_VDD_075_VTRIP_SRAM/0",
+    "19": "Port19_SITE0::ADC_VDD_105_VAA_DDRH/0",
+    "20": "Port20_SITE0::ADC_VDD_105_VAA_DDRL/0",
+    "21": "Port21_SITE0::ADC_VDD_105_VDD2H_DDRH/0",
+    "22": "Port22_SITE0::ADC_VDD_105_VDD2H_DDRL/0",
+    "23": "Port23_SITE0::ADC_VDD_120_VDDA_LSIO/0",
+    "24": "Port24_SITE0::ADC_VDD_120_VDDA_P_CL1_M/0",
+    "25": "Port25_SITE0::ADC_VDD_120_VDDA_P_CL1_P/0",
+    "26": "Port26_SITE0::ADC_VDD_120_VDDA_P_CL2_M/0",
+    "27": "Port27_SITE0::ADC_VDD_120_VDDA_P_CL2_P/0",
+    "28": "Port28_SITE0::ADC_VDD_120_VDDA_P_CL3_M/0",
+    "29": "Port29_SITE0::ADC_VDD_120_VDDA_P_CL3_P/0",
+    "30": "Port30_SITE0::ADC_VDD_120_VDDA_P_CL4_M/0",
+    "31": "Port31_SITE0::ADC_VDD_120_VDDA_P_CL4_P/0",
+    "32": "Port32_SITE0::ADC_VDD_120_VDDA_P_CL5_M/0",
+    "33": "Port33_SITE0::ADC_VDD_120_VDDA_P_CL5_P/0",
+    "34": "Port34_SITE0::ADC_VDD_120_VPH_AON/0",
+    "35": "Port35_SITE0::ADC_VDD_120_VPH_CAM/0",
+    "36": "Port36_SITE0::ADC_VDD_120_VPH_HSIO/0",
+    "37": "Port37_SITE0::ADC_VDD_120_VPH_PCI/0",
+    "38": "Port38_SITE0::ADC_VDD_120_VPH_UFS/0",
+    "39": "Port39_SITE0::ADC_VDD_120_VP_OD_PCI/0",
+    "40": "Port40_SITE0::ADC_VDD_180_VIO_AON/0",
+    "41": "Port41_SITE0::ADC_VDD_180_VIO_LSIO/0",
+    "42": "Port42_SITE0::ADC_VDD_180_VQPS_OTP_TOP_AON/0",
+    "43": "Port43_SITE0::ADC_VDD_180_VQPS_SYS_0_AON/0",
+    "44": "Port44_SITE0::ADC_VDD_180_VQPS_SYS_1_AON/0",
+    "45": "Port45_SITE0::ADC_VDD_180_VQPS_SYS_2_AON/0",
+    "46": "Port46_SITE0::ADC_VDD_180_VQPS_SYS_3_AON/0",
+    "47": "Port47_SITE1::ADC_VDD_050_VDDQ_DDRH/1",
+    "48": "Port48_SITE1::ADC_VDD_050_VDDQ_DDRL/1",
+    "49": "Port49_SITE1::ADC_VDD_055_VTRIP/1",
+    "50": "Port50_SITE1::ADC_VDD_070_VAON/1",
+    "51": "Port51_SITE1_1721::ADC_VDD_070_VDDA_DDRH_REF_CLK/1",
+    "52": "Port52_SITE1_19216::ADC_VDD_070_VDDA_DDRL_REF_CLK/1",
+    "53": "Port53_SITE1::ADC_VDD_070_VINT/1",
+    "54": "Port54_SITE1::ADC_VDD_070_VPDIG_PHY_PCI/1",
+    "55": "Port55_SITE1::ADC_VDD_070_VP_AON/1",
+    "56": "Port56_SITE1::ADC_VDD_070_VP_CAM0/1",
+    "57": "Port57_SITE1::ADC_VDD_070_VP_CAM12/1",
+    "58": "Port58_SITE1::ADC_VDD_070_VP_HSIO/1",
+    "59": "Port59_SITE1::ADC_VDD_070_VP_PCI/1",
+    "60": "Port60_SITE1::ADC_VDD_075_VAON_SRAM/1",
+    "61": "Port61_SITE1::ADC_VDD_075_VCPU/1",
+    "62": "Port62_SITE1::ADC_VDD_075_VINT_SRAM/1",
+    "63": "Port63_SITE1::ADC_VDD_075_VP_UFS/1",
+    "64": "Port64_SITE1::ADC_VDD_075_VTRIP_SRAM/1",
+    "65": "Port65_SITE1::ADC_VDD_105_VAA_DDRH/1",
+    "66": "Port66_SITE1::ADC_VDD_105_VAA_DDRL/1",
+    "67": "Port67_SITE1::ADC_VDD_105_VDD2H_DDRH/1",
+    "68": "Port68_SITE1::ADC_VDD_105_VDD2H_DDRL/1",
+    "69": "Port69_SITE1::ADC_VDD_120_VDDA_LSIO/1",
+    "70": "Port70_SITE1::ADC_VDD_120_VDDA_P_CL1_M/1",
+    "71": "Port71_SITE1::ADC_VDD_120_VDDA_P_CL1_P/1",
+    "72": "Port72_SITE1::ADC_VDD_120_VDDA_P_CL2_M/1",
+    "73": "Port73_SITE1::ADC_VDD_120_VDDA_P_CL2_P/1",
+    "74": "Port74_SITE1::ADC_VDD_120_VDDA_P_CL3_M/1",
+    "75": "Port75_SITE1::ADC_VDD_120_VDDA_P_CL3_P/1",
+    "76": "Port76_SITE1::ADC_VDD_120_VDDA_P_CL4_M/1",
+    "77": "Port77_SITE1::ADC_VDD_120_VDDA_P_CL4_P/1",
+    "78": "Port78_SITE1::ADC_VDD_120_VDDA_P_CL5_M/1",
+    "79": "Port79_SITE1::ADC_VDD_120_VDDA_P_CL5_P/1",
+    "80": "Port80_SITE1::ADC_VDD_120_VPH_AON/1",
+    "81": "Port81_SITE1::ADC_VDD_120_VPH_CAM/1",
+    "82": "Port82_SITE1::ADC_VDD_120_VPH_HSIO/1",
+    "83": "Port83_SITE1::ADC_VDD_120_VPH_PCI/1",
+    "84": "Port84_SITE1::ADC_VDD_120_VPH_UFS/1",
+    "85": "Port85_SITE1::ADC_VDD_120_VP_OD_PCI/1",
+    "86": "Port86_SITE1::ADC_VDD_180_VIO_AON/1",
+    "87": "Port87_SITE1::ADC_VDD_180_VIO_LSIO/1",
+    "88": "Port88_SITE1::ADC_VDD_180_VQPS_OTP_TOP_AON/1",
+    "89": "Port89_SITE1::ADC_VDD_180_VQPS_SYS_0_AON/1",
+    "90": "Port90_SITE1::ADC_VDD_180_VQPS_SYS_1_AON/1",
+    "91": "Port91_SITE1::ADC_VDD_180_VQPS_SYS_2_AON/1",
+    "92": "Port92_SITE1::ADC_VDD_180_VQPS_SYS_3_AON/1"
+  },
+  "port_manifest_sha256": "93c26802277a4974e2df34381a07c9b17d7de28561f20a2e147b65e52c3ab690",
+  "touchstone_option_line": "#\tHz\tS\tRI\tR\t1",
+  "touchstone_generated_from": "E:\\Work\\20260724 S4LB002_DC MLO PI\\S4LB002-2Para_260729_1_injected.spd",
+  "source_path": "D:\\S4LB002-2Para_260729_1_injected_073026_100913_33216_S.s92p",
+  "source_size_bytes": 303974090,
+  "source_sha256": "c5fca21da6f3b1f1e097ac6fc4c2c4f40a44201617502a9e5bf864e2a5fe7a11",
+  "selection_input": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_loaded_development_selection_2026-09-07.json",
+    "sha256": "99d0f77fcceb9d07b97aa65953dd42b8d106b7f2485f42f11ee643134d64b8f9"
+  },
+  "existing_reference_input": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_loaded_development_reference_2026-09-07.json",
+    "sha256": "761d61334678ceaca0db55bc8c5539bb080ee36363eae33a2c419a1ea5c06430"
+  },
+  "frequencies_hz": [
+    1000.0,
+    10000.0,
+    100000.0
+  ],
+  "source_frequency_indices": [
+    100,
+    125,
+    150
+  ],
+  "source_record_count": 826,
+  "full_matrix_ports": 92,
+  "reference_ohm": 1.0,
+  "points": [
+    {
+      "frequency_hz": 1000.0,
+      "source_frequency_index": 100,
+      "reference_zdd_ohm": [
+        0.007405998229796151,
+        -0.6056929157693945
+      ],
+      "s_to_z_condition": 365076.0177631334,
+      "s_to_z_relative_residual": 2.1216819254168002e-16
+    },
+    {
+      "frequency_hz": 10000.0,
+      "source_frequency_index": 125,
+      "reference_zdd_ohm": [
+        0.0013448927803346375,
+        -0.061571456904480806
+      ],
+      "s_to_z_condition": 37268.51572329223,
+      "s_to_z_relative_residual": 2.8541694673503785e-16
+    },
+    {
+      "frequency_hz": 100000.0,
+      "source_frequency_index": 150,
+      "reference_zdd_ohm": [
+        0.0007239775128696244,
+        -0.006246865250866255
+      ],
+      "s_to_z_condition": 3727.70657312637,
+      "s_to_z_relative_residual": 2.3032639434961992e-16
+    }
+  ],
+  "one_mhz_control": {
+    "point": {
+      "frequency_hz": 1000000.0,
+      "source_frequency_index": 175,
+      "reference_zdd_ohm": [
+        0.0006915479466520245,
+        -0.0004257504501139287
+      ],
+      "s_to_z_condition": 372.77025512461785,
+      "s_to_z_relative_residual": 3.741085422332027e-16
+    },
+    "existing_reference_zdd_ohm": [
+      0.0006915479466520245,
+      -0.0004257504501139287
+    ],
+    "relative_error": 0.0
+  },
+  "script_sha256": "8e13a43597c90c03c1d3af9f782bae2601e1e3bc5975208afff84dc0c2ebdf5e",
+  "elapsed_s": 20.375,
+  "scope": "Existing source-mounted 92-port Touchstone; exact 1/10/100 kHz points plus 1 MHz control at port 18. No interpolation, fitting, new PowerSI run, raw SPD/scenario scan, geometry, native solve or LU."
+}

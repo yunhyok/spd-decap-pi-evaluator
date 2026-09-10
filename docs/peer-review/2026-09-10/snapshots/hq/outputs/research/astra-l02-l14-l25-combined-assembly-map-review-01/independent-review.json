@@ -1,0 +1,82 @@
+{
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-assembly-map-review-01\\driver-at-run.py",
+    "sha256": "301e824b64e7290e5291deb15212758ada4c1af3ca539b13fe2f9f2e61874c9f",
+    "size_bytes": 14575
+  },
+  "elapsed_s": 4.721547199995257,
+  "findings": [],
+  "metrics": {
+    "coordinate_reconstruction": {
+      "l02": true,
+      "l14": true,
+      "l25": true,
+      "port": true
+    },
+    "deterministic_branch_power_real_w": 1125523930.3339608,
+    "exact_full_branch_reconstruction": {
+      "admittance": true,
+      "first": true,
+      "native_row": true,
+      "second": true,
+      "split_leg": true
+    },
+    "finite_branch_count": 1692409,
+    "gc_owner_partition": {
+      "l02": true,
+      "l14": true,
+      "l25": true,
+      "retained": true
+    },
+    "global_kcl_relative_error": 4.303171297444312e-15,
+    "native_collapse_exact": true,
+    "positive_dissipation": true,
+    "virtual_work_relative_error": 2.20119229445912e-15
+  },
+  "program": "SPD Decap PI Evaluator",
+  "reviewed": {
+    "l02_binding": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-circuit-contact-binding-01\\circuit-contact-binding.npz",
+      "sha256": "61ed51f68ae0cc39cdd5ee07e919e105fd15aee5a6b4c8374b063f7d72221020",
+      "size_bytes": 2182451
+    },
+    "l14": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\run_astra_l14_sheet_r_shadow.py",
+      "sha256": "ff234c89be9bb6828f4efa3e559116c903d62b463f9f9fec6893abf71a369803",
+      "size_bytes": 25205
+    },
+    "l25_binding": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-dual-cell-source-binding-01\\native-source-binding.npz",
+      "sha256": "c9d41f1e2b870dd854affa1db2c31bb86f24c472866fcd2125f313cb29981c6a",
+      "size_bytes": 4911
+    },
+    "map": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-assembly-map-02\\combined-assembly-map.npz",
+      "sha256": "a6ccff514fe788396eb9d7620ebc828f966efbea3f7899e7a73991c17f8a2469",
+      "size_bytes": 16919703
+    },
+    "mass": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-gc-mass-05\\receipt.json",
+      "sha256": "dd41a5a2772a280d98a73943eb276b94d3eeadd502c981f328eb7548cfb5cdeb",
+      "size_bytes": 4774
+    },
+    "producer": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l02_l14_l25_combined_assembly_map.py",
+      "sha256": "2e28deb06c9807d60ffc11af3d2248c7c603128a9d5004ca5bb5aee8a14b1a43",
+      "size_bytes": 31347
+    },
+    "raw": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\raw-field-snapshot.npz",
+      "sha256": "6eac098738598a78b2068ce4f80e46fd70e17010a89bfb5949ec8a68124df4a7",
+      "size_bytes": 145099492
+    },
+    "result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-assembly-map-02\\result.json",
+      "sha256": "cdbb80f3412732f614c1d482a3cc8288c5c6134b5dfb1de2376711309039ae81",
+      "size_bytes": 9732
+    }
+  },
+  "scope": "Independent exact replay of all saved final branch rows from the pinned L14 return assembly plus L02/L25 bindings, coordinate and owner maps, native collapse, and a full-list virtual-work/KCL check. No combined sparse matrix, LU, field or Green operator.",
+  "status": "ACCEPT_L02_L14_L25_COMBINED_ASSEMBLY_MAP_INDEPENDENT_REVIEW",
+  "version": "0.23.1"
+}

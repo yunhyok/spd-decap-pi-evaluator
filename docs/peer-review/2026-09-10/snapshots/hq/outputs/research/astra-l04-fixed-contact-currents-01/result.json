@@ -1,0 +1,95 @@
+{
+  "aggregation": {
+    "category2_group_count": 10,
+    "category_counts": [
+      76136,
+      10,
+      20
+    ],
+    "coincident_group_size_histogram": {
+      "1": 390,
+      "2": 37888
+    },
+    "component_aggregation_replay_difference_max_abs_a": 1.6213028186949773e-16,
+    "component_aggregation_replay_roundoff_envelope_a": 2.8162971321999868e-14,
+    "component_count": 1,
+    "deterministic_summation_envelope_a": 1.4080370901743298e-14,
+    "physical_component_source_outward_sum_a": [
+      [
+        -3.5151962178743557e-14,
+        -2.7772333791913425e-14
+      ]
+    ],
+    "qualification02_boundary_absolute_incident_sum_a": 1.9816360358227967,
+    "qualification02_boundary_signed_outward_sum_a": [
+      -3.520396444315465e-14,
+      -2.7762971539720104e-14
+    ]
+  },
+  "artifact": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-currents-01\\l04-fixed-contact-currents.npz",
+    "sha256": "5c2fd3bd30a45d9d92ccc47a5ad2d553f0d122acb4282a1046be09d7b4e51adb",
+    "size_bytes": 3013247
+  },
+  "budget": {
+    "elapsed_s": 1.0469999999622814,
+    "kind": "pinned reconstruct _Budget.create(60,4)",
+    "max_rss_bytes": 4294967296,
+    "max_runtime_s": 60.0,
+    "peak_rss_bytes": 1368305664
+  },
+  "coincident_group_count": 38278,
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-currents-01\\driver-at-run.py",
+    "sha256": "1331d6824e1b7ebc56216fda1093eeb517211c4b5bf311e1a982ed053b5d5427",
+    "size_bytes": 20198
+  },
+  "pins": {
+    "budget_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\reconstruct_astra_native_loaded_field.py",
+      "sha256": "354d9e004b189cf8193c2922c8fa4dc1903b407bebb295a4576673200ce6b213",
+      "size_bytes": 33457
+    },
+    "contact_inputs": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-source-contact-inputs-01\\contact-ledger-inputs.npz",
+      "sha256": "6e5886f81a14c1f1fec43a4af64a175bca518486cfd74fbc7794c551bd74ec4a",
+      "size_bytes": 9993208
+    },
+    "pad_external_budget": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-pad-conductor-domain-01\\external-budget.json",
+      "sha256": "4a4cca2dc0b6e40721ad22a5b1c54d67da9d0b2813f981179de1aeef9f194547",
+      "size_bytes": 1348
+    },
+    "pad_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-pad-conductor-domain-01\\result.json",
+      "sha256": "bde2eb7c636276da737d0e6c91b0309603d9570899ccf5bbbfc2acffe7a74f96",
+      "size_bytes": 428850
+    },
+    "pad_support_map": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-pad-conductor-domain-01\\l04-pad-drill-support-map.npz",
+      "sha256": "7c76d3e61680d2092bdb3ebe53a03fd52030de478da570a35c4ce09baafc92ff",
+      "size_bytes": 2307665
+    },
+    "qualified_rebind_artifact": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-source-contact-current-rebind-01\\l04-source-contact-current-rebind.npz",
+      "sha256": "2cf4dcb6d97a31a01d818bbd600906a3f5f1dbcec8f0a7d0b3105f22b23635f7",
+      "size_bytes": 4749774
+    },
+    "qualified_rebind_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-source-contact-current-rebind-02\\result.json",
+      "sha256": "dd9ae1512395f1393b868055269044b858fede31ae9132d00f577406cc1e4d24",
+      "size_bytes": 4529
+    },
+    "rebind_attempt_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-source-contact-current-rebind-01\\driver-at-run.py",
+      "sha256": "e881e1194203f1201694ad999fac8081be85d077856e39e1a8d92bbc70905ee3",
+      "size_bytes": 18401
+    }
+  },
+  "program": "SPD Decap PI Evaluator",
+  "record_count": 76166,
+  "run_released": true,
+  "scope": "Saved current orientation and coincident-group aggregation only. A later RT0 Bq electrode-incidence RHS uses the negative of coincident_group_current_outward_from_l04_sheet_a. Physical component source-outward sums are preserved separately from aggregation replay roundoff differences. No current is corrected, redistributed, solved or promoted to a field.",
+  "status": "COMPLETED_L04_FIXED_CONTACT_CURRENTS_SOURCE_AGGREGATION",
+  "version": "0.23.1"
+}

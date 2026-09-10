@@ -1,0 +1,22 @@
+{
+  "artifact": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-forward-closed-gcrotmk-01\\gcrot-captures-before-final.npz",
+    "sha256": "c2484b7c506c130798cfe0b4db6f53e6b794fcb37966beca80a9004eaa77aa6a",
+    "size_bytes": 366179481
+  },
+  "metrics": {
+    "rank": 2,
+    "column_count": 2,
+    "normalized_condition": 6.212284946720468,
+    "correction_replay_relative": 7.214485137682226e-14,
+    "singular_values": [
+      1.3962397223434544,
+      0.2247546167502417
+    ],
+    "column_norms": [
+      21.902595346029468,
+      7.158678109420123
+    ],
+    "gate": true
+  }
+}

@@ -1,0 +1,585 @@
+{
+  "artifact": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-all-finite-current-l-ownership-02\\corrected-units-and-power-metadata.npz",
+    "sha256": "73c011f0ae4cf650a3294e00ac9ab560324bbd296ca031aeac6abde902390f4a",
+    "size_bytes": 1500
+  },
+  "budget": {
+    "cooperative_checks": true,
+    "elapsed_s": 1.4059999999590218,
+    "kind": "pinned reconstruct _Budget.create(60,4)",
+    "max_rss_bytes": 4294967296,
+    "max_runtime_s": 60,
+    "peak_rss_bytes": 1508261888
+  },
+  "composite_scope": {
+    "both_legs_unique_vias": 93,
+    "leg0_source_segments": 78,
+    "leg0_source_trace_segments": 5,
+    "leg0_source_via_segments": 73,
+    "segment_currents_assigned": false,
+    "split_leg0_rows": 20
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-all-finite-current-l-ownership-02\\driver-at-run.py",
+    "sha256": "151d9ee1a6a4c0d18637c25220338bb6f1714f690c24f2e50578fa235ea177e7",
+    "size_bytes": 8909
+  },
+  "finite_power_replay": {
+    "absolute_error_ohm": 0.0,
+    "accepted_physical_finite_category_ohm": [
+      7.59910002005268e-05,
+      4.167873218150023e-05
+    ],
+    "limit_ohm": 8.667034572293851e-17,
+    "passed": true,
+    "recomputed_from_stored_i_and_z_ohm": [
+      7.59910002005268e-05,
+      4.167873218150023e-05
+    ]
+  },
+  "inputs": {
+    "accepted_physical_diagnostic": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-hybrid-right-correction-01\\physical-diagnostic.json",
+      "sha256": "337042aae1110021cae6c678d817d6f3dd5a5941bd3e7ec077414aca44b3f71b",
+      "size_bytes": 7471
+    },
+    "attempt01_artifact": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-all-finite-current-l-ownership-01\\all-finite-current-l-ownership.npz",
+      "sha256": "1b908c62e385ea1c227e77b1ccc37dd5c4b3376cce6f67d7b4e5c4a0c20508e6",
+      "size_bytes": 42593028
+    },
+    "attempt01_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-all-finite-current-l-ownership-01\\driver-at-run.py",
+      "sha256": "4da0d49c62b1271d11fc80dded974c528078380eed42f41636a717009adab79e",
+      "size_bytes": 13105
+    },
+    "attempt01_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-all-finite-current-l-ownership-01\\result.json",
+      "sha256": "b9641892dd80cbbecd48ea1a30e58b7afee9ab589878ed613f797e863cb75e7f",
+      "size_bytes": 13528
+    },
+    "budget_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\reconstruct_astra_native_loaded_field.py",
+      "sha256": "354d9e004b189cf8193c2922c8fa4dc1903b407bebb295a4576673200ce6b213",
+      "size_bytes": 33457
+    }
+  },
+  "program": "SPD Decap PI Evaluator",
+  "r_l_gates": {
+    "all_inductance_nonnegative": true,
+    "all_resistance_positive": true
+  },
+  "scope": "Cheap read-only qualification of attempt01 saved arrays. It neither recomputes branch currents nor loads a field, validator, matrix, raw SPD, or SQLite. It corrects A^2 H labels to J and separately reports the explicit 1 A source-normalized H values. The 78 segment composite scope carries no assigned segment current; no magnetic action or accuracy claim is made.",
+  "source_current_normalization": {
+    "hermitian_abs_i_squared_l_h_normalized_per_source_a_squared": 6.633376248489018e-12,
+    "ordinary_i_squared_l_h_normalized_per_source_a_squared": [
+      5.753832011712286e-12,
+      -2.0936807249534643e-12
+    ],
+    "source_current_a": 1.0
+  },
+  "status": "COMPLETED_ATTEMPT01_UNITS_AND_FINITE_POWER_QUALIFICATION",
+  "stored_arrays": {
+    "per_row_value_correction": "Attempt01 values are retained unchanged; |I|^2L and I^2L have units A^2 H = J, not H.",
+    "preserved_attempt01_artifact": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-all-finite-current-l-ownership-01\\all-finite-current-l-ownership.npz",
+      "sha256": "1b908c62e385ea1c227e77b1ccc37dd5c4b3376cce6f67d7b4e5c4a0c20508e6",
+      "size_bytes": 42593028
+    }
+  },
+  "top_rows_j": {
+    "hermitian_abs_i_squared_l_j": [
+      {
+        "final_active_current_row": 161929,
+        "metric": [
+          4.681624228424553e-13,
+          0.0
+        ],
+        "metric_j": [
+          4.681624228424553e-13,
+          0.0
+        ],
+        "native_active_current_row": 161930
+      },
+      {
+        "final_active_current_row": 1031306,
+        "metric": [
+          4.4834509939525706e-13,
+          0.0
+        ],
+        "metric_j": [
+          4.4834509939525706e-13,
+          0.0
+        ],
+        "native_active_current_row": 1031316
+      },
+      {
+        "final_active_current_row": 497778,
+        "metric": [
+          3.792041144183805e-13,
+          0.0
+        ],
+        "metric_j": [
+          3.792041144183805e-13,
+          0.0
+        ],
+        "native_active_current_row": 497783
+      },
+      {
+        "final_active_current_row": 454671,
+        "metric": [
+          2.634155244157095e-13,
+          0.0
+        ],
+        "metric_j": [
+          2.634155244157095e-13,
+          0.0
+        ],
+        "native_active_current_row": 454675
+      },
+      {
+        "final_active_current_row": 658779,
+        "metric": [
+          2.2412854388804012e-13,
+          0.0
+        ],
+        "metric_j": [
+          2.2412854388804012e-13,
+          0.0
+        ],
+        "native_active_current_row": 658786
+      },
+      {
+        "final_active_current_row": 1359084,
+        "metric": [
+          1.464660935989568e-13,
+          0.0
+        ],
+        "metric_j": [
+          1.464660935989568e-13,
+          0.0
+        ],
+        "native_active_current_row": 1359098
+      },
+      {
+        "final_active_current_row": 80582,
+        "metric": [
+          1.264506812943541e-13,
+          0.0
+        ],
+        "metric_j": [
+          1.264506812943541e-13,
+          0.0
+        ],
+        "native_active_current_row": 80583
+      },
+      {
+        "final_active_current_row": 561126,
+        "metric": [
+          8.003763651044871e-14,
+          0.0
+        ],
+        "metric_j": [
+          8.003763651044871e-14,
+          0.0
+        ],
+        "native_active_current_row": 561133
+      },
+      {
+        "final_active_current_row": 594457,
+        "metric": [
+          7.101876168376821e-14,
+          0.0
+        ],
+        "metric_j": [
+          7.101876168376821e-14,
+          0.0
+        ],
+        "native_active_current_row": 594464
+      },
+      {
+        "final_active_current_row": 812290,
+        "metric": [
+          4.294774859082793e-14,
+          0.0
+        ],
+        "metric_j": [
+          4.294774859082793e-14,
+          0.0
+        ],
+        "native_active_current_row": 812299
+      },
+      {
+        "final_active_current_row": 937651,
+        "metric": [
+          3.9605574764838945e-14,
+          0.0
+        ],
+        "metric_j": [
+          3.9605574764838945e-14,
+          0.0
+        ],
+        "native_active_current_row": 937660
+      },
+      {
+        "final_active_current_row": 1510027,
+        "metric": [
+          2.264624962203659e-14,
+          0.0
+        ],
+        "metric_j": [
+          2.264624962203659e-14,
+          0.0
+        ],
+        "native_active_current_row": 1510043
+      },
+      {
+        "final_active_current_row": 115714,
+        "metric": [
+          2.2312223976149878e-14,
+          0.0
+        ],
+        "metric_j": [
+          2.2312223976149878e-14,
+          0.0
+        ],
+        "native_active_current_row": 115715
+      },
+      {
+        "final_active_current_row": 1050297,
+        "metric": [
+          2.1894821984646913e-14,
+          0.0
+        ],
+        "metric_j": [
+          2.1894821984646913e-14,
+          0.0
+        ],
+        "native_active_current_row": 1050307
+      },
+      {
+        "final_active_current_row": 1065014,
+        "metric": [
+          1.387348389184857e-14,
+          0.0
+        ],
+        "metric_j": [
+          1.387348389184857e-14,
+          0.0
+        ],
+        "native_active_current_row": 1065024
+      },
+      {
+        "final_active_current_row": 754417,
+        "metric": [
+          1.1969499771093281e-14,
+          0.0
+        ],
+        "metric_j": [
+          1.1969499771093281e-14,
+          0.0
+        ],
+        "native_active_current_row": 754424
+      },
+      {
+        "final_active_current_row": 717207,
+        "metric": [
+          1.1771107517399373e-14,
+          0.0
+        ],
+        "metric_j": [
+          1.1771107517399373e-14,
+          0.0
+        ],
+        "native_active_current_row": 717214
+      },
+      {
+        "final_active_current_row": 1691913,
+        "metric": [
+          7.743693396287387e-15,
+          0.0
+        ],
+        "metric_j": [
+          7.743693396287387e-15,
+          0.0
+        ],
+        "native_active_current_row": 1691933
+      },
+      {
+        "final_active_current_row": 563754,
+        "metric": [
+          7.201993553208155e-15,
+          0.0
+        ],
+        "metric_j": [
+          7.201993553208155e-15,
+          0.0
+        ],
+        "native_active_current_row": 563761
+      },
+      {
+        "final_active_current_row": 509669,
+        "metric": [
+          6.6339022314106714e-15,
+          0.0
+        ],
+        "metric_j": [
+          6.6339022314106714e-15,
+          0.0
+        ],
+        "native_active_current_row": 509674
+      }
+    ],
+    "ordinary_i_squared_l_j": [
+      {
+        "final_active_current_row": 161929,
+        "metric": [
+          2.5766619055295e-13,
+          -3.9087618040454787e-13
+        ],
+        "metric_j": [
+          2.5766619055295e-13,
+          -3.9087618040454787e-13
+        ],
+        "native_active_current_row": 161930
+      },
+      {
+        "final_active_current_row": 1031306,
+        "metric": [
+          2.8396760365923183e-13,
+          -3.4695205464700215e-13
+        ],
+        "metric_j": [
+          2.8396760365923183e-13,
+          -3.4695205464700215e-13
+        ],
+        "native_active_current_row": 1031316
+      },
+      {
+        "final_active_current_row": 497778,
+        "metric": [
+          2.7611840889571526e-13,
+          -2.5991226339041166e-13
+        ],
+        "metric_j": [
+          2.7611840889571526e-13,
+          -2.5991226339041166e-13
+        ],
+        "native_active_current_row": 497783
+      },
+      {
+        "final_active_current_row": 454671,
+        "metric": [
+          2.157649496694476e-13,
+          -1.5110666761378864e-13
+        ],
+        "metric_j": [
+          2.157649496694476e-13,
+          -1.5110666761378864e-13
+        ],
+        "native_active_current_row": 454675
+      },
+      {
+        "final_active_current_row": 658779,
+        "metric": [
+          2.0615577446515797e-13,
+          -8.793975687960516e-14
+        ],
+        "metric_j": [
+          2.0615577446515797e-13,
+          -8.793975687960516e-14
+        ],
+        "native_active_current_row": 658786
+      },
+      {
+        "final_active_current_row": 1359084,
+        "metric": [
+          1.4065751373126398e-13,
+          -4.0838467222431983e-14
+        ],
+        "metric_j": [
+          1.4065751373126398e-13,
+          -4.0838467222431983e-14
+        ],
+        "native_active_current_row": 1359098
+      },
+      {
+        "final_active_current_row": 80582,
+        "metric": [
+          1.2603722943725974e-13,
+          -1.021722054111898e-14
+        ],
+        "metric_j": [
+          1.2603722943725974e-13,
+          -1.021722054111898e-14
+        ],
+        "native_active_current_row": 80583
+      },
+      {
+        "final_active_current_row": 561126,
+        "metric": [
+          8.001277139040308e-14,
+          1.9949116786993076e-15
+        ],
+        "metric_j": [
+          8.001277139040308e-14,
+          1.9949116786993076e-15
+        ],
+        "native_active_current_row": 561133
+      },
+      {
+        "final_active_current_row": 594457,
+        "metric": [
+          6.948342550057197e-14,
+          1.468734461372542e-14
+        ],
+        "metric_j": [
+          6.948342550057197e-14,
+          1.468734461372542e-14
+        ],
+        "native_active_current_row": 594464
+      },
+      {
+        "final_active_current_row": 812290,
+        "metric": [
+          4.069452725039047e-14,
+          1.3728239540749202e-14
+        ],
+        "metric_j": [
+          4.069452725039047e-14,
+          1.3728239540749202e-14
+        ],
+        "native_active_current_row": 812299
+      },
+      {
+        "final_active_current_row": 937651,
+        "metric": [
+          3.5207397007535285e-14,
+          1.813948037863937e-14
+        ],
+        "metric_j": [
+          3.5207397007535285e-14,
+          1.813948037863937e-14
+        ],
+        "native_active_current_row": 937660
+      },
+      {
+        "final_active_current_row": 1510027,
+        "metric": [
+          1.8275452773127902e-14,
+          1.3373871835813437e-14
+        ],
+        "metric_j": [
+          1.8275452773127902e-14,
+          1.3373871835813437e-14
+        ],
+        "native_active_current_row": 1510043
+      },
+      {
+        "final_active_current_row": 115714,
+        "metric": [
+          2.188062415347819e-14,
+          -4.36733619224624e-15
+        ],
+        "metric_j": [
+          2.188062415347819e-14,
+          -4.36733619224624e-15
+        ],
+        "native_active_current_row": 115715
+      },
+      {
+        "final_active_current_row": 1050297,
+        "metric": [
+          1.6352834525350823e-14,
+          1.4559121976474818e-14
+        ],
+        "metric_j": [
+          1.6352834525350823e-14,
+          1.4559121976474818e-14
+        ],
+        "native_active_current_row": 1050307
+      },
+      {
+        "final_active_current_row": 1065014,
+        "metric": [
+          1.3336973161875442e-14,
+          3.820824803206226e-15
+        ],
+        "metric_j": [
+          1.3336973161875442e-14,
+          3.820824803206226e-15
+        ],
+        "native_active_current_row": 1065024
+      },
+      {
+        "final_active_current_row": 754417,
+        "metric": [
+          6.792072689363524e-15,
+          9.855793897632207e-15
+        ],
+        "metric_j": [
+          6.792072689363524e-15,
+          9.855793897632207e-15
+        ],
+        "native_active_current_row": 754424
+      },
+      {
+        "final_active_current_row": 717207,
+        "metric": [
+          6.792483857697217e-15,
+          9.613591172350674e-15
+        ],
+        "metric_j": [
+          6.792483857697217e-15,
+          9.613591172350674e-15
+        ],
+        "native_active_current_row": 717214
+      },
+      {
+        "final_active_current_row": 1691913,
+        "metric": [
+          6.035525608269289e-15,
+          -4.851517087224415e-15
+        ],
+        "metric_j": [
+          6.035525608269289e-15,
+          -4.851517087224415e-15
+        ],
+        "native_active_current_row": 1691933
+      },
+      {
+        "final_active_current_row": 563754,
+        "metric": [
+          6.081556369504456e-15,
+          -3.8578988147684244e-15
+        ],
+        "metric_j": [
+          6.081556369504456e-15,
+          -3.8578988147684244e-15
+        ],
+        "native_active_current_row": 563761
+      },
+      {
+        "final_active_current_row": 509669,
+        "metric": [
+          5.8757783029476006e-15,
+          -3.079592205232e-15
+        ],
+        "metric_j": [
+          5.8757783029476006e-15,
+          -3.079592205232e-15
+        ],
+        "native_active_current_row": 509674
+      }
+    ]
+  },
+  "totals_j": {
+    "hermitian_abs_i_squared_l_j": 6.633376248489018e-12,
+    "ordinary_i_squared_l_j": [
+      5.753832011712286e-12,
+      -2.0936807249534643e-12
+    ]
+  },
+  "version": "0.23.1"
+}

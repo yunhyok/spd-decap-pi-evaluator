@@ -1,0 +1,70 @@
+{
+  "checks": {
+    "all_contact_nodes_disjoint": true,
+    "all_contact_triangles_disjoint": true,
+    "contact_area_max_relative_error": 1.2532979117332193e-13,
+    "contact_count": 38856,
+    "contact_node_count": 621696,
+    "contact_node_radius_squared_relative_error": 3.3764990803319963e-13,
+    "contact_triangle_count": 543984,
+    "domain_area_relative_error": 4.892301673941168e-13,
+    "mesh_nodes": 1439614,
+    "mesh_triangles": 2127824,
+    "minimum_triangle_area_um2": 0.006032676888298349,
+    "sampled_direct_element_stiffness_relative_error": 6.331117353261985e-16,
+    "sampled_stiffness_row_count": 1283,
+    "source_domain_area_um2": 9360714797.64983,
+    "stiffness_nnz": 8421202,
+    "stiffness_relative_row_sum": 4.0501768453131303e-16,
+    "stiffness_relative_symmetry_error": 0.0,
+    "triangle_area_sum_um2": 9360714797.64525
+  },
+  "elapsed_s": 2.64000000001397,
+  "execution": {
+    "acceptance_basis": "independently checked saved artifact after supervised post-result termination",
+    "blocked_call": "unconfirmed; watchdog cleanup is an inference",
+    "clean_worker_exit": false,
+    "guard_exit_code": 4294967295,
+    "guard_status": "STOP_NATIVE_WORKER_EXIT",
+    "post_result_termination": {
+      "path": "outputs\\research\\astra-l02-sheet-mesh-preflight-02\\post-result-termination.json",
+      "sha256": "7d1920380b67703c8a7d0b73332b912ee1eb88ffc498cf1f2a1b0de41941692c"
+    },
+    "post_result_wait_s": 291.449668,
+    "supervisor_exit_code_available": false
+  },
+  "program": "SPD Decap PI Evaluator",
+  "reviewed": {
+    "frozen_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-sheet-mesh-preflight-02\\driver-at-run.py",
+      "sha256": "176ae7bd1aa0d9727cc905b4f805fa613a04988bd2a3fce58268351a2ad70a9c"
+    },
+    "guard": {
+      "path": "outputs\\research\\astra-l02-sheet-mesh-preflight-02-guard\\external-budget.json",
+      "sha256": "eb8bd673d37164bb83c7496949f0da8864f4c921e684f2a0ed7b098f0531f142",
+      "status": "STOP_NATIVE_WORKER_EXIT"
+    },
+    "result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-sheet-mesh-preflight-02\\result.json",
+      "sha256": "2ff4183b727373d8f6d9dbd32a39fcfc55a92b19bc55328b7e79082e766bfe59"
+    },
+    "snapshot": {
+      "coordinate_units": "um",
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-sheet-mesh-preflight-02\\mesh-stiffness.npz",
+      "sha256": "137b4952f739a75e7bf6f2e21684529a43c48558412df59faab0ad003ea10fb9",
+      "stiffness_units": "dimensionless; sigma*t multiplies for DC admittance"
+    },
+    "source_result": {
+      "path": "outputs\\research\\astra-l02-pad-conductor-domain-01\\result.json",
+      "sha256": "91e16302f7b7c6b5a43067a6208331f1aa1acee75440aa48ba035c02f1350a9d"
+    },
+    "source_review_sha256": "ac4f8ba26c1ad976d843fc0177e449f24523382498b21f7c65ad5cf5a5cae7f6"
+  },
+  "scope": "Independent saved-array/hash/contact/source-map/area/stiffness review. It does not repeat domain union, contact predicates, triangulation, full element reassembly, G/C projection, contact reduction, Kron, LU, circuit solve, convergence, return closure, or PowerSI comparison.",
+  "source_pad_coverage": {
+    "strict": false,
+    "uncovered_area_um2": 1.3601868730772715e-12
+  },
+  "status": "ACCEPT_SAVED_L02_PAD_DOMAIN_MESH_AND_STIFFNESS_INDEPENDENT_REVIEW",
+  "version": "0.23.1"
+}

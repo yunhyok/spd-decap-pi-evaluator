@@ -1,0 +1,14 @@
+{
+  "status": "PASS_INSTALLED_FLEXIBLE_GCROT_ONE_CYCLE_CONTRACT",
+  "scipy_version": "1.18.1",
+  "counts": {
+    "A": 6,
+    "M": 4,
+    "callback": 1
+  },
+  "source": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research-runtime\\scipy\\sparse\\linalg\\_isolve\\_gcrotmk.py",
+  "source_sha256": "2d9f0c77e4d0a0a43c261f13dced3132c576e8d2fdf88e0fc8f0d3a724e7c9c3",
+  "info": 1,
+  "final_residual_ratio": 0.004471976676423744,
+  "scope": "Tiny call-accounting test with variable preconditioning, explicit warm/final true actions, and correction x0=None. Not a board convergence or physics claim."
+}

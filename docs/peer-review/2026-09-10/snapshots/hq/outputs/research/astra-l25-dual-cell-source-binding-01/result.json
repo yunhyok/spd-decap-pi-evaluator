@@ -1,0 +1,159 @@
+{
+  "constant_C_relative_error": 1.1295582356867148e-13,
+  "elapsed_s": 0.4380000000237487,
+  "gc_owners": [
+    {
+      "branch_admittance_s": [
+        3.8787077146108085e-05,
+        0.0038787077146108084
+      ],
+      "capacitance_f": 5.647780157516188e-10,
+      "density_f_per_um2": 3.8073007595040197e-19,
+      "dispersion_s_per_f": [
+        68676.67661335826,
+        6867667.661335826
+      ],
+      "external_active_index": 725157,
+      "external_global_reduced_index": 725157,
+      "external_island_id": "spd-surface-island:4f23b7e65a7e9bd8ae00819d",
+      "external_net": "dgnd",
+      "external_reduced_node_id": "spd-finite-via-vertex:f5441ddab8a62964c8074f35 = spd-surface-island:4f23b7e65a7e9bd8ae00819d",
+      "fingerprint": "924e8e16018d8ec9d77f29498aa8426818730a5ce3de08ecce1c146895dfc273",
+      "overlap_area_um2": 1483407934.983295,
+      "owner_current_outgoing_a": [
+        2.341242530833099e-06,
+        4.996656002637739e-07
+      ],
+      "owner_index": 0,
+      "partial_ordinal": 13,
+      "target_island_id": "spd-surface-island:279609d3a8c5969250977818"
+    },
+    {
+      "branch_admittance_s": [
+        3.652474029400855e-05,
+        0.0036524740294008535
+      ],
+      "capacitance_f": 5.318361646944361e-10,
+      "density_f_per_um2": 3.626000723337144e-19,
+      "dispersion_s_per_f": [
+        68676.67661335829,
+        6867667.661335826
+      ],
+      "external_active_index": 126094,
+      "external_global_reduced_index": 126094,
+      "external_island_id": "spd-surface-island:44241f41cf5c8c1bdde7e497",
+      "external_net": "adc_vdd_055_vtrip/0",
+      "external_reduced_node_id": "spd-finite-via-vertex:29e30fdb86137cce26b6bbdd = spd-surface-island:44241f41cf5c8c1bdde7e497",
+      "fingerprint": "5776b2c1a763d33b89bc512c109cbd08726cf0a1c343959573bbeb6a84fbf59b",
+      "overlap_area_um2": 1466729339.7695947,
+      "owner_current_outgoing_a": [
+        2.204681980840426e-06,
+        4.705206878815013e-07
+      ],
+      "owner_index": 1,
+      "partial_ordinal": 14,
+      "target_island_id": "spd-surface-island:279609d3a8c5969250977818"
+    },
+    {
+      "branch_admittance_s": [
+        1.8893546633608646e-07,
+        1.8893546633608638e-05
+      ],
+      "capacitance_f": 2.751086331678092e-12,
+      "density_f_per_um2": 3.6260007233371434e-19,
+      "dispersion_s_per_f": [
+        68676.67661335829,
+        6867667.661335826
+      ],
+      "external_active_index": 163769,
+      "external_global_reduced_index": 163769,
+      "external_island_id": "spd-surface-island:eb8cda32904cb6ff17fbad49",
+      "external_net": "adc_vdd_050_vddq_ddrh/0",
+      "external_reduced_node_id": "spd-finite-via-vertex:36b38fd3ac98f26949bdd88a = spd-surface-island:eb8cda32904cb6ff17fbad49",
+      "fingerprint": "6ea83bab6eb091d1207ebd49a72ceddb37cf3edb72ec0338fdbf3c1c255cb278",
+      "overlap_area_um2": 7587109.164021801,
+      "owner_current_outgoing_a": [
+        1.1404409140141891e-08,
+        2.4339170372613996e-09
+      ],
+      "owner_index": 2,
+      "partial_ordinal": 14,
+      "target_island_id": "spd-surface-island:279609d3a8c5969250977818"
+    },
+    {
+      "branch_admittance_s": [
+        1.8118594609075294e-07,
+        1.8118594609075287e-05
+      ],
+      "capacitance_f": 2.6382456901752656e-12,
+      "density_f_per_um2": 3.6260007233371434e-19,
+      "dispersion_s_per_f": [
+        68676.67661335829,
+        6867667.661335826
+      ],
+      "external_active_index": 744014,
+      "external_global_reduced_index": 744014,
+      "external_island_id": "spd-surface-island:a2c304cddf22d1d3c73478bf",
+      "external_net": "adc_vdd_050_vddq_ddrl/0",
+      "external_reduced_node_id": "spd-finite-via-vertex:fba57bdf3dcbf4b5b045011f = spd-surface-island:a2c304cddf22d1d3c73478bf",
+      "fingerprint": "c954833ee80a07df419f342a5543c5a02b1d144cfbc0b496ae8b2d17962a0645",
+      "overlap_area_um2": 7275910.545729814,
+      "owner_current_outgoing_a": [
+        1.0936635968498754e-08,
+        2.3340850815061323e-09
+      ],
+      "owner_index": 3,
+      "partial_ordinal": 14,
+      "target_island_id": "spd-surface-island:279609d3a8c5969250977818"
+    }
+  ],
+  "inputs": {
+    "cell_area": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-dual-cell-inputs-02\\owner-cell-area.npz",
+      "sha256": "5c6b1f1a0d71ec7d8688e80f0aff192a6f9849b200e70e8ccf98ee0149515239"
+    },
+    "drive": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-sheet-drive-02\\sheet-electrode-drive.npz",
+      "sha256": "dd1e927ba48e86be331e9c5e0bb0a966dcee77f8bf47052aa94660654065a266"
+    },
+    "helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\census_astra_l14_l25_sheet_field_redistribution.py",
+      "sha256": "60598d753cc02e0cb36296f8328aebd434cb1560e61778c7b4fa4617fead7c3c"
+    },
+    "raw": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\raw-field-snapshot.npz",
+      "sha256": "6eac098738598a78b2068ce4f80e46fd70e17010a89bfb5949ec8a68124df4a7"
+    },
+    "topology": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-dual-cell-topology-01\\dual-cell-topology.npz",
+      "sha256": "eb33117f14a3e5725e9efeafd2a0a083961ad83abaf022b7fe78b94bc8b5265f"
+    }
+  },
+  "limitations": [
+    "L25-local potential indices are not native/global indices. Global embedding has not been performed.",
+    "Saved native via R/L/count and four GC owners are retained without fitting. No rim-edge current split is prescribed.",
+    "No RT0 resistance, frequency-dependent GC assembly, solve, or magnetic operator is executed."
+  ],
+  "local_electrode_potential_range": [
+    539641,
+    539815
+  ],
+  "native_via_coverage": {
+    "contact_count": 175,
+    "duplicate_count": 0,
+    "missing_count": 0,
+    "native_via_count": 350,
+    "orientation_first_target": 59,
+    "orientation_second_target": 291,
+    "target_incident_count": 350
+  },
+  "output": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-dual-cell-source-binding-01\\native-source-binding.npz",
+    "sha256": "c9d41f1e2b870dd854affa1db2c31bb86f24c472866fcd2125f313cb29981c6a"
+  },
+  "program": "SPD Decap PI Evaluator",
+  "script_sha256": "dd2d51289d25aa66e69487b571c6c5718f59cdd8689c6f8d155a6ea5884136fb",
+  "status": "COMPLETED_L25_DUAL_CELL_NATIVE_SOURCE_BINDING",
+  "topology_receipt_sha256": "d24d13516b0a721565cdf16e2c678b2e74c03b70f8edea9557926b4599542d31",
+  "version": "0.23.1"
+}

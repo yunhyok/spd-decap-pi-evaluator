@@ -1,0 +1,82 @@
+{
+  "direct_whole_polygon_checks": [
+    {
+      "island_index": 43,
+      "symmetric_difference_area_um2": 0.0,
+      "trace_index": 0
+    },
+    {
+      "island_index": 43,
+      "symmetric_difference_area_um2": 0.0,
+      "trace_index": 1
+    },
+    {
+      "island_index": 43,
+      "symmetric_difference_area_um2": 0.0,
+      "trace_index": 9665
+    },
+    {
+      "island_index": 43,
+      "symmetric_difference_area_um2": 0.0,
+      "trace_index": 19331
+    },
+    {
+      "island_index": 43,
+      "symmetric_difference_area_um2": 0.0,
+      "trace_index": 28996
+    },
+    {
+      "island_index": 43,
+      "symmetric_difference_area_um2": 0.0,
+      "trace_index": 38661
+    }
+  ],
+  "elapsed_s": 20.23499999998603,
+  "flat_body_outside_artwork_positive_area_count": 30596,
+  "flat_contact_count_histogram": {
+    "0": 3334,
+    "1": 34142,
+    "2": 1186
+  },
+  "flat_positive_area_contact_count": 36514,
+  "inputs": {
+    "contact_inputs": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-source-contact-inputs-01\\contact-ledger-inputs.npz",
+      "sha256": "c5c0dab9ac22d750aeecf3a4290c2b9ef9285bcf7ed33a5d8a7a2775c8430984"
+    },
+    "contact_receipt": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-source-contact-inputs-01\\result.json",
+      "sha256": "98bce62fde03d676e43d121207d00bb5ed840552bf8fd02793ae6732ab8bffd2"
+    },
+    "overlap_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l02_gc_source_overlaps.py",
+      "sha256": "535e57dfdf656b4000a9e0703ab4d4aa3b8ea5f0d86b0b60f8d1a8aa4c7b86d1"
+    },
+    "persistence_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\project_astra_l14_gc_mass.py",
+      "sha256": "f2c668fd090db5c4606eec27558c9bdbbdde6552d2f82c3b64b8837bd7350dc3"
+    },
+    "trace_inputs": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-trace-inputs-01\\source-trace-inputs.npz",
+      "sha256": "d1f7c1ed9cb1b1c404c704417b260d596109827e344ae831229b95f2078a6cf5"
+    },
+    "trace_receipt": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-trace-inputs-01\\result.json",
+      "sha256": "63c44792b82dc95202d0bcef7d115e1bde3186a626e59f35d7cb6313a5891b9f"
+    }
+  },
+  "output": {
+    "bytes": 1472584,
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-trace-artwork-coverage-01\\trace-artwork-coverage.npz",
+    "sha256": "93dcb72e2ba554882281ab26a485572e7064741cc9303f483dc970c1272c7080"
+  },
+  "program": "SPD Decap PI Evaluator",
+  "scope": "Source endpoint/width rectangles and square-cap envelopes are explicit geometric interpretations. A square envelope encloses flat and round endcaps; containment qualifies redundancy only under these conventions. Positive flat-body overlaps and residual WKB preserve the exact saved artwork, including holes. No trace-pair/pad union, certified source endcap, electrode, mesh, R/L, G/C transfer, finite solve or accuracy claim.",
+  "script_sha256": "e913a51803210abee8262fa1b653e05f51192d795ad5cc41d0a8837413daa1c9",
+  "square_envelope_covered_by_one_island_count": 8052,
+  "status": "COMPLETED_L02_TRACE_ARTWORK_COVERAGE",
+  "total_flat_body_area_um2": 186667942.39328983,
+  "total_outside_flat_body_area_um2": 58801958.16362275,
+  "trace_count": 38662,
+  "version": "0.23.1"
+}

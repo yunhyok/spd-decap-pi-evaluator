@@ -1,0 +1,10 @@
+{
+  "artifact": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-complete-current-gcrotmk-01\\gcrot-m-inputs-before-final.npz",
+    "sha256": "26bc080c19cd14f45aa9c6a9291235f5d80ec3cb4c2be4d40b97eb584c960266",
+    "size_bytes": 127926551
+  },
+  "input_count": 2,
+  "normalized_gram_error": 3.7438640321092485e-14,
+  "gate": true
+}

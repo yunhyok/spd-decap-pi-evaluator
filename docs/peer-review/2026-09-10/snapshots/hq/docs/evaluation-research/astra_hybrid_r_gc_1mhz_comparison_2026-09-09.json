@@ -1,0 +1,62 @@
+{
+  "complex_relative_error_reduction_percentage_points": 0.057345651903562,
+  "device_active_indices": [
+    2699,
+    2656
+  ],
+  "driver_sha256": "e9ce9ad63366586293364c80ec49bae77c1812c423811f06bce1c5c9a44dc1fa",
+  "errors": {
+    "hybrid_p1_rt0": {
+      "complex_gap_ohm": 0.00021262886699454942,
+      "complex_relative_error": 0.2618268397573785,
+      "magnitude_error_db": -0.03807608093413334,
+      "phase_error_deg": -15.075844063945086
+    },
+    "p1_p1_rt0": {
+      "complex_gap_ohm": 0.0002130945694795436,
+      "complex_relative_error": 0.26240029627641415,
+      "magnitude_error_db": -0.04205304508384554,
+      "phase_error_deg": -15.112081478537801
+    }
+  },
+  "field": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-hybrid-right-correction-01\\field.npz",
+    "sha256": "960e767c383cd7e5580dfc86e9a221cfdff78086f8478465a25d8bd4dd98654b",
+    "size_bytes": 40145495
+  },
+  "frequency_hz": 1000000.0,
+  "inputs": {
+    "control": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_combined_r_gc_1mhz_comparison_2026-09-09.json",
+      "sha256": "bb0e8daa519ffd3be44d8b8cb149e082e14badca4b9962c2986ca276c0656f06"
+    },
+    "external": {
+      "path": "outputs\\research\\astra-l02-hybrid-right-correction-01\\external-budget.json",
+      "sha256": "a3b082f1976ba9e9580e8b265bb813e55614a48f65922881c73c3ea476739235"
+    },
+    "result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-hybrid-right-correction-01\\result.json",
+      "sha256": "7341e700f5ac76f96f07558a42bc93181319b118ffb86bab64f80c5bdb54b9d3"
+    }
+  },
+  "program": "SPD Decap PI Evaluator",
+  "rail_id": "ADC_VDD_075_VTRIP_SRAM/0",
+  "reference_port_one_based": 18,
+  "scope": "Post-freeze comparison at one previously used development point. L02 RT0/P0 R/G/C replaces P1; no fitted coefficient, new magnetic operator, mesh convergence, independent holdout or broadband acceptance. The earlier magnetic candidate is a different model.",
+  "status": "COMPLETED_CONDITIONAL_HYBRID_R_GC_1MHZ_COMPARISON",
+  "version": "0.23.1",
+  "zdd_ohm": {
+    "hybrid_p1_rt0": [
+      0.0005545735011944134,
+      -0.0005883820472006132
+    ],
+    "p1_p1_rt0": [
+      0.0005539475696674413,
+      -0.0005884631779362248
+    ],
+    "reference": [
+      0.0006915479466520245,
+      -0.0004257504501139287
+    ]
+  }
+}

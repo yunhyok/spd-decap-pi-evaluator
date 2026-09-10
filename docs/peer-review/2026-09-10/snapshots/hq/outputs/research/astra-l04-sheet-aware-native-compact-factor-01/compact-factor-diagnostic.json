@@ -1,0 +1,129 @@
+{
+  "artifact": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-compact-factor-01\\compact-factor-probe.npz",
+    "sha256": "ac97411339050e5458d709d88c8cb858341deaa85d479b2faf28f7fa50ca2fa8",
+    "size_bytes": 285475278
+  },
+  "budget": {
+    "elapsed_s": 72.68800000002375,
+    "max_rss_bytes": 25769803776,
+    "max_runtime_s": 210.0,
+    "peak_rss_bytes": 0
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-compact-factor-01\\driver-at-run.py",
+    "sha256": "eed904035db4aa0dbcca7c2b85ff8b5d2c0e9b61acfd86527b9d0725e3786acf",
+    "size_bytes": 12897
+  },
+  "inputs": {
+    "base": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l02_conditional_hybrid_block_lgmres.py",
+      "sha256": "ae0fb71ea00d02381abf28bf440d9407191e45f1c43d774cae31da6e0fb8da5e",
+      "size_bytes": 35889
+    },
+    "counter": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_l25_rt0_p1_pair.py",
+      "sha256": "35b1fb7c485b31cab4ea26beba52765ad6cfcbc2a60504d96194aa3b183eee20",
+      "size_bytes": 35907
+    },
+    "factor_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-factor-01\\driver-at-run.py",
+      "sha256": "8ded2b0fdde86f32bb44c955abcb81942f237079a2d9b227131d942e122fcf7a",
+      "size_bytes": 12882
+    },
+    "factor_guard": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-factor-01\\external-budget.json",
+      "sha256": "6ed6ca723c195988e3dc755c7a4856da973a839fa9502baaf1beaa8ec104f3bc",
+      "size_bytes": 1021
+    },
+    "factor_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-factor-01\\result.json",
+      "sha256": "fcf48774d1e49a0ea3cfcf9aa82d423c9968fb18de0328c72bce863aaa7ae091",
+      "size_bytes": 4246
+    },
+    "guard": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_fmm3d_runtime.py",
+      "sha256": "2961d1606ec2d4583c37d990d238a6abc87a54d8e0b93f9d83397f3851536a25",
+      "size_bytes": 16465
+    },
+    "preflight01_diagnostic": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-preflight-01\\factor-coarse-resource-diagnostic.json",
+      "sha256": "34121e38aa9516f2359436de672feffcb8d5db535412bdb60663b15528a82ea0",
+      "size_bytes": 10421
+    },
+    "preflight01_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-preflight-01\\driver-at-run.py",
+      "sha256": "bc2f8bfe7abdc6fc068b6de3b38521196be51e1e81042e3979e59e7802f5c139",
+      "size_bytes": 28413
+    },
+    "preflight01_external": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-preflight-01\\external-budget.json",
+      "sha256": "a173a7b8c4bffa92d6ecc18240fa3260732476b1834469ea5894bd1a31834b39",
+      "size_bytes": 1274
+    },
+    "recon": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\reconstruct_astra_native_loaded_field.py",
+      "sha256": "354d9e004b189cf8193c2922c8fa4dc1903b407bebb295a4576673200ce6b213",
+      "size_bytes": 33457
+    },
+    "static": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-block-01\\native-l04-auxiliary-block.npz",
+      "sha256": "c9ddef8e180a337f9a8ac5b509a060776fed5e7e5e3d1a13380ec847c76126ad",
+      "size_bytes": 52261901
+    },
+    "static_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-block-01\\driver-at-run.py",
+      "sha256": "5836ba78aa01a818675a4bb4ce3175219a32f2a39b896d8aa2a47314a8d4ffde",
+      "size_bytes": 10283
+    },
+    "static_guard": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-block-01\\external-budget.json",
+      "sha256": "94e12ebc2562da027d3421ba4b87ffa25b29bb13f8c1473b2b8dd0e24150796d",
+      "size_bytes": 1018
+    },
+    "static_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-block-01\\result.json",
+      "sha256": "ae45f21634d9bdc688639d37cdeaa5cc1752c6ca7df1a4a13a1d541a9be579de",
+      "size_bytes": 6050
+    }
+  },
+  "metrics": {
+    "L_nnz": 11996422,
+    "L_storage_bytes": 249468400,
+    "U_nnz": 11996422,
+    "U_storage_bytes": 249468400,
+    "compact_n_seconds": 1.3914807999972254,
+    "compact_t_seconds": 1.5283276999834925,
+    "factor_live_max_private_or_working_bytes": 12814708736,
+    "factor_seconds": 53.50208420003764,
+    "n_parity_finite": true,
+    "n_parity_gate_lte_2e_8": true,
+    "n_parity_relative": 2.5987065009985735e-15,
+    "n_residual_finite": true,
+    "n_residual_gate_lte_2e_8": true,
+    "n_residual_relative": 4.821891405010571e-09,
+    "permutation_storage_bytes": 19079912,
+    "pivot_finite": true,
+    "pivot_nonzero": true,
+    "policy": {
+      "SymmetricMode": true,
+      "diag_pivot_thresh": 0.0,
+      "permc_spec": "MMD_AT_PLUS_A",
+      "scipy_version": "1.18.1"
+    },
+    "post_delete_delta_bytes": -11696123904,
+    "post_delete_max_private_or_working_bytes": 1118584832,
+    "reference_n_seconds": 0.23355959996115416,
+    "reference_t_seconds": 0.2816519000334665,
+    "rhs_count": 2,
+    "t_parity_finite": true,
+    "t_parity_gate_lte_2e_8": true,
+    "t_parity_relative": 1.4900715530987508e-15,
+    "t_residual_finite": true,
+    "t_residual_gate_lte_2e_8": true,
+    "t_residual_relative": 4.813698444448797e-09
+  },
+  "program": "SPD Decap PI Evaluator",
+  "status": "MEASURED_PUBLIC_FACTORS_BEFORE_ACCEPTANCE",
+  "version": "0.23.1"
+}

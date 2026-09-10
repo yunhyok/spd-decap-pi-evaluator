@@ -1,0 +1,6 @@
+{
+  "error": "ValueError: LGMRES solve gate",
+  "program": "SPD Decap PI Evaluator",
+  "status": "STOP_CONDITIONAL_HYBRID_BLOCK_LGMRES",
+  "version": "0.23.1"
+}

@@ -1,0 +1,28 @@
+{
+  "artifact": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-hybrid-aux-native-preflight-01\\unvalidated-one-step-action.npz",
+    "sha256": "5b33db6339b2ec1796c3d20db527d2d66579d8b821753ab699d376460e86f83e",
+    "size_bytes": 128210624
+  },
+  "budget": {
+    "elapsed_s": 126.96899999998277,
+    "max_rss_bytes": 34359738368,
+    "max_runtime_s": 270.0,
+    "peak_rss_bytes": 24431439872
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-hybrid-aux-native-preflight-01\\driver-at-run.py",
+    "sha256": "0ee80a0d19ec1efc8a1480f742d7948840e9afae41a96e274e5c391d34654c1b",
+    "size_bytes": 25097
+  },
+  "initial_scaled_residual_relative": 219.8892996994003,
+  "post_release_rss_bytes": 658894848,
+  "program": "SPD Decap PI Evaluator",
+  "status": "SAVED_UNVALIDATED_ONE_STEP_VECTORS_BEFORE_INTERPRETATION",
+  "timings_s": {
+    "preconditioner": 3.62908070004778,
+    "true_action_of_restart_residual_including_ntd_apply": 3.541289200016763,
+    "true_action_of_step_including_ntd_apply": 4.073232299997471
+  },
+  "version": "0.23.1"
+}

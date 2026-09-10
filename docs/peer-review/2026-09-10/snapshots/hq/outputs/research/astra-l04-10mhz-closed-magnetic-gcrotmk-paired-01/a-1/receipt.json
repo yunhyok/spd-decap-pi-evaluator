@@ -1,0 +1,51 @@
+{
+  "index": 1,
+  "final_replay": false,
+  "field_gates": {
+    "field_finite": true,
+    "pg_kcl": true,
+    "combined_kcl": true,
+    "field_stationarity": true,
+    "field_dual": true,
+    "pt_rcpsi": true,
+    "projected_rcpsi": true,
+    "pt_rc_gradient_finite": true
+  },
+  "action_gates": {
+    "four_fmm_calls": true,
+    "fmm_ier_zero": true,
+    "pt_gradient": true,
+    "finite_action": true
+  },
+  "calls": [
+    {
+      "component": 0,
+      "imaginary": false,
+      "elapsed_s": 67.31632279999758,
+      "ier": 0
+    },
+    {
+      "component": 0,
+      "imaginary": true,
+      "elapsed_s": 69.13676750000013,
+      "ier": 0
+    },
+    {
+      "component": 1,
+      "imaginary": false,
+      "elapsed_s": 68.27316170000267,
+      "ier": 0
+    },
+    {
+      "component": 1,
+      "imaginary": true,
+      "elapsed_s": 66.0478183999985,
+      "ier": 0
+    }
+  ],
+  "raw": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-closed-magnetic-gcrotmk-paired-01\\a-1\\raw-action-before-projection.npz",
+    "sha256": "c954c3b52932eab57e722dca927b0770abb6e51bffcc0ca682877b8e13cc9cb8",
+    "size_bytes": 154063719
+  }
+}

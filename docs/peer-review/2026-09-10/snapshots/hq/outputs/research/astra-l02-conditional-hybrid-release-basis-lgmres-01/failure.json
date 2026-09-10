@@ -1,0 +1,21 @@
+{
+  "error": "ValueError: LGMRES solve gate",
+  "latest_unvalidated_outer_field": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-release-basis-lgmres-01\\latest-unvalidated-outer-field.npz",
+    "sha256": "a675a8307e852e31d47cc1186e5810df98316eb8948c19d388a384aa188f1e90",
+    "size_bytes": 40396143
+  },
+  "program": "SPD Decap PI Evaluator",
+  "status": "STOP_CONDITIONAL_HYBRID_EXACT_LGMRES",
+  "unvalidated_field": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-release-basis-lgmres-01\\unvalidated-field.npz",
+    "sha256": "d5bd9859cb6ea8c46745051da9c026f79c8d9bfa705bba9a213f349a060057ca",
+    "size_bytes": 40147119
+  },
+  "version": "0.23.1",
+  "warm_final_field": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-galerkin-sgs-lgmres-01\\unvalidated-field.npz",
+    "sha256": "1a8efde773057e73ee6a37e76d1131f79679be5e235c2a8a23c3a1e6624f2449",
+    "size_bytes": 41790459
+  }
+}

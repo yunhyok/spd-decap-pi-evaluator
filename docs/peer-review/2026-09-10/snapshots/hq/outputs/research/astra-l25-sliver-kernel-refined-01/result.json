@@ -1,0 +1,114 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "ACCEPT_L25_SLIVER_REFINED_KERNEL_ONLY",
+  "inputs": {
+    "bar": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_rt0_p0_bar.py",
+      "sha256": "7ce14c6113e3c5023fdbe4ebd3f98aecf04c3b6fe98aa3007964ac998a2fbb0a"
+    },
+    "potential": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_triangle_static_potential.py",
+      "sha256": "75f55868574d16236b5e6dc14370c3fefffda2d3c171707f330eda1af8561b1e"
+    },
+    "prior_stress": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-shape-kernel-stress-01\\result.json",
+      "sha256": "c4450535687d9d69e8215179e81a85355e67cb285c711b0c3cc87165bf765120"
+    },
+    "prior_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-shape-kernel-stress-01\\driver-at-run.py",
+      "sha256": "5749360fc90dc13f6777ced6bcbc4b5124d8fb9e5ddc3297d29279adf1b9e77f"
+    }
+  },
+  "triangle_index": 457250,
+  "vertices_m": [
+    [
+      0.03770650347464103,
+      0.048364922186352126
+    ],
+    [
+      0.03834349652535897,
+      0.048364922186352126
+    ],
+    [
+      0.038349999999999995,
+      0.048365002
+    ]
+  ],
+  "reused_order": 64,
+  "new_quadrature_orders": [
+    128,
+    256
+  ],
+  "tolerance": 5e-05,
+  "self_partial_L_128_h": [
+    [
+      2.472330744538856e-10,
+      -6.841765898229954e-11,
+      -7.164034423156123e-11
+    ],
+    [
+      -6.841765899568052e-11,
+      4.551490626942518e-11,
+      4.667811516165125e-11
+    ],
+    [
+      -7.16403442450959e-11,
+      4.667811516149718e-11,
+      4.7886109232027055e-11
+    ]
+  ],
+  "self_partial_L_256_h": [
+    [
+      2.472344854020221e-10,
+      -6.841765901045036e-11,
+      -7.164035866529952e-11
+    ],
+    [
+      -6.841765904310863e-11,
+      4.551490621018274e-11,
+      4.6678115102272506e-11
+    ],
+    [
+      -7.164035869828924e-11,
+      4.6678115101937317e-11,
+      4.7886109319427204e-11
+    ]
+  ],
+  "orthogonal_sheet_current_density_a_per_m": 1.0,
+  "twice_magnetic_energy_x_y_j": [
+    [
+      2.7364999749158664e-24,
+      2.7364999196957714e-24
+    ],
+    [
+      2.736539427934092e-24,
+      2.736539533682201e-24
+    ],
+    [
+      2.7365484160859203e-24,
+      2.7365483613764627e-24
+    ]
+  ],
+  "metrics": {
+    "refinement_64_to_128": 2.0673291142509603e-05,
+    "refinement_128_to_256": 4.717461497561403e-06,
+    "uniform_x_y_energy_refinement": 3.2844848552487544e-06,
+    "uniform_current_isotropy": 1.9992139496460465e-08,
+    "raw_reciprocity": 2.1947753765280615e-10,
+    "winding": 2.983109802490514e-07,
+    "min_symmetric_eigenvalue_h": 3.3377009235780685e-18
+  },
+  "gates": {
+    "refinement_128_to_256": true,
+    "uniform_x_y_energy_refinement": true,
+    "uniform_current_isotropy": true,
+    "raw_reciprocity": true,
+    "winding": true,
+    "min_symmetric_eigenvalue_h": true,
+    "positive_uniform_current_energy": true
+  },
+  "elapsed_s": 16.37962919997517,
+  "scope": "Refined outer integration for the single failed L25 triangle only. Prior64 STOP retained; first/largest source triangles are not repeated. No source magnetic assembly, internal/return composition, or PowerSI claim.",
+  "script_sha256": "ee23e490b77ce74c91486a06083dfe09d07a83b3c510b9382d508ee61f5be4f4"
+}

@@ -1,0 +1,93 @@
+{
+  "curve": [
+    {
+      "gap_over_p1": 0.40178560869475777,
+      "gap_ratio": 0.6802086993040923,
+      "p1_ohm": 0.00036109418454289264,
+      "rt0_ohm": 0.0005061766312758527,
+      "step": 1
+    },
+    {
+      "gap_over_p1": 0.29418784532459397,
+      "gap_ratio": 0.7424545285353088,
+      "p1_ohm": 0.0003661508158803365,
+      "rt0_ohm": 0.00047386793546825055,
+      "step": 2
+    },
+    {
+      "gap_over_p1": 0.22428810068459856,
+      "gap_ratio": 0.7776646294696664,
+      "p1_ohm": 0.0003734830052776124,
+      "rt0_ohm": 0.00045725079916958617,
+      "step": 3
+    },
+    {
+      "gap_over_p1": 0.18562097571155142,
+      "gap_ratio": 0.8363044334885756,
+      "p1_ohm": 0.00037741088875668094,
+      "rt0_ohm": 0.0004474662661721242,
+      "step": 4
+    },
+    {
+      "gap_over_p1": 0.1427788501306187,
+      "gap_ratio": 0.7848881460280519,
+      "p1_ohm": 0.00038511050655186396,
+      "rt0_ohm": 0.0004400961418506601,
+      "step": 5
+    },
+    {
+      "gap_over_p1": 0.1099298434254942,
+      "gap_ratio": 0.7838460089873528,
+      "p1_ohm": 0.000392070701071524,
+      "rt0_ohm": 0.0004351709718524301,
+      "step": 6
+    }
+  ],
+  "geometry_controls": {
+    "fallback_parent_count_by_step": [
+      24,
+      87,
+      284,
+      731,
+      1710,
+      3710
+    ],
+    "max_contact_area_relative_error": 5.91515353501472e-15,
+    "max_midpoint_roundoff_ulp": 0.5,
+    "max_parent_area_relative_error": 8.879362259374846e-11
+  },
+  "hash_and_schema_controls": {
+    "all_npz_allow_pickle_false": true,
+    "all_reported_gates_true": true,
+    "all_step_result_artifact_field_hashes_and_sizes_match": true,
+    "p1_monotone_nondecreasing": true,
+    "rt0_monotone_nonincreasing": true
+  },
+  "independent_numeric_max": {
+    "negative_cell_count": 0,
+    "p1_kcl_a": 8.577472065951497e-12,
+    "rt0_constitutive_v": 3.036274302727765e-17,
+    "rt0_kcl_a": 4.510281037539698e-16,
+    "saved_triangle_quantity_abs_error_ohm": 5.421010862427522e-20
+  },
+  "inputs": {
+    "driver_sha256": "8ba3f885906dc4b23867012b5a2da707cfe08cbc7c041d27ba2d86eac82f0e31",
+    "result_sha256": "bb418b0ea06d9ea71a0316a55ed107cd77f323b3ea8fec2fa3ba8cd58b987eba"
+  },
+  "limitations": [
+    "Conditional fixed-pair DC discretization review only; target gap was not reached.",
+    "Longest-edge marking is an observed efficiency comparison, not a general adaptive convergence guarantee.",
+    "No board, G/C, magnetic, PowerSI, convergence, or accuracy-improvement claim."
+  ],
+  "program": "SPD Decap PI Evaluator v0.23.1",
+  "scope": "Independent saved NPZ/hash and direct CSC/triangle-energy review; no LU, geometry refinement, or source clipping rerun.",
+  "status": "ACCEPT_SAVED_FIELDS_STOP_MAX_NEW_NODES",
+  "step_count": 6,
+  "stop": {
+    "cap": 20000,
+    "next_step_lu_started": false,
+    "requested_new_nodes": 40016,
+    "saved_step_directories": 6,
+    "status": "STOP_MAX_NEW_NODES"
+  }
+}

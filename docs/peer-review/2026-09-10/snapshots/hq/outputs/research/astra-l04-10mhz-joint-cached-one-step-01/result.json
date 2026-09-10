@@ -1,0 +1,594 @@
+{
+  "algebraically_converged": false,
+  "artifact": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-joint-cached-one-step-01\\unvalidated-cached-joint-one-step-action.npz",
+    "sha256": "ed0b6dc8a2ff2ab82be8a853802a349369d5fe54ca98b5ca6d5a0154de1b4c7c",
+    "size_bytes": 148871141
+  },
+  "budget": {
+    "elapsed_s": 62.70299999997951,
+    "max_rss_bytes": 34359738368,
+    "max_runtime_s": 270.0,
+    "peak_rss_bytes": 20144373760
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-joint-cached-one-step-01\\driver-at-run.py",
+    "sha256": "a9ab2e92e90cf04a7acb07fff2c4f4b56f45decd1f69bcf919fc86a3c1c29a4b",
+    "size_bytes": 36352
+  },
+  "frequency_hz": 10000000.0,
+  "initial_scaled_residual_relative": 0.008413688787283,
+  "inputs": {
+    "balanced_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\solve_astra_l02_l14_l25_combined_block_lgmres.py",
+      "sha256": "853f193fd51d3c204668019f7957cc74ea295a0e47206aae338076dfa796c692",
+      "size_bytes": 45742
+    },
+    "base_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l02_conditional_hybrid_block_lgmres.py",
+      "sha256": "ae0fb71ea00d02381abf28bf440d9407191e45f1c43d774cae31da6e0fb8da5e",
+      "size_bytes": 35889
+    },
+    "bridge": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-partial-inputs-01\\frequency-10000000-partial-inputs.npz",
+      "sha256": "f5fff0c74c667d8243852b709ed07238585eec427a878bb074519d995f5f680a",
+      "size_bytes": 391933
+    },
+    "bridge_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-partial-inputs-01\\driver-at-run.py",
+      "sha256": "b32c738ba610319492be737d488c91bea77a3cc79a8063ab9d63bfac3256158f",
+      "size_bytes": 10485
+    },
+    "bridge_external": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-partial-inputs-01\\external-budget.json",
+      "sha256": "964b69f692efb28ab66d3dd7ea52348838f721d8efe646244889e2949511210a",
+      "size_bytes": 435
+    },
+    "bridge_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-partial-inputs-01\\result.json",
+      "sha256": "a0117fe7cfe66646ac09d2450ed2be283e7754bce728dc8c33d9916c4b2d2958",
+      "size_bytes": 5699
+    },
+    "budget_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\reconstruct_astra_native_loaded_field.py",
+      "sha256": "354d9e004b189cf8193c2922c8fa4dc1903b407bebb295a4576673200ce6b213",
+      "size_bytes": 33457
+    },
+    "cache_builder": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\cache_astra_l04_10mhz_joint_native_l14_factor.py",
+      "sha256": "76d5bca218c9e3c48974781efa342aae33acffdd356093ca809fff9942d65b21",
+      "size_bytes": 17048
+    },
+    "cache_diagnostic": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-joint-native-l14-factor-cache-01\\compact-factor-diagnostic.json",
+      "sha256": "735f554ab103ba4944ecad4a50997d1d47ca455f563d7df04e92b937ccb96f58",
+      "size_bytes": 5965
+    },
+    "cache_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-joint-native-l14-factor-cache-01\\driver-at-run.py",
+      "sha256": "76d5bca218c9e3c48974781efa342aae33acffdd356093ca809fff9942d65b21",
+      "size_bytes": 17048
+    },
+    "cache_external": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-joint-native-l14-factor-cache-01\\external-budget.json",
+      "sha256": "33f65baee2b0449f98419807ad08beae7b3e90981396a87d071653f262e06240",
+      "size_bytes": 1025
+    },
+    "cache_factors": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-joint-native-l14-factor-cache-01\\qualified-public-factors.npz",
+      "sha256": "b95162dc946a2d757f630bcc08b3d1311b36d334b97b515eca1aa8239e58a762",
+      "size_bytes": 686651870
+    },
+    "cache_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-joint-native-l14-factor-cache-01\\result.json",
+      "sha256": "4eb346b90b1451aad486f234fbddca614092cbd8cb1cf33a8967ea4a76f27ee7",
+      "size_bytes": 7083
+    },
+    "cache_witness": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-joint-native-l14-factor-cache-01\\compact-factor-probe.npz",
+      "sha256": "ca7c87045bb40356cb355e4d7fa037b61a1153fb36710bfc25d51f075cd103a8",
+      "size_bytes": 606305652
+    },
+    "compact_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_l04_sheet_aware_native_compact_factor.py",
+      "sha256": "eed904035db4aa0dbcca7c2b85ff8b5d2c0e9b61acfd86527b9d0725e3786acf",
+      "size_bytes": 12897
+    },
+    "correction_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\astra_fixed_residual_correction.py",
+      "sha256": "349abe08fbacbf1ad5b64061abb2514ec78ffb0b6f4f3673a9a358f23697a101",
+      "size_bytes": 971
+    },
+    "coupled_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\solve_astra_l04_full_contact_coupled.py",
+      "sha256": "6f9b6ce6dc22cefdbb5980b47b30b0c06c8e5ab04a4a0840e7738b014d642430",
+      "size_bytes": 26880
+    },
+    "guard": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_fmm3d_runtime.py",
+      "sha256": "2961d1606ec2d4583c37d990d238a6abc87a54d8e0b93f9d83397f3851536a25",
+      "size_bytes": 16465
+    },
+    "measured_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\preflight_astra_l04_hybrid_aux_native_preconditioner.py",
+      "sha256": "0ee80a0d19ec1efc8a1480f742d7948840e9afae41a96e274e5c391d34654c1b",
+      "size_bytes": 25097
+    },
+    "memory_counter": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_l25_rt0_p1_pair.py",
+      "sha256": "35b1fb7c485b31cab4ea26beba52765ad6cfcbc2a60504d96194aa3b183eee20",
+      "size_bytes": 35907
+    },
+    "ntd_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l04_contact_ntd_action.py",
+      "sha256": "e9108a481308335d3f442a53652468ec9b8507204537c6d96d6f730de2bfbde8",
+      "size_bytes": 28847
+    },
+    "operator": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-full-contact-frequency-operators-02\\frequency-10000000-conditional-operator.npz",
+      "sha256": "7d528de4ced4e24e6fbf1c0ba437276ce8ccc706684e36028f63494685171701",
+      "size_bytes": 101909646
+    },
+    "operator_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-full-contact-frequency-operators-02\\driver-at-run.py",
+      "sha256": "9218fdd6712f9ed4c9bf5c30815f3730d02bab50cc22ac93c9e665d4a2b779e4",
+      "size_bytes": 15672
+    },
+    "operator_external": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-full-contact-frequency-operators-02\\external-budget.json",
+      "sha256": "ff816c7f857cdd4d6a77f6f57a5331943770b9c3af29f5b7a691143b9fdc0a1c",
+      "size_bytes": 438
+    },
+    "operator_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-full-contact-frequency-operators-02\\result.json",
+      "sha256": "7efcd3d999162b27311136a462ef5335071c00e371c6bbe6ac1333d7a98f6555",
+      "size_bytes": 8113
+    },
+    "solver_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-10mhz-hybrid-aux-right-lgmres-01\\driver-at-run.py",
+      "sha256": "e50707e8189ae6f71e107a620d8b194c387965c53db276c4ebdc97fc1dcd3c9f",
+      "size_bytes": 29495
+    },
+    "solver_external": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-10mhz-hybrid-aux-right-lgmres-01\\external-budget.json",
+      "sha256": "c05235fc381d1a442d7835b90e996aa2051dae5841d6c71e1c2447bc3df00caf",
+      "size_bytes": 1274
+    },
+    "solver_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-10mhz-hybrid-aux-right-lgmres-01\\result.json",
+      "sha256": "5fa0b4faef1909e0c66d0d21f75e37aa3f0cd96c94504bcf18be09c2001e2e8d",
+      "size_bytes": 28622
+    },
+    "source_field": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-10mhz-hybrid-aux-right-lgmres-01\\restart-4-unvalidated-field.npz",
+      "sha256": "02a2444e2aae549ffaae6422ec189a5d39e1a74213ae6cfb0bb449ca7c1a1849",
+      "size_bytes": 45761458
+    },
+    "source_physical_diagnostic": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-10mhz-unvalidated-physical-diagnostic-01\\physical-diagnostic.json",
+      "sha256": "a8adce893b8c518f2636030cdc0913984a0a8284f70f8b6a958a818440045206",
+      "size_bytes": 19604
+    },
+    "static": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-joint-native-l14-auxiliary-10mhz-01\\joint-native-l14-l04-hybrid-aux-block.npz",
+      "sha256": "babe65c41ad7e33eb6752e96f5209994adb348105c6d7552793abbe88d26c4b6",
+      "size_bytes": 62963594
+    },
+    "static_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-joint-native-l14-auxiliary-10mhz-01\\driver-at-run.py",
+      "sha256": "1e15c3d4dd873c0179143c4926cc8c11fc3a9fecd8f0fa7d745e29793ec2b166",
+      "size_bytes": 18324
+    },
+    "static_external": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-joint-native-l14-auxiliary-10mhz-01\\external-budget.json",
+      "sha256": "a905f3ef630905329bbd117d3e2ebf9a4781aa70b9be5ec315b82936e37e18c7",
+      "size_bytes": 436
+    },
+    "static_hq_check": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-joint-native-l14-auxiliary-10mhz-01\\hq-block-check.json",
+      "sha256": "91b766a2ddbb60c65530009f151730734ab60965a12a48db45be8abe1a01cb10",
+      "size_bytes": 434
+    },
+    "static_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-joint-native-l14-auxiliary-10mhz-01\\result.json",
+      "sha256": "20aa09b4a62e4c06d28e3d7ec8e37fc34217e0b2bce3f77ea56df354c86cb835",
+      "size_bytes": 11774
+    }
+  },
+  "krylov_iterations": 0,
+  "optimized_complex_alpha": [
+    0.0003643221072508244,
+    0.0005350674548916497
+  ],
+  "optimized_step_ratio_to_initial": 0.9997958837740016,
+  "optimized_step_scaled_residual_relative": 0.008411971416881015,
+  "original_numerical_gate": false,
+  "physical_operator_replacement_accepted": false,
+  "physical_validation_performed": false,
+  "port_indicators_unvalidated_ohm": {
+    "optimized_step_stationary": [
+      0.0006407753743042634,
+      0.00013902626159490892
+    ],
+    "source_raw": [
+      0.0006383312485782705,
+      0.0001360440491696138
+    ],
+    "source_stationary": [
+      0.0006407753922671976,
+      0.0001390262704337954
+    ],
+    "unit_step_stationary": [
+      0.0006407626943681322,
+      0.00013903531257903975
+    ]
+  },
+  "post_release_rss_bytes": 571772928,
+  "preconditioner": {
+    "cache_witness": {
+      "normal_saved_parity_relative": 0.0,
+      "normal_scaled_residual_relative": 1.2081374095072512e-09,
+      "transpose_saved_parity_relative": 0.0,
+      "transpose_scaled_residual_relative": 1.1586436695925547e-09
+    },
+    "coarse_mode_error": 4.041099265050824e-12,
+    "coarse_modes": [
+      "l25_constant",
+      "l02_constant"
+    ],
+    "fixed_residual_corrections": 1,
+    "joint_and_l04_response_eliminated_from_modes": true,
+    "joint_cache_calls": {
+      "normal_count": 6,
+      "normal_seconds": 17.187054300040472,
+      "transpose_count": 1,
+      "transpose_seconds": 3.815480799996294
+    },
+    "joint_filled_once": true,
+    "joint_rows": 903942,
+    "remaining_factors": {
+      "l02_exact": {
+        "L_nnz": 35299905,
+        "U_nnz": 44267300,
+        "factor_elapsed_s": 10.94897809997201,
+        "nnz": 7917807,
+        "pivot_max": 1.033907749166318,
+        "pivot_min": 0.00032849351369713714,
+        "pivot_ratio": 3147.422113544547,
+        "probe_solve_relative_residual": 9.176993000278927e-14,
+        "size": 1694809
+      },
+      "l25_current": {
+        "L_nnz": 5168087,
+        "U_nnz": 7128818,
+        "factor_elapsed_s": 1.1772327999933623,
+        "nnz": 4930001,
+        "pivot_max": 5.34478002162147,
+        "pivot_min": 0.0002586276724964918,
+        "pivot_ratio": 20665.924763692758,
+        "probe_solve_relative_residual": 7.635782816043255e-13,
+        "size": 1183383
+      }
+    },
+    "separate_l14_factor": false
+  },
+  "preconditioner_candidate_only": true,
+  "program": "SPD Decap PI Evaluator",
+  "raw_solver_info": 4,
+  "residual_blocks": {
+    "initial": {
+      "scaled_residual_relative": 0.008413688787283,
+      "scaled_residual_squared_norms": {
+        "l02": 1.145993147303903e-12,
+        "l04_contact": 4.232784733472155e-13,
+        "l14": 1.5028143706179446e-11,
+        "l25": 8.477018413533488e-12,
+        "l25_current": 2.6797799381121696e-32,
+        "native": 4.5868913112553476e-11
+      },
+      "scope": "Top residuals belong to the eliminated MNA potential equations; full physical KCL is checked separately.",
+      "top_physical_potential_row_indices": [
+        2656,
+        1932,
+        757388,
+        757389,
+        757391,
+        757392,
+        1928,
+        756900,
+        756901,
+        757386,
+        757387,
+        756898,
+        756899,
+        506817,
+        756903,
+        756904
+      ],
+      "top_physical_potential_row_residuals_a": [
+        [
+          0.0022428133163727754,
+          -0.0013024891348713936
+        ],
+        [
+          -5.30007599423045e-05,
+          3.5477679935736962e-06
+        ],
+        [
+          -4.2741119419445107e-05,
+          3.1136954116720006e-05
+        ],
+        [
+          -4.265211613924929e-05,
+          3.118940011147569e-05
+        ],
+        [
+          -4.227632755360119e-05,
+          2.9144063234730346e-05
+        ],
+        [
+          -4.219417355573284e-05,
+          2.919855164637671e-05
+        ],
+        [
+          -5.088095185822213e-05,
+          -6.290695644247876e-06
+        ],
+        [
+          -4.71802416588502e-05,
+          1.5423303680813767e-05
+        ],
+        [
+          -4.7082988058729114e-05,
+          1.5481222819954253e-05
+        ],
+        [
+          -3.945254034831008e-05,
+          2.8596128086117544e-05
+        ],
+        [
+          -3.932979534988222e-05,
+          2.8649600470461944e-05
+        ],
+        [
+          -4.5455829807888e-05,
+          1.6140972937836733e-05
+        ],
+        [
+          -4.532979696979953e-05,
+          1.6197535222719603e-05
+        ],
+        [
+          -4.136954326135982e-05,
+          2.4305878637331805e-05
+        ],
+        [
+          -4.604046249661578e-05,
+          1.1106125011799076e-05
+        ],
+        [
+          -4.594848934269726e-05,
+          1.1167208654145673e-05
+        ]
+      ]
+    },
+    "optimized_step": {
+      "scaled_residual_relative": 0.008411971416881015,
+      "scaled_residual_squared_norms": {
+        "l02": 1.1454854939255879e-12,
+        "l04_contact": 4.5131591578054823e-13,
+        "l14": 1.5017199833422923e-11,
+        "l25": 8.468469811187482e-12,
+        "l25_current": 2.6778284774162745e-32,
+        "native": 4.5831917377905554e-11
+      },
+      "scope": "Top residuals belong to the eliminated MNA potential equations; full physical KCL is checked separately.",
+      "top_physical_potential_row_indices": [
+        2656,
+        1932,
+        757388,
+        757389,
+        757391,
+        757392,
+        1928,
+        756900,
+        756901,
+        757386,
+        757387,
+        756898,
+        756899,
+        506817,
+        756903,
+        756904
+      ],
+      "top_physical_potential_row_residuals_a": [
+        [
+          0.002239384702452701,
+          -0.0013026390913308261
+        ],
+        [
+          -5.2921600418534495e-05,
+          3.700126454541605e-06
+        ],
+        [
+          -4.270888751395964e-05,
+          3.114847961796982e-05
+        ],
+        [
+          -4.261988859748149e-05,
+          3.120085888273156e-05
+        ],
+        [
+          -4.224533131311983e-05,
+          2.9156066095185087e-05
+        ],
+        [
+          -4.2163178090793356e-05,
+          2.9210490697567956e-05
+        ],
+        [
+          -5.082880988996906e-05,
+          -6.125887439151206e-06
+        ],
+        [
+          -4.715480034594193e-05,
+          1.5442929242141576e-05
+        ],
+        [
+          -4.7057551186811e-05,
+          1.5500775242822947e-05
+        ],
+        [
+          -3.942286605819919e-05,
+          2.8606819654827172e-05
+        ],
+        [
+          -3.930013716715522e-05,
+          2.8660206881145925e-05
+        ],
+        [
+          -4.5430632734876237e-05,
+          1.6159414359728236e-05
+        ],
+        [
+          -4.5304615548699094e-05,
+          1.621588860165038e-05
+        ],
+        [
+          -4.124840353629311e-05,
+          2.427341489600349e-05
+        ],
+        [
+          -4.601774641225644e-05,
+          1.1126713558021484e-05
+        ],
+        [
+          -4.592577408232212e-05,
+          1.11877257344054e-05
+        ]
+      ]
+    },
+    "unit_step": {
+      "scaled_residual_relative": 0.2626402698175709,
+      "scaled_residual_squared_norms": {
+        "l02": 8.151959938783172e-13,
+        "l04_contact": 6.72568880617432e-08,
+        "l14": 3.8667806097299695e-34,
+        "l25": 1.7975810462782603e-09,
+        "l25_current": 7.975546688626223e-39,
+        "native": 7.389754620454861e-11
+      },
+      "scope": "Top residuals belong to the eliminated MNA potential equations; full physical KCL is checked separately.",
+      "top_physical_potential_row_indices": [
+        2656,
+        1948,
+        1942,
+        1968,
+        1952,
+        1928,
+        1956,
+        1932,
+        1960,
+        1936,
+        1964,
+        1922,
+        392696,
+        506817,
+        1483254,
+        1483253
+      ],
+      "top_physical_potential_row_residuals_a": [
+        [
+          -0.0009296653011758107,
+          0.002945217961014367
+        ],
+        [
+          0.00023935039265532204,
+          -1.1209387690338424e-06
+        ],
+        [
+          0.00022932435084834,
+          6.1427032735301266e-06
+        ],
+        [
+          0.00020528255404052658,
+          7.885802787899136e-05
+        ],
+        [
+          0.00021738367024810073,
+          -4.074697709696929e-06
+        ],
+        [
+          0.00020490156170838882,
+          7.041973724077478e-05
+        ],
+        [
+          0.00021309497522943154,
+          1.2223115648373261e-05
+        ],
+        [
+          0.00021037466276360207,
+          3.493439985606173e-05
+        ],
+        [
+          0.0002099486240551887,
+          3.698969638419351e-05
+        ],
+        [
+          0.00021209639594477872,
+          1.0825628875117782e-05
+        ],
+        [
+          0.0002008910078913737,
+          6.128126713765352e-05
+        ],
+        [
+          0.0001944931286275587,
+          7.427752432128515e-05
+        ],
+        [
+          1.9204485441678203e-05,
+          -0.00017522938101120994
+        ],
+        [
+          2.2501134992369666e-05,
+          -0.00015860605906141192
+        ],
+        [
+          0.00010654501052792698,
+          4.932409221111175e-05
+        ],
+        [
+          0.00010676201212563485,
+          4.840690482423905e-05
+        ]
+      ]
+    }
+  },
+  "scope": "One saved 10 MHz restart-4 residual and one true action of its cached-joint preconditioned step. Original target-frequency Y/delta/U/D and exact fixed-R ContactNtD remain the true operator. The native+L14+L04 auxiliary uses fixed B1 and only L25/L02 coarse modes. No Krylov iteration, changed physical model, saved candidate field, convergence, physical validation, impedance accuracy, PowerSI fitting, or acceptance claim.",
+  "source_current_a": 1.0,
+  "source_failed_physical_gates": [
+    "l04_all_contact_kcl",
+    "matrix_global_circuit_kcl",
+    "matrix_identity_power",
+    "physical_power_closure",
+    "physical_source_global_circuit_kcl"
+  ],
+  "source_field": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-10mhz-hybrid-aux-right-lgmres-01\\restart-4-unvalidated-field.npz",
+    "sha256": "02a2444e2aae549ffaae6422ec189a5d39e1a74213ae6cfb0bb449ca7c1a1849",
+    "size_bytes": 45761458
+  },
+  "source_physical_gates_all_pass": false,
+  "status": "DIAGNOSTIC_UNVALIDATED_10MHZ_CACHED_JOINT_ONE_STEP",
+  "timings_s": {
+    "cached_joint_preconditioner": 3.7301453000400215,
+    "exact_ntd_load": 2.50694290001411,
+    "true_action_of_preconditioned_step": 3.3501888000173494,
+    "true_initial_residual_action": 3.335215499973856
+  },
+  "true_operator_calls": 2,
+  "unit_step_ratio_to_initial": 31.21582892566012,
+  "unit_step_scaled_residual_relative": 0.2626402698175709,
+  "version": "0.23.1"
+}

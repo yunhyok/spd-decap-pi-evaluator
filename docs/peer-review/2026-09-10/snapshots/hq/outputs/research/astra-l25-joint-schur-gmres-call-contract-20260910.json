@@ -1,0 +1,11 @@
+{
+  "status": "PASS_INSTALLED_SCIPY_GMRES_BOUNDED_CALL_CONTRACT",
+  "scipy_version": "1.18.1",
+  "source": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research-runtime\\scipy\\sparse\\linalg\\_isolve\\iterative.py",
+  "source_sha256": "b467009e4c8853579bd8966002a017b761d4a1979df6eb0b8a62114b3ddab848",
+  "arnoldi_calls": 8,
+  "total_matvec_calls": 9,
+  "final_matvec_input_equals_returned_solution": true,
+  "info": 1,
+  "scope": "Small runtime call-count check only. No physical or board accuracy claim."
+}

@@ -1,0 +1,274 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "STOP_L25_SHAPE_KERNEL_GATE",
+  "inputs": {
+    "bar": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_rt0_p0_bar.py",
+      "sha256": "7ce14c6113e3c5023fdbe4ebd3f98aecf04c3b6fe98aa3007964ac998a2fbb0a"
+    },
+    "potential": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_triangle_static_potential.py",
+      "sha256": "75f55868574d16236b5e6dc14370c3fefffda2d3c171707f330eda1af8561b1e"
+    },
+    "mesh": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-sheet-mesh-preflight-01\\mesh-stiffness.npz",
+      "sha256": "09e79fcbdac766603a3e2f451e2079c3c6b8b588026d0aa47f532f1e98d78134"
+    },
+    "topology": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-dual-cell-topology-01\\dual-cell-topology.npz",
+      "sha256": "eb33117f14a3e5725e9efeafd2a0a083961ad83abaf022b7fe78b94bc8b5265f"
+    }
+  },
+  "tolerance": 5e-05,
+  "quadrature_orders": [
+    16,
+    32,
+    64
+  ],
+  "cases": [
+    {
+      "label": "first_free",
+      "triangle_index": 0,
+      "mesh_node_indices": [
+        0,
+        1,
+        29
+      ],
+      "vertices_m": [
+        [
+          -0.0038549979999999997,
+          0.01201667
+        ],
+        [
+          -0.0038549979999999997,
+          0.012139249999999999
+        ],
+        [
+          -0.0038200779999999998,
+          0.0121503
+        ]
+      ],
+      "area_m2": 2.140246799999974e-09,
+      "longest_edge_over_altitude": 4.456584936839995,
+      "self_partial_L_h": [
+        [
+          1.1475283397265413e-11,
+          -3.3106879178306692e-12,
+          -5.213064186459625e-12
+        ],
+        [
+          -3.310687917791088e-12,
+          2.478334925459061e-12,
+          2.4306958525368605e-12
+        ],
+        [
+          -5.213064186418003e-12,
+          2.4306958525388986e-12,
+          4.219992861401037e-12
+        ]
+      ],
+      "orthogonal_sheet_current_density_a_per_m": 1.0,
+      "twice_magnetic_energy_x_y_j": [
+        [
+          2.5089515079140157e-20,
+          2.508951507914015e-20
+        ],
+        [
+          2.5089294263744382e-20,
+          2.5089294263744295e-20
+        ],
+        [
+          2.5089279556650022e-20,
+          2.508927955664989e-20
+        ]
+      ],
+      "metrics": {
+        "inner_scalar_relative_error": 1.9512312613861364e-16,
+        "inner_moment_scaled_relative_error": 9.52677293515074e-18,
+        "refinement_16_to_32": 1.0483315298339339e-05,
+        "refinement_32_to_64": 6.963106702332527e-07,
+        "uniform_x_y_energy_refinement": 5.861903835046208e-07,
+        "raw_reciprocity": 5.206340720778248e-12,
+        "translation": 5.995282738057294e-16,
+        "winding": 7.78560736978296e-09,
+        "min_symmetric_eigenvalue_h": 7.418190533330969e-13
+      },
+      "gates": {
+        "inner_scalar_relative_error": true,
+        "inner_moment_scaled_relative_error": true,
+        "refinement_32_to_64": true,
+        "uniform_x_y_energy_refinement": true,
+        "raw_reciprocity": true,
+        "translation": true,
+        "winding": true,
+        "min_symmetric_eigenvalue_h": true,
+        "positive_uniform_current_energy": true
+      },
+      "passed": true
+    },
+    {
+      "label": "known_sliver",
+      "triangle_index": 457250,
+      "mesh_node_indices": [
+        449771,
+        456211,
+        456265
+      ],
+      "vertices_m": [
+        [
+          0.03770650347464103,
+          0.048364922186352126
+        ],
+        [
+          0.03834349652535897,
+          0.048364922186352126
+        ],
+        [
+          0.038349999999999995,
+          0.048365002
+        ]
+      ],
+      "area_m2": 2.5420369523249825e-11,
+      "longest_edge_over_altitude": 8144.802618635206,
+      "self_partial_L_h": [
+        [
+          2.472268913909062e-10,
+          -6.841765394847795e-11,
+          -7.164027601937887e-11
+        ],
+        [
+          -6.841765279935569e-11,
+          4.5514907208441063e-11,
+          4.667811604706423e-11
+        ],
+        [
+          -7.164027485861875e-11,
+          4.6678116058702105e-11,
+          4.788610942995538e-11
+        ]
+      ],
+      "orthogonal_sheet_current_density_a_per_m": 1.0,
+      "twice_magnetic_energy_x_y_j": [
+        [
+          2.735336128032085e-24,
+          2.735336133680994e-24
+        ],
+        [
+          2.7363172474006626e-24,
+          2.7363172081405215e-24
+        ],
+        [
+          2.7364999749158664e-24,
+          2.7364999196957714e-24
+        ]
+      ],
+      "metrics": {
+        "inner_scalar_relative_error": 1.8544683801475993e-15,
+        "inner_moment_scaled_relative_error": 5.497862746098378e-18,
+        "refinement_16_to_32": 0.0005134563610481998,
+        "refinement_32_to_64": 9.553219199515722e-05,
+        "uniform_x_y_energy_refinement": 6.677417024621052e-05,
+        "raw_reciprocity": 7.722668327797837e-09,
+        "translation": 1.6715452581475913e-13,
+        "winding": 2.573887538801068e-05,
+        "min_symmetric_eigenvalue_h": 3.3376418501521677e-18
+      },
+      "gates": {
+        "inner_scalar_relative_error": true,
+        "inner_moment_scaled_relative_error": true,
+        "refinement_32_to_64": false,
+        "uniform_x_y_energy_refinement": false,
+        "raw_reciprocity": true,
+        "translation": true,
+        "winding": true,
+        "min_symmetric_eigenvalue_h": true,
+        "positive_uniform_current_energy": true
+      },
+      "passed": false
+    },
+    {
+      "label": "largest_area",
+      "triangle_index": 542067,
+      "mesh_node_indices": [
+        535110,
+        535147,
+        535148
+      ],
+      "vertices_m": [
+        [
+          0.048365002,
+          0.02405
+        ],
+        [
+          0.0497,
+          9.499299999999999e-05
+        ],
+        [
+          0.0497,
+          0.04787572999999999
+        ]
+      ],
+      "area_m2": 3.1893594166763114e-05,
+      "longest_edge_over_altitude": 35.79086785148728,
+      "self_partial_L_h": [
+        [
+          3.5170869486155023e-10,
+          3.377534333754275e-10,
+          3.498195959300188e-10
+        ],
+        [
+          3.377534334600744e-10,
+          4.310753211159561e-09,
+          -3.6049526696510457e-09
+        ],
+        [
+          3.4981959584727256e-10,
+          -3.6049526698184584e-09,
+          4.29210205511761e-09
+        ]
+      ],
+      "orthogonal_sheet_current_density_a_per_m": 1.0,
+      "twice_magnetic_energy_x_y_j": [
+        [
+          2.8182054206709564e-14,
+          2.818205420671188e-14
+        ],
+        [
+          2.81818272986676e-14,
+          2.8181827298670005e-14
+        ],
+        [
+          2.8181812830497597e-14,
+          2.8181812830498648e-14
+        ]
+      ],
+      "metrics": {
+        "inner_scalar_relative_error": 4.588169549442741e-16,
+        "inner_moment_scaled_relative_error": 1.74606929310661e-17,
+        "refinement_16_to_32": 9.248925087050696e-06,
+        "refinement_32_to_64": 5.805553807259624e-07,
+        "uniform_x_y_energy_refinement": 5.133868230303391e-07,
+        "raw_reciprocity": 3.63611612293592e-11,
+        "translation": 3.317756235771034e-16,
+        "winding": 3.006488305720257e-08,
+        "min_symmetric_eigenvalue_h": 8.229249011158858e-12
+      },
+      "gates": {
+        "inner_scalar_relative_error": true,
+        "inner_moment_scaled_relative_error": true,
+        "refinement_32_to_64": true,
+        "uniform_x_y_energy_refinement": true,
+        "raw_reciprocity": true,
+        "translation": true,
+        "winding": true,
+        "min_symmetric_eigenvalue_h": true,
+        "positive_uniform_current_energy": true
+      },
+      "passed": true
+    }
+  ],
+  "elapsed_s": 4.775572799961083,
+  "scope": "Three actual L25 triangle shapes evaluated with a zero-thickness static kernel only; no inter-triangle source coupling, finite-thickness/internal composition, board solve, accelerator, or PowerSI claim.",
+  "script_sha256": "5749360fc90dc13f6777ced6bcbc4b5124d8fb9e5ddc3297d29279adf1b9e77f"
+}

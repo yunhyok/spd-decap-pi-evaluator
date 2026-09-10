@@ -1,0 +1,120 @@
+{
+  "active_face_count_histogram": [
+    0,
+    92789,
+    650403,
+    846635
+  ],
+  "artifact": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-exact-hybrid-cells-01\\l04-exact-hybrid-cells.npz",
+    "sha256": "8f51d808397cf5ba5764e0df51b41e44ed9af82924dc1a766b515524279cb5c0",
+    "size_bytes": 42743816
+  },
+  "budget": {
+    "elapsed_s": 9.75,
+    "max_rss_bytes": 4294967296,
+    "max_runtime_s": 120,
+    "peak_rss_bytes": 501661696
+  },
+  "contacts": 38278,
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-exact-hybrid-cells-01\\driver-at-run.py",
+    "sha256": "cd925c921034fa84762ca887f02a05faa01a0fa2c0576b446a8217de4c332d39",
+    "size_bytes": 15871
+  },
+  "free_cells": 1589827,
+  "geometry_approximation": {
+    "domain": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-conditional-sheet-mesh-02\\l04-coalesced-conductor-domain.wkb",
+      "sha256": "8dbfbb75d87efa7c9504b1ab521a78687ef97b45d1eb0e6a8d5ff6007658c674",
+      "size_bytes": 14024197
+    },
+    "max_vertex_displacement_um": 1.473493695890548e-10,
+    "method": "EXACT_TWO_SOURCE_VERTEX_COALESCENCE_L04_RING563",
+    "source_domain": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-pad-conductor-domain-01\\l04-pad-augmented-conductor-domain.wkb",
+      "sha256": "0eeaffc34a6b9759fd285f28d35ebd59042e6bcd909a697fad3f18a5d2eafa68",
+      "size_bytes": 14024197
+    },
+    "unchanged_source_geometry": false,
+    "witness_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-cdt-local-coalescence-witness-02\\result.json",
+      "sha256": "3e097e7086f6bd10e009afbcdb6b98ca8029f6555273f4e7b1f92c3059a216ce",
+      "size_bytes": 6819
+    }
+  },
+  "inputs": {
+    "accepted_stream_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\result.json",
+      "sha256": "3e5417fa1a2db0308208449896c2aa1650beff5051d2ee03b60a8b4a11fe2bf1",
+      "size_bytes": 8797
+    },
+    "accepted_stream_space": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\l04-fixed-contact-rt0-space.npz",
+      "sha256": "5d31b3c6183eb4f43723eb80d1a545953a42fb2c9320be425d3ebc034cb51bb6",
+      "size_bytes": 79222436
+    },
+    "budget_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\reconstruct_astra_native_loaded_field.py",
+      "sha256": "354d9e004b189cf8193c2922c8fa4dc1903b407bebb295a4576673200ce6b213",
+      "size_bytes": 33457
+    },
+    "full_parameters_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l02_hybrid_cell_geometry.py",
+      "sha256": "5f102d3a3f0a59919c7bacfb259cbf00a9959f50d01ed9913e7501acfcf6c9c2",
+      "size_bytes": 6788
+    },
+    "local_rt0_identity_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\assemble_astra_l25_rt0_resistance.py",
+      "sha256": "ec299b76564463bcea09a54aea4391cb2659e5267375cb7b3b2175d1fe475010",
+      "size_bytes": 18360
+    },
+    "mesh_snapshot": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-conditional-sheet-mesh-02\\l04-conditional-sheet-mesh-before-stiffness.npz",
+      "sha256": "6f2f396fe2319d60ad4b1586fd7043960e42f1d85c29f28a1d9c082302a3a211",
+      "size_bytes": 19845932
+    },
+    "mesh_snapshot_receipt": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-conditional-sheet-mesh-02\\l04-conditional-sheet-mesh-before-stiffness.json",
+      "sha256": "1dda2cb3a109081b5a5206d54dbcea81b3f979ceaf53d6bd4e48f6d3f90d7bac",
+      "size_bytes": 1998
+    },
+    "restricted_parameters_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l02_restricted_hybrid_cells.py",
+      "sha256": "31426b9bb52b71955443051c3f5071cc106541ae28e3d554b9d95a491357fbfa",
+      "size_bytes": 8480
+    },
+    "saved_mesh_qualification_guard": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-saved-mesh-qualification-01\\external-budget.json",
+      "sha256": "1749c8d8ca63fc53a351a08d3514beb9b58815d574a191f79727f2ed0cd2f8a4",
+      "size_bytes": 1008
+    },
+    "saved_mesh_qualification_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-saved-mesh-qualification-01\\result.json",
+      "sha256": "b0bfb67985d123600c892d3d34cd39d56254e2a1fb9bcdc95622da8be990ca4d",
+      "size_bytes": 6860
+    }
+  },
+  "internal_branches": 1660526,
+  "material": {
+    "conductivity_s_per_m": 59590000.0,
+    "sheet_conductance_s": 1191.8000000000002,
+    "thickness_m": 2e-05
+  },
+  "metrics": {
+    "h_row_sum_roundoff_ratio": 0.02026132870420607,
+    "rh_abs": 5.564248195533139e-08,
+    "rh_roundoff_ratio": 0.6264818026687506,
+    "rw_abs_ohm": 2.159938894408242e-13,
+    "rw_roundoff_ratio": 0.042029075808943904,
+    "weight_abs": 1301.0000002081529,
+    "weight_sum_abs": 1.4210854715202004e-14,
+    "weight_sum_roundoff_ratio": 0.1249447677992909
+  },
+  "program": "SPD Decap PI Evaluator",
+  "rim_branches": 612448,
+  "run_released": true,
+  "scope": "Static conditional L04 exact-hybrid-cell preparation only. Exterior facets have zero flux because the saved negative local-facet IDs are restricted before inversion. No global R assembly, operator, factor, field, solve, or accuracy claim.",
+  "status": "PREPARED_STATIC_CONDITIONAL_L04_EXACT_HYBRID_CELLS",
+  "version": "0.23.1"
+}

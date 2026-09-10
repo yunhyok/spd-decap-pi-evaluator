@@ -1,0 +1,109 @@
+{
+  "captured_l02_source_category_nnz": {
+    "distributed_gc": 2003377,
+    "finite_via": 3021121,
+    "retained_gc": 5452,
+    "sheet_dc": 4512062,
+    "termination": 5312
+  },
+  "category_nnz": {
+    "l02_distributed_gc": 2003377,
+    "l02_sheet_dc": 4512062,
+    "l14_distributed_gc": 1196872,
+    "l14_sheet_dc": 773755,
+    "l25_distributed_gc": 2821635,
+    "retained_gc": 5437,
+    "termination": 5312
+  },
+  "checks": {
+    "combined_csc_vs_one_owned_source_action_relative_error": 1.085310739364179e-12,
+    "combined_to_corrected_native_source_action_relative_error": 6.651377168027228e-13,
+    "combined_y_row_sum_relative_max": 4.865241091095473e-13,
+    "combined_y_symmetry_relative_max": 1.2659207839798154e-17,
+    "deterministic_driven_power": [
+      5203168812.1311455,
+      -445676787.8089222
+    ],
+    "l25_b_column_sum_max": 0.0,
+    "l25_category_vs_callback_action_relative_error": 8.592096071852142e-13,
+    "l25_r_symmetry_relative_max": 0.0,
+    "l25_returned_callback_action_relative_error": 8.593951721182578e-13,
+    "l25_returned_category_action_relative_error": 1.0403544704935727e-13,
+    "no_lu_or_field_solve": true,
+    "retained_gc_l02_target_relative_max": 0.0,
+    "single_final_finite_branch_list_used": true
+  },
+  "dimensions": {
+    "b_nnz": 1208062,
+    "current_count": 604031,
+    "finite_branch_count": 1692409,
+    "gauge_eliminated_unknown_count": 2944099,
+    "mixed_unknown_count": 2944100,
+    "potential_count": 2340069,
+    "r_nnz": 1949981,
+    "y_nnz": 12331873
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-operator-02\\driver-at-run.py",
+    "sha256": "f938bdf5fb3ead1c5cafaf380404f97c204ecf5eb6d1e441cbb858cd0f1a9c6a",
+    "size_bytes": 23187
+  },
+  "elapsed_s": 24.608681400015485,
+  "frequency_hz": 1000000.0,
+  "inputs": {
+    "assembly_map": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-assembly-map-02\\combined-assembly-map.npz",
+      "sha256": "a6ccff514fe788396eb9d7620ebc828f966efbea3f7899e7a73991c17f8a2469",
+      "size_bytes": 16919703
+    },
+    "assembly_map_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-assembly-map-02\\result.json",
+      "sha256": "cdbb80f3412732f614c1d482a3cc8288c5c6134b5dfb1de2376711309039ae81",
+      "size_bytes": 9732
+    },
+    "assembly_map_review": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-assembly-map-review-01\\independent-review.json",
+      "sha256": "5f0436c3f574e5eafd7f9d957d5aca56d283ef562fe1105132356008da36eaad",
+      "size_bytes": 3790
+    },
+    "l02_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\run_astra_l02_sheet_r_shadow.py",
+      "sha256": "8437a7eb0398fdef919704c33a6ba2e9498c810b79e04b5df533462c8ce55105",
+      "size_bytes": 47796
+    },
+    "l02_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-sheet-r-board-1mhz-01\\result.json",
+      "sha256": "a491c951b7ec8c209fb194cb8dfa82d25a94230abefffbb97c94af55179b0e9b",
+      "size_bytes": 12186
+    },
+    "l25_gc_receipt": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-refined-gc-areas-02\\result.json",
+      "sha256": "8c0cd86b78ac647eadbf15962eadb5ad4d7a2ab385e41488982771a2432a69ef",
+      "size_bytes": 7773
+    },
+    "l25_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\run_astra_l25_rt0_board_shadow.py",
+      "sha256": "edb0d82ff2b9af9b44259541cca0d2abdef7e52c4c1ebd29ba2c990e7d65ef98",
+      "size_bytes": 23386
+    }
+  },
+  "limitations": [
+    "The existing conditional sheet/contact discretizations and their owner projections are reused unchanged.",
+    "The saved operator is an assembly prerequisite, not an accepted board response; a guarded solve and source-current/power checks remain pending.",
+    "L02 conservative current/charge and magnetic coupling beyond this nodal sheet model remain separate work."
+  ],
+  "output": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-operator-02\\combined-operator.npz",
+    "sha256": "45cc79706849631e9c33dc2f0d0e3c7910fe7dcce817585c728f6f1e3c30a1e8",
+    "size_bytes": 77455200
+  },
+  "port": {
+    "gauge_active_index": 0,
+    "negative_active_index": 2656,
+    "positive_active_index": 2699
+  },
+  "program": "SPD Decap PI Evaluator",
+  "scope": "One executable 1MHz sparse Y/R/B assembly combining the pinned conditional L02, L14 and L25 source operators. The native finite network is constructed once from the accepted final branch list; no large delta subtraction, LU, voltage/current field or PowerSI comparison is performed.",
+  "status": "PASS_L02_L14_L25_COMBINED_OPERATOR_ASSEMBLY_NO_LU",
+  "version": "0.23.1"
+}

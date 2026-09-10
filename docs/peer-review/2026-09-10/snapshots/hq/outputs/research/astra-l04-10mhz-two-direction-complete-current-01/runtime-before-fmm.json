@@ -1,0 +1,49 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "RUNTIME_VERIFIED_BEFORE_FMM",
+  "runtime": {
+    "program": "SPD Decap PI Evaluator",
+    "version": "0.23.1",
+    "status": "ACCEPT_FMM3D_POINT_KERNEL_ONLY",
+    "fmm3d_version": "2.1.0",
+    "numpy_version": "2.3.5",
+    "wheel": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research-deps\\wheels\\fmm3dpy-2.1.0-cp312-cp312-win_amd64.whl",
+      "sha256": "9ec1a3bd0dc661475d5cf9dc051fb09c1c8de260d6d2f5f821996d480e665cfe"
+    },
+    "runtime_files": {
+      "fmm3dpy\\__init__.py": "8912b657a58293a14676a447e6f987a9aa20aac9d9f6388d8fcd6713af581a8c",
+      "fmm3dpy\\emfmm3d_fortran.cp312-win_amd64.pyd": "c344896d884c256ed87d457b2ff26c1a87ad1f646fc004314ee483f6ff2d840f",
+      "fmm3dpy\\fmm3d.py": "8b7e457c884a937709c962c653e39a57d34dada427bfda753a610fbd83be8f8a",
+      "fmm3dpy\\hfmm3d_fortran.cp312-win_amd64.pyd": "976430cfebc65234211c50b339baa403822cc5c62b2dbcc90c32947e671b7367",
+      "fmm3dpy\\lfmm3d_fortran.cp312-win_amd64.pyd": "0e6d8356e9d749f60870f464394e386db70b206ab39c0ad61c076a1b0630d5c8",
+      "fmm3dpy\\stfmm3d_fortran.cp312-win_amd64.pyd": "794c894a440f0f81a314a61ef0160571f5ec04d6c295ee462e88b76394fddb32"
+    },
+    "source_count": 2048,
+    "real_channels": 4,
+    "requested_precision": 1e-10,
+    "normalization_absolute_error": 0.0,
+    "channel_direct_relative_errors": [
+      3.845683937633802e-12,
+      5.03114453131368e-12,
+      3.6485913688080364e-12,
+      2.7322306394644355e-12
+    ],
+    "complex_bilinear_reciprocity": 9.626555907588241e-18,
+    "inverse_length_scaling": 5.790473118562494e-12,
+    "fmm_s": 0.08141829998930916,
+    "numpy_direct_s": 0.13839879998704419,
+    "elapsed_s": 0.35404010000638664,
+    "gates": {
+      "normalization_1_over_4pi_r": true,
+      "fmm_ier_zero": true,
+      "finite": true,
+      "all_channels_direct_relative_below_1e_8": true,
+      "complex_bilinear_reciprocity_below_1e_8": true,
+      "inverse_length_scaling_below_1e_8": true
+    },
+    "scope": "Nonuniform two-plane point kernel with self points omitted. Four real channels represent two complex patterns. Magnetic vector potential needs mu0 times this1/(4pi*r) kernel. No triangle quadrature, finite self/near integration, RT0 composition, source board, PSD or accuracy claim.",
+    "script_sha256": "d753db51643a07114e10ed79694d06ef7eef33a28d63ac27ab587af75365642e"
+  }
+}

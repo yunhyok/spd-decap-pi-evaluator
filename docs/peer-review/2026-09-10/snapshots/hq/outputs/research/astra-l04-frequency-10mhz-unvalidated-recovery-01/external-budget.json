@@ -1,0 +1,13 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "COMPLETED_NATIVE_WORKER",
+  "exit_code": 0,
+  "driver_sha256": "0334087871401cf664f4eea7cf66b97cdb37fdb1e49a0a06dfc1e8e0cdd6ba95",
+  "external_seconds": 150.0,
+  "max_memory_bytes": 8589934592,
+  "printed_memory_cap_gib": 8.0,
+  "sampled_peak_private_bytes": 3357601792,
+  "sampled_peak_working_set_bytes": 905674752,
+  "sampling_interval_s": 0.5
+}

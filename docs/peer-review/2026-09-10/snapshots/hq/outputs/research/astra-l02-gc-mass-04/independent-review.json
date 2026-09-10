@@ -1,0 +1,112 @@
+{
+  "checks": {
+    "csc_canonical_finite_symmetric": true,
+    "csc_row_sum_relative_max": 7.992712156165092e-15,
+    "expanded_nnz": 4862069,
+    "expanded_shape": [
+      1441310,
+      1441310
+    ],
+    "external_active_identity_count": 1696,
+    "integrated_capacitance_total_f": 5.909971854073673e-09,
+    "local_raw_mass_block_count": 1041341,
+    "maximum_direct_area_relative_error": 1.0696322511702341e-15,
+    "maximum_direct_mass_relative_error": 8.848523406934301e-16,
+    "mesh_node_count": 1439614,
+    "minimum_local_triangle_mass_eigenvalue": 1.0734027865877648e-12,
+    "native_capacitance_total_f": 5.909971854073682e-09,
+    "owner_area_collapse_relative_max": 6.037536611238076e-14,
+    "owner_capacitance_collapse_relative_max": 5.160064642896065e-15,
+    "owner_count": 2064,
+    "raw_block_reconstruction_relative_error": 1.0380145657357261e-16,
+    "sampled_constrained_triangle_count": 15,
+    "sampled_local_blocks": 12,
+    "sampled_owner_indices": [
+      0,
+      246,
+      519,
+      794,
+      1028,
+      1302,
+      1565,
+      1635,
+      1635,
+      1635,
+      1801,
+      2063
+    ],
+    "source_arrays_bitwise_exact": true
+  },
+  "elapsed_s": 4.297000000020489,
+  "program": "SPD Decap PI Evaluator",
+  "reviewed": {
+    "capacitance_npz": {
+      "bytes": 46180834,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-gc-mass-04\\l02-gc-capacitance-block.npz",
+      "sha256": "920dc89580bf123df00343d1a59f149c5fd96158694c391179528a02fe1af184"
+    },
+    "frozen_driver": {
+      "bytes": 41255,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-gc-mass-04\\driver-at-run.py",
+      "sha256": "b50915a6ec98b9d09665eac678a101444d055c610d6f9601f1439b0fe06e76eb"
+    },
+    "guard": {
+      "bytes": 1471,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-gc-mass-04-guard\\external-budget.json",
+      "sha256": "c50855b2ca4e29274b937eabffe0dbe0c4572caf93c09566d756c9b30d8c0d4a"
+    },
+    "guard_helper": {
+      "bytes": 16465,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_fmm3d_runtime.py",
+      "sha256": "2961d1606ec2d4583c37d990d238a6abc87a54d8e0b93f9d83397f3851536a25"
+    },
+    "mesh_npz": {
+      "bytes": 54863370,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-sheet-mesh-preflight-02\\mesh-stiffness.npz",
+      "sha256": "137b4952f739a75e7bf6f2e21684529a43c48558412df59faab0ad003ea10fb9"
+    },
+    "mesh_result": {
+      "bytes": 4646,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-sheet-mesh-preflight-02\\result.json",
+      "sha256": "2ff4183b727373d8f6d9dbd32a39fcfc55a92b19bc55328b7e79082e766bfe59"
+    },
+    "mesh_review": {
+      "bytes": 3499,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-sheet-mesh-preflight-02\\independent-review.json",
+      "sha256": "69019084739f64c96d68450bf0e4a8cd0b22f9a70f55cae1095ae109a9468c06"
+    },
+    "result": {
+      "bytes": 5446,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-gc-mass-04\\result.json",
+      "sha256": "7ba47f4058d368dea0e96f0c153191cfdb0015e3dd28d10b82a9cd2e3af82d86"
+    },
+    "source_overlap_npz": {
+      "bytes": 1121901,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-gc-source-overlaps-01\\source-overlap-polygons.npz",
+      "sha256": "7ce1575f8b03380aff3a549f347bbafe9bc0fd85d47fe4039383de9bcaa6d920"
+    },
+    "source_overlap_result": {
+      "bytes": 545300,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-gc-source-overlaps-01\\result.json",
+      "sha256": "3ee62248ceae6d54a2d182a615c882b2e270d8752b166408fcc1441a9549fb46"
+    },
+    "source_overlap_review": {
+      "bytes": 2478,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-gc-source-overlaps-01\\independent-review.json",
+      "sha256": "3f135214d73478b0d32173b1580e0812b4966634a80231be6d8596d1c59caebb"
+    },
+    "source_owner_ledger": {
+      "bytes": 2248642,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-gc-owner-ledger-01\\result.json",
+      "sha256": "69fb96a75b7bbe8a73d6704b237043272b7b1ca2da8c35880894205f606982b8"
+    },
+    "triangle_mass_helper": {
+      "bytes": 61282,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\project_astra_l14_gc_mass.py",
+      "sha256": "f2c668fd090db5c4606eec27558c9bdbbdde6552d2f82c3b64b8837bd7350dc3"
+    }
+  },
+  "scope": "Independent hash/binding/source-array/sparse-layout/raw-owner-mass review with a deterministic small direct moment sample. It does not replay all 2064 overlays, compile a mesh, contract contacts, assemble a board, run LU, fit PowerSI, or claim accuracy.",
+  "status": "ACCEPT_L02_SOURCE_GC_P1_CAPACITANCE_BLOCK_INDEPENDENT_REVIEW",
+  "version": "0.23.1"
+}

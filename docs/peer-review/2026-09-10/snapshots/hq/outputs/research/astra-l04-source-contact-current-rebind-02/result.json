@@ -1,0 +1,95 @@
+{
+  "budget": {
+    "cooperative_checks": true,
+    "elapsed_s": 0.09299999999348074,
+    "kind": "pinned reconstruct _Budget.create(60,4)",
+    "max_rss_bytes": 4294967296,
+    "max_runtime_s": 60,
+    "peak_rss_bytes": 1382735872
+  },
+  "counts": {
+    "hidden_future_child_records_and_parents": [
+      20,
+      10
+    ],
+    "native_boundary_rows": 76146,
+    "records_by_category": [
+      76136,
+      10,
+      20
+    ],
+    "unique_present_parent_rows": 76156
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-source-contact-current-rebind-02\\driver-at-run.py",
+    "sha256": "2414c9c2e8ed8a77f251370e02968358bf57f9e056d8a4839d3a3b9851a09c90",
+    "size_bytes": 10002
+  },
+  "gates": {
+    "accepted_ranking_agreement": true,
+    "attempt_failure_occurred_after_result_and_artifact_write": true,
+    "exception_original_junction_identity": true,
+    "hidden_pair_same_parent_current_opposite_source_orientation": true,
+    "ordinary_native_unsplit_identity": true,
+    "source_record_identity": true
+  },
+  "inputs": {
+    "attempt_artifact": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-source-contact-current-rebind-01\\l04-source-contact-current-rebind.npz",
+      "sha256": "2cf4dcb6d97a31a01d818bbd600906a3f5f1dbcec8f0a7d0b3105f22b23635f7",
+      "size_bytes": 4749774
+    },
+    "attempt_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-source-contact-current-rebind-01\\driver-at-run.py",
+      "sha256": "e881e1194203f1201694ad999fac8081be85d077856e39e1a8d92bbc70905ee3",
+      "size_bytes": 18401
+    },
+    "attempt_failure": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-source-contact-current-rebind-01\\failure.json",
+      "sha256": "43440901ca22486df2bd565dd40bb67a26022662f2461412c7c328c590e91084",
+      "size_bytes": 609
+    },
+    "attempt_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-source-contact-current-rebind-01\\result.json",
+      "sha256": "41e909596444997160c2c3cc753a63b9d450ac8ceca4edec45c8062becb67fac",
+      "size_bytes": 6366
+    },
+    "budget_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\reconstruct_astra_native_loaded_field.py",
+      "sha256": "354d9e004b189cf8193c2922c8fa4dc1903b407bebb295a4576673200ce6b213",
+      "size_bytes": 33457
+    },
+    "ranking_artifact": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-unexpanded-native-surface-group-ranking-01\\unexpanded-native-surface-group-ranking.npz",
+      "sha256": "5ecb3515ceb502919e2b698fec0ce69e63c0523ac805cff2e8da876ef720c737",
+      "size_bytes": 59787
+    },
+    "ranking_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-unexpanded-native-surface-group-ranking-01\\result.json",
+      "sha256": "558503143f8556535a29df47982bbdaa009fd9b930a927657dc4ac29d67b1175",
+      "size_bytes": 29752
+    }
+  },
+  "native_l04_boundary_current": {
+    "absolute_incident_sum_a": 1.9816360358227967,
+    "half_absolute_incident_sum_a": 0.9908180179113983,
+    "ranking_absolute_incident_sum_a": 1.981636035821522,
+    "ranking_signed_sum_a": [
+      1.1714418226681927e-14,
+      -2.999378664570067e-14
+    ],
+    "signed_outward_sum_a": [
+      -3.5176722645857694e-14,
+      -2.7764682913877792e-14
+    ]
+  },
+  "program": "SPD Decap PI Evaluator",
+  "qualified_artifact": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-source-contact-current-rebind-01\\l04-source-contact-current-rebind.npz",
+    "sha256": "2cf4dcb6d97a31a01d818bbd600906a3f5f1dbcec8f0a7d0b3105f22b23635f7",
+    "size_bytes": 4749774
+  },
+  "scope": "Qualification of the preserved attempt01 artifact after a print-only KeyError. No branch current was recomputed and no field, SQLite, source parse, geometry, solve or magnetic action was used. Category-2 records describe two future series-child ownership records sharing one present parent current; they are not summed as port, cut or throughput current, and future coupled redistribution remains open.",
+  "status": "QUALIFIED_L04_SAVED_SOURCE_CONTACT_CURRENT_REBIND",
+  "version": "0.23.1"
+}

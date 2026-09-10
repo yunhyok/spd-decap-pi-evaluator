@@ -1,0 +1,47 @@
+{
+  "budget": {
+    "elapsed_s": 8.28200000000652,
+    "max_rss_bytes": 4294967296,
+    "max_runtime_s": 120.0,
+    "peak_rss_bytes": 460218368
+  },
+  "coarse_nnz": 3880039,
+  "coarse_rows": 761791,
+  "coarse_transpose_symmetry_relative": 4.126433927282403e-16,
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l02_galerkin_auxiliary.py",
+    "sha256": "2bfeaef796ee7e3844373246773f5c8c0a990cbfd82e40ffc0592b9572e79889",
+    "size_bytes": 5503
+  },
+  "endpoint_graph_components": 1,
+  "full_column_rank_argument": "Every endpoint-average graph component contains an exact identity row. Pv=0 therefore forces all kept nodal values to zero.",
+  "galerkin_action_roundoff_relative": 1.41738430389057e-17,
+  "inputs": {
+    "conditional": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-operator-02\\conditional-hybrid-operator.npz",
+      "sha256": "5ab5ba38aaf8c317aa05ae1d4f790c1d6447406ec25afe3c30e96536c714aa92",
+      "size_bytes": 115480771
+    },
+    "transfer": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-hybrid-p1-transfer-01\\p1-hybrid-transfer.npz",
+      "sha256": "7db244bf196f7c2195a0ce79e7abed848ae0c2404809ea2c25dcedec23528a68",
+      "size_bytes": 16620587
+    }
+  },
+  "minimum_identity_anchors_per_component": 38856,
+  "output": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-galerkin-auxiliary-01\\galerkin-auxiliary.npz",
+    "sha256": "c8b0455c4ffe5b9ee8f7a9d650dd15a7468cde047b56d847f0066f0451eac081",
+    "size_bytes": 39677157
+  },
+  "program": "SPD Decap PI Evaluator",
+  "removed_zero_columns": 94983,
+  "scope": "Exact coarse operator for the unchanged conditional Y_L02, with only zero transfer columns removed. Full column rank of transfer is checked combinatorially; no LU, new global field or physical/PowerSI acceptance.",
+  "status": "PASS_ACTUAL_RESTRICTED_GALERKIN_AUXILIARY_NO_FACTOR",
+  "transfer_nnz": 3350762,
+  "transfer_shape": [
+    1694809,
+    761791
+  ],
+  "version": "0.23.1"
+}

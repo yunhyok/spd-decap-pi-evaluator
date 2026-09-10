@@ -1,0 +1,74 @@
+{
+  "findings": {
+    "boundary": {
+      "external_nodes": 59735,
+      "incident_links": 76146,
+      "native_owner_arity": {
+        "1": 76136,
+        "3": 10
+      },
+      "orientation_first_second": [
+        66878,
+        9268
+      ],
+      "triple_links": 10
+    },
+    "declared_hashes": {
+      "audit.py": {
+        "actual": "055f52d88dc8d389d00dedde0f921c3a01102b5fb037aaee404c26bc2bad81ff",
+        "expected": "055f52d88dc8d389d00dedde0f921c3a01102b5fb037aaee404c26bc2bad81ff",
+        "matches": true
+      },
+      "guard.json": {
+        "actual": null,
+        "expected": "1ec7d9c0c147dead28ef1ca0111cd02877d6e984d76da2fc2a990aa28c30a55b",
+        "matches": false
+      },
+      "result.json": {
+        "actual": "c86cf3410188e5386bfa8b5f4b57faddc6c219456e59a4ba8ac1d8e9b5f041d1",
+        "expected": "c86cf3410188e5386bfa8b5f4b57faddc6c219456e59a4ba8ac1d8e9b5f041d1",
+        "matches": true
+      }
+    },
+    "identity": {
+      "active_index": 71610,
+      "asset_sha256": "f7ddeb208553e1279e4a4ca36333d2b5e0180b7ea6391b3a3705afccc3a896f3",
+      "component_evidence_sha256": "f012924eacbc6682cbfaf6f24af1760faff757f756bb7deebde276c48b4e2135",
+      "islands": 289,
+      "matching_assets": 1,
+      "material_rows": 1,
+      "material_thickness_um": 20.0
+    },
+    "l02_ledger": {
+      "junctions": 20,
+      "outside_arities": [
+        5,
+        7,
+        12
+      ],
+      "outside_do_not_touch_target": true,
+      "outside_exactly_two_l04_owners": true,
+      "outside_membership": 10,
+      "outside_paths": 10,
+      "triple_membership": 10,
+      "union_matches_ledger": true
+    },
+    "owner_sets": {
+      "l04_outside_target": 20,
+      "non_l04_inside_target": 20,
+      "symmetric_difference": 40,
+      "target_native": 76166,
+      "whole_l04_touching": 76166
+    },
+    "representation": {
+      "partial_tables": 36,
+      "partial_target_names": 0,
+      "surface_aliases": 290
+    }
+  },
+  "guard_artifact_missing": true,
+  "program": "SPD Decap PI Evaluator",
+  "scope": "Independent cached SQLite/NPZ indexed queries only; no raw SPD/scenario replay, geometry decode, mesh/LU, or accuracy_parse access.",
+  "status": "PASS_WITH_MISSING_DECLARED_GUARD",
+  "version": "0.23.1"
+}

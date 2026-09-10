@@ -1,0 +1,29 @@
+{
+  "artifact": {
+    "external_guard_sha256": "8c4469a566d6bd19a5f62f64084be681549dae8a56d3de08245c4454a4f725ec",
+    "frozen_driver_sha256": "282def7c0eff7a7e6b822766bbb104ee910945a2af95b49d800badcd89a4deb1",
+    "npz_path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-source-contact-inputs-01\\contact-ledger-inputs.npz",
+    "npz_sha256": "c5c0dab9ac22d750aeecf3a4290c2b9ef9285bcf7ed33a5d8a7a2775c8430984",
+    "result_path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-source-contact-inputs-01\\result.json",
+    "result_sha256": "98bce62fde03d676e43d121207d00bb5ed840552bf8fd02793ae6732ab8bffd2"
+  },
+  "checks": {
+    "actual_command_uses_optimized_python": false,
+    "coincident_groups": 38836,
+    "compiled_kind1_links_replayed": 76139,
+    "compiled_owner_node_rl_mismatch_count": 0,
+    "excluded_source_vias": 42,
+    "ordered_wkb_polygons_rebuilt": 491,
+    "raw_active_filter_exact": true,
+    "raw_spatial_rows_replayed": 76139
+  },
+  "findings": [],
+  "producer_hardening": [
+    "The producer pins compiled-topology.sqlite but does not query it; this independent review closes all 76,139 compiled link, owner, node, count, R and L bindings.",
+    "Producer validation uses assert. The governing guard invoked standard Python without -O; this independent replay validates the saved artifact, while a future producer revision should reject optimized mode explicitly."
+  ],
+  "program": "SPD Decap PI Evaluator",
+  "scope": "Ordered native via/contact, endpoint, pad/drill, coincident-center and 491 source-island WKB input ledger only. Footprint overlap, trace/pad union, the 42 excluded-via policy, mesh, operators, solve, return closure and accuracy remain unresolved.",
+  "status": "ACCEPTED_INDEPENDENT_L02_ORDERED_CONTACT_INPUT_LEDGER",
+  "version": "0.23.1"
+}

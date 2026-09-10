@@ -1,0 +1,29 @@
+{
+  "adapted_from_coupled_source_sha256": "6f9b6ce6dc22cefdbb5980b47b30b0c06c8e5ab04a4a0840e7738b014d642430",
+  "driver_sha256": "4e0ff8031d71e6e1feba3e9f5dc166cd3cb74a07d2222cc092803940a888bd96",
+  "elapsed_s": 842.2970000000205,
+  "exit_code": 0,
+  "max_memory_bytes": 34359738368,
+  "max_runtime_s": 1020.0,
+  "memory_at_launch": {
+    "available_commit_bytes": 42700042240,
+    "available_physical_bytes": 38879932416,
+    "total_physical_bytes": 68374552576
+  },
+  "owned_pid": 47436,
+  "program": "SPD Decap PI Evaluator",
+  "reference_guard_sha256": "2961d1606ec2d4583c37d990d238a6abc87a54d8e0b93f9d83397f3851536a25",
+  "sampled_peak_private_bytes": 29665914880,
+  "sampled_peak_working_set_bytes": 12378378240,
+  "sampling_interval_s": 0.5,
+  "status": "COMPLETED_NATIVE_WORKER",
+  "version": "0.23.1",
+  "worker_command": [
+    "C:\\Users\\User\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+    "-B",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\continue_astra_l04_hybrid_aux_right_lgmres.py",
+    "--native-worker",
+    "--output",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-hybrid-aux-right-lgmres-01"
+  ]
+}

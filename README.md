@@ -1,5 +1,7 @@
 # SPD Decap PI Evaluator v0.23.1
 
+> **2026-09-10 외부 Peer Review:** [검토 시작·요청서](docs/peer-review/2026-09-10/README.md), [검토 보고서](docs/peer-review/2026-09-10/REPORT.md), [근거·소스](docs/peer-review/2026-09-10/EVIDENCE.md), [대형 데이터 다운로드](docs/peer-review/2026-09-10/DATA.md). 연구 중지 시점의 자료이며 계산 재개 승인이 아닙니다.
+
 > **v0.23.1 restores production-size GUI SPD loading while retaining the v0.23.0 source-derived multilayer Evaluation.** Distribution retains all 21 physical PWR conductor layers, defaults to the disclosed `BALANCED_AUTO` gap-distance objective, exports Candidate Audit evidence, preserves source-proven MLO transition diagnostics, and blocks non-TOP MLO transitions that lack an engineered translated recipe. Optional immutable signal-Trace avoidance remains OFF by default. Evaluation assembles exact adjacent-gap artwork Maxwell-Y blocks on shared physical `(layer, NET)` surface nodes, uses only source-observed same-NET Trace/Via connectivity, and eliminates internal interfaces through one global sparse Schur/Kron solve. Touchstone remains comparison-only. The title bar identifies the application as **SPD Decap PI Evaluator v0.23.1**.
 
 > 프로그램: **SPD Decap PI Evaluator v0.23.1**

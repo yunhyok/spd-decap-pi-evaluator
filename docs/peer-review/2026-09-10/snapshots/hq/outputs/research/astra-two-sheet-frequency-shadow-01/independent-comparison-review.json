@@ -1,0 +1,159 @@
+{
+  "arithmetic": [
+    {
+      "complex_gap_reduction_fraction": 0.6138276520697044,
+      "frequency_hz": 1000000,
+      "native_complex_gap_ohm": 0.0006180322719598752,
+      "native_magnitude_error_db": -2.428670003508578,
+      "native_phase_error_deg": -48.97890346256608,
+      "source": "one_mhz_posthoc_saved_field_triage",
+      "two_sheet_complex_gap_ohm": 0.00023866697355944,
+      "two_sheet_magnitude_error_db": -0.3663985855593993,
+      "two_sheet_phase_error_deg": -17.09013811230245
+    },
+    {
+      "complex_gap_reduction_fraction": 0.2968922520618634,
+      "frequency_hz": 10000000,
+      "native_complex_gap_ohm": 0.0014784638901228291,
+      "native_magnitude_error_db": -22.54743117707597,
+      "native_phase_error_deg": 5.732461590875697,
+      "source": "frozen_high_frequency_result",
+      "two_sheet_complex_gap_ohm": 0.001039519416192119,
+      "two_sheet_magnitude_error_db": -8.304131340936532,
+      "two_sheet_phase_error_deg": -19.653151304532244
+    },
+    {
+      "complex_gap_reduction_fraction": 0.049616217974106314,
+      "frequency_hz": 100000000,
+      "native_complex_gap_ohm": 0.009741241248346017,
+      "native_magnitude_error_db": -21.261945494176725,
+      "native_phase_error_deg": 2.2021265534632546,
+      "source": "frozen_high_frequency_result",
+      "two_sheet_complex_gap_ohm": 0.009257917699229725,
+      "two_sheet_magnitude_error_db": -16.755374288297514,
+      "two_sheet_phase_error_deg": -23.125980815057236
+    },
+    {
+      "complex_gap_reduction_fraction": 0.004284149736011433,
+      "frequency_hz": 1000000000,
+      "native_complex_gap_ohm": 0.10131320022640695,
+      "native_magnitude_error_db": -20.790630610487927,
+      "native_phase_error_deg": 5.873935113223192,
+      "source": "frozen_high_frequency_result",
+      "two_sheet_complex_gap_ohm": 0.10087915930640252,
+      "two_sheet_magnitude_error_db": -20.469485325909574,
+      "two_sheet_phase_error_deg": -2.1096414724527293
+    }
+  ],
+  "arithmetic_max_abs_errors": {
+    "complex_gap_abs_error_ohm": 0.0,
+    "db_abs_error": 3.552713678800501e-15,
+    "phase_deg_abs_error": 0.0,
+    "reduction_abs_error": 0.0,
+    "relative_error_abs_error": 0.0
+  },
+  "closed_findings": [
+    {
+      "priority": "P2",
+      "reason": "Static shared-state evidence plus exact field V[2699]-V[2656] checks binds each frozen point. Persisting port indices remains preferable for future standalone review.",
+      "status": "CLOSED_FOR_FROZEN_RUN",
+      "title": "High-frequency field Device index omission"
+    }
+  ],
+  "high_frequency_port_mapping_static_evidence": {
+    "evidence": [
+      "frequency driver constructs state once before frequency loop (lines 77-80)",
+      "its 1MHz saved-field KCL uses state positive/negative (lines 116-119)",
+      "the same state positive/negative is passed to every high-frequency solve (lines 131-138)",
+      "frozen two-sheet helper returns baseline positive/negative without remapping (lines 187-195)"
+    ],
+    "frozen_driver_sha256": "ef7432f3087b521c223ae99542b23741be3ab53c1b172334edaa6e5c5a258f6c",
+    "index_basis": "Python active-vector indices from the saved 1MHz posthoc check",
+    "negative_active": 2656,
+    "one_mhz_anchor": "The pinned saved field used by the driver has separately verified V[2699]-V[2656] equal to its frozen 1MHz Zdd.",
+    "point_checks": [
+      {
+        "absolute_error_ohm": 0.0,
+        "field_vpos_minus_vneg_ohm": [
+          0.0005966084647432856,
+          0.0001445518250458507
+        ],
+        "frequency_hz": 10000000,
+        "point_zdd_ohm": [
+          0.0005966084647432856,
+          0.0001445518250458507
+        ]
+      },
+      {
+        "absolute_error_ohm": 0.0,
+        "field_vpos_minus_vneg_ohm": [
+          0.0008376874678580425,
+          0.001303127368813163
+        ],
+        "frequency_hz": 100000000,
+        "point_zdd_ohm": [
+          0.0008376874678580425,
+          0.001303127368813163
+        ]
+      },
+      {
+        "absolute_error_ohm": 0.0,
+        "field_vpos_minus_vneg_ohm": [
+          0.0020916686934944182,
+          0.01034718034772955
+        ],
+        "frequency_hz": 1000000000,
+        "point_zdd_ohm": [
+          0.0020916686934944182,
+          0.01034718034772955
+        ]
+      }
+    ],
+    "positive_active": 2699,
+    "result": "All three frozen high-frequency fields exactly reproduce point Zdd with these stable port indices."
+  },
+  "inputs": {
+    "comparison": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_two_sheet_four_frequency_comparison_2026-09-07.json",
+      "sha256": "042da3f43f7671763d745409f283d5bb4c4e5635ca1f3708e9749799ec2ff793"
+    },
+    "one_mhz_field_zdd_check": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-two-sheet-frequency-shadow-01\\one-mhz-field-zdd-check.json",
+      "sha256": "afecf2f13d39567e1ea1fff5935e7561cdf450ab7290029baf9794824c643be7"
+    },
+    "prior_actual_result_review": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-two-sheet-frequency-shadow-01\\independent-actual-result-review.json",
+      "sha256": "673030f31cde0545d9cece6306c7b6cab49185cbe426b2612d35969583fc6225"
+    },
+    "two_sheet_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-two-sheet-frequency-shadow-01\\result.json",
+      "sha256": "f580a47697385efdd234f6c8738119285bc3cac94a4ad1827ffd5e7b449f4372"
+    }
+  },
+  "one_mhz_triage": {
+    "absolute_error_ohm": 0.0,
+    "closed": true,
+    "field_port_zdd_ohm": [
+      0.0005137583675450426,
+      -0.0005849760442531394
+    ],
+    "negative_active": 2656,
+    "positive_active": 2699,
+    "recorded_zdd_ohm": [
+      0.0005137583675450426,
+      -0.0005849760442531394
+    ],
+    "status": "VERIFIED_SAVED_TWO_SHEET_FIELD_PORT_ZDD_TRIAD"
+  },
+  "p1_findings": [],
+  "p2_findings": [],
+  "program": "SPD Decap PI Evaluator",
+  "rail_id": "ADC_VDD_075_VTRIP_SRAM/0",
+  "scope": [
+    "Arithmetic and provenance review of four supplied development points only.",
+    "The comparison is conditional DC-sheet research and does not establish PowerSI fit, dense-band agreement, or physical AC sheet accuracy.",
+    "No solver, geometry, source scenario, or PowerSI artifact was read or rerun.",
+    "The prior high-frequency field-port metadata P2 is closed for this frozen run by static shared-state evidence and direct saved-vector checks; no new solve was run."
+  ],
+  "status": "ACCEPT_CONDITIONAL_FOUR_FREQUENCY_COMPARISON"
+}
