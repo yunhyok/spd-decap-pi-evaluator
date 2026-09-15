@@ -7,3 +7,6 @@
 - 기존 파일은 수정하지 않았고, 이 세션에서 솔버를 프로덕션 경로로 실행하거나 커밋하지 않았다.
 - 핵심 결론 한 줄: Astra(3-D 적분방정식) 폐기, 2-D plane-pair+회로 하이브리드 채택, 260729 Port18 1MHz 오차 26.18%(이전 Astra 기준) → 2.7%(EXP-8 cavity-wall).
 - 미해결: port16/19 R 결손, f_res 조건불량, 10–100MHz, PowerSI `MaxEdgeLength` 재해석 확인 요청.
+
+- `CODEX_HANDOVER_RETROSPECTIVE.md` — Codex 인계 작업 회고(오판·수정·개선 결과·후속 과제)
+- `reviews/` — 세션 검토 산출물 사본(deep/fresh review, 데이터 특성, Sigrity void 조사)
