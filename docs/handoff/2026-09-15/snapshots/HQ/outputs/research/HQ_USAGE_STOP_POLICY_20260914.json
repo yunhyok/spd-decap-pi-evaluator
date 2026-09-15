@@ -1,0 +1,31 @@
+{
+  "updated_at": "2026-09-14T15:35:40.585140+09:00",
+  "source": "User instruction relayed by mobile task01a07696-742c-7020-bf48-8b9ae43ce684",
+  "threshold_remaining_percent": 40,
+  "last_live_remaining_percent": 40,
+  "stop_latched": true,
+  "rule": "If ANY participant observes valid remaining<=40, latch STOP immediately. Finish only the bounded fragment already running at that instant and necessary result/checkpoint saving. No new task, calculation, failed-calculation retry or agent delegation after latch. Usage recovery does not clear latch; explicit user resume is required. No Reset. Check official guard with force_refresh before each new fragment and at least every10minutes during long work. An idle participant does not start new research on a stop notice.",
+  "current_fragment": "NONE. All research, computation and child tasks stopped; administrative final saving complete.",
+  "existing_child_task": "01a09d3c-a425-7c70-a0e5-c81df219a284",
+  "branch": "codex/astra-evaluation-resume-20260906",
+  "head": "e2f219e71d8c8a397009f72242cce10d78cfc7ab",
+  "workspace": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator",
+  "working_tree_snapshot": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\hq-stopped-working-tree-20260914-usage40.txt",
+  "working_tree_status_entries": 788,
+  "processes": "All four owned workers ended; native agents completed; Sol and physics tasks both officially idle.",
+  "next_start": "FORBIDDEN until explicit user resume, even if usage recovers. No new task/calculation/retry/delegation/Reset. At resume read stopped checkpoint and exact saved artifacts before selecting a next bounded step.",
+  "current_output": "outputs/research/astra-static-tighter-inverse-20260914-01",
+  "stop_observation": {
+    "reporter_task": "01a09d3c-a47e-7213-a338-1fa220a14d4b",
+    "tool": "Codex Usage Guard v0.1.1 evaluate_usage_guard",
+    "force_refresh": true,
+    "purpose": "task_start",
+    "status": "live",
+    "minRemainingPercent": 40.0,
+    "ageSec": 0.0083937645,
+    "received_at": "2026-09-14T15:27:39.673840+09:00"
+  },
+  "current_fragment_at_stop": "Only already-running tighter STATIC comparison completion review and necessary checkpoint saving. Its computation already ended; no HQ worker active.",
+  "final_checkpoint": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\HQ_STOPPED_CHECKPOINT_20260914_USAGE40.md",
+  "all_research_stopped": true
+}

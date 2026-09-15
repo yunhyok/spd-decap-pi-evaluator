@@ -1,0 +1,30 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "COMPLETED_SAVED_AFFINE_RESIDUAL_DIAGNOSTIC_NOT_A_SOLUTION",
+  "initial_scaled_residual": 222.7182098254802,
+  "final_scaled_residual": 1.7996731987152275,
+  "initial_block_scaled_norms": [
+    9.99140030210492e-10,
+    92.32749524951451,
+    202.67963540725475
+  ],
+  "final_block_scaled_norms": [
+    1.7975742760458704,
+    0.021499416890541242,
+    0.08419096950025182
+  ],
+  "affine_optimal_complex_coefficient": [
+    0.9999335876596497,
+    -9.731192053609217e-06
+  ],
+  "affine_minimum_scaled_residual": 1.7996111049677816,
+  "residual_reduction_factor": 123.75480725304848,
+  "final_vs_affine_optimum": 1.0000345039810403,
+  "source_pins": {
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-finite-joint-p-20260914-01\\finite-driver-at-run.py": "6f7b89e087fbfbe2ea8dc8f524739942b8d5b3713c65cdcd523d00929d20e719",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-finite-joint-p-20260914-01\\finite\\raw-finite-magnetic-field-before-gates.npz": "38207bc8c0dbe9d9886dcb61d64ed83b00b7dcc46a76046f88ebc2a93b61e78c",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-joint-p-arbitrary-source-20260914-01\\fixed-current-point-action.npz": "b81741ed93848dd687a1e7ea1a5d35b3f7bece5eb209b4d27d5d211de92a2bdd"
+  },
+  "scope": "One-dimensional span of saved baseline and failed final iterate under the same linear operator. No new FMM, factors or Krylov solve. No accepted field, error bound or convergence prediction."
+}

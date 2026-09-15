@@ -1,0 +1,28 @@
+{
+  "status": "PASS_PINNED_ND2_SOURCE_EVALUATION_SELF_OMISSION",
+  "package": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research-fmm-runtime\\fmm3dpy\\__init__.py",
+  "version": "2.1.0",
+  "checks": [
+    {
+      "label": 0,
+      "part": "real",
+      "relative_error": 1.8746233532338955e-16
+    },
+    {
+      "label": 0,
+      "part": "imag",
+      "relative_error": 1.5108283617768232e-16
+    },
+    {
+      "label": 1,
+      "part": "real",
+      "relative_error": 2.9697355457081463e-16
+    },
+    {
+      "label": 1,
+      "part": "imag",
+      "relative_error": 2.285553878807346e-16
+    }
+  ],
+  "source_scale_run": false
+}

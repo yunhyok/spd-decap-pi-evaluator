@@ -1,0 +1,143 @@
+{
+  "status": "STATIC_REFINEMENT_MEASURED_NOT_CONVERGED_REPLAY_GATE_FAILED",
+  "accepted": false,
+  "magnetic_actions": 0,
+  "external": {
+    "status": "STOP_NATIVE_WORKER_EXIT",
+    "owned_pid": 43968,
+    "exit_code": 1,
+    "elapsed_s": 123.17099999997299,
+    "peak_private_bytes": 24434507776,
+    "peak_working_set_bytes": 6527692800,
+    "max_seconds": 180.0,
+    "max_bytes": 34359738368,
+    "command": [
+      "C:\\Users\\User\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+      "-B",
+      "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\run_astra_l14_l25_fixed_action.py",
+      "--worker",
+      "--output",
+      "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-static-tighter-inverse-20260914-01"
+    ],
+    "child_driver_sha256": "770853958598004883dc49ca91f26f701668889576644030b08907608f2cc05e"
+  },
+  "artifacts": {
+    "external-budget.json": {
+      "sha256": "e4644b0d28c299498f5a89681ad1de94476496886dba103f80825f0a557980be",
+      "bytes": 780
+    },
+    "static-driver-at-run.py": {
+      "sha256": "7adf754ac44ff3bbb4687b8f6fc449f4da03baa62bb0ee8efbe12b5a9cdc5687",
+      "bytes": 15498
+    },
+    "static\\sample-01-baseline_alpha1_q_eta_with_zero_nodal_rows.json": {
+      "sha256": "8792795622df8e2896a6fb6fa0a61c462d96787668bd4a2fc92ea650800bcd51",
+      "bytes": 1338
+    },
+    "static\\sample-02-latest_right_field_pure_nodal_residual.json": {
+      "sha256": "fcec46ecddaba6924081b92b4715c0bb0f347b3bd2ae0171b489365d62ad710c",
+      "bytes": 1762
+    }
+  },
+  "samples": [
+    {
+      "program": "SPD Decap PI Evaluator",
+      "version": "0.23.1",
+      "sample": "baseline_alpha1_q_eta_with_zero_nodal_rows",
+      "status": "SAVED_BEFORE_ASSERTIONS",
+      "accepted": false,
+      "solver": {
+        "operator": "Ahat0(Mz)",
+        "gmres_M": null,
+        "restart": 8,
+        "maxiter": 3,
+        "rtol": 1e-09,
+        "atol": 0.0,
+        "info": 3,
+        "callbacks": 24,
+        "last_callback_relative": 0.12783370766518104
+      },
+      "evaluations": {
+        "m_applications": 28,
+        "static_a0_actions": 28,
+        "cap_per_kind": 32
+      },
+      "residuals": {
+        "total_scaled_relative": 0.1278337076654855,
+        "node_max_a": 0.36922353515513595,
+        "node_l2_a": 2.4644461617250153,
+        "q25_max_v": 4.028724966090482e-05,
+        "q25_l2_v": 0.0011836456101049872,
+        "eta_max_a": 0.23279796486715612,
+        "eta_l2_a": 0.4175954405862998
+      },
+      "one_m_comparison": {
+        "reference_node_max_a": 4.933974915258021,
+        "reference_node_l2_a": 13.170315688575778,
+        "node_max_ratio": 0.07483287643261712,
+        "node_l2_ratio": 0.18712126724970837,
+        "reference_m_apply_s": 1.019132899993565
+      },
+      "cost": {
+        "sample_elapsed_s": 43.53464490000624,
+        "setup_and_factor_until_intercept_s": 32.720176699978765
+      },
+      "scope": "Static inverse comparison only; no magnetic action, Z accuracy, or fixed-preconditioner claim."
+    },
+    {
+      "program": "SPD Decap PI Evaluator",
+      "version": "0.23.1",
+      "sample": "latest_right_field_pure_nodal_residual",
+      "status": "SAVED_BEFORE_ASSERTIONS",
+      "accepted": false,
+      "solver": {
+        "operator": "Ahat0(Mz)",
+        "gmres_M": null,
+        "restart": 8,
+        "maxiter": 3,
+        "rtol": 1e-09,
+        "atol": 0.0,
+        "info": 3,
+        "callbacks": 24,
+        "last_callback_relative": 0.38186014634579296
+      },
+      "evaluations": {
+        "m_applications": 28,
+        "static_a0_actions": 28,
+        "cap_per_kind": 32
+      },
+      "residuals": {
+        "total_scaled_relative": 0.3818601463459859,
+        "node_max_a": 0.004302607606026877,
+        "node_l2_a": 0.034399614550070366,
+        "q25_max_v": 7.306170463265837e-18,
+        "q25_l2_v": 4.798658449958396e-17,
+        "eta_max_a": 2.1486913583447444e-12,
+        "eta_l2_a": 6.203730114148456e-12
+      },
+      "one_m_comparison": {
+        "reference_node_max_a": 0.018163356132007313,
+        "reference_node_l2_a": 0.07513817668276106,
+        "node_max_ratio": 0.23688395331548107,
+        "node_l2_ratio": 0.4578180635831514,
+        "reference_m_apply_s": 0.9458315999945626
+      },
+      "cost": {
+        "sample_elapsed_s": 41.82687220000662,
+        "setup_and_factor_until_intercept_s": 32.720176699978765
+      },
+      "scope": "Static inverse comparison only; no magnetic action, Z accuracy, or fixed-preconditioner claim.",
+      "node_repair": {
+        "residual_convention": "r=A*x-b; x_repair=x-u",
+        "pre_kcl_max_a": 0.01812862397271888,
+        "post_kcl_max_a": 0.004302607606038474,
+        "post_over_pre": 0.23733779312281583,
+        "direct_vs_negative_residual_max_a": 4.962061523846791e-12,
+        "repair_sign_algebra_check": false,
+        "one_m_post_kcl_max_a": 0.018163356131981195,
+        "post_vs_one_m_ratio": 0.23688395331646014
+      }
+    }
+  ],
+  "interpretation": "Same two RHS improve with28 M evaluations each but static info3/residuals and original KCL1e-7A targets are not satisfied. Sign/algebra check false is preserved after per-sample saving. No rerun, threshold change, fixed-preconditioner or board accuracy claim. Solved vectors were not saved; only these metrics are reusable."
+}

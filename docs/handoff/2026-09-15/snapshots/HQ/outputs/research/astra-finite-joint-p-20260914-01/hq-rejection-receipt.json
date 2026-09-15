@@ -1,0 +1,45 @@
+{
+  "status": "REJECTED_NONCONVERGED_FINITE_JOINT_P",
+  "numerical_gates": {
+    "finite_field": true,
+    "info0": false,
+    "scaled_residual": false,
+    "kcl": false,
+    "q25_constitutive": false,
+    "l14_auxiliary": false,
+    "magnetic_hermitian": true,
+    "resistance_passive": true,
+    "power_closure": false,
+    "reciprocal_identity": true
+  },
+  "info": 1,
+  "scaled_residual_relative": 1.7996731987152275,
+  "kcl_max_a": 0.049977400120103925,
+  "power_closure_ohm": 0.0004240801648217753,
+  "elapsed_s": 2214.1560000000172,
+  "peak_private_gib": 27.54595947265625,
+  "peak_working_gib": 10.850822448730469,
+  "scope": "No accepted port Z or accuracy update. Independent saved-array audit pending. No repeat or budget increase authorized by this receipt.",
+  "artifacts": {
+    "finite-driver-at-run.py": {
+      "sha256": "6f7b89e087fbfbe2ea8dc8f524739942b8d5b3713c65cdcd523d00929d20e719",
+      "bytes": 36155
+    },
+    "finite/raw-finite-field-before-gates.npz": {
+      "sha256": "31a2929f65acd30be0633046bacea9601282ca6f978904956f5eff92777c7c13",
+      "bytes": 43132379
+    },
+    "finite/raw-finite-magnetic-field-before-gates.npz": {
+      "sha256": "38207bc8c0dbe9d9886dcb61d64ed83b00b7dcc46a76046f88ebc2a93b61e78c",
+      "bytes": 64685058
+    },
+    "finite/finite-metrics-before-acceptance.json": {
+      "sha256": "5a6b33c08bcf917624f15555e07d7255fa1d3b3da528ba537cc46744165112ed",
+      "bytes": 1714
+    },
+    "external-budget.json": {
+      "sha256": "fe5fa8af90046276507dd1ab1d525edf76a95dbd20b2b8a248c13c342bc5b75e",
+      "bytes": 774
+    }
+  }
+}

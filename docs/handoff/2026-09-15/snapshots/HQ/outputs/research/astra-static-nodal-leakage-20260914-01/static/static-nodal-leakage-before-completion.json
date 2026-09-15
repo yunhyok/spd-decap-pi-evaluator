@@ -1,0 +1,98 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "STATIC_NODAL_LEAKAGE_DIAGNOSTIC_COMPLETE",
+  "diagnostic_driver_sha256": "7bb96c539b80f69bcf5efdfc68b175d3ef14e38e34efc413264f1686868ed2fd",
+  "accepted": false,
+  "magnetic_actions": 0,
+  "factor_builds": 1,
+  "m_applications": 2,
+  "residual_convention": "r=A*x-b; x_repair=x-M*r",
+  "inputs": {
+    "finite_worker": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-finite-joint-p-20260914-01\\finite\\driver-at-run.py",
+      "sha256": "6f7b89e087fbfbe2ea8dc8f524739942b8d5b3713c65cdcd523d00929d20e719"
+    },
+    "baseline_action": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-joint-p-arbitrary-source-20260914-01\\fixed-current-point-action.npz",
+      "sha256": "b81741ed93848dd687a1e7ea1a5d35b3f7bece5eb209b4d27d5d211de92a2bdd"
+    },
+    "latest_right_field": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-finite-right-probe-20260914-01\\finite\\raw-finite-field-before-gates.npz",
+      "sha256": "2569d379d05dd99d1a86506fbc6bfb03f768dbb18025419cf5cfcac78e7db520"
+    },
+    "right_timeout": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-finite-right-probe-20260914-01\\external-budget.json",
+      "sha256": "8318739937653cbc07e0a2b7a1869a7f85a4474952317d55c415cde42a183afc"
+    }
+  },
+  "frozen_worker_inputs": {
+    "actual": {
+      "accepted_field": "960e767c383cd7e5580dfc86e9a221cfdff78086f8478465a25d8bd4dd98654b",
+      "accepted_result": "7341e700f5ac76f96f07558a42bc93181319b118ffb86bab64f80c5bdb54b9d3",
+      "accepted_driver": "91e792487f371d14c21e9ce6729f17b34b93386f9f1d0c599302b129d2d755a6",
+      "accepted_driver_canonical": "91e792487f371d14c21e9ce6729f17b34b93386f9f1d0c599302b129d2d755a6",
+      "literal_alpha0": "f360949b8dc3625ad08d996301a634eea847d2f4cadafe077782052640f11c20",
+      "literal_alpha0_driver": "528ba0f791f90fbec237786a8b8e46cb975c54b730c80461e4fd2773942188a3",
+      "adapter": "d2bb67b933c390ffe573e13902292bb8bb8fda42fa6e3d73e7b32e3dcf56dabb",
+      "joint_api": "9639d4ac8e990ed14d49f2b42eb1e72870a1fc326763a40025eb192f1dd02c64",
+      "joint_api_physics_review": "28d4a44030917c249dfaf844dd0e19b98c4695ae875923401f1f94b6ab4ea71e",
+      "joint_api_import_qualification": "7d6c37fc820f25cea51193093a96439028f1eec18cad5368e98ea960ed40fe09",
+      "magnetic_descriptor": "7e8b83dc5e45bba918fe60c1d7f29b0925c57f825d909ed5135f9a6647cddf02",
+      "self14": "6574a1406e6f6ed319c441050bbca3b8c5c41d7cc3dc8430ae859a9b0165ac08",
+      "mesh": "a7a8234df9fb173a6fd88a5c613fc074321b984d5e7f0708842d66c8f0b9e779",
+      "drive": "05a1102082a76cb2f83184576e4d1c4af5985824e134e3199b2ac06fa32c050d",
+      "map": "a6ccff514fe788396eb9d7620ebc828f966efbea3f7899e7a73991c17f8a2469",
+      "hybrid": "01ff4236af30621ca6cc4b87c4688c28ee23c22ed99b15aadd047f91a25c0b2c",
+      "saved_k": "55ba26a5c804913e79d130a562d0eae96f0b6f13542992b55ba96731910a4153",
+      "accepted_core": "5ab5ba38aaf8c317aa05ae1d4f790c1d6447406ec25afe3c30e96536c714aa92",
+      "physical_validator": "fd28d5a3eef17d7d85e0fab52de1a88e1910faa2ad46a4cde3b16d3607c8abd9",
+      "l25_self": "3008ff8b4cd50cfaf202f90ece440b5aebff44e8cd3bdc79a048c5048bc407d9",
+      "l25_near": "4afe4f4528ef0b156ee81322093c2e95075ee0ef67bf6967baff6269a2b81f0f"
+    },
+    "mismatch": {}
+  },
+  "unchanged_source_coefficients": {
+    "magnetic_descriptor": "7e8b83dc5e45bba918fe60c1d7f29b0925c57f825d909ed5135f9a6647cddf02",
+    "self14": "6574a1406e6f6ed319c441050bbca3b8c5c41d7cc3dc8430ae859a9b0165ac08",
+    "l25_self": "3008ff8b4cd50cfaf202f90ece440b5aebff44e8cd3bdc79a048c5048bc407d9",
+    "l25_near": "4afe4f4528ef0b156ee81322093c2e95075ee0ef67bf6967baff6269a2b81f0f"
+  },
+  "samples": {
+    "baseline_alpha1_q_eta_with_zero_nodal_rows": {
+      "input_scaled_l2": 0.13791906747519084,
+      "total_scaled_relative": 0.6955592460167919,
+      "nodal_scaled_relative_to_input": 0.6955592460167919,
+      "nodal_leakage_max_a": 4.933974915258021,
+      "nodal_leakage_l2_a": 13.170315688575778,
+      "node_rows_exactly_zero": true,
+      "m_apply_s": 1.019132899993565,
+      "q_residual_max": 0.002784168241165967,
+      "eta_residual_max": 16.088184372192845
+    },
+    "latest_right_field_pure_nodal_residual": {
+      "input_scaled_l2": 0.000670499168410031,
+      "total_scaled_relative": 0.8552127291429017,
+      "nodal_scaled_relative_to_input": 0.8552127291429017,
+      "nodal_leakage_max_a": 0.018163356132007313,
+      "nodal_leakage_l2_a": 0.07513817668276106,
+      "m_apply_s": 0.9458315999945626,
+      "pre_kcl_max_a": 0.01812862397271888,
+      "post_repair_kcl_max_a": 0.018163356131981195,
+      "post_over_pre_kcl": 1.0019158739965361,
+      "kcl_reduction_factor": 0.9980877895577261,
+      "direct_vs_negative_leakage_max_a": 6.052292225961788e-12,
+      "repair_sign_algebra_check": false,
+      "repair_interpretation": "static A0 algebra only; no magnetic or Z-accuracy claim"
+    }
+  },
+  "cost": {
+    "setup_and_factor_until_intercept_s": 30.781480000005104,
+    "m_apply_total_s": 1.9649644999881275,
+    "elapsed_before_save_s": 35.402323800022714,
+    "external_limit_s": 180,
+    "memory_limit_bytes": 34359738368,
+    "hard_guard": "HQ external guard; no internal-timeout claim"
+  },
+  "scope": "One frozen factor build and two actual M applications. No FMM, inner solve, tighter solve, source-coefficient change, full native model, Z accuracy, or convergence guarantee."
+}

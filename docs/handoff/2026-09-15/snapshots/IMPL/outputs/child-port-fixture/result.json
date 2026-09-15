@@ -1,0 +1,73 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "SOURCE_FIXED_CHILD_PORT_FIXTURE",
+  "artifact_sha256": "47bec5abf13437ff1fb8e5216ebb2c1344be51b60aa2656d109ac4ba27cb3bd4",
+  "source_hashes": {
+    "joint_template": "14b927da78b3cbf9d68f49c89b84dbeda746a99cef0bc6d9bcefd597f9db49eb",
+    "partition": "c9ec2371ea45695d6b32c4c1d9f3c7ee2eb8c2501b8e9eed446cd346a1ab70bd",
+    "l02": "24983f24486fd87f866be0f7009c65c07f29769da929ead6f3eb8af0170b541b",
+    "cross05": "3c515d9a24a7abe817d5b25a90e39190caee0a4175463f0f89958093f3c6989d",
+    "frequency": "61390c0ef9c7554b83d55f91b2e81a59f9453690f783b747f2906c475be5f6dc"
+  },
+  "pwr": {
+    "trace": "Trace464278",
+    "tetrahedra": 96,
+    "vertices": 68,
+    "current_faces": 258,
+    "free_faces": 68,
+    "electrode_faces": [
+      32,
+      32
+    ],
+    "original_translation_xy_um": [
+      8315.2,
+      20368.5
+    ],
+    "legacy_field_input_sha256": "126b4302895b598145e14d95018fbbd2911a5fd092db34baf8b7c856727aa1b8",
+    "compact_field_input_sha256": "8790933b1192e3368966f6cd8e70be6081629171a66f14d3196eb0e6f44620d3"
+  },
+  "l02": {
+    "rows": [
+      0,
+      75
+    ],
+    "global_slots": [
+      0,
+      74,
+      75,
+      81,
+      749
+    ],
+    "cap_slots": [
+      "row0_bottom",
+      "row0_top",
+      "row75_bottom",
+      "row75_top"
+    ],
+    "minimum_pwr_return_x_separation_mm": 56.50984
+  },
+  "signs_units": {
+    "D": "volume outward divergence; free face negative outward flux",
+    "H": "electrode positive outward flux",
+    "R": "ohm",
+    "coordinates": "m in L02, um in PWR"
+  },
+  "termination": {
+    "model": "CAP_1608_10UF tabulated only",
+    "frequency_hz": 1000000.0,
+    "z_ohm": [
+      0.003805177917341136,
+      -0.02055969550385439
+    ]
+  },
+  "source_paths": {
+    "joint_template": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-boundary-conforming-power-joint-01\\joint-template.npz",
+    "partition": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-power-joint-source-boundary-partition-20260912\\source-boundary-partition.npz",
+    "l02": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-retained-sheet-current-green-20260912-02\\current-support.npz",
+    "cross05": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-rows0-75-current-cross-handoff-20260912-05\\rows0-75-cross-delta.npz",
+    "frequency": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-frequency-stamps-01\\source-frequency-inputs.json"
+  },
+  "scope": "Original coordinates are retained. This finite research boundary differs from the original board, is not an original-board port equivalent or a PowerSI-accuracy claim, and introduces neither arbitrary ground nor equipotential cut merge.",
+  "pending": "Physical-mode L/P and final port solve are HQ scope."
+}

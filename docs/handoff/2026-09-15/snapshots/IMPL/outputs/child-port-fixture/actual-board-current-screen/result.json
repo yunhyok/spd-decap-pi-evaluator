@@ -1,0 +1,500 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "PASS_SAVED_ACTUAL_BOARD_CURRENT_SCREEN",
+  "frequency_hz": 1000000.0,
+  "reference_port_one_based": 18,
+  "rail_id": "ADC_VDD_075_VTRIP_SRAM/0",
+  "board_complex_gap_ohm": 0.00021262886699454942,
+  "branch0_current_a": [
+    0.0,
+    0.0
+  ],
+  "cases_ranked_by_ordinary_magnitude": [
+    {
+      "label": "over1mm",
+      "original_rows": [
+        13406,
+        13407
+      ],
+      "original_current_ids": [
+        25729,
+        25730,
+        25731,
+        25732,
+        25943
+      ],
+      "compact_to_original_identity_for_selected_pair": true,
+      "maximum_current_abs_a": 2.907906082149408e-06,
+      "delta_l_spectral_norm_h": 2.0070957029928255e-10,
+      "ordinary_jw_i_transpose_delta_l_i_ohm": [
+        -2.783716363483908e-17,
+        6.944199204760574e-17
+      ],
+      "ordinary_magnitude_ohm": 7.481375501050957e-17,
+      "hermitian_energy_indicator_ohm": 7.481181592540353e-17,
+      "spectral_norm_bound_ohm": 2.925326371768446e-14,
+      "entrywise_absolute_bound_ohm": 1.9455796652158634e-14,
+      "ordinary_to_board_gap": 3.518513552180446e-13,
+      "spectral_bound_to_board_gap": 1.3757898506995452e-10,
+      "delta_l_h": [
+        [
+          0.0,
+          0.0,
+          -4.465564139855023e-11,
+          5.975474696256874e-11,
+          4.474131407696188e-11
+        ],
+        [
+          0.0,
+          0.0,
+          5.974176886468948e-11,
+          -3.9429578622043894e-11,
+          -5.9821632052562e-11
+        ],
+        [
+          -4.465564139855023e-11,
+          5.974176886468948e-11,
+          8.947920878523532e-11,
+          -5.983292422727197e-11,
+          -4.482213993874715e-11
+        ],
+        [
+          5.975474696256874e-11,
+          -3.9429578622043894e-11,
+          -5.983292422727197e-11,
+          0.0,
+          0.0
+        ],
+        [
+          4.474131407696188e-11,
+          -5.9821632052562e-11,
+          -4.482213993874715e-11,
+          0.0,
+          0.0
+        ]
+      ]
+    },
+    {
+      "label": "over10mm",
+      "original_rows": [
+        65,
+        66
+      ],
+      "original_current_ids": [
+        64,
+        65,
+        66,
+        709,
+        713
+      ],
+      "compact_to_original_identity_for_selected_pair": true,
+      "maximum_current_abs_a": 7.921927851154467e-09,
+      "delta_l_spectral_norm_h": 4.1906746158086634e-08,
+      "ordinary_jw_i_transpose_delta_l_i_ohm": [
+        6.077418787181622e-19,
+        -1.3110355889098138e-18
+      ],
+      "ordinary_magnitude_ohm": 1.4450482713515087e-18,
+      "hermitian_energy_indicator_ohm": -1.4450473480534818e-18,
+      "spectral_norm_bound_ohm": 3.554388334793434e-17,
+      "entrywise_absolute_bound_ohm": 2.4696237134197934e-17,
+      "ordinary_to_board_gap": 6.796105777060607e-15,
+      "spectral_bound_to_board_gap": 1.6716395967460748e-13,
+      "delta_l_h": [
+        [
+          0.0,
+          -9.827655810547228e-09,
+          9.544751134829683e-09,
+          0.0,
+          -8.997089994957757e-09
+        ],
+        [
+          -9.827655810547228e-09,
+          1.9082462369951917e-08,
+          -9.270380185613842e-09,
+          -8.944350475049159e-09,
+          8.482487929211234e-09
+        ],
+        [
+          9.544751134829683e-09,
+          -9.270380185613842e-09,
+          0.0,
+          8.438282135804352e-09,
+          0.0
+        ],
+        [
+          0.0,
+          -8.944350475049159e-09,
+          8.438282135804352e-09,
+          0.0,
+          -2.4730623063786386e-08
+        ],
+        [
+          -8.997089994957757e-09,
+          8.482487929211234e-09,
+          0.0,
+          -2.4730623063786386e-08,
+          0.0
+        ]
+      ]
+    },
+    {
+      "label": "saved_rows0_75",
+      "original_rows": [
+        0,
+        75
+      ],
+      "original_current_ids": [
+        0,
+        74,
+        75,
+        81,
+        749
+      ],
+      "compact_to_original_identity_for_selected_pair": true,
+      "maximum_current_abs_a": 6.088963461862724e-09,
+      "delta_l_spectral_norm_h": 6.493800636933957e-09,
+      "ordinary_jw_i_transpose_delta_l_i_ohm": [
+        3.5258845295659065e-19,
+        -7.187825159992366e-19
+      ],
+      "ordinary_magnitude_ohm": 8.006040984559814e-19,
+      "hermitian_energy_indicator_ohm": -8.006017550992042e-19,
+      "spectral_norm_bound_ohm": 4.021203661215173e-18,
+      "entrywise_absolute_bound_ohm": 2.3704364921391556e-18,
+      "ordinary_to_board_gap": 3.765265317791983e-15,
+      "spectral_bound_to_board_gap": 1.8911842583059308e-14,
+      "delta_l_h": [
+        [
+          0.0,
+          -4.580590919563996e-10,
+          -4.428930730087004e-10,
+          0.0,
+          -6.888355213221244e-10
+        ],
+        [
+          -4.580590919563996e-10,
+          0.0,
+          -1.531423510895648e-09,
+          6.249253132571556e-10,
+          0.0
+        ],
+        [
+          -4.428930730087004e-10,
+          -1.531423510895648e-09,
+          -2.922059116439378e-09,
+          5.844778689410019e-10,
+          -3.778502035246066e-09
+        ],
+        [
+          0.0,
+          6.249253132571556e-10,
+          5.844778689410019e-10,
+          0.0,
+          2.4286833401366737e-09
+        ],
+        [
+          -6.888355213221244e-10,
+          0.0,
+          -3.778502035246066e-09,
+          2.4286833401366737e-09,
+          0.0
+        ]
+      ]
+    },
+    {
+      "label": "largest_aspect",
+      "original_rows": [
+        456,
+        457
+      ],
+      "original_current_ids": [
+        459,
+        460,
+        461,
+        1508004,
+        1511810
+      ],
+      "compact_to_original_identity_for_selected_pair": true,
+      "maximum_current_abs_a": 1.0494244291247691e-08,
+      "delta_l_spectral_norm_h": 6.7131732270547535e-09,
+      "ordinary_jw_i_transpose_delta_l_i_ohm": [
+        1.8394428971744074e-19,
+        -3.2294243025127633e-19
+      ],
+      "ordinary_magnitude_ohm": 3.7165483311300317e-19,
+      "hermitian_energy_indicator_ohm": -3.712226081373082e-19,
+      "spectral_norm_bound_ohm": 1.3641939215544056e-17,
+      "entrywise_absolute_bound_ohm": 6.181096033591646e-18,
+      "ordinary_to_board_gap": 1.7479039340529914e-15,
+      "spectral_bound_to_board_gap": 6.415845321648521e-14,
+      "delta_l_h": [
+        [
+          0.0,
+          1.5452099887182795e-09,
+          -4.5851233897887e-10,
+          0.0,
+          6.246473807132545e-10
+        ],
+        [
+          1.5452099887182795e-09,
+          -3.0769056737251027e-09,
+          4.570858778870002e-10,
+          3.887870636819786e-09,
+          -6.207695320398262e-10
+        ],
+        [
+          -4.5851233897887e-10,
+          4.570858778870002e-10,
+          0.0,
+          -6.909376096018302e-10,
+          0.0
+        ],
+        [
+          0.0,
+          3.887870636819786e-09,
+          -6.909376096018302e-10,
+          0.0,
+          2.4956005618297686e-09
+        ],
+        [
+          6.246473807132545e-10,
+          -6.207695320398262e-10,
+          0.0,
+          2.4956005618297686e-09,
+          0.0
+        ]
+      ]
+    },
+    {
+      "label": "most_frequent_candidate",
+      "original_rows": [
+        15252,
+        15253
+      ],
+      "original_current_ids": [
+        29122,
+        29123,
+        29124,
+        29148,
+        29186
+      ],
+      "compact_to_original_identity_for_selected_pair": true,
+      "maximum_current_abs_a": 2.142702742835983e-06,
+      "delta_l_spectral_norm_h": 2.7352284390417766e-13,
+      "ordinary_jw_i_transpose_delta_l_i_ohm": [
+        1.9555653852963936e-20,
+        -6.650406926804655e-20
+      ],
+      "ordinary_magnitude_ohm": 6.931965685738842e-20,
+      "hermitian_energy_indicator_ohm": -6.66449434420949e-20,
+      "spectral_norm_bound_ohm": 1.479577300053606e-17,
+      "entrywise_absolute_bound_ohm": 1.1026868271628101e-17,
+      "ordinary_to_board_gap": 3.2601244523945745e-16,
+      "spectral_bound_to_board_gap": 6.958496844605459e-14,
+      "delta_l_h": [
+        [
+          0.0,
+          -5.070784239631818e-15,
+          -5.6401411850413055e-15,
+          0.0,
+          2.0938151599354777e-14
+        ],
+        [
+          -5.070784239631818e-15,
+          1.7459648872892975e-13,
+          7.075523120084906e-14,
+          9.758923817439934e-14,
+          4.8332616736306705e-14
+        ],
+        [
+          -5.6401411850413055e-15,
+          7.075523120084906e-14,
+          0.0,
+          8.414209140234659e-14,
+          0.0
+        ],
+        [
+          0.0,
+          9.758923817439934e-14,
+          8.414209140234659e-14,
+          0.0,
+          6.014801538668804e-14
+        ],
+        [
+          2.0938151599354777e-14,
+          4.8332616736306705e-14,
+          0.0,
+          6.014801538668804e-14,
+          0.0
+        ]
+      ]
+    },
+    {
+      "label": "ordinary_median_size",
+      "original_rows": [
+        239833,
+        240794
+      ],
+      "original_current_ids": [
+        466497,
+        466511,
+        468172,
+        468173,
+        475402
+      ],
+      "compact_to_original_identity_for_selected_pair": true,
+      "maximum_current_abs_a": 3.7726043697862544e-08,
+      "delta_l_spectral_norm_h": 1.0582527679743155e-12,
+      "ordinary_jw_i_transpose_delta_l_i_ohm": [
+        -2.3570871608673637e-24,
+        3.7768468035840544e-23
+      ],
+      "ordinary_magnitude_ohm": 3.7841948121869126e-23,
+      "hermitian_energy_indicator_ohm": 3.784194812186913e-23,
+      "spectral_norm_bound_ohm": 2.839050143054352e-20,
+      "entrywise_absolute_bound_ohm": 2.198422545792223e-20,
+      "ordinary_to_board_gap": 1.7797182789314855e-19,
+      "spectral_bound_to_board_gap": 1.3352138790859141e-16,
+      "delta_l_h": [
+        [
+          0.0,
+          0.0,
+          -1.3090098651738086e-13,
+          1.2931150048537694e-13,
+          -1.386955322429611e-13
+        ],
+        [
+          0.0,
+          0.0,
+          3.328199204033407e-13,
+          -3.294987589090913e-13,
+          3.1007860522048773e-13
+        ],
+        [
+          -1.3090098651738086e-13,
+          3.328199204033407e-13,
+          5.723076343257787e-13,
+          -2.8071682408727377e-13,
+          2.6360518036020667e-13
+        ],
+        [
+          1.2931150048537694e-13,
+          -3.294987589090913e-13,
+          -2.8071682408727377e-13,
+          0.0,
+          0.0
+        ],
+        [
+          -1.386955322429611e-13,
+          3.1007860522048773e-13,
+          2.6360518036020667e-13,
+          0.0,
+          0.0
+        ]
+      ]
+    },
+    {
+      "label": "ordinary_small",
+      "original_rows": [
+        193603,
+        193724
+      ],
+      "original_current_ids": [
+        376803,
+        376804,
+        377026,
+        377027,
+        377095
+      ],
+      "compact_to_original_identity_for_selected_pair": true,
+      "maximum_current_abs_a": 1.5007171472335212e-08,
+      "delta_l_spectral_norm_h": 4.77172077329077e-13,
+      "ordinary_jw_i_transpose_delta_l_i_ohm": [
+        1.5708656500761332e-23,
+        -3.301176492988645e-23
+      ],
+      "ordinary_magnitude_ohm": 3.6558699550790814e-23,
+      "hermitian_energy_indicator_ohm": -3.655869955079081e-23,
+      "spectral_norm_bound_ohm": 2.0256939679155547e-21,
+      "entrywise_absolute_bound_ohm": 1.2332997180976806e-21,
+      "ordinary_to_board_gap": 1.7193667100586098e-19,
+      "spectral_bound_to_board_gap": 9.526900070287644e-18,
+      "delta_l_h": [
+        [
+          0.0,
+          0.0,
+          -1.1220361650619646e-13,
+          1.0865841831919234e-13,
+          -1.0043443764598433e-13
+        ],
+        [
+          0.0,
+          0.0,
+          -9.800857364999805e-14,
+          1.003884142254426e-13,
+          -2.8730603362836266e-13
+        ],
+        [
+          -1.1220361650619646e-13,
+          -9.800857364999805e-14,
+          2.0553928592311273e-13,
+          -1.1214208501450556e-13,
+          9.794065302927585e-14
+        ],
+        [
+          1.0865841831919234e-13,
+          1.003884142254426e-13,
+          -1.1214208501450556e-13,
+          0.0,
+          0.0
+        ],
+        [
+          -1.0043443764598433e-13,
+          -2.8730603362836266e-13,
+          9.794065302927585e-14,
+          0.0,
+          0.0
+        ]
+      ]
+    }
+  ],
+  "authoritative_local05": {
+    "original_current_ids": [
+      0,
+      74,
+      75,
+      81,
+      749
+    ],
+    "ordinary_jw_i_transpose_delta_l_i_ohm": [
+      3.5258829478840837e-19,
+      -7.187821937459193e-19
+    ],
+    "ordinary_magnitude_ohm": 8.00603739479147e-19,
+    "hermitian_energy_indicator_ohm": -8.006013961236518e-19,
+    "spectral_norm_bound_ohm": 4.021202345211964e-18,
+    "ordinary_to_board_gap": 3.765263629513061e-15,
+    "spectral_bound_to_board_gap": 1.8911836393856366e-14,
+    "matrix_current_outer_delta_relative_to_local05": 5.050219075992876e-07
+  },
+  "decision": {
+    "implement_kkt_or_complete_support_integral": false,
+    "reason": "All seven saved-current cross-only spectral bounds are below 2e-10 of the accepted board gap.",
+    "next_path": "Existing L14/L25 magnetic ownership and complete-return composition, prioritized by actual error ownership rather than pair geometry.",
+    "existing_l25_full_candidate_gap_ohm": 0.00019297777480633876,
+    "existing_l25_full_candidate_gap_reduction_fraction": 0.10213569950972123,
+    "existing_same_triangle_self_gap_ohm": 9.063477940297003e-05,
+    "caveat": "This is a first derivative screen on the accepted R/GC-only current, not a finite magnetic update, broadband rejection, or full-return/cross-layer rejection."
+  },
+  "inputs": {
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-matrix-current-outer-20260912-01\\result.json": "c852684b390484f511841e02f36ea2c2f87cf2190fe87e0353b0379bbba556c8",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-retained-sheet-current-green-20260912-02\\current-support.npz": "24983f24486fd87f866be0f7009c65c07f29769da929ead6f3eb8af0170b541b",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-hybrid-right-correction-01\\l02-reconstructed-field.npz": "b715867457410d6e2ba5154143b479f4d0868f263a3d487d5780c2c77c6c6f19",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-rows0-75-current-cross-handoff-20260912-05\\rows0-75-cross-delta.npz": "3c515d9a24a7abe817d5b25a90e39190caee0a4175463f0f89958093f3c6989d",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_hybrid_r_gc_1mhz_comparison_2026-09-09.json": "2049cf1033a94250098987f47ed0e3d18ff2cd0dba61a90b2916e730b897584e",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_l25_fmm_magnetic_1mhz_comparison_2026-09-08.json": "7b6ce80cf39f300bd7a21b1864aaf33284d9ca55cf840dfdc6ed9a96bd1225ba",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_self_magnetic_1mhz_comparison_2026-09-07.json": "8e7bd5868dc3f8545705bc9e5f5c369dc439c6e974c51e7784cd7d3ab37b27f6"
+  }
+}

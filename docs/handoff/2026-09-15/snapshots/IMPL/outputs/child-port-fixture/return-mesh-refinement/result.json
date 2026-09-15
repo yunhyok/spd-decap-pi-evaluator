@@ -1,0 +1,17 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "PASS_ONE_EDGE_RETURN_REFINEMENT",
+  "artifact_sha256": "88eeb5f19f8ebb380f576c2904c9d516c862ce8922d5581e2fb9266161b48599",
+  "source_fixture": "C:\\Users\\User\\.codex\\worktrees\\06f1\\SPD Decap PI Evaluator\\outputs\\child-port-fixture\\child_port_fixture.npz",
+  "source_fixture_sha256": "47bec5abf13437ff1fb8e5216ebb2c1344be51b60aa2656d109ac4ba27cb3bd4",
+  "counts": {
+    "prisms": 3,
+    "xy_currents": 7,
+    "cap_currents": 6,
+    "currents": 13,
+    "charges": 11,
+    "electrodes": 2
+  },
+  "scope": "Only row0 wall0 v0-v1 is split at its exact midpoint. No L/P, field integration, port solve, board expansion, or -05 correction embedding."
+}

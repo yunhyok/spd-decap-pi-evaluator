@@ -1,0 +1,245 @@
+{
+  "purpose": "Claude handoff snapshots; no new research execution",
+  "date_kst": "2026-09-15",
+  "source_hq_head": "e2f219e71d8c8a397009f72242cce10d78cfc7ab",
+  "publishing_base": "d5e7df4261a20f84cbf18c2b78cb9db3be4f743c",
+  "source_handoff_sha256": "396542aa89146c4117958997b794b6866bd93df5e0a23bc35e164ebaf984c017",
+  "published_handoff_sha256": "8477919ee0a1acda6ba4a365528124c98664aed2fca33b6f041ce49987f82cf1",
+  "files": [
+    {
+      "path": "snapshots/HQ/outputs/research/HQ_STOPPED_CHECKPOINT_20260914_USAGE40.md",
+      "source": "C:/Users/User/.codex/worktrees/5950/SPD Decap PI Evaluator/outputs/research/HQ_STOPPED_CHECKPOINT_20260914_USAGE40.md",
+      "bytes": 7745,
+      "sha256": "6ab6c316c909650e25c8c1d93dc3f7b529a95405b614993882f1e6f1d297af58"
+    },
+    {
+      "path": "snapshots/HQ/outputs/research/HQ_STOPPED_ARTIFACTS_20260914_USAGE40.json",
+      "source": "C:/Users/User/.codex/worktrees/5950/SPD Decap PI Evaluator/outputs/research/HQ_STOPPED_ARTIFACTS_20260914_USAGE40.json",
+      "bytes": 2713,
+      "sha256": "2ccc0413311f3471a095678679e61201be0dd2013b8b4364afd6d5ea24f348b3"
+    },
+    {
+      "path": "snapshots/HQ/outputs/research/astra-static-tighter-inverse-20260914-01/hq-comparison-receipt.json",
+      "source": "C:/Users/User/.codex/worktrees/5950/SPD Decap PI Evaluator/outputs/research/astra-static-tighter-inverse-20260914-01/hq-comparison-receipt.json",
+      "bytes": 5515,
+      "sha256": "442895b7b804173120b2b1e4ae2431daafc2286c3aa7d9be56ec1003c65d187e"
+    },
+    {
+      "path": "snapshots/PHYS/outputs/child-port-physics/checkpoint-20260914-1455KST.md",
+      "source": "C:/Users/User/.codex/worktrees/353f/SPD Decap PI Evaluator/outputs/child-port-physics/checkpoint-20260914-1455KST.md",
+      "bytes": 18230,
+      "sha256": "22cdfa028de6ce59ab91ba5d930f84a107289e559082e9d5324857b1492e98bf"
+    },
+    {
+      "path": "snapshots/REVIEW/docs/peer-review/2026-09-10/NEXT_PLAN.md",
+      "source": "C:/Users/User/.codex/worktrees/peer-review-followup-20260910/SPD Decap PI Evaluator/docs/peer-review/2026-09-10/NEXT_PLAN.md",
+      "bytes": 12373,
+      "sha256": "f5242004148b0c7f0f53a6f72780ec044f77904c2bb3d49f36adccf9cbcea2fd"
+    },
+    {
+      "path": "snapshots/HQ/outputs/research/hq-stopped-working-tree-20260914-usage40.txt",
+      "source": "C:/Users/User/.codex/worktrees/5950/SPD Decap PI Evaluator/outputs/research/hq-stopped-working-tree-20260914-usage40.txt",
+      "bytes": 49639,
+      "sha256": "6a472c483c5438f24118ca2d83cabaa2cddc3f2a529800c67587fc4d87b24f00"
+    },
+    {
+      "path": "snapshots/HQ/outputs/research/astra-l14-l25-fmm-nd2-runtime-20260914-01/result.json",
+      "source": "C:/Users/User/.codex/worktrees/5950/SPD Decap PI Evaluator/outputs/research/astra-l14-l25-fmm-nd2-runtime-20260914-01/result.json",
+      "bytes": 696,
+      "sha256": "321160e7f8d63366c36df2b4bc64fc15bcc7fef3919a649c377e403154655f5e"
+    },
+    {
+      "path": "snapshots/HQ/tools/research/run_astra_static_tighter_actor.py",
+      "source": "C:/Users/User/.codex/worktrees/5950/SPD Decap PI Evaluator/tools/research/run_astra_static_tighter_actor.py",
+      "bytes": 3121,
+      "sha256": "770853958598004883dc49ca91f26f701668889576644030b08907608f2cc05e"
+    },
+    {
+      "path": "snapshots/HQ/docs/evaluation-research/astra_loaded_development_selection_2026-09-07.json",
+      "source": "C:/Users/User/.codex/worktrees/5950/SPD Decap PI Evaluator/docs/evaluation-research/astra_loaded_development_selection_2026-09-07.json",
+      "bytes": 1702,
+      "sha256": "99d0f77fcceb9d07b97aa65953dd42b8d106b7f2485f42f11ee643134d64b8f9"
+    },
+    {
+      "path": "snapshots/HQ/docs/evaluation-research/astra_loaded_development_reference_2026-09-07.json",
+      "source": "C:/Users/User/.codex/worktrees/5950/SPD Decap PI Evaluator/docs/evaluation-research/astra_loaded_development_reference_2026-09-07.json",
+      "bytes": 2005,
+      "sha256": "761d61334678ceaca0db55bc8c5539bb080ee36363eae33a2c419a1ea5c06430"
+    },
+    {
+      "path": "snapshots/HQ/docs/evaluation-research/astra_hybrid_r_gc_1mhz_comparison_2026-09-09.json",
+      "source": "C:/Users/User/.codex/worktrees/5950/SPD Decap PI Evaluator/docs/evaluation-research/astra_hybrid_r_gc_1mhz_comparison_2026-09-09.json",
+      "bytes": 2484,
+      "sha256": "2049cf1033a94250098987f47ed0e3d18ff2cd0dba61a90b2916e730b897584e"
+    },
+    {
+      "path": "snapshots/HQ/docs/EVALUATION_ACCURACY.md",
+      "source": "C:/Users/User/.codex/worktrees/5950/SPD Decap PI Evaluator/docs/EVALUATION_ACCURACY.md",
+      "bytes": 63415,
+      "sha256": "ecc4066e09a39cf5407cdc6446ce047f82b3ce74ffef80148e1a9fe1205e380f"
+    },
+    {
+      "path": "snapshots/REVIEW/docs/peer-review/2026-09-10/RED_TEAM_RESPONSE_2026-09-10.md",
+      "source": "C:/Users/User/.codex/worktrees/peer-review-followup-20260910/SPD Decap PI Evaluator/docs/peer-review/2026-09-10/RED_TEAM_RESPONSE_2026-09-10.md",
+      "bytes": 30230,
+      "sha256": "6f25eae295bf7ee0bedf4952301639cc7a8e919f6df7c84adf27e8b4743832fe"
+    },
+    {
+      "path": "snapshots/HQ/docs/evaluation-research/ASTRA_COMMON_MODEL_2026-09-12.md",
+      "source": "C:/Users/User/.codex/worktrees/5950/SPD Decap PI Evaluator/docs/evaluation-research/ASTRA_COMMON_MODEL_2026-09-12.md",
+      "bytes": 15597,
+      "sha256": "0870c008e7764a59b2b8c2af9bf2cdb57f998f77985834c76686579358af4d57"
+    },
+    {
+      "path": "snapshots/IMPL/outputs/child-port-fixture/actual-board-1mhz-connection-map.md",
+      "source": "C:/Users/User/.codex/worktrees/06f1/SPD Decap PI Evaluator/outputs/child-port-fixture/actual-board-1mhz-connection-map.md",
+      "bytes": 4557,
+      "sha256": "61c498465eca5cd898ea0cf452457133cf8e041d54cacae7171d3fb63a2dcf0e"
+    },
+    {
+      "path": "snapshots/IMPL/outputs/child-port-fixture/actual-board-current-screen/result.json",
+      "source": "C:/Users/User/.codex/worktrees/06f1/SPD Decap PI Evaluator/outputs/child-port-fixture/actual-board-current-screen/result.json",
+      "bytes": 15586,
+      "sha256": "fadaa00739501b8322797e06243143e4dfac73122e96b9fb846f4e8f97cde3d5"
+    },
+    {
+      "path": "snapshots/HQ/outputs/research/HQ_USAGE_STOP_POLICY_20260914.json",
+      "source": "C:/Users/User/.codex/worktrees/5950/SPD Decap PI Evaluator/outputs/research/HQ_USAGE_STOP_POLICY_20260914.json",
+      "bytes": 2518,
+      "sha256": "852ea0179d6a9c9f04abfd49cf41889177ab3e8a2d9efa4143e81fe6eaf0e1d1"
+    },
+    {
+      "path": "snapshots/HQ/outputs/research/astra-finite-joint-p-20260914-01/hq-rejection-receipt.json",
+      "source": "C:/Users/User/.codex/worktrees/5950/SPD Decap PI Evaluator/outputs/research/astra-finite-joint-p-20260914-01/hq-rejection-receipt.json",
+      "bytes": 1628,
+      "sha256": "6c685251dfd874a5640e5023dde7e770fe4df0031cc27444ed8120f4ed62aa4f"
+    },
+    {
+      "path": "snapshots/HQ/outputs/research/astra-finite-joint-p-20260914-01/saved-affine-residual-diagnostic.json",
+      "source": "C:/Users/User/.codex/worktrees/5950/SPD Decap PI Evaluator/outputs/research/astra-finite-joint-p-20260914-01/saved-affine-residual-diagnostic.json",
+      "bytes": 1665,
+      "sha256": "fce164ec7103e004d3c8b3d0b8154359f1adc49e3f3d82811d9a4614922cfc1e"
+    },
+    {
+      "path": "snapshots/HQ/outputs/research/astra-finite-right-probe-20260914-01/hq-timeout-receipt.json",
+      "source": "C:/Users/User/.codex/worktrees/5950/SPD Decap PI Evaluator/outputs/research/astra-finite-right-probe-20260914-01/hq-timeout-receipt.json",
+      "bytes": 1875,
+      "sha256": "593447e3006b8b7ee97bbdf94a2d6099a61c0a98ed89435391e839c708def06b"
+    },
+    {
+      "path": "snapshots/HQ/outputs/research/astra-static-nodal-leakage-20260914-01/hq-measurement-receipt.json",
+      "source": "C:/Users/User/.codex/worktrees/5950/SPD Decap PI Evaluator/outputs/research/astra-static-nodal-leakage-20260914-01/hq-measurement-receipt.json",
+      "bytes": 1982,
+      "sha256": "36b38e983c2ab93656b3b62263384f97dc7add83acc0a3579c6a0fdd9bfad1d9"
+    },
+    {
+      "path": "snapshots/HQ/outputs/research/HQ_ACTIVE_CHECKPOINT_20260914.md",
+      "source": "C:/Users/User/.codex/worktrees/5950/SPD Decap PI Evaluator/outputs/research/HQ_ACTIVE_CHECKPOINT_20260914.md",
+      "bytes": 59941,
+      "sha256": "6521af751c74b84ae9b13bc6f7ef5bc885e649dcfe17a18c58e9f95bb2b366f0"
+    },
+    {
+      "path": "snapshots/HQ/outputs/research/ASTRA_PROGRESS_20260914.md",
+      "source": "C:/Users/User/.codex/worktrees/5950/SPD Decap PI Evaluator/outputs/research/ASTRA_PROGRESS_20260914.md",
+      "bytes": 16638,
+      "sha256": "9a496830c99a2d0ed3ced5183ffe54919945e171260c01534f9347cad92582b7"
+    },
+    {
+      "path": "snapshots/HQ/outputs/research/astra-static-tighter-inverse-20260914-01/static/sample-01-baseline_alpha1_q_eta_with_zero_nodal_rows.json",
+      "source": "C:/Users/User/.codex/worktrees/5950/SPD Decap PI Evaluator/outputs/research/astra-static-tighter-inverse-20260914-01/static/sample-01-baseline_alpha1_q_eta_with_zero_nodal_rows.json",
+      "bytes": 1338,
+      "sha256": "8792795622df8e2896a6fb6fa0a61c462d96787668bd4a2fc92ea650800bcd51"
+    },
+    {
+      "path": "snapshots/HQ/outputs/research/astra-static-tighter-inverse-20260914-01/static/sample-02-latest_right_field_pure_nodal_residual.json",
+      "source": "C:/Users/User/.codex/worktrees/5950/SPD Decap PI Evaluator/outputs/research/astra-static-tighter-inverse-20260914-01/static/sample-02-latest_right_field_pure_nodal_residual.json",
+      "bytes": 1762,
+      "sha256": "fcec46ecddaba6924081b92b4715c0bb0f347b3bd2ae0171b489365d62ad710c"
+    },
+    {
+      "path": "snapshots/HQ/outputs/research/astra-static-tighter-inverse-20260914-01/external-budget.json",
+      "source": "C:/Users/User/.codex/worktrees/5950/SPD Decap PI Evaluator/outputs/research/astra-static-tighter-inverse-20260914-01/external-budget.json",
+      "bytes": 780,
+      "sha256": "e4644b0d28c299498f5a89681ad1de94476496886dba103f80825f0a557980be"
+    },
+    {
+      "path": "snapshots/HQ/outputs/research/astra-static-nodal-leakage-20260914-01/static/static-nodal-leakage-before-completion.json",
+      "source": "C:/Users/User/.codex/worktrees/5950/SPD Decap PI Evaluator/outputs/research/astra-static-nodal-leakage-20260914-01/static/static-nodal-leakage-before-completion.json",
+      "bytes": 5720,
+      "sha256": "1b8e14670de4fd7a48d87af11e0b90a9a406695fd30db2c2f82e4eadba3eb3b8"
+    },
+    {
+      "path": "snapshots/HQ/tools/research/probe_astra_joint_p_action.py",
+      "source": "C:/Users/User/.codex/worktrees/5950/SPD Decap PI Evaluator/tools/research/probe_astra_joint_p_action.py",
+      "bytes": 4296,
+      "sha256": "517219b014069de2071564db7eb3930cb456d8f5a67e8207122029e7c9e77df0"
+    },
+    {
+      "path": "snapshots/HQ/tools/research/prepare_astra_hybrid_right_correction.py",
+      "source": "C:/Users/User/.codex/worktrees/5950/SPD Decap PI Evaluator/tools/research/prepare_astra_hybrid_right_correction.py",
+      "bytes": 5545,
+      "sha256": "91e792487f371d14c21e9ce6729f17b34b93386f9f1d0c599302b129d2d755a6"
+    },
+    {
+      "path": "snapshots/IMPL/outputs/child-port-fixture/static-tighter-inverse-01/static_tighter_inverse_driver.py",
+      "source": "C:/Users/User/.codex/worktrees/06f1/SPD Decap PI Evaluator/outputs/child-port-fixture/static-tighter-inverse-01/static_tighter_inverse_driver.py",
+      "bytes": 15498,
+      "sha256": "7adf754ac44ff3bbb4687b8f6fc449f4da03baa62bb0ee8efbe12b5a9cdc5687"
+    },
+    {
+      "path": "snapshots/IMPL/outputs/child-port-fixture/static-tighter-inverse-01/research-stop-latch-40.json",
+      "source": "C:/Users/User/.codex/worktrees/06f1/SPD Decap PI Evaluator/outputs/child-port-fixture/static-tighter-inverse-01/research-stop-latch-40.json",
+      "bytes": 1217,
+      "sha256": "d22106039202b10ef0bb7733e810cf77ebb9141cc9d73cc25c4fd213651c109f"
+    },
+    {
+      "path": "snapshots/IMPL/outputs/child-port-fixture/static-nodal-leakage-01/static_nodal_leakage_driver.py",
+      "source": "C:/Users/User/.codex/worktrees/06f1/SPD Decap PI Evaluator/outputs/child-port-fixture/static-nodal-leakage-01/static_nodal_leakage_driver.py",
+      "bytes": 13343,
+      "sha256": "7bb96c539b80f69bcf5efdfc68b175d3ef14e38e34efc413264f1686868ed2fd"
+    },
+    {
+      "path": "snapshots/IMPL/outputs/child-port-fixture/result.json",
+      "source": "C:/Users/User/.codex/worktrees/06f1/SPD Decap PI Evaluator/outputs/child-port-fixture/result.json",
+      "bytes": 3061,
+      "sha256": "fbbc78c74f41bfe3e08ec40b0f13dee2c27b8819e1a158947e9e17073fa80f48"
+    },
+    {
+      "path": "snapshots/IMPL/outputs/child-port-fixture/return-mesh-refinement/result.json",
+      "source": "C:/Users/User/.codex/worktrees/06f1/SPD Decap PI Evaluator/outputs/child-port-fixture/return-mesh-refinement/result.json",
+      "bytes": 747,
+      "sha256": "83ab07f3753b82747adae1420d0c00c641dfe8bd3a64f2206f55125f726f5816"
+    },
+    {
+      "path": "snapshots/PHYS/outputs/child-port-physics/PHYSICAL_CONTRACT.md",
+      "source": "C:/Users/User/.codex/worktrees/353f/SPD Decap PI Evaluator/outputs/child-port-physics/PHYSICAL_CONTRACT.md",
+      "bytes": 13812,
+      "sha256": "d59e8c093c5f06d7bc80c40068f1068089cc843cea670eda3a5cc625c5babd3a"
+    },
+    {
+      "path": "snapshots/PHYS/outputs/child-port-physics/L14_MAGNETIC_CONTRACT.md",
+      "source": "C:/Users/User/.codex/worktrees/353f/SPD Decap PI Evaluator/outputs/child-port-physics/L14_MAGNETIC_CONTRACT.md",
+      "bytes": 10239,
+      "sha256": "9aa56d6d7e3c75fadc8bb8cc81f821c5bc0307df106d8a46e2d1449c5077ab5c"
+    },
+    {
+      "path": "snapshots/PHYS/outputs/child-port-physics/FOLLOWUP_PORT_REVIEW.md",
+      "source": "C:/Users/User/.codex/worktrees/353f/SPD Decap PI Evaluator/outputs/child-port-physics/FOLLOWUP_PORT_REVIEW.md",
+      "bytes": 7871,
+      "sha256": "67c8952919195c27db283b2ab1c7405bd129247f3f764cef908714a262f2d44c"
+    },
+    {
+      "path": "snapshots/RED/outputs/red-team/20260914-120025-KST-review.md",
+      "source": "C:/Users/User/.codex/worktrees/1f13/SPD Decap PI Evaluator/outputs/red-team/20260914-120025-KST-review.md",
+      "bytes": 20889,
+      "sha256": "b5a7d50c7d316985fe9f639ce2892a59fcb31774ac3e2192dd1ccc4110d514b8"
+    },
+    {
+      "path": "snapshots/RED/outputs/red-team/STATUS.md",
+      "source": "C:/Users/User/.codex/worktrees/1f13/SPD Decap PI Evaluator/outputs/red-team/STATUS.md",
+      "bytes": 17408,
+      "sha256": "4e147875e0ca8007f7607bd81d112e03e0428f0fcd076e8c5a4f9f5cdfc117b7"
+    }
+  ],
+  "handoff_hash_normalization": "UTF-8 text with LF newlines; snapshot files use exact bytes"
+}

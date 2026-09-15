@@ -1,0 +1,36 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "latched_at_kst": "2026-09-14T15:27:10+09:00",
+  "status": "RESEARCH_STOP_LATCHED",
+  "official_usage_guard": {
+    "product": "Codex Usage Guard v0.1.1",
+    "force_refresh": true,
+    "purpose": "task_start",
+    "status": "live",
+    "remaining_percent": 40.0,
+    "age_s": 0.0083937645
+  },
+  "policy": {
+    "new_tasks": false,
+    "new_calculations": false,
+    "retries": false,
+    "new_delegation": false,
+    "reset_credit": false,
+    "automatic_resume_on_usage_recovery": false,
+    "resume_requires_explicit_user_instruction": true
+  },
+  "active_fragment": {
+    "status": "completed_and_checkpointed",
+    "worker_pid_43968_running": false,
+    "checkpoint": "outputs/child-port-fixture/static-tighter-inverse-01/checkpoint-static-run-final-usage-41.json",
+    "checkpoint_sha256": "febbc89b9625402dd570d6284dcce8a4d7636885b08fbec5692742beff9abb3c"
+  },
+  "native_subagents": {
+    "finite_joint_driver_impl": "completed",
+    "finite_joint_driver_sol_review": "completed",
+    "static_leakage_sol_review": "completed",
+    "running_children": 0,
+    "root_status_after_checkpoint": "stopped_waiting_for_explicit_user_resumption"
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "status": "ALL_STOPPED",
+  "saved_at": "2026-09-14T15:35:40.585140+09:00",
+  "artifacts": {
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-finite-joint-p-20260914-01\\hq-rejection-receipt.json": {
+      "sha256": "6c685251dfd874a5640e5023dde7e770fe4df0031cc27444ed8120f4ed62aa4f",
+      "bytes": 1628
+    },
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-finite-joint-p-20260914-01\\saved-affine-residual-diagnostic.json": {
+      "sha256": "fce164ec7103e004d3c8b3d0b8154359f1adc49e3f3d82811d9a4614922cfc1e",
+      "bytes": 1665
+    },
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-finite-right-probe-20260914-01\\hq-timeout-receipt.json": {
+      "sha256": "593447e3006b8b7ee97bbdf94a2d6099a61c0a98ed89435391e839c708def06b",
+      "bytes": 1875
+    },
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-static-nodal-leakage-20260914-01\\hq-measurement-receipt.json": {
+      "sha256": "36b38e983c2ab93656b3b62263384f97dc7add83acc0a3579c6a0fdd9bfad1d9",
+      "bytes": 1982
+    },
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-static-tighter-inverse-20260914-01\\hq-comparison-receipt.json": {
+      "sha256": "442895b7b804173120b2b1e4ae2431daafc2286c3aa7d9be56ec1003c65d187e",
+      "bytes": 5515
+    },
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\hq-stopped-working-tree-20260914-usage40.txt": {
+      "sha256": "6a472c483c5438f24118ca2d83cabaa2cddc3f2a529800c67587fc4d87b24f00",
+      "bytes": 49639
+    },
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\HQ_STOPPED_CHECKPOINT_20260914_USAGE40.md": {
+      "sha256": "6ab6c316c909650e25c8c1d93dc3f7b529a95405b614993882f1e6f1d297af58",
+      "bytes": 7745
+    },
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\HQ_USAGE_STOP_POLICY_20260914.json": {
+      "sha256": "852ea0179d6a9c9f04abfd49cf41889177ab3e8a2d9efa4143e81fe6eaf0e1d1",
+      "bytes": 2518
+    },
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\HQ_ACTIVE_CHECKPOINT_20260914.md": {
+      "sha256": "6521af751c74b84ae9b13bc6f7ef5bc885e649dcfe17a18c58e9f95bb2b366f0",
+      "bytes": 59941
+    },
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\ASTRA_PROGRESS_20260914.md": {
+      "sha256": "9a496830c99a2d0ed3ced5183ffe54919945e171260c01534f9347cad92582b7",
+      "bytes": 16638
+    }
+  }
+}

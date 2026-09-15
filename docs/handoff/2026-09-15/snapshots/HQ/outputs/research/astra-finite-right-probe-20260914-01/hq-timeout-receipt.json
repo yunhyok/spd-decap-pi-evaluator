@@ -1,0 +1,47 @@
+{
+  "status": "INCOMPLETE_FINAL_MAGNETIC_VALIDATION_EXTERNAL_TIMEOUT",
+  "external": {
+    "status": "STOP_EXTERNAL_TIMEOUT",
+    "owned_pid": 39536,
+    "exit_code": 1,
+    "elapsed_s": 900.8429999999935,
+    "peak_private_bytes": 28820996096,
+    "peak_working_set_bytes": 10896695296,
+    "max_seconds": 900.0,
+    "max_bytes": 34359738368,
+    "command": [
+      "C:\\Users\\User\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+      "-B",
+      "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\run_astra_l14_l25_fixed_action.py",
+      "--worker",
+      "--output",
+      "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-finite-right-probe-20260914-01"
+    ],
+    "child_driver_sha256": "c1f0475765344df63f1473a7a24ec81a6b3b94e95f8b11948bf1c6b42366da9d"
+  },
+  "artifacts": {
+    "external-budget.json": {
+      "sha256": "8318739937653cbc07e0a2b7a1869a7f85a4474952317d55c415cde42a183afc",
+      "bytes": 774
+    },
+    "finite/driver-at-run.py": {
+      "sha256": "0eda759d3a1004ea6c753ac8167e5d8db1151149c4a3e5905f70b6039c710216",
+      "bytes": 11476
+    },
+    "finite/raw-finite-field-before-gates.npz": {
+      "sha256": "2569d379d05dd99d1a86506fbc6bfb03f768dbb18025419cf5cfcac78e7db520",
+      "bytes": 43284697
+    },
+    "finite/right-action-receipts.jsonl": {
+      "sha256": "9211648923bd5a6a0e64ca525f1a9ed97c47cd186e1e2020d5dd022b5a0ac6ad",
+      "bytes": 947
+    }
+  },
+  "completed_joint_actions": 7,
+  "started_final_joint_action": 8,
+  "final_force_flux_available": false,
+  "solver_info": null,
+  "full_residual": null,
+  "power_closure": null,
+  "scope": "No accepted field or accuracy change. Saved v/q/eta permits static nodal KCL readback. No extra magnetic action or automatic cycle."
+}

@@ -1,0 +1,19 @@
+{
+  "status": "STOP_NATIVE_WORKER_EXIT",
+  "owned_pid": 43968,
+  "exit_code": 1,
+  "elapsed_s": 123.17099999997299,
+  "peak_private_bytes": 24434507776,
+  "peak_working_set_bytes": 6527692800,
+  "max_seconds": 180.0,
+  "max_bytes": 34359738368,
+  "command": [
+    "C:\\Users\\User\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+    "-B",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\run_astra_l14_l25_fixed_action.py",
+    "--worker",
+    "--output",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-static-tighter-inverse-20260914-01"
+  ],
+  "child_driver_sha256": "770853958598004883dc49ca91f26f701668889576644030b08907608f2cc05e"
+}

@@ -1,0 +1,44 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "sample": "baseline_alpha1_q_eta_with_zero_nodal_rows",
+  "status": "SAVED_BEFORE_ASSERTIONS",
+  "accepted": false,
+  "solver": {
+    "operator": "Ahat0(Mz)",
+    "gmres_M": null,
+    "restart": 8,
+    "maxiter": 3,
+    "rtol": 1e-09,
+    "atol": 0.0,
+    "info": 3,
+    "callbacks": 24,
+    "last_callback_relative": 0.12783370766518104
+  },
+  "evaluations": {
+    "m_applications": 28,
+    "static_a0_actions": 28,
+    "cap_per_kind": 32
+  },
+  "residuals": {
+    "total_scaled_relative": 0.1278337076654855,
+    "node_max_a": 0.36922353515513595,
+    "node_l2_a": 2.4644461617250153,
+    "q25_max_v": 4.028724966090482e-05,
+    "q25_l2_v": 0.0011836456101049872,
+    "eta_max_a": 0.23279796486715612,
+    "eta_l2_a": 0.4175954405862998
+  },
+  "one_m_comparison": {
+    "reference_node_max_a": 4.933974915258021,
+    "reference_node_l2_a": 13.170315688575778,
+    "node_max_ratio": 0.07483287643261712,
+    "node_l2_ratio": 0.18712126724970837,
+    "reference_m_apply_s": 1.019132899993565
+  },
+  "cost": {
+    "sample_elapsed_s": 43.53464490000624,
+    "setup_and_factor_until_intercept_s": 32.720176699978765
+  },
+  "scope": "Static inverse comparison only; no magnetic action, Z accuracy, or fixed-preconditioner claim."
+}

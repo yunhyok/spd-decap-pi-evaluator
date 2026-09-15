@@ -1,0 +1,40 @@
+{
+  "status": "MEASUREMENTS_SAVED_ALGEBRA_REPLAY_GATE_FAILED",
+  "accepted": false,
+  "elapsed_s": 38.57799999997951,
+  "peak_private_gib": 22.07550048828125,
+  "peak_working_gib": 5.397880554199219,
+  "magnetic_actions": 0,
+  "m_applications": 2,
+  "samples": {
+    "baseline_alpha1_q_eta_with_zero_nodal_rows": {
+      "input_scaled_l2": 0.13791906747519084,
+      "total_scaled_relative": 0.6955592460167919,
+      "nodal_scaled_relative_to_input": 0.6955592460167919,
+      "nodal_leakage_max_a": 4.933974915258021,
+      "nodal_leakage_l2_a": 13.170315688575778,
+      "node_rows_exactly_zero": true,
+      "m_apply_s": 1.019132899993565,
+      "q_residual_max": 0.002784168241165967,
+      "eta_residual_max": 16.088184372192845
+    },
+    "latest_right_field_pure_nodal_residual": {
+      "input_scaled_l2": 0.000670499168410031,
+      "total_scaled_relative": 0.8552127291429017,
+      "nodal_scaled_relative_to_input": 0.8552127291429017,
+      "nodal_leakage_max_a": 0.018163356132007313,
+      "nodal_leakage_l2_a": 0.07513817668276106,
+      "m_apply_s": 0.9458315999945626,
+      "pre_kcl_max_a": 0.01812862397271888,
+      "post_repair_kcl_max_a": 0.018163356131981195,
+      "post_over_pre_kcl": 1.0019158739965361,
+      "kcl_reduction_factor": 0.9980877895577261,
+      "direct_vs_negative_leakage_max_a": 6.052292225961788e-12,
+      "repair_sign_algebra_check": false,
+      "repair_interpretation": "static A0 algebra only; no magnetic or Z-accuracy claim"
+    }
+  },
+  "source_result_sha256": "1b8e14670de4fd7a48d87af11e0b90a9a406695fd30db2c2f82e4eadba3eb3b8",
+  "external_sha256": "650019d024bc459d2a7acef0ad14b6ae5afe20e33f7777e736dbfdbf50e776a8",
+  "interpretation": "Measured static M leaks node current on tested directions; tighter inverse benefit remains unmeasured. Preserve the failed original sign/allclose gate; do not relabel the run PASS. No repetition or tolerance change. No board Z or accuracy result."
+}

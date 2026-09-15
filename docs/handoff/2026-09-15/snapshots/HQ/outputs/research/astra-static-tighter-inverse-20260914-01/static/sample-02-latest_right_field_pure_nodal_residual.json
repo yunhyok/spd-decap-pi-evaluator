@@ -1,0 +1,54 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "sample": "latest_right_field_pure_nodal_residual",
+  "status": "SAVED_BEFORE_ASSERTIONS",
+  "accepted": false,
+  "solver": {
+    "operator": "Ahat0(Mz)",
+    "gmres_M": null,
+    "restart": 8,
+    "maxiter": 3,
+    "rtol": 1e-09,
+    "atol": 0.0,
+    "info": 3,
+    "callbacks": 24,
+    "last_callback_relative": 0.38186014634579296
+  },
+  "evaluations": {
+    "m_applications": 28,
+    "static_a0_actions": 28,
+    "cap_per_kind": 32
+  },
+  "residuals": {
+    "total_scaled_relative": 0.3818601463459859,
+    "node_max_a": 0.004302607606026877,
+    "node_l2_a": 0.034399614550070366,
+    "q25_max_v": 7.306170463265837e-18,
+    "q25_l2_v": 4.798658449958396e-17,
+    "eta_max_a": 2.1486913583447444e-12,
+    "eta_l2_a": 6.203730114148456e-12
+  },
+  "one_m_comparison": {
+    "reference_node_max_a": 0.018163356132007313,
+    "reference_node_l2_a": 0.07513817668276106,
+    "node_max_ratio": 0.23688395331548107,
+    "node_l2_ratio": 0.4578180635831514,
+    "reference_m_apply_s": 0.9458315999945626
+  },
+  "cost": {
+    "sample_elapsed_s": 41.82687220000662,
+    "setup_and_factor_until_intercept_s": 32.720176699978765
+  },
+  "scope": "Static inverse comparison only; no magnetic action, Z accuracy, or fixed-preconditioner claim.",
+  "node_repair": {
+    "residual_convention": "r=A*x-b; x_repair=x-u",
+    "pre_kcl_max_a": 0.01812862397271888,
+    "post_kcl_max_a": 0.004302607606038474,
+    "post_over_pre": 0.23733779312281583,
+    "direct_vs_negative_residual_max_a": 4.962061523846791e-12,
+    "repair_sign_algebra_check": false,
+    "one_m_post_kcl_max_a": 0.018163356131981195,
+    "post_vs_one_m_ratio": 0.23688395331646014
+  }
+}
