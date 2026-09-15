@@ -1,0 +1,25 @@
+=== Item 4: Delta-Z, 260729 vs 260804 ===
+(260804 = 260729 minus 293 decaps + dielectric reassignment: ABF-GL102 -> EL190T, thinner top dielectric)
+
+Port18 |dZ|/|Z| vs f: min=7.4100e-05 @ 575.4 Hz, max=1.7719e-01 @ 2.512e+06 Hz
+  f=1000 Hz : |Z1|=6.0574e-01  |Z2|=6.0574e-01  |dZ|/|Z1|=9.8640e-05
+  f=1e+04 Hz : |Z1|=6.1586e-02  |Z2|=6.1586e-02  |dZ|/|Z1|=9.5720e-04
+  f=1e+05 Hz : |Z1|=6.2887e-03  |Z2|=6.2842e-03  |dZ|/|Z1|=9.8214e-03
+  f=1e+06 Hz : |Z1|=8.1210e-04  |Z2|=8.9588e-04  |dZ|/|Z1|=1.4276e-01
+  f=1e+07 Hz : |Z1|=1.5969e-03  |Z2|=1.6987e-03  |dZ|/|Z1|=6.4394e-02
+  f=1e+08 Hz : |Z1|=1.0663e-02  |Z2|=1.0724e-02  |dZ|/|Z1|=1.2595e-02
+
+Actual freq used for 1MHz slice: 1e+06 Hz
+
+Top 10 ports by |dZ|/|Z| at 1 MHz:
+rank  port# name                                               |Z1|         |Z2|    |dZ|/|Z1|
+   1     43 Port43_SITE0::ADC_VDD_180_VQPS_SYS_0_AON/0   2.4238e+02   8.6816e+01   6.4184e-01
+   2     92 Port92_SITE1::ADC_VDD_180_VQPS_SYS_3_AON/1   1.1293e+02   4.1542e+01   6.3216e-01
+   3     46 Port46_SITE0::ADC_VDD_180_VQPS_SYS_3_AON/0   2.0536e+02   7.5572e+01   6.3201e-01
+   4     42 Port42_SITE0::ADC_VDD_180_VQPS_OTP_TOP_AON/0   2.4981e+02   9.2017e+01   6.3167e-01
+   5     88 Port88_SITE1::ADC_VDD_180_VQPS_OTP_TOP_AON/1   1.4364e+02   5.3326e+01   6.2876e-01
+   6     89 Port89_SITE1::ADC_VDD_180_VQPS_SYS_0_AON/1   1.5891e+02   5.9022e+01   6.2861e-01
+   7     22 Port22_SITE0::ADC_VDD_105_VDD2H_DDRL/0       2.2031e-02   1.3373e-02   4.1754e-01
+   8     20 Port20_SITE0::ADC_VDD_105_VAA_DDRL/0         2.2913e-02   1.3999e-02   4.1297e-01
+   9     21 Port21_SITE0::ADC_VDD_105_VDD2H_DDRH/0       2.2519e-02   1.3873e-02   4.0962e-01
+  10     67 Port67_SITE1::ADC_VDD_105_VDD2H_DDRH/1       2.1762e-02   1.3176e-02   4.0932e-01

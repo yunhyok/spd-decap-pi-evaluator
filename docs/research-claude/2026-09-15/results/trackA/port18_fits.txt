@@ -1,0 +1,13 @@
+
+--- Item 2: Low-freq fit 1-10 kHz : Z = R + 1/(jwC) ---
+R_eff = 3.355168e-03 Ohm
+C_eff = 2.619424e-04 F  (261.942383 uF)
+relative residual (||Z-model||/||Z||) = 6.8940e-03  (n=26 pts)
+
+--- Mid-band fit 10 kHz-3 MHz : Z = R(f) + jwL + 1/(jwC), C fixed from LF fit ---
+L_eff = 2.458696e-11 H  (24.5870 pH)
+relative residual on (Im(Z)+1/(wC)) vs wL = 9.2471e-01  (n=62 pts)
+
+L(f) over fit band 10kHz-3MHz: mean=-1.5145e-09 H, std=2.9236e-09 H, std/mean=-1.930, min=-1.2922e-08, max=2.9118e-11
+L(f) above 3 MHz (up to 100 MHz): mean=1.7798e-11 H, min=1.3147e-11, max=2.6198e-11  (departs from lumped value if far from 2.459e-11)
+negative L(f) points within fit band: 39 of 62

@@ -1,0 +1,67 @@
+{
+ "step": "S2",
+ "h": 100.0,
+ "fine_h": 25.0,
+ "top_h": 25.0,
+ "info": {
+  "h": 100.0,
+  "fine_h": 25.0,
+  "top_h": 25.0,
+  "sub_um_coarse": 10.0,
+  "sub_um_fine": 5.0,
+  "sub_um_top": 5.0,
+  "fringe": true,
+  "fringe_w_over_d_max": 5.0,
+  "explicit_gnd": false,
+  "gnd_sheet_h": 400.0,
+  "gnd_sheet_fine_h": 100.0,
+  "rail_traces_drawn_into_planes": 13870,
+  "rail_nodes_snapped": 18625,
+  "port_pos": 978,
+  "rail_vias": 30520,
+  "rail_pad_links": 800,
+  "off_plane_traces": 14777,
+  "decaps_gnd_to_reference_directly": 421,
+  "unknowns": 887556,
+  "nodes_before_prune": 914789,
+  "decaps_connected": 421,
+  "build_seconds": 216.67890214920044
+ },
+ "freq": [
+  1000000.0
+ ],
+ "Z_re": [
+  0.0007319624099454717
+ ],
+ "Z_im": [
+  -0.0003241520080521253
+ ],
+ "Zref_re": [
+  0.0006915479466520243
+ ],
+ "Zref_im": [
+  -0.0004257504501139286
+ ],
+ "rel_err": [
+  0.13464093639334132
+ ],
+ "dRe_mOhm": [
+  0.04041446329344745
+ ],
+ "dL_pH": [
+  16.16989426457153
+ ],
+ "per_freq_stats": [
+  {
+   "f": 1000000.0,
+   "assemble_s": 2.711939573287964,
+   "factor_s": 17.21268320083618,
+   "nnz_LU": 81214797,
+   "rss_MB": 2884.41796875
+  }
+ ],
+ "solve_seconds": 20.347545862197876,
+ "breakdown": {},
+ "peak_rss_MB": 2884.41796875,
+ "wall_seconds": 239.4329171180725
+}

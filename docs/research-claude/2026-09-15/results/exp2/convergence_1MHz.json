@@ -1,0 +1,13 @@
+{
+ "model": "EXP-2 primary (explicit L13-L16, L24-L27; coupled column L, bottom gauge), 1 MHz, probe.py",
+ "ref_Z_1MHz": [6.915479e-04, -4.257505e-04],
+ "runs": [
+  {"h": 400, "fine_h": 200, "top_gnd_h": 100, "unknowns": 165013, "nnz_LU": 36811860, "factor_s": 12.2, "Z": [1.426919e-03, -2.134577e-04], "rel_err": 0.9425},
+  {"h": 300, "fine_h": 150, "top_gnd_h": 100, "unknowns": 213166, "nnz_LU": 69856750, "factor_s": 15.2, "Z": [1.426327e-03, -2.082664e-04], "rel_err": 0.9436, "rel_change_vs_h400": 0.036},
+  {"h": 400, "fine_h": 100, "top_gnd_h": 100, "unknowns": 242426, "nnz_LU": 93803596, "factor_s": 28.7, "Z": [1.375073e-03, -2.205765e-04], "rel_err": 0.8788, "rel_change_vs_h400": 0.037},
+  {"h": 200, "fine_h": 100, "top_gnd_h": 100, "unknowns": 350445, "result": "FAILED: SuperLU out of memory under 6.2 GB address-space limit (true h/2 check not obtained)"},
+  {"h": 200, "fine_h": 100, "top_gnd_h": 50, "result": "FAILED: OOM-killed (6.1 GB RSS)"}
+ ],
+ "gauge_test_h400": {"bottom_z0": {"Z": [1.426919e-03, -2.134577e-04], "net_column_current_fraction": 0.0724},
+                     "top_z0": {"Z": [1.440277e-03, -2.365169e-04], "net_column_current_fraction": 0.1752}}
+}

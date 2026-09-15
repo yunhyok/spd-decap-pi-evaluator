@@ -1,0 +1,1395 @@
+{
+ "rows": [
+  {
+   "tag": "260729",
+   "port": "Port18_SITE0",
+   "rail": "ADC_VDD_075_VTRIP_SRAM/0",
+   "decaps": 421,
+   "layers": [
+    {
+     "layer": "L14(MAIN_POWER4)",
+     "cells": 46141,
+     "d_eff_gnd": 21.818181818181817,
+     "d_eff_any": 15.0,
+     "mean_ratio_any_over_gnd": 0.6853162293050353,
+     "nearest_gnd_rule": {
+      "up": [
+       "L13(DGND)",
+       30.0,
+       0.992,
+       "DGND"
+      ],
+      "down": [
+       "L16(DGND)",
+       80.0,
+       0.993,
+       "DGND"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": [
+       "L13(DGND)",
+       30.0,
+       0.992,
+       "DGND"
+      ],
+      "down": [
+       "L15(MAIN_POWER5)",
+       30.0,
+       0.997,
+       "ADC_VDD_055_VTRIP/0"
+      ]
+     },
+     "L_ext_pH": 9.497078840627104,
+     "L_int_pH": 0.7027642621554647
+    },
+    {
+     "layer": "L20(DGND)",
+     "cells": 422,
+     "d_eff_gnd": 80.0,
+     "d_eff_any": 50.23255813953488,
+     "mean_ratio_any_over_gnd": 0.9538465777581836,
+     "nearest_gnd_rule": {
+      "up": [
+       "L18(DGND)",
+       80.0,
+       0.711,
+       "DGND"
+      ],
+      "down": [
+       "L21(DGND)",
+       30.0,
+       0.047,
+       "ADC_VDD_075_VTRIP_SRAM/0"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": [
+       "L18(DGND)",
+       80.0,
+       0.711,
+       "DGND"
+      ],
+      "down": [
+       "L22(MAIN_POWER2)",
+       135.0,
+       0.346,
+       "ADC_VDD_055_VTRIP/0"
+      ]
+     },
+     "L_ext_pH": 0.34553380280354273,
+     "L_int_pH": 0.03590250543638837
+    },
+    {
+     "layer": "L21(DGND)",
+     "cells": 634,
+     "d_eff_gnd": 93.96588486140725,
+     "d_eff_any": 45.5,
+     "mean_ratio_any_over_gnd": 0.7779673003731516,
+     "nearest_gnd_rule": {
+      "up": [
+       "L18(DGND)",
+       130.0,
+       0.566,
+       "DGND"
+      ],
+      "down": [
+       "L24(DGND)",
+       339.0,
+       0.543,
+       "DGND"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": [
+       "L18(DGND)",
+       130.0,
+       0.566,
+       "DGND"
+      ],
+      "down": [
+       "L22(MAIN_POWER2)",
+       70.0,
+       0.543,
+       "ADC_VDD_055_VTRIP/0"
+      ]
+     },
+     "L_ext_pH": 1.6682824629275126,
+     "L_int_pH": 0.22161281830321394
+    },
+    {
+     "layer": "L25(MAIN_POWER4)",
+     "cells": 38119,
+     "d_eff_gnd": 70.32640949554896,
+     "d_eff_any": 51.21951219512195,
+     "mean_ratio_any_over_gnd": 0.7352817897959026,
+     "nearest_gnd_rule": {
+      "up": [
+       "L24(DGND)",
+       100.0,
+       0.975,
+       "DGND"
+      ],
+      "down": [
+       "L27(DGND)",
+       237.0,
+       0.975,
+       "DGND"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": [
+       "L24(DGND)",
+       100.0,
+       0.975,
+       "DGND"
+      ],
+      "down": [
+       "L26(MAIN_POWER5)",
+       105.0,
+       0.974,
+       "ADC_VDD_055_VTRIP/0"
+      ]
+     },
+     "L_ext_pH": 29.65303892905823,
+     "L_int_pH": 1.2401866921206461
+    },
+    {
+     "layer": "TOP",
+     "cells": 16976,
+     "d_eff_gnd": 30.0,
+     "d_eff_any": 30.0,
+     "mean_ratio_any_over_gnd": 1.0,
+     "nearest_gnd_rule": {
+      "up": null,
+      "down": [
+       "L02(DGND)",
+       30.0,
+       0.82,
+       "DGND"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": null,
+      "down": [
+       "L02(DGND)",
+       30.0,
+       0.82,
+       "DGND"
+      ]
+     },
+     "L_ext_pH": 0.20695535473106405,
+     "L_int_pH": 0.060048105458751166
+    }
+   ],
+   "L_plane_pH": 43.63140377362191,
+   "fit_dL_pH": 10.929280840894812,
+   "predicted_plane_L_ratio": 0.7427394988873084,
+   "predicted_dL_change_pH": -11.224636799052156,
+   "measured_ratio_1_minus": 0.7495088423558288,
+   "measured_ratio_coord": 0.7996857825719638
+  },
+  {
+   "tag": "260729",
+   "port": "Port16_SITE0",
+   "rail": "ADC_VDD_075_VINT_SRAM/0",
+   "decaps": 106,
+   "layers": [
+    {
+     "layer": "L14(MAIN_POWER4)",
+     "cells": 70304,
+     "d_eff_gnd": 21.818181818181817,
+     "d_eff_any": 15.0,
+     "mean_ratio_any_over_gnd": 0.6859091814250837,
+     "nearest_gnd_rule": {
+      "up": [
+       "L13(DGND)",
+       30.0,
+       0.993,
+       "DGND"
+      ],
+      "down": [
+       "L16(DGND)",
+       80.0,
+       0.991,
+       "DGND"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": [
+       "L13(DGND)",
+       30.0,
+       0.996,
+       "DGND"
+      ],
+      "down": [
+       "L15(MAIN_POWER5)",
+       30.0,
+       0.994,
+       "ADC_VDD_055_VTRIP/0"
+      ]
+     },
+     "L_ext_pH": 9.005915433008623,
+     "L_int_pH": 0.6300239258898578
+    },
+    {
+     "layer": "L20(DGND)",
+     "cells": 45,
+     "d_eff_gnd": 80.0,
+     "d_eff_any": 50.23255813953488,
+     "mean_ratio_any_over_gnd": 0.6985670660089265,
+     "nearest_gnd_rule": {
+      "up": [
+       "L18(DGND)",
+       80.0,
+       0.889,
+       "DGND"
+      ],
+      "down": [
+       "L21(DGND)",
+       30.0,
+       0.133,
+       "ADC_VDD_075_VINT_SRAM/0"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": [
+       "L18(DGND)",
+       80.0,
+       0.889,
+       "DGND"
+      ],
+      "down": [
+       "L21(DGND)",
+       30.0,
+       0.467,
+       "ADC_VDD_075_VINT_SRAM/0"
+      ]
+     },
+     "L_ext_pH": 0.07577134873898984,
+     "L_int_pH": 0.011242421093342862
+    },
+    {
+     "layer": "L21(DGND)",
+     "cells": 613,
+     "d_eff_gnd": 30.0,
+     "d_eff_any": 30.0,
+     "mean_ratio_any_over_gnd": 0.8286292534315043,
+     "nearest_gnd_rule": {
+      "up": [
+       "L20(DGND)",
+       30.0,
+       0.726,
+       "ADC_VDD_075_VINT_SRAM/0"
+      ],
+      "down": [
+       "L24(DGND)",
+       339.0,
+       0.454,
+       "DGND"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": [
+       "L20(DGND)",
+       30.0,
+       0.749,
+       "DGND"
+      ],
+      "down": [
+       "L22(MAIN_POWER2)",
+       70.0,
+       0.452,
+       "ADC_VDD_055_VTRIP/0"
+      ]
+     },
+     "L_ext_pH": 0.31960892569530114,
+     "L_int_pH": 0.10404122190505631
+    },
+    {
+     "layer": "L25(MAIN_POWER4)",
+     "cells": 53883,
+     "d_eff_gnd": 70.32640949554896,
+     "d_eff_any": 51.21951219512195,
+     "mean_ratio_any_over_gnd": 0.7322390799541276,
+     "nearest_gnd_rule": {
+      "up": [
+       "L24(DGND)",
+       100.0,
+       0.99,
+       "DGND"
+      ],
+      "down": [
+       "L27(DGND)",
+       237.0,
+       0.99,
+       "DGND"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": [
+       "L24(DGND)",
+       100.0,
+       0.99,
+       "DGND"
+      ],
+      "down": [
+       "L26(MAIN_POWER5)",
+       105.0,
+       0.986,
+       "ADC_VDD_055_VTRIP/0"
+      ]
+     },
+     "L_ext_pH": 15.720363294578323,
+     "L_int_pH": 0.7016968191686551
+    },
+    {
+     "layer": "TOP",
+     "cells": 4200,
+     "d_eff_gnd": 30.0,
+     "d_eff_any": 30.0,
+     "mean_ratio_any_over_gnd": 1.0,
+     "nearest_gnd_rule": {
+      "up": null,
+      "down": [
+       "L02(DGND)",
+       30.0,
+       0.823,
+       "DGND"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": null,
+      "down": [
+       "L02(DGND)",
+       30.0,
+       0.823,
+       "DGND"
+      ]
+     },
+     "L_ext_pH": 0.2023687345775217,
+     "L_int_pH": 0.05695756643751639
+    }
+   ],
+   "L_plane_pH": 26.827989691093187,
+   "fit_dL_pH": 8.026849433538484,
+   "predicted_plane_L_ratio": 0.7347700676911557,
+   "predicted_dL_change_pH": -7.115585889751017,
+   "measured_ratio_1_minus": 0.7008031713906848,
+   "measured_ratio_coord": 0.7697063123764079
+  },
+  {
+   "tag": "260729",
+   "port": "Port1_SITE0",
+   "rail": "ADC_VDD_050_VDDQ_DDRH/0",
+   "decaps": 35,
+   "layers": [
+    {
+     "layer": "L15(MAIN_POWER5)",
+     "cells": 22171,
+     "d_eff_gnd": 21.818181818181817,
+     "d_eff_any": 15.0,
+     "mean_ratio_any_over_gnd": 0.6863015735645663,
+     "nearest_gnd_rule": {
+      "up": [
+       "L13(DGND)",
+       80.0,
+       0.995,
+       "DGND"
+      ],
+      "down": [
+       "L16(DGND)",
+       30.0,
+       0.992,
+       "DGND"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": [
+       "L14(MAIN_POWER4)",
+       30.0,
+       0.997,
+       "ADC_VDD_075_VINT_SRAM/0"
+      ],
+      "down": [
+       "L16(DGND)",
+       30.0,
+       0.992,
+       "DGND"
+      ]
+     },
+     "L_ext_pH": 47.45826092795029,
+     "L_int_pH": 3.7260612704448164
+    },
+    {
+     "layer": "L20(DGND)",
+     "cells": 4,
+     "d_eff_gnd": 80.0,
+     "d_eff_any": 50.90909090909091,
+     "mean_ratio_any_over_gnd": 0.8181818181818181,
+     "nearest_gnd_rule": {
+      "up": [
+       "L18(DGND)",
+       80.0,
+       1.0,
+       "DGND"
+      ],
+      "down": [
+       "L21(DGND)",
+       30.0,
+       0.25,
+       "ADC_VDD_120_VDDA_P_CL2_P/0"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": [
+       "L18(DGND)",
+       80.0,
+       1.0,
+       "DGND"
+      ],
+      "down": [
+       "L21(DGND)",
+       30.0,
+       0.5,
+       "ADC_VDD_120_VDDA_P_CL2_P/0"
+      ]
+     },
+     "L_ext_pH": 0.6435661698067132,
+     "L_int_pH": 0.10438910050199535
+    },
+    {
+     "layer": "L21(DGND)",
+     "cells": 426,
+     "d_eff_gnd": 30.0,
+     "d_eff_any": 30.0,
+     "mean_ratio_any_over_gnd": 0.8887672558253258,
+     "nearest_gnd_rule": {
+      "up": [
+       "L20(DGND)",
+       30.0,
+       0.897,
+       "DGND"
+      ],
+      "down": [
+       "L24(DGND)",
+       339.0,
+       0.39,
+       "DGND"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": [
+       "L20(DGND)",
+       30.0,
+       0.899,
+       "DGND"
+      ],
+      "down": [
+       "L22(MAIN_POWER2)",
+       70.0,
+       0.387,
+       "ADC_VDD_055_VTRIP/0"
+      ]
+     },
+     "L_ext_pH": 1.9146826942765467,
+     "L_int_pH": 0.5856412253268352
+    },
+    {
+     "layer": "L26(MAIN_POWER5)",
+     "cells": 18245,
+     "d_eff_gnd": 70.32640949554896,
+     "d_eff_any": 51.21951219512195,
+     "mean_ratio_any_over_gnd": 0.7343123353355426,
+     "nearest_gnd_rule": {
+      "up": [
+       "L24(DGND)",
+       237.0,
+       0.979,
+       "DGND"
+      ],
+      "down": [
+       "L27(DGND)",
+       100.0,
+       0.979,
+       "DGND"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": [
+       "L25(MAIN_POWER4)",
+       105.0,
+       0.978,
+       "ADC_VDD_075_VINT_SRAM/0"
+      ],
+      "down": [
+       "L27(DGND)",
+       100.0,
+       0.979,
+       "DGND"
+      ]
+     },
+     "L_ext_pH": 206.27668304795293,
+     "L_int_pH": 8.924781673297268
+    },
+    {
+     "layer": "TOP",
+     "cells": 1344,
+     "d_eff_gnd": 30.0,
+     "d_eff_any": 30.0,
+     "mean_ratio_any_over_gnd": 1.0,
+     "nearest_gnd_rule": {
+      "up": null,
+      "down": [
+       "L02(DGND)",
+       30.0,
+       0.801,
+       "DGND"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": null,
+      "down": [
+       "L02(DGND)",
+       30.0,
+       0.801,
+       "DGND"
+      ]
+     },
+     "L_ext_pH": 0.5489427611816018,
+     "L_int_pH": 0.15320556343274316
+    }
+   ],
+   "L_plane_pH": 270.3362144341718,
+   "fit_dL_pH": 88.49212752405428,
+   "predicted_plane_L_ratio": 0.7409790635858952,
+   "predicted_dL_change_pH": -70.02273940938343,
+   "measured_ratio_1_minus": 0.6726589972073366,
+   "measured_ratio_coord": 0.7533859030166676
+  },
+  {
+   "tag": "260729",
+   "port": "Port14_SITE0",
+   "rail": "ADC_VDD_075_VAON_SRAM/0",
+   "decaps": 35,
+   "layers": [
+    {
+     "layer": "L12(MAIN_POWER3)",
+     "cells": 8173,
+     "d_eff_gnd": 21.818181818181817,
+     "d_eff_any": 15.0,
+     "mean_ratio_any_over_gnd": 0.6835081977242139,
+     "nearest_gnd_rule": {
+      "up": [
+       "L10(DGND)",
+       80.0,
+       0.968,
+       "DGND"
+      ],
+      "down": [
+       "L13(DGND)",
+       30.0,
+       0.998,
+       "DGND"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": [
+       "L11(MAIN_POWER2)",
+       30.0,
+       0.995,
+       "ADC_VDD_070_VAON/0"
+      ],
+      "down": [
+       "L13(DGND)",
+       30.0,
+       0.998,
+       "DGND"
+      ]
+     },
+     "L_ext_pH": 40.02649623682696,
+     "L_int_pH": 3.1309114170942216
+    },
+    {
+     "layer": "L20(DGND)",
+     "cells": 20,
+     "d_eff_gnd": 80.0,
+     "d_eff_any": 50.23255813953488,
+     "mean_ratio_any_over_gnd": 1.7075581395348838,
+     "nearest_gnd_rule": {
+      "up": [
+       "L18(DGND)",
+       80.0,
+       0.55,
+       "DGND"
+      ],
+      "down": [
+       "L21(DGND)",
+       30.0,
+       0.05,
+       "ADC_VDD_075_VAON_SRAM/0"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": [
+       "L18(DGND)",
+       80.0,
+       0.55,
+       "DGND"
+      ],
+      "down": [
+       "L22(MAIN_POWER2)",
+       135.0,
+       0.7,
+       "ADC_VDD_070_VAON/0"
+      ]
+     },
+     "L_ext_pH": 0.868913314641194,
+     "L_int_pH": 0.10176059509004075
+    },
+    {
+     "layer": "L21(DGND)",
+     "cells": 27,
+     "d_eff_gnd": 93.96588486140725,
+     "d_eff_any": 45.5,
+     "mean_ratio_any_over_gnd": 0.7413744127608436,
+     "nearest_gnd_rule": {
+      "up": [
+       "L18(DGND)",
+       130.0,
+       0.556,
+       "DGND"
+      ],
+      "down": [
+       "L24(DGND)",
+       339.0,
+       0.481,
+       "DGND"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": [
+       "L18(DGND)",
+       130.0,
+       0.556,
+       "DGND"
+      ],
+      "down": [
+       "L22(MAIN_POWER2)",
+       70.0,
+       0.481,
+       "ADC_VDD_070_VAON/0"
+      ]
+     },
+     "L_ext_pH": 4.304201826076101,
+     "L_int_pH": 0.8187097371139075
+    },
+    {
+     "layer": "L23(MAIN_POWER3)",
+     "cells": 6599,
+     "d_eff_gnd": 69.08794788273616,
+     "d_eff_any": 51.21951219512195,
+     "mean_ratio_any_over_gnd": 0.7374481514109568,
+     "nearest_gnd_rule": {
+      "up": [
+       "L21(DGND)",
+       202.0,
+       0.927,
+       "DGND"
+      ],
+      "down": [
+       "L24(DGND)",
+       105.0,
+       0.987,
+       "DGND"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": [
+       "L22(MAIN_POWER2)",
+       100.0,
+       0.987,
+       "ADC_VDD_070_VAON/0"
+      ],
+      "down": [
+       "L24(DGND)",
+       105.0,
+       0.987,
+       "DGND"
+      ]
+     },
+     "L_ext_pH": 103.47456837951704,
+     "L_int_pH": 4.179482510339646
+    },
+    {
+     "layer": "TOP",
+     "cells": 1364,
+     "d_eff_gnd": 30.0,
+     "d_eff_any": 30.0,
+     "mean_ratio_any_over_gnd": 1.0,
+     "nearest_gnd_rule": {
+      "up": null,
+      "down": [
+       "L02(DGND)",
+       30.0,
+       0.804,
+       "DGND"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": null,
+      "down": [
+       "L02(DGND)",
+       30.0,
+       0.804,
+       "DGND"
+      ]
+     },
+     "L_ext_pH": 0.5675245713570354,
+     "L_int_pH": 0.1581321755460466
+    }
+   ],
+   "L_plane_pH": 157.63070076360216,
+   "fit_dL_pH": 45.39352357682207,
+   "predicted_plane_L_ratio": 0.7441242918801553,
+   "predicted_dL_change_pH": -40.333867179314055,
+   "measured_ratio_1_minus": 0.7120261258947362,
+   "measured_ratio_coord": 0.7764132643565345
+  },
+  {
+   "tag": "260729",
+   "port": "Port7_SITE0",
+   "rail": "ADC_VDD_070_VINT/0",
+   "decaps": 1034,
+   "layers": [
+    {
+     "layer": "L09(MAIN_POWER1)",
+     "cells": 45044,
+     "d_eff_gnd": 15.0,
+     "d_eff_any": 15.0,
+     "mean_ratio_any_over_gnd": 0.9931801110967593,
+     "nearest_gnd_rule": {
+      "up": [
+       "L08(DGND)",
+       30.0,
+       0.961,
+       "DGND"
+      ],
+      "down": [
+       "L10(DGND)",
+       30.0,
+       0.959,
+       "DGND"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": [
+       "L08(DGND)",
+       30.0,
+       0.961,
+       "DGND"
+      ],
+      "down": [
+       "L10(DGND)",
+       30.0,
+       0.97,
+       "DGND"
+      ]
+     },
+     "L_ext_pH": 4.816029665130597,
+     "L_int_pH": 0.52844332948169
+    },
+    {
+     "layer": "L11(MAIN_POWER2)",
+     "cells": 1310,
+     "d_eff_gnd": 21.818181818181817,
+     "d_eff_any": 21.818181818181817,
+     "mean_ratio_any_over_gnd": 0.9942748091603053,
+     "nearest_gnd_rule": {
+      "up": [
+       "L10(DGND)",
+       30.0,
+       0.78,
+       "DGND"
+      ],
+      "down": [
+       "L13(DGND)",
+       80.0,
+       0.869,
+       "DGND"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": [
+       "L10(DGND)",
+       30.0,
+       0.78,
+       "DGND"
+      ],
+      "down": [
+       "L13(DGND)",
+       80.0,
+       0.802,
+       "DGND"
+      ]
+     },
+     "L_ext_pH": 0.29440873011235924,
+     "L_int_pH": 0.01868270957683257
+    },
+    {
+     "layer": "L12(MAIN_POWER3)",
+     "cells": 27988,
+     "d_eff_gnd": 21.818181818181817,
+     "d_eff_any": 15.0,
+     "mean_ratio_any_over_gnd": 0.6972430148635129,
+     "nearest_gnd_rule": {
+      "up": [
+       "L10(DGND)",
+       80.0,
+       0.938,
+       "DGND"
+      ],
+      "down": [
+       "L13(DGND)",
+       30.0,
+       0.985,
+       "DGND"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": [
+       "L11(MAIN_POWER2)",
+       30.0,
+       0.945,
+       "ADC_VDD_075_VCPU/0"
+      ],
+      "down": [
+       "L13(DGND)",
+       30.0,
+       0.985,
+       "DGND"
+      ]
+     },
+     "L_ext_pH": 2.0921356126452566,
+     "L_int_pH": 0.16240966830824727
+    },
+    {
+     "layer": "L20(DGND)",
+     "cells": 778,
+     "d_eff_gnd": 80.0,
+     "d_eff_any": 50.23255813953488,
+     "mean_ratio_any_over_gnd": 1.12643956151459,
+     "nearest_gnd_rule": {
+      "up": [
+       "L18(DGND)",
+       80.0,
+       0.563,
+       "DGND"
+      ],
+      "down": [
+       "L21(DGND)",
+       30.0,
+       0.078,
+       "ADC_VDD_070_VINT/0"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": [
+       "L18(DGND)",
+       80.0,
+       0.563,
+       "DGND"
+      ],
+      "down": [
+       "L22(MAIN_POWER2)",
+       135.0,
+       0.183,
+       "ADC_VDD_070_VINT/0"
+      ]
+     },
+     "L_ext_pH": 0.023368690627638914,
+     "L_int_pH": 0.003045255237536115
+    },
+    {
+     "layer": "L21(DGND)",
+     "cells": 605,
+     "d_eff_gnd": 93.96588486140725,
+     "d_eff_any": 93.96588486140725,
+     "mean_ratio_any_over_gnd": 0.8614308003608085,
+     "nearest_gnd_rule": {
+      "up": [
+       "L18(DGND)",
+       130.0,
+       0.557,
+       "DGND"
+      ],
+      "down": [
+       "L24(DGND)",
+       339.0,
+       0.507,
+       "DGND"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": [
+       "L18(DGND)",
+       130.0,
+       0.557,
+       "DGND"
+      ],
+      "down": [
+       "L24(DGND)",
+       339.0,
+       0.274,
+       "DGND"
+      ]
+     },
+     "L_ext_pH": 0.2401777993354433,
+     "L_int_pH": 0.03312494220768557
+    },
+    {
+     "layer": "L22(MAIN_POWER2)",
+     "cells": 1109,
+     "d_eff_gnd": 70.0,
+     "d_eff_any": 54.039087947882734,
+     "mean_ratio_any_over_gnd": 0.8641350421800045,
+     "nearest_gnd_rule": {
+      "up": [
+       "L21(DGND)",
+       70.0,
+       0.366,
+       "ADC_VDD_070_VINT/0"
+      ],
+      "down": [
+       "L24(DGND)",
+       237.0,
+       0.826,
+       "DGND"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": [
+       "L21(DGND)",
+       70.0,
+       0.554,
+       "DGND"
+      ],
+      "down": [
+       "L24(DGND)",
+       237.0,
+       0.66,
+       "DGND"
+      ]
+     },
+     "L_ext_pH": 0.007653904534113946,
+     "L_int_pH": 0.00021092476490215675
+    },
+    {
+     "layer": "L23(MAIN_POWER3)",
+     "cells": 22817,
+     "d_eff_gnd": 69.08794788273616,
+     "d_eff_any": 51.21951219512195,
+     "mean_ratio_any_over_gnd": 0.7480781225010037,
+     "nearest_gnd_rule": {
+      "up": [
+       "L21(DGND)",
+       202.0,
+       0.831,
+       "ADC_VDD_070_VINT/0"
+      ],
+      "down": [
+       "L24(DGND)",
+       105.0,
+       0.956,
+       "DGND"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": [
+       "L22(MAIN_POWER2)",
+       100.0,
+       0.923,
+       "ADC_VDD_075_VCPU/0"
+      ],
+      "down": [
+       "L24(DGND)",
+       105.0,
+       0.956,
+       "DGND"
+      ]
+     },
+     "L_ext_pH": 10.783748356667294,
+     "L_int_pH": 0.3843568026083061
+    },
+    {
+     "layer": "TOP",
+     "cells": 41736,
+     "d_eff_gnd": 30.0,
+     "d_eff_any": 30.0,
+     "mean_ratio_any_over_gnd": 1.0,
+     "nearest_gnd_rule": {
+      "up": null,
+      "down": [
+       "L02(DGND)",
+       30.0,
+       0.824,
+       "DGND"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": null,
+      "down": [
+       "L02(DGND)",
+       30.0,
+       0.824,
+       "DGND"
+      ]
+     },
+     "L_ext_pH": 0.4163497987997804,
+     "L_int_pH": 0.12132856230286068
+    }
+   ],
+   "L_plane_pH": 19.92547475234055,
+   "fit_dL_pH": 1.6811136937110185,
+   "predicted_plane_L_ratio": 0.8285628024020114,
+   "predicted_dL_change_pH": -3.4159675523507396,
+   "measured_ratio_1_minus": 0.9156299302974678,
+   "measured_ratio_coord": 0.9221943946445544
+  },
+  {
+   "tag": "260729",
+   "port": "Port19_SITE0",
+   "rail": "ADC_VDD_105_VAA_DDRH/0",
+   "decaps": 4,
+   "layers": [
+    {
+     "layer": "L10(DGND)",
+     "cells": 31,
+     "d_eff_gnd": 49.523809523809526,
+     "d_eff_any": 15.0,
+     "mean_ratio_any_over_gnd": 0.33467741935483863,
+     "nearest_gnd_rule": {
+      "up": [
+       "L08(DGND)",
+       80.0,
+       0.968,
+       "DGND"
+      ],
+      "down": [
+       "L13(DGND)",
+       130.0,
+       0.839,
+       "DGND"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": [
+       "L09(MAIN_POWER1)",
+       30.0,
+       0.968,
+       "ADC_VDD_055_VTRIP/0"
+      ],
+      "down": [
+       "L11(MAIN_POWER2)",
+       30.0,
+       0.839,
+       "ADC_VDD_055_VTRIP/0"
+      ]
+     },
+     "L_ext_pH": 48.76232420435809,
+     "L_int_pH": 1.6975469877554057
+    },
+    {
+     "layer": "L21(DGND)",
+     "cells": 80,
+     "d_eff_gnd": 30.0,
+     "d_eff_any": 30.0,
+     "mean_ratio_any_over_gnd": 0.9414786135693216,
+     "nearest_gnd_rule": {
+      "up": [
+       "L20(DGND)",
+       30.0,
+       0.713,
+       "ADC_VDD_105_VDD2H_DDRH/0"
+      ],
+      "down": [
+       "L24(DGND)",
+       339.0,
+       0.188,
+       "DGND"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": [
+       "L20(DGND)",
+       30.0,
+       0.738,
+       "DGND"
+      ],
+      "down": [
+       "L22(MAIN_POWER2)",
+       70.0,
+       0.188,
+       "ADC_VDD_055_VTRIP/0"
+      ]
+     },
+     "L_ext_pH": 20.63594541806782,
+     "L_int_pH": 6.442570463570326
+    },
+    {
+     "layer": "L30(OTHER_POWER1)",
+     "cells": 36142,
+     "d_eff_gnd": 21.818181818181817,
+     "d_eff_any": 15.0,
+     "mean_ratio_any_over_gnd": 0.6739805044400662,
+     "nearest_gnd_rule": {
+      "up": [
+       "L29(DGND)",
+       30.0,
+       0.96,
+       "DGND"
+      ],
+      "down": [
+       "L32(DGND)",
+       80.0,
+       0.981,
+       "DGND"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": [
+       "L29(DGND)",
+       30.0,
+       0.96,
+       "DGND"
+      ],
+      "down": [
+       "L31(OTHER_POWER2)",
+       30.0,
+       0.997,
+       "ADC_VDD_105_VDD2H_DDRH/0"
+      ]
+     },
+     "L_ext_pH": 48.815424557114824,
+     "L_int_pH": 3.391953539582466
+    }
+   ],
+   "L_plane_pH": 129.74576517044892,
+   "fit_dL_pH": 42.24439130072746,
+   "predicted_plane_L_ratio": 0.6179829103584781,
+   "predicted_dL_change_pH": -49.565099603727234,
+   "measured_ratio_1_minus": 0.6744063958832847,
+   "measured_ratio_coord": 0.754379016988643
+  },
+  {
+   "tag": "260804",
+   "port": "Port18_SITE0",
+   "rail": "ADC_VDD_075_VTRIP_SRAM/0",
+   "decaps": 421,
+   "layers": [
+    {
+     "layer": "L14(MAIN_POWER4)",
+     "cells": 46135,
+     "d_eff_gnd": 21.818181818181817,
+     "d_eff_any": 15.0,
+     "mean_ratio_any_over_gnd": 0.6852942697813729,
+     "nearest_gnd_rule": {
+      "up": [
+       "L13(DGND)",
+       30.0,
+       0.992,
+       "DGND"
+      ],
+      "down": [
+       "L16(DGND)",
+       80.0,
+       0.993,
+       "DGND"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": [
+       "L13(DGND)",
+       30.0,
+       0.992,
+       "DGND"
+      ],
+      "down": [
+       "L15(MAIN_POWER5)",
+       30.0,
+       0.997,
+       "ADC_VDD_055_VTRIP/0"
+      ]
+     },
+     "L_ext_pH": 9.96046613910468,
+     "L_int_pH": 0.7375555564878624
+    },
+    {
+     "layer": "L20(DGND)",
+     "cells": 422,
+     "d_eff_gnd": 80.0,
+     "d_eff_any": 54.90196078431372,
+     "mean_ratio_any_over_gnd": 1.0012312982064864,
+     "nearest_gnd_rule": {
+      "up": [
+       "L18(DGND)",
+       80.0,
+       0.711,
+       "DGND"
+      ],
+      "down": [
+       "L21(DGND)",
+       30.0,
+       0.047,
+       "ADC_VDD_075_VTRIP_SRAM/0"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": [
+       "L18(DGND)",
+       80.0,
+       0.711,
+       "DGND"
+      ],
+      "down": [
+       "L22(MAIN_POWER2)",
+       175.0,
+       0.346,
+       "ADC_VDD_055_VTRIP/0"
+      ]
+     },
+     "L_ext_pH": 0.31035281887499067,
+     "L_int_pH": 0.03229347868747938
+    },
+    {
+     "layer": "L21(DGND)",
+     "cells": 634,
+     "d_eff_gnd": 99.76744186046511,
+     "d_eff_any": 59.583333333333336,
+     "mean_ratio_any_over_gnd": 0.8276881285556363,
+     "nearest_gnd_rule": {
+      "up": [
+       "L18(DGND)",
+       130.0,
+       0.566,
+       "DGND"
+      ],
+      "down": [
+       "L24(DGND)",
+       429.0,
+       0.543,
+       "DGND"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": [
+       "L18(DGND)",
+       130.0,
+       0.566,
+       "DGND"
+      ],
+      "down": [
+       "L22(MAIN_POWER2)",
+       110.0,
+       0.543,
+       "ADC_VDD_055_VTRIP/0"
+      ]
+     },
+     "L_ext_pH": 1.5456879298657642,
+     "L_int_pH": 0.1974692965958047
+    },
+    {
+     "layer": "L25(MAIN_POWER4)",
+     "cells": 38057,
+     "d_eff_gnd": 146.67802385008517,
+     "d_eff_any": 77.77777777777777,
+     "mean_ratio_any_over_gnd": 0.5423334356141819,
+     "nearest_gnd_rule": {
+      "up": [
+       "L24(DGND)",
+       300.0,
+       0.974,
+       "DGND"
+      ],
+      "down": [
+       "L27(DGND)",
+       287.0,
+       0.974,
+       "DGND"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": [
+       "L24(DGND)",
+       300.0,
+       0.974,
+       "DGND"
+      ],
+      "down": [
+       "L26(MAIN_POWER5)",
+       105.0,
+       0.974,
+       "ADC_VDD_055_VTRIP/0"
+      ]
+     },
+     "L_ext_pH": 62.136939527691446,
+     "L_int_pH": 1.199325372834354
+    },
+    {
+     "layer": "TOP",
+     "cells": 16976,
+     "d_eff_gnd": 15.0,
+     "d_eff_any": 15.0,
+     "mean_ratio_any_over_gnd": 1.0,
+     "nearest_gnd_rule": {
+      "up": null,
+      "down": [
+       "L02(DGND)",
+       15.0,
+       0.82,
+       "DGND"
+      ]
+     },
+     "nearest_any_rule": {
+      "up": null,
+      "down": [
+       "L02(DGND)",
+       15.0,
+       0.82,
+       "DGND"
+      ]
+     },
+     "L_ext_pH": 0.08083672305145523,
+     "L_int_pH": 0.037418006096147434
+    }
+   ],
+   "L_plane_pH": 76.23834484928999,
+   "fit_dL_pH": 15.899534830608404,
+   "predicted_plane_L_ratio": 0.5823811008666707,
+   "predicted_dL_change_pH": -31.838573647707612,
+   "measured_ratio_1_minus": 0.7914496325695549,
+   "measured_ratio_coord": 0.8274375871699468
+  }
+ ],
+ "pearson_pred_vs_1_minus": 0.37850727058376976,
+ "pearson_pred_vs_coord": 0.40300204744321066,
+ "pred_dL_change": [
+  -11.224636799052156,
+  -7.115585889751017,
+  -70.02273940938343,
+  -40.333867179314055,
+  -3.4159675523507396,
+  -49.565099603727234,
+  -31.838573647707612
+ ],
+ "fit_dL": [
+  10.929280840894812,
+  8.026849433538484,
+  88.49212752405428,
+  45.39352357682207,
+  1.6811136937110185,
+  42.24439130072746,
+  15.899534830608404
+ ],
+ "pearson_pred_dLchange_vs_minus_fitdL": 0.9488941666199853
+}

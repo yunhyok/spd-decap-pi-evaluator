@@ -1,0 +1,595 @@
+{
+ "model": "EXP-2: multiconductor stacked-plane (M-FDM-consistent) model of port 18.\n\nExplicit column conductors on one common 2-D grid (coarse h + fine box):\n  L13 DGND, L14 rail, L15 other-net (ADC_VDD_055_VTRIP/0), L16 DGND,\n  L24 DGND, L25 rail, L26 other-net, L27 DGND.\nPer grid edge (\"column\"), the present layers carry branch currents I_k with\n  Z_col = diag(Zs_k(f)) * sq + j w mu0 * G * sq,   G_kl = s_B - max(s_k, s_l)\n(s = cumulative dielectric gap coordinate from the top explicit layer, s_B that of\nthe bottom explicit layer; loop L of any adjacent pair = mu0 * gap; G is PSD).\nY_col = inv(Z_col) is stamped on the 2m end nodes (M-FDM multiconductor unit cell,\ncf. src/spd_decap_pi/_core/solver/mfdm.py:1067-1158).  Capacitance only between\nvertically adjacent explicit layers with no conductor in between.\nRail TOP pads / L20 / L21 islands: series R + j w mu0 d_eff (EXP-1b per-cell d_eff).\nRail traces / vias / pad links / decaps: as EXP-1 (model.py).\nGND: DGND nodes snap to explicit GND planes; other DGND nodes are explicit,\nconnected by DGND vias (R, via_model.estimate_via_segment_rl) and DGND traces\n(R); inductance of vertical/trace loops stays on the rail side (as EXP-1).\nPort: + = 978 rail DUT bumps shorted; - = 10,919 DGND DUT bumps = reference.\nDecaps connect rail pin node <-> their own DGND pin node.\n",
+ "h": 400.0,
+ "fine_h": 200.0,
+ "top_h": 100.0,
+ "window_um": [
+  -14671.5,
+  6532.199999999999,
+  46361.0,
+  26073.699999999997
+ ],
+ "fine_box_um": [
+  -4384.799999999999,
+  10708.3,
+  13605.2,
+  21818.899999999998
+ ],
+ "info": {
+  "column_cells": {
+   "Signal$L02(DGND)": 9077,
+   "Signal$L04(DGND)": 9139,
+   "Signal$L06(DGND)": 7328,
+   "Signal$L08(DGND)": 8644,
+   "Signal$L10(DGND)": 9502,
+   "Signal$L13(DGND)": 10500,
+   "Signal$L14(MAIN_POWER4)": 5856,
+   "Signal$L15(MAIN_POWER5)": 6521,
+   "Signal$L16(DGND)": 9998,
+   "Signal$L18(DGND)": 10612,
+   "Signal$L20(DGND)": 9430,
+   "Signal$L21(DGND)": 7039,
+   "Signal$L24(DGND)": 8987,
+   "Signal$L25(MAIN_POWER4)": 5862,
+   "Signal$L26(MAIN_POWER5)": 6245,
+   "Signal$L27(DGND)": 8987,
+   "Signal$L28(DGND)": 8122
+  },
+  "gauge": "bottom",
+  "magnetic_groups": [
+   [
+    "Signal$L02(DGND)",
+    "Signal$L04(DGND)",
+    "Signal$L06(DGND)",
+    "Signal$L08(DGND)",
+    "Signal$L10(DGND)",
+    "Signal$L13(DGND)",
+    "Signal$L14(MAIN_POWER4)",
+    "Signal$L15(MAIN_POWER5)",
+    "Signal$L16(DGND)",
+    "Signal$L18(DGND)",
+    "Signal$L20(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L24(DGND)",
+    "Signal$L25(MAIN_POWER4)",
+    "Signal$L26(MAIN_POWER5)",
+    "Signal$L27(DGND)",
+    "Signal$L28(DGND)"
+   ]
+  ],
+  "gap_coordinate_um": {
+   "Signal$L02(DGND)": 0.0,
+   "Signal$L04(DGND)": 80.0,
+   "Signal$L06(DGND)": 160.0,
+   "Signal$L08(DGND)": 240.0,
+   "Signal$L10(DGND)": 320.0,
+   "Signal$L13(DGND)": 450.0,
+   "Signal$L14(MAIN_POWER4)": 480.0,
+   "Signal$L15(MAIN_POWER5)": 510.0,
+   "Signal$L16(DGND)": 540.0,
+   "Signal$L18(DGND)": 620.0,
+   "Signal$L20(DGND)": 700.0,
+   "Signal$L21(DGND)": 730.0,
+   "Signal$L24(DGND)": 1069.0,
+   "Signal$L25(MAIN_POWER4)": 1169.0,
+   "Signal$L26(MAIN_POWER5)": 1274.0,
+   "Signal$L27(DGND)": 1374.0,
+   "Signal$L28(DGND)": 1444.0
+  },
+  "column_edges": 22772,
+  "column_patterns": 612,
+  "series_rail_cells": {
+   "Signal$TOP": 4222
+  },
+  "reference_search_series_layers": {
+   "Signal$TOP": {
+    "blocks": [
+     {
+      "h": 100.0,
+      "cells": 4222,
+      "sides": {
+       "up": [],
+       "down": [
+        {
+         "layer": "Signal$L02(DGND)",
+         "gap_um": 30.0,
+         "gnd_cover_of_rail": 0.806,
+         "newly_assigned": 0.806,
+         "other_nets_cover": []
+        },
+        {
+         "layer": "Signal$L03(SIG1)",
+         "gap_um": 80.0,
+         "gnd_cover_of_rail": 0.0,
+         "newly_assigned": 0.0,
+         "other_nets_cover": []
+        },
+        {
+         "layer": "Signal$L04(DGND)",
+         "gap_um": 130.0,
+         "gnd_cover_of_rail": 0.806,
+         "newly_assigned": 0.0,
+         "other_nets_cover": []
+        }
+       ]
+      },
+      "two_sided": 0.0,
+      "single_up": 0.0,
+      "single_down": 0.806,
+      "fallback_none": 0.194,
+      "d_up_um_median": null,
+      "d_down_um_median": 30.0,
+      "d_eff_um_median": 30.0,
+      "d_eff_um_mean": 30.0,
+      "d_B_um": 30.0
+     }
+    ]
+   }
+  },
+  "top_gnd_cells": 50031,
+  "port_pos_found": 978,
+  "rail_traces": 23958,
+  "rail_vias": 30520,
+  "rail_pad_links": 583,
+  "top_gnd_port_links": 2154,
+  "gnd_nodes_in_window": 362988,
+  "gnd_nodes_snapped_to_planes": 200715,
+  "gnd_elements_after_reduction": 197681,
+  "gnd_standalone_nodes": 10986,
+  "decaps_missing_nodes": 0,
+  "ground_in_port_component": true,
+  "unknowns": 246888,
+  "nodes_before_prune": 249069,
+  "decaps_connected": 421,
+  "build_seconds": 8.886154890060425
+ },
+ "freq": [
+  1000.0,
+  10000.0,
+  100000.0,
+  301995.172040202,
+  1000000.0,
+  10000000.0
+ ],
+ "Z_re": [
+  0.007637941991607966,
+  0.0015840830486617374,
+  0.0010084907439534539,
+  0.001027317690582247,
+  0.0012143763443809292,
+  0.0016004035629859684
+ ],
+ "Z_im": [
+  -0.6057014848191522,
+  -0.06155261950716727,
+  -0.006161661081353039,
+  -0.0018676032205225985,
+  -0.00014075423292145682,
+  0.0012403329981475184
+ ],
+ "Zref_re": [
+  0.007405998229796137,
+  0.0013448927803346375,
+  0.0007239775128696244,
+  0.0006737404121636238,
+  0.0006915479466520243,
+  0.0013351332705258871
+ ],
+ "Zref_im": [
+  -0.6056929157693948,
+  -0.061571456904480834,
+  -0.006246865250866255,
+  -0.0020281292768650795,
+  -0.0004257504501139286,
+  0.0008761129830389298
+ ],
+ "rel_err": [
+  0.00038317213718042277,
+  0.003895858343124383,
+  0.04722733962021733,
+  0.18169925393704228,
+  0.7332370279306085,
+  0.28215711289142253
+ ],
+ "dRe_mOhm": [
+  0.23194376181182896,
+  0.23919026832709991,
+  0.2845132310838295,
+  0.35357727841862324,
+  0.522828397728905,
+  0.26527029246008127
+ ],
+ "dL_pH": [
+  -1363.8066264960632,
+  299.8064897439813,
+  135.6066475006812,
+  84.5990854401901,
+  45.35855672867328,
+  5.796741577753668
+ ],
+ "per_freq_stats": [
+  {
+   "f": 1000.0,
+   "assemble_s": 5.790053129196167,
+   "factor_s": 56.118284940719604,
+   "nnz_Y": 8085362,
+   "nnz_LU": 166565273,
+   "rss_MB": 4610.53515625
+  },
+  {
+   "f": 10000.0,
+   "assemble_s": 2.5298993587493896,
+   "factor_s": 59.22056698799133,
+   "nnz_Y": 8085362,
+   "nnz_LU": 166551481,
+   "rss_MB": 4872.8515625
+  },
+  {
+   "f": 100000.0,
+   "assemble_s": 3.251418113708496,
+   "factor_s": 57.61030173301697,
+   "nnz_Y": 8085362,
+   "nnz_LU": 166561910,
+   "rss_MB": 4872.8515625
+  },
+  {
+   "f": 301995.172040202,
+   "assemble_s": 2.1156210899353027,
+   "factor_s": 54.50023055076599,
+   "nnz_Y": 8085362,
+   "nnz_LU": 166611618,
+   "rss_MB": 4872.8515625
+  },
+  {
+   "f": 1000000.0,
+   "assemble_s": 2.5649638175964355,
+   "factor_s": 59.89800786972046,
+   "nnz_Y": 8085362,
+   "nnz_LU": 166570078,
+   "rss_MB": 4872.8515625
+  },
+  {
+   "f": 10000000.0,
+   "assemble_s": 2.7886300086975098,
+   "factor_s": 62.79940629005432,
+   "nnz_Y": 8085362,
+   "nnz_LU": 166626195,
+   "rss_MB": 4872.8515625
+  }
+ ],
+ "solve_seconds": 372.57453298568726,
+ "breakdown": {
+  "1e+04": {
+   "col_R:Signal$L02(DGND)": {
+    "mOhm": 0.006882316731638336,
+    "pH": 0.06871579850720527
+   },
+   "col_L_gap:L02-L04": {
+    "mOhm": 0.0,
+    "pH": 0.8245896006302161
+   },
+   "col_L_gap:L04-L06": {
+    "mOhm": 0.0,
+    "pH": 2.9604641235651217
+   },
+   "col_L_gap:L06-L08": {
+    "mOhm": 0.0,
+    "pH": 5.99238531398871
+   },
+   "col_L_gap:L08-L10": {
+    "mOhm": 0.0,
+    "pH": 9.97513112990805
+   },
+   "col_L_gap:L10-L13": {
+    "mOhm": 0.0,
+    "pH": 24.108292107652066
+   },
+   "col_L_gap:L13-L14": {
+    "mOhm": 0.0,
+    "pH": 7.778518462134508
+   },
+   "col_L_gap:L14-L15": {
+    "mOhm": 0.0,
+    "pH": 4.932072765176364
+   },
+   "col_L_gap:L15-L16": {
+    "mOhm": 0.0,
+    "pH": 4.935058579111397
+   },
+   "col_L_gap:L16-L18": {
+    "mOhm": 0.0,
+    "pH": 12.116917868422162
+   },
+   "col_L_gap:L18-L20": {
+    "mOhm": 0.0,
+    "pH": 12.028261372688496
+   },
+   "col_L_gap:L20-L21": {
+    "mOhm": 0.0,
+    "pH": 4.791886822230478
+   },
+   "col_L_gap:L21-L24": {
+    "mOhm": 0.0,
+    "pH": 66.0695079513692
+   },
+   "col_L_gap:L24-L25": {
+    "mOhm": 0.0,
+    "pH": 23.699917945047332
+   },
+   "col_L_gap:L25-L26": {
+    "mOhm": 0.0,
+    "pH": 59.82620631216803
+   },
+   "col_L_gap:L26-L27": {
+    "mOhm": 0.0,
+    "pH": 56.96472139839678
+   },
+   "col_L_gap:L27-L28": {
+    "mOhm": 0.0,
+    "pH": 37.985137778959555
+   },
+   "col_R:Signal$L04(DGND)": {
+    "mOhm": 0.0056334922181178445,
+    "pH": 0.056247035881468836
+   },
+   "col_R:Signal$L08(DGND)": {
+    "mOhm": 0.004710964550963514,
+    "pH": 0.04703615126726879
+   },
+   "col_R:Signal$L06(DGND)": {
+    "mOhm": 0.004758124466319267,
+    "pH": 0.047507014694158974
+   },
+   "col_R:Signal$L13(DGND)": {
+    "mOhm": 0.0047506982067030456,
+    "pH": 0.04743286795268388
+   },
+   "col_R:Signal$L10(DGND)": {
+    "mOhm": 0.004755850394408171,
+    "pH": 0.04748430945211228
+   },
+   "col_R:Signal$L14(MAIN_POWER4)": {
+    "mOhm": 0.33981264388803795,
+    "pH": 3.392825131146286
+   },
+   "col_R:Signal$L15(MAIN_POWER5)": {
+    "mOhm": 0.00020690329780851305,
+    "pH": 0.002065805146300147
+   },
+   "col_R:Signal$L16(DGND)": {
+    "mOhm": 0.004595407604132715,
+    "pH": 0.04588238456571178
+   },
+   "col_R:Signal$L18(DGND)": {
+    "mOhm": 0.004297411595935159,
+    "pH": 0.042907073423589986
+   },
+   "col_R:Signal$L20(DGND)": {
+    "mOhm": 0.006585420194388033,
+    "pH": 0.0657514649220635
+   },
+   "col_R:Signal$L25(MAIN_POWER4)": {
+    "mOhm": 0.23853580806786004,
+    "pH": 6.096986679673615
+   },
+   "col_R:Signal$L21(DGND)": {
+    "mOhm": 0.009215856463346607,
+    "pH": 0.28179505855833403
+   },
+   "col_R:Signal$L26(MAIN_POWER5)": {
+    "mOhm": 2.7153656587993853e-05,
+    "pH": 0.0006940487630030452
+   },
+   "col_R:Signal$L24(DGND)": {
+    "mOhm": 0.00386116049433636,
+    "pH": 0.09869144717825165
+   },
+   "col_R:Signal$L27(DGND)": {
+    "mOhm": 0.0035304299039882036,
+    "pH": 0.09023795744752053
+   },
+   "col_R:Signal$L28(DGND)": {
+    "mOhm": 0.0031748597873327467,
+    "pH": 0.09707831314910138
+   },
+   "series_rail_planes": {
+    "mOhm": 0.0070393616096174364,
+    "pH": 0.505164740970639
+   },
+   "rail_traces": {
+    "mOhm": 0.05814240253125724,
+    "pH": 1.8473319790028542
+   },
+   "rail_vias_pads": {
+    "mOhm": 0.09230375859054805,
+    "pH": 6.030052146841259
+   },
+   "gnd_vias_traces_R": {
+    "mOhm": 0.017168220444962256,
+    "pH": 0.0
+   },
+   "plane_caps": {
+    "mOhm": 1.8915201134946702e-06,
+    "pH": -5.42744963103555
+   },
+   "decaps": {
+    "mOhm": 0.7640928512503949,
+    "pH": -979988.8389930546
+   },
+   "_total": {
+    "mOhm": 1.5840829874687978,
+    "Zport": [
+     0.0015840830486617374,
+     -0.06155261950716727
+    ]
+   }
+  },
+  "1e+06": {
+   "col_R:Signal$L02(DGND)": {
+    "mOhm": 0.0011659215821137906,
+    "pH": 0.011629260460069051
+   },
+   "col_L_gap:L02-L04": {
+    "mOhm": 0.0,
+    "pH": 0.13958250467953934
+   },
+   "col_L_gap:L04-L06": {
+    "mOhm": 0.0,
+    "pH": 0.33074319664951163
+   },
+   "col_L_gap:L06-L08": {
+    "mOhm": 0.0,
+    "pH": 0.5988069456399808
+   },
+   "col_L_gap:L08-L10": {
+    "mOhm": 0.0,
+    "pH": 1.319818038446315
+   },
+   "col_L_gap:L10-L13": {
+    "mOhm": 0.0,
+    "pH": 5.996348810834617
+   },
+   "col_L_gap:L13-L14": {
+    "mOhm": 0.0,
+    "pH": 6.161048735813304
+   },
+   "col_L_gap:L14-L15": {
+    "mOhm": 0.0,
+    "pH": 5.559390342763609
+   },
+   "col_L_gap:L15-L16": {
+    "mOhm": 0.0,
+    "pH": 5.306889595981387
+   },
+   "col_L_gap:L16-L18": {
+    "mOhm": 0.0,
+    "pH": 4.925725795964811
+   },
+   "col_L_gap:L18-L20": {
+    "mOhm": 0.0,
+    "pH": 2.4040158465680803
+   },
+   "col_L_gap:L20-L21": {
+    "mOhm": 0.0,
+    "pH": 0.7209954529649962
+   },
+   "col_L_gap:L21-L24": {
+    "mOhm": 0.0,
+    "pH": 6.596619398579971
+   },
+   "col_L_gap:L24-L25": {
+    "mOhm": 0.0,
+    "pH": 14.831081694099261
+   },
+   "col_L_gap:L25-L26": {
+    "mOhm": 0.0,
+    "pH": 8.050412158158775
+   },
+   "col_L_gap:L26-L27": {
+    "mOhm": 0.0,
+    "pH": 6.224349369576706
+   },
+   "col_L_gap:L27-L28": {
+    "mOhm": 0.0,
+    "pH": 2.7982079748143107
+   },
+   "col_R:Signal$L04(DGND)": {
+    "mOhm": 0.0004675403683474016,
+    "pH": 0.004663391434311666
+   },
+   "col_R:Signal$L08(DGND)": {
+    "mOhm": 0.003057106217188801,
+    "pH": 0.030492517678015862
+   },
+   "col_R:Signal$L06(DGND)": {
+    "mOhm": 0.0007948051017778347,
+    "pH": 0.007927630541677406
+   },
+   "col_R:Signal$L13(DGND)": {
+    "mOhm": 0.07298800205706844,
+    "pH": 0.7280047812845652
+   },
+   "col_R:Signal$L10(DGND)": {
+    "mOhm": 0.011243281152943612,
+    "pH": 0.11214394429196328
+   },
+   "col_R:Signal$L14(MAIN_POWER4)": {
+    "mOhm": 0.480794582475636,
+    "pH": 4.795593042597633
+   },
+   "col_R:Signal$L15(MAIN_POWER5)": {
+    "mOhm": 0.0023164029346532922,
+    "pH": 0.023104515321444967
+   },
+   "col_R:Signal$L16(DGND)": {
+    "mOhm": 0.042204922441121194,
+    "pH": 0.4209648773075973
+   },
+   "col_R:Signal$L18(DGND)": {
+    "mOhm": 0.01420141584944304,
+    "pH": 0.14164928958215953
+   },
+   "col_R:Signal$L20(DGND)": {
+    "mOhm": 0.006879825940859813,
+    "pH": 0.06862149994783254
+   },
+   "col_R:Signal$L25(MAIN_POWER4)": {
+    "mOhm": 0.15389319313846467,
+    "pH": 3.907623676126342
+   },
+   "col_R:Signal$L21(DGND)": {
+    "mOhm": 0.005811009636688605,
+    "pH": 0.17601574933298494
+   },
+   "col_R:Signal$L26(MAIN_POWER5)": {
+    "mOhm": 0.003807608355580473,
+    "pH": 0.09668199259661672
+   },
+   "col_R:Signal$L24(DGND)": {
+    "mOhm": 0.048342126769519704,
+    "pH": 1.2274931416161585
+   },
+   "col_R:Signal$L27(DGND)": {
+    "mOhm": 0.008702559927796805,
+    "pH": 0.22097357604484896
+   },
+   "col_R:Signal$L28(DGND)": {
+    "mOhm": 0.004690537465412657,
+    "pH": 0.14207659569801018
+   },
+   "series_rail_planes": {
+    "mOhm": 0.011132418766817967,
+    "pH": 0.7972683244129439
+   },
+   "rail_traces": {
+    "mOhm": 0.08988972854138924,
+    "pH": 2.7299915275892968
+   },
+   "rail_vias_pads": {
+    "mOhm": 0.11636944226724558,
+    "pH": 6.824302093916553
+   },
+   "gnd_vias_traces_R": {
+    "mOhm": 0.052932951856822424,
+    "pH": 0.0
+   },
+   "plane_caps": {
+    "mOhm": 2.7245440733816215e-08,
+    "pH": -0.0007621903702975428
+   },
+   "decaps": {
+    "mOhm": 0.08269093428301781,
+    "pH": -116.83222703027768
+   },
+   "_total": {
+    "mOhm": 1.21437634437535,
+    "Zport": [
+     0.0012143763443809292,
+     -0.00014075423292145682
+    ]
+   }
+  }
+ },
+ "peak_rss_MB": 4872.8515625,
+ "wall_seconds": 515.4473180770874
+}

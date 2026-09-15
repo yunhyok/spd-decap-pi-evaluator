@@ -1,0 +1,1256 @@
+{
+ "decaps": [
+  {
+   "refdes": "C10002_0",
+   "model": "CAP_0402_100NF",
+   "pad": "200X200SQ",
+   "xy": [
+    20861.0,
+    22146.5
+   ],
+   "rail_traces_at_pad": 0,
+   "vias_at_pad_node": 0,
+   "pad_link_R_mOhm": 0.3356267830172848,
+   "n_via_stacks": 2,
+   "chains": [
+    {
+     "top_node": "Node2142636",
+     "dxdy": [
+      -50.0,
+      0.0
+     ],
+     "segments": [
+      {
+       "frm": "TOP",
+       "to": "L02(DGND)",
+       "padstack": "DR-0102",
+       "len_um": 52.5,
+       "drill_um": 60.0,
+       "R_mOhm": 0.31159719238218586,
+       "n_parallel_here": 1
+      },
+      {
+       "frm": "L02(DGND)",
+       "to": "L03(SIG1)",
+       "padstack": "DR-0203",
+       "len_um": 50.0,
+       "drill_um": 60.0,
+       "R_mOhm": 0.296759230840177,
+       "n_parallel_here": 1
+      },
+      {
+       "frm": "L03(SIG1)",
+       "to": "L04(DGND)",
+       "padstack": "DR-0304",
+       "len_um": 50.0,
+       "drill_um": 60.0,
+       "R_mOhm": 0.296759230840177,
+       "n_parallel_here": 1
+      },
+      {
+       "frm": "L04(DGND)",
+       "to": "L05(SIG2)",
+       "padstack": "DR-0405",
+       "len_um": 50.0,
+       "drill_um": 60.0,
+       "R_mOhm": 0.296759230840177,
+       "n_parallel_here": 1
+      }
+     ],
+     "R_stack_mOhm": 1.2018748849027168,
+     "landing_layer": "L05(SIG2)",
+     "landing_xy": [
+      20811.0,
+      22146.5
+     ],
+     "landing_inside_rail_polygon": false,
+     "traces_at_landing": [
+      [
+       "L05(SIG2)",
+       100.0,
+       100
+      ],
+      [
+       "L05(SIG2)",
+       100.0,
+       100
+      ]
+     ],
+     "further_vias_below": []
+    },
+    {
+     "top_node": "Node2142637",
+     "dxdy": [
+      50.0,
+      0.0
+     ],
+     "segments": [
+      {
+       "frm": "TOP",
+       "to": "L02(DGND)",
+       "padstack": "DR-0102",
+       "len_um": 52.5,
+       "drill_um": 60.0,
+       "R_mOhm": 0.31159719238218586,
+       "n_parallel_here": 1
+      },
+      {
+       "frm": "L02(DGND)",
+       "to": "L03(SIG1)",
+       "padstack": "DR-0203",
+       "len_um": 50.0,
+       "drill_um": 60.0,
+       "R_mOhm": 0.296759230840177,
+       "n_parallel_here": 1
+      },
+      {
+       "frm": "L03(SIG1)",
+       "to": "L04(DGND)",
+       "padstack": "DR-0304",
+       "len_um": 50.0,
+       "drill_um": 60.0,
+       "R_mOhm": 0.296759230840177,
+       "n_parallel_here": 1
+      },
+      {
+       "frm": "L04(DGND)",
+       "to": "L05(SIG2)",
+       "padstack": "DR-0405",
+       "len_um": 50.0,
+       "drill_um": 60.0,
+       "R_mOhm": 0.296759230840177,
+       "n_parallel_here": 1
+      }
+     ],
+     "R_stack_mOhm": 1.2018748849027168,
+     "landing_layer": "L05(SIG2)",
+     "landing_xy": [
+      20911.0,
+      22146.5
+     ],
+     "landing_inside_rail_polygon": false,
+     "traces_at_landing": [
+      [
+       "L05(SIG2)",
+       100.0,
+       100
+      ],
+      [
+       "L05(SIG2)",
+       100.0,
+       100
+      ]
+     ],
+     "further_vias_below": []
+    }
+   ],
+   "series_R_pad_to_plane_mOhm": 0.7687508339600008,
+   "gnd_node": "Node53412",
+   "dist_to_port_centroid_mm": 18.964047393571473
+  },
+  {
+   "refdes": "C10039_0",
+   "model": "CAP_0603_1UF",
+   "pad": "400X400SQ",
+   "xy": [
+    -8433.0,
+    41163.0
+   ],
+   "rail_traces_at_pad": 0,
+   "vias_at_pad_node": 0,
+   "pad_link_R_mOhm": 0.3356267830172848,
+   "n_via_stacks": 2,
+   "chains": [
+    {
+     "top_node": "Node2142492",
+     "dxdy": [
+      0.0,
+      -50.0
+     ],
+     "segments": [
+      {
+       "frm": "TOP",
+       "to": "L02(DGND)",
+       "padstack": "DR-0102",
+       "len_um": 52.5,
+       "drill_um": 60.0,
+       "R_mOhm": 0.31159719238218586,
+       "n_parallel_here": 1
+      },
+      {
+       "frm": "L02(DGND)",
+       "to": "L03(SIG1)",
+       "padstack": "DR-0203",
+       "len_um": 50.0,
+       "drill_um": 60.0,
+       "R_mOhm": 0.296759230840177,
+       "n_parallel_here": 1
+      },
+      {
+       "frm": "L03(SIG1)",
+       "to": "L04(DGND)",
+       "padstack": "DR-0304",
+       "len_um": 50.0,
+       "drill_um": 60.0,
+       "R_mOhm": 0.296759230840177,
+       "n_parallel_here": 1
+      },
+      {
+       "frm": "L04(DGND)",
+       "to": "L05(SIG2)",
+       "padstack": "DR-0405",
+       "len_um": 50.0,
+       "drill_um": 60.0,
+       "R_mOhm": 0.296759230840177,
+       "n_parallel_here": 1
+      },
+      {
+       "frm": "L05(SIG2)",
+       "to": "L06(DGND)",
+       "padstack": "DR-0506",
+       "len_um": 50.0,
+       "drill_um": 60.0,
+       "R_mOhm": 0.296759230840177,
+       "n_parallel_here": 1
+      }
+     ],
+     "R_stack_mOhm": 1.4986341157428937,
+     "landing_layer": "L06(DGND)",
+     "landing_xy": [
+      -8433.0,
+      41113.0
+     ],
+     "landing_inside_rail_polygon": false,
+     "traces_at_landing": [
+      [
+       "L06(DGND)",
+       100.0,
+       100
+      ],
+      [
+       "L06(DGND)",
+       100.0,
+       100
+      ]
+     ],
+     "further_vias_below": []
+    },
+    {
+     "top_node": "Node2142493",
+     "dxdy": [
+      0.0,
+      50.0
+     ],
+     "segments": [
+      {
+       "frm": "TOP",
+       "to": "L02(DGND)",
+       "padstack": "DR-0102",
+       "len_um": 52.5,
+       "drill_um": 60.0,
+       "R_mOhm": 0.31159719238218586,
+       "n_parallel_here": 1
+      },
+      {
+       "frm": "L02(DGND)",
+       "to": "L03(SIG1)",
+       "padstack": "DR-0203",
+       "len_um": 50.0,
+       "drill_um": 60.0,
+       "R_mOhm": 0.296759230840177,
+       "n_parallel_here": 1
+      },
+      {
+       "frm": "L03(SIG1)",
+       "to": "L04(DGND)",
+       "padstack": "DR-0304",
+       "len_um": 50.0,
+       "drill_um": 60.0,
+       "R_mOhm": 0.296759230840177,
+       "n_parallel_here": 1
+      },
+      {
+       "frm": "L04(DGND)",
+       "to": "L05(SIG2)",
+       "padstack": "DR-0405",
+       "len_um": 50.0,
+       "drill_um": 60.0,
+       "R_mOhm": 0.296759230840177,
+       "n_parallel_here": 1
+      },
+      {
+       "frm": "L05(SIG2)",
+       "to": "L06(DGND)",
+       "padstack": "DR-0506",
+       "len_um": 50.0,
+       "drill_um": 60.0,
+       "R_mOhm": 0.296759230840177,
+       "n_parallel_here": 1
+      }
+     ],
+     "R_stack_mOhm": 1.4986341157428937,
+     "landing_layer": "L06(DGND)",
+     "landing_xy": [
+      -8433.0,
+      41213.0
+     ],
+     "landing_inside_rail_polygon": false,
+     "traces_at_landing": [
+      [
+       "L06(DGND)",
+       100.0,
+       141
+      ],
+      [
+       "L06(DGND)",
+       100.0,
+       100
+      ],
+      [
+       "L06(DGND)",
+       100.0,
+       100
+      ]
+     ],
+     "further_vias_below": []
+    }
+   ],
+   "series_R_pad_to_plane_mOhm": 0.9171304493800893,
+   "gnd_node": "Node50885",
+   "dist_to_port_centroid_mm": 21.18930696827117
+  },
+  {
+   "refdes": "C10040_0",
+   "model": "CAP_0603_1UF",
+   "pad": "400X400SQ",
+   "xy": [
+    -9733.0,
+    41163.0
+   ],
+   "rail_traces_at_pad": 0,
+   "vias_at_pad_node": 0,
+   "pad_link_R_mOhm": 0.3356267830172848,
+   "n_via_stacks": 2,
+   "chains": [
+    {
+     "top_node": "Node2142498",
+     "dxdy": [
+      0.0,
+      50.0
+     ],
+     "segments": [
+      {
+       "frm": "TOP",
+       "to": "L02(DGND)",
+       "padstack": "DR-0102",
+       "len_um": 52.5,
+       "drill_um": 60.0,
+       "R_mOhm": 0.31159719238218586,
+       "n_parallel_here": 1
+      },
+      {
+       "frm": "L02(DGND)",
+       "to": "L03(SIG1)",
+       "padstack": "DR-0203",
+       "len_um": 50.0,
+       "drill_um": 60.0,
+       "R_mOhm": 0.296759230840177,
+       "n_parallel_here": 1
+      },
+      {
+       "frm": "L03(SIG1)",
+       "to": "L04(DGND)",
+       "padstack": "DR-0304",
+       "len_um": 50.0,
+       "drill_um": 60.0,
+       "R_mOhm": 0.296759230840177,
+       "n_parallel_here": 1
+      },
+      {
+       "frm": "L04(DGND)",
+       "to": "L05(SIG2)",
+       "padstack": "DR-0405",
+       "len_um": 50.0,
+       "drill_um": 60.0,
+       "R_mOhm": 0.296759230840177,
+       "n_parallel_here": 1
+      },
+      {
+       "frm": "L05(SIG2)",
+       "to": "L06(DGND)",
+       "padstack": "DR-0506",
+       "len_um": 50.0,
+       "drill_um": 60.0,
+       "R_mOhm": 0.296759230840177,
+       "n_parallel_here": 1
+      }
+     ],
+     "R_stack_mOhm": 1.4986341157428937,
+     "landing_layer": "L06(DGND)",
+     "landing_xy": [
+      -9733.0,
+      41213.0
+     ],
+     "landing_inside_rail_polygon": false,
+     "traces_at_landing": [
+      [
+       "L06(DGND)",
+       100.0,
+       100
+      ],
+      [
+       "L06(DGND)",
+       100.0,
+       100
+      ],
+      [
+       "L06(DGND)",
+       100.0,
+       141
+      ]
+     ],
+     "further_vias_below": []
+    },
+    {
+     "top_node": "Node2142499",
+     "dxdy": [
+      0.0,
+      -50.0
+     ],
+     "segments": [
+      {
+       "frm": "TOP",
+       "to": "L02(DGND)",
+       "padstack": "DR-0102",
+       "len_um": 52.5,
+       "drill_um": 60.0,
+       "R_mOhm": 0.31159719238218586,
+       "n_parallel_here": 1
+      },
+      {
+       "frm": "L02(DGND)",
+       "to": "L03(SIG1)",
+       "padstack": "DR-0203",
+       "len_um": 50.0,
+       "drill_um": 60.0,
+       "R_mOhm": 0.296759230840177,
+       "n_parallel_here": 1
+      },
+      {
+       "frm": "L03(SIG1)",
+       "to": "L04(DGND)",
+       "padstack": "DR-0304",
+       "len_um": 50.0,
+       "drill_um": 60.0,
+       "R_mOhm": 0.296759230840177,
+       "n_parallel_here": 1
+      },
+      {
+       "frm": "L04(DGND)",
+       "to": "L05(SIG2)",
+       "padstack": "DR-0405",
+       "len_um": 50.0,
+       "drill_um": 60.0,
+       "R_mOhm": 0.296759230840177,
+       "n_parallel_here": 1
+      },
+      {
+       "frm": "L05(SIG2)",
+       "to": "L06(DGND)",
+       "padstack": "DR-0506",
+       "len_um": 50.0,
+       "drill_um": 60.0,
+       "R_mOhm": 0.296759230840177,
+       "n_parallel_here": 1
+      }
+     ],
+     "R_stack_mOhm": 1.4986341157428937,
+     "landing_layer": "L06(DGND)",
+     "landing_xy": [
+      -9733.0,
+      41113.0
+     ],
+     "landing_inside_rail_polygon": false,
+     "traces_at_landing": [
+      [
+       "L06(DGND)",
+       100.0,
+       100
+      ],
+      [
+       "L06(DGND)",
+       100.0,
+       100
+      ]
+     ],
+     "further_vias_below": []
+    }
+   ],
+   "series_R_pad_to_plane_mOhm": 0.9171304493800893,
+   "gnd_node": "Node50886",
+   "dist_to_port_centroid_mm": 21.85298892132665
+  },
+  {
+   "refdes": "C10105_0",
+   "model": "CAP_1608_10UF",
+   "pad": "700X800SQ",
+   "xy": [
+    36111.9,
+    29880.0
+   ],
+   "rail_traces_at_pad": 0,
+   "vias_at_pad_node": 0,
+   "pad_link_R_mOhm": 0.3356267830172848,
+   "n_via_stacks": 2,
+   "chains": [
+    {
+     "top_node": "Node2142514",
+     "dxdy": [
+      0.0,
+      -50.0
+     ],
+     "segments": [
+      {
+       "frm": "TOP",
+       "to": "L02(DGND)",
+       "padstack": "DR-0102",
+       "len_um": 52.5,
+       "drill_um": 60.0,
+       "R_mOhm": 0.31159719238218586,
+       "n_parallel_here": 1
+      },
+      {
+       "frm": "L02(DGND)",
+       "to": "L03(SIG1)",
+       "padstack": "DR-0203",
+       "len_um": 50.0,
+       "drill_um": 60.0,
+       "R_mOhm": 0.296759230840177,
+       "n_parallel_here": 1
+      },
+      {
+       "frm": "L03(SIG1)",
+       "to": "L04(DGND)",
+       "padstack": "DR-0304",
+       "len_um": 50.0,
+       "drill_um": 60.0,
+       "R_mOhm": 0.296759230840177,
+       "n_parallel_here": 1
+      },
+      {
+       "frm": "L04(DGND)",
+       "to": "L05(SIG2)",
+       "padstack": "DR-0405",
+       "len_um": 50.0,
+       "drill_um": 60.0,
+       "R_mOhm": 0.296759230840177,
+       "n_parallel_here": 1
+      },
+      {
+       "frm": "L05(SIG2)",
+       "to": "L06(DGND)",
+       "padstack": "DR-0506",
+       "len_um": 50.0,
+       "drill_um": 60.0,
+       "R_mOhm": 0.296759230840177,
+       "n_parallel_here": 1
+      }
+     ],
+     "R_stack_mOhm": 1.4986341157428937,
+     "landing_layer": "L06(DGND)",
+     "landing_xy": [
+      36111.9,
+      29830.0
+     ],
+     "landing_inside_rail_polygon": false,
+     "traces_at_landing": [
+      [
+       "L06(DGND)",
+       100.0,
+       100
+      ],
+      [
+       "L06(DGND)",
+       100.0,
+       100
+      ]
+     ],
+     "further_vias_below": []
+    },
+    {
+     "top_node": "Node2142515",
+     "dxdy": [
+      0.0,
+      50.0
+     ],
+     "segments": [
+      {
+       "frm": "TOP",
+       "to": "L02(DGND)",
+       "padstack": "DR-0102",
+       "len_um": 52.5,
+       "drill_um": 60.0,
+       "R_mOhm": 0.31159719238218586,
+       "n_parallel_here": 1
+      },
+      {
+       "frm": "L02(DGND)",
+       "to": "L03(SIG1)",
+       "padstack": "DR-0203",
+       "len_um": 50.0,
+       "drill_um": 60.0,
+       "R_mOhm": 0.296759230840177,
+       "n_parallel_here": 1
+      },
+      {
+       "frm": "L03(SIG1)",
+       "to": "L04(DGND)",
+       "padstack": "DR-0304",
+       "len_um": 50.0,
+       "drill_um": 60.0,
+       "R_mOhm": 0.296759230840177,
+       "n_parallel_here": 1
+      },
+      {
+       "frm": "L04(DGND)",
+       "to": "L05(SIG2)",
+       "padstack": "DR-0405",
+       "len_um": 50.0,
+       "drill_um": 60.0,
+       "R_mOhm": 0.296759230840177,
+       "n_parallel_here": 1
+      },
+      {
+       "frm": "L05(SIG2)",
+       "to": "L06(DGND)",
+       "padstack": "DR-0506",
+       "len_um": 50.0,
+       "drill_um": 60.0,
+       "R_mOhm": 0.296759230840177,
+       "n_parallel_here": 1
+      }
+     ],
+     "R_stack_mOhm": 1.4986341157428937,
+     "landing_layer": "L06(DGND)",
+     "landing_xy": [
+      36111.9,
+      29930.0
+     ],
+     "landing_inside_rail_polygon": false,
+     "traces_at_landing": [
+      [
+       "L06(DGND)",
+       100.0,
+       141
+      ],
+      [
+       "L06(DGND)",
+       100.0,
+       100
+      ],
+      [
+       "L06(DGND)",
+       100.0,
+       100
+      ]
+     ],
+     "further_vias_below": []
+    }
+   ],
+   "series_R_pad_to_plane_mOhm": 0.9171304493800893,
+   "gnd_node": "Node51198",
+   "dist_to_port_centroid_mm": 34.96018022937847
+  }
+ ],
+ "port_pins": [
+  {
+   "node": "Node19749",
+   "xy": [
+    8963.6,
+    23813.7
+   ],
+   "layer": "Signal$TOP",
+   "pad": "DUT",
+   "segments": 5,
+   "R_stack_mOhm": 3.371926760421511,
+   "landing": "L06(DGND)",
+   "landing_inside": false
+  },
+  {
+   "node": "Node19750",
+   "xy": [
+    6063.799999999999,
+    23813.7
+   ],
+   "layer": "Signal$TOP",
+   "pad": "DUT",
+   "segments": 5,
+   "R_stack_mOhm": 3.371926760421511,
+   "landing": "L06(DGND)",
+   "landing_inside": false
+  },
+  {
+   "node": "Node19751",
+   "xy": [
+    3164.1,
+    23813.7
+   ],
+   "layer": "Signal$TOP",
+   "pad": "DUT",
+   "segments": 5,
+   "R_stack_mOhm": 3.371926760421511,
+   "landing": "L06(DGND)",
+   "landing_inside": false
+  },
+  {
+   "node": "Node19752",
+   "xy": [
+    264.29999999999995,
+    23813.7
+   ],
+   "layer": "Signal$TOP",
+   "pad": "DUT",
+   "segments": 5,
+   "R_stack_mOhm": 3.371926760421511,
+   "landing": "L06(DGND)",
+   "landing_inside": false
+  },
+  {
+   "node": "Node19753",
+   "xy": [
+    -2635.5,
+    23813.7
+   ],
+   "layer": "Signal$TOP",
+   "pad": "DUT",
+   "segments": 5,
+   "R_stack_mOhm": 3.371926760421511,
+   "landing": "L06(DGND)",
+   "landing_inside": false
+  },
+  {
+   "node": "Node19754",
+   "xy": [
+    -5535.3,
+    23813.7
+   ],
+   "layer": "Signal$TOP",
+   "pad": "DUT",
+   "segments": 5,
+   "R_stack_mOhm": 3.371926760421511,
+   "landing": "L06(DGND)",
+   "landing_inside": false
+  },
+  {
+   "node": "Node19756",
+   "xy": [
+    -6174.8,
+    22013.2
+   ],
+   "layer": "Signal$TOP",
+   "pad": "DUT",
+   "segments": 5,
+   "R_stack_mOhm": 3.371926760421511,
+   "landing": "L06(DGND)",
+   "landing_inside": false
+  },
+  {
+   "node": "Node19757",
+   "xy": [
+    9547.3,
+    21419.8
+   ],
+   "layer": "Signal$TOP",
+   "pad": "DUT",
+   "segments": 5,
+   "R_stack_mOhm": 3.371926760421511,
+   "landing": "L06(DGND)",
+   "landing_inside": false
+  },
+  {
+   "node": "Node19758",
+   "xy": [
+    6647.5,
+    21419.8
+   ],
+   "layer": "Signal$TOP",
+   "pad": "DUT",
+   "segments": 5,
+   "R_stack_mOhm": 3.371926760421511,
+   "landing": "L06(DGND)",
+   "landing_inside": false
+  },
+  {
+   "node": "Node19759",
+   "xy": [
+    3747.7,
+    21419.8
+   ],
+   "layer": "Signal$TOP",
+   "pad": "DUT",
+   "segments": 5,
+   "R_stack_mOhm": 3.371926760421511,
+   "landing": "L06(DGND)",
+   "landing_inside": false
+  },
+  {
+   "node": "Node19760",
+   "xy": [
+    848.0,
+    21419.8
+   ],
+   "layer": "Signal$TOP",
+   "pad": "DUT",
+   "segments": 5,
+   "R_stack_mOhm": 3.371926760421511,
+   "landing": "L06(DGND)",
+   "landing_inside": false
+  },
+  {
+   "node": "Node19761",
+   "xy": [
+    -2051.8,
+    21419.8
+   ],
+   "layer": "Signal$TOP",
+   "pad": "DUT",
+   "segments": 5,
+   "R_stack_mOhm": 3.371926760421511,
+   "landing": "L06(DGND)",
+   "landing_inside": false
+  }
+ ],
+ "port_header": "Port19_SITE0::ADC_VDD_105_VAA_DDRH/0",
+ "n_pos_pins": 12,
+ "n_neg_pins": 10919,
+ "rail_geoms": {
+  "Signal$L10(DGND)": {
+   "pos": 2,
+   "neg": 0,
+   "area_mm2": 1.169885507904887
+  },
+  "Signal$L21(DGND)": {
+   "pos": 12,
+   "neg": 0,
+   "area_mm2": 2.713537279509942
+  },
+  "Signal$L30(OTHER_POWER1)": {
+   "pos": 1,
+   "neg": 2842,
+   "area_mm2": 1572.3378853313761
+  }
+ },
+ "rail_traces": 543,
+ "rail_vias": 705,
+ "traces_with_none_width": 150,
+ "plane_nodes_outside_rail_polygon": [
+  [
+   "Node496078",
+   "L21(DGND)",
+   [
+    -8450.0,
+    40950.0
+   ]
+  ],
+  [
+   "Node496079",
+   "L21(DGND)",
+   [
+    -8356.0,
+    41180.0
+   ]
+  ],
+  [
+   "Node496082",
+   "L21(DGND)",
+   [
+    -8544.0,
+    41180.0
+   ]
+  ],
+  [
+   "Node496114",
+   "L21(DGND)",
+   [
+    -9750.0,
+    40950.0
+   ]
+  ],
+  [
+   "Node496115",
+   "L21(DGND)",
+   [
+    -9844.0,
+    41180.0
+   ]
+  ],
+  [
+   "Node496117",
+   "L21(DGND)",
+   [
+    -9656.0,
+    41180.0
+   ]
+  ],
+  [
+   "Node496196",
+   "L21(DGND)",
+   [
+    35750.0,
+    30550.0
+   ]
+  ],
+  [
+   "Node496197",
+   "L21(DGND)",
+   [
+    35844.0,
+    30780.0
+   ]
+  ],
+  [
+   "Node496236",
+   "L21(DGND)",
+   [
+    35656.0,
+    30780.0
+   ]
+  ],
+  [
+   "Node496272",
+   "L21(DGND)",
+   [
+    37050.0,
+    29900.0
+   ]
+  ],
+  [
+   "Node496273",
+   "L21(DGND)",
+   [
+    37144.0,
+    30130.0
+   ]
+  ],
+  [
+   "Node496312",
+   "L21(DGND)",
+   [
+    36956.0,
+    30130.0
+   ]
+  ],
+  [
+   "Node496348",
+   "L21(DGND)",
+   [
+    36400.0,
+    29900.0
+   ]
+  ],
+  [
+   "Node496349",
+   "L21(DGND)",
+   [
+    36494.0,
+    30130.0
+   ]
+  ],
+  [
+   "Node496388",
+   "L21(DGND)",
+   [
+    36306.0,
+    30130.0
+   ]
+  ],
+  [
+   "Node496442",
+   "L21(DGND)",
+   [
+    35750.0,
+    29900.0
+   ]
+  ],
+  [
+   "Node496443",
+   "L21(DGND)",
+   [
+    35844.0,
+    30130.0
+   ]
+  ],
+  [
+   "Node496482",
+   "L21(DGND)",
+   [
+    35656.0,
+    30130.0
+   ]
+  ],
+  [
+   "Node496496",
+   "L10(DGND)",
+   [
+    8920.5,
+    23770.600000000002
+   ]
+  ],
+  [
+   "Node496497",
+   "L10(DGND)",
+   [
+    8963.6,
+    23813.7
+   ]
+  ],
+  [
+   "Node496512",
+   "L10(DGND)",
+   [
+    6020.7,
+    23770.600000000002
+   ]
+  ],
+  [
+   "Node496513",
+   "L10(DGND)",
+   [
+    6063.799999999999,
+    23813.7
+   ]
+  ],
+  [
+   "Node496527",
+   "L10(DGND)",
+   [
+    3120.8999999999996,
+    23770.600000000002
+   ]
+  ],
+  [
+   "Node496528",
+   "L10(DGND)",
+   [
+    3164.1,
+    23813.7
+   ]
+  ],
+  [
+   "Node496542",
+   "L10(DGND)",
+   [
+    221.1,
+    23770.600000000002
+   ]
+  ],
+  [
+   "Node496543",
+   "L10(DGND)",
+   [
+    264.29999999999995,
+    23813.7
+   ]
+  ],
+  [
+   "Node496557",
+   "L10(DGND)",
+   [
+    -2678.6,
+    23770.600000000002
+   ]
+  ],
+  [
+   "Node496558",
+   "L10(DGND)",
+   [
+    -2635.5,
+    23813.7
+   ]
+  ],
+  [
+   "Node496573",
+   "L10(DGND)",
+   [
+    -5578.400000000001,
+    23770.600000000002
+   ]
+  ],
+  [
+   "Node496574",
+   "L10(DGND)",
+   [
+    -5535.3,
+    23813.7
+   ]
+  ],
+  [
+   "Node496577",
+   "L10(DGND)",
+   [
+    20890.0,
+    22270.0
+   ]
+  ],
+  [
+   "Node496578",
+   "L10(DGND)",
+   [
+    20811.0,
+    22146.5
+   ]
+  ],
+  [
+   "Node496579",
+   "L10(DGND)",
+   [
+    20950.0,
+    22270.0
+   ]
+  ],
+  [
+   "Node496590",
+   "L21(DGND)",
+   [
+    20800.0,
+    22100.0
+   ]
+  ],
+  [
+   "Node496591",
+   "L21(DGND)",
+   [
+    20706.0,
+    22330.0
+   ]
+  ],
+  [
+   "Node496593",
+   "L21(DGND)",
+   [
+    20894.0,
+    22330.0
+   ]
+  ],
+  [
+   "Node496616",
+   "L10(DGND)",
+   [
+    20911.0,
+    22146.5
+   ]
+  ],
+  [
+   "Node496648",
+   "L10(DGND)",
+   [
+    -6217.900000000001,
+    21970.0
+   ]
+  ],
+  [
+   "Node496649",
+   "L10(DGND)",
+   [
+    -6174.8,
+    22013.2
+   ]
+  ],
+  [
+   "Node496664",
+   "L10(DGND)",
+   [
+    9504.2,
+    21376.6
+   ]
+  ],
+  [
+   "Node496665",
+   "L10(DGND)",
+   [
+    9547.3,
+    21419.8
+   ]
+  ],
+  [
+   "Node496679",
+   "L10(DGND)",
+   [
+    6604.4,
+    21376.6
+   ]
+  ],
+  [
+   "Node496680",
+   "L10(DGND)",
+   [
+    6647.5,
+    21419.8
+   ]
+  ],
+  [
+   "Node496695",
+   "L10(DGND)",
+   [
+    3704.6,
+    21376.6
+   ]
+  ],
+  [
+   "Node496696",
+   "L10(DGND)",
+   [
+    3747.7,
+    21419.8
+   ]
+  ],
+  [
+   "Node496711",
+   "L10(DGND)",
+   [
+    804.8,
+    21376.6
+   ]
+  ],
+  [
+   "Node496712",
+   "L10(DGND)",
+   [
+    848.0,
+    21419.8
+   ]
+  ],
+  [
+   "Node496726",
+   "L10(DGND)",
+   [
+    -2095.0,
+    21376.6
+   ]
+  ],
+  [
+   "Node496727",
+   "L10(DGND)",
+   [
+    -2051.8,
+    21419.8
+   ]
+  ]
+ ],
+ "other_rail_components": [
+  [
+   "LGA",
+   "LGA-ALL",
+   22195
+  ],
+  [
+   "SITE0",
+   "DUT",
+   24590
+  ]
+ ],
+ "diagnostics": [
+  "('skip_component_no_2port_model', 'LGA', 'LGA-ALL')",
+  "('skip_component_no_2port_model', 'SITE0', 'DUT')"
+ ]
+}

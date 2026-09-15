@@ -1,0 +1,10 @@
+--- Item 3: series resonance (global min |Z18| up to 100 MHz) ---
+f_min = 1.584893e+06 Hz, |Z|_min = 7.347291e-04 Ohm, Re(Z) at f_min = 7.272231e-04 Ohm, Im(Z) at f_min = -1.047540e-04 Ohm
+'-3dB' width around min (|Z|<=sqrt(2)*|Z|min): f_lo=6.7647e+05 Hz, f_hi=4.5538e+06 Hz, BW=3.8773e+06 Hz, Q=f0/BW=0.409
+
+All local minima of |Z18| up to 100 MHz (n=2):
+  f=1.584893e+06 Hz  |Z|=7.347291e-04 Ohm  Re(Z)=7.2722e-04  Im(Z)=-1.0475e-04
+  f=1.200000e+07 Hz  |Z|=1.410780e-03 Ohm  Re(Z)=1.0403e-03  Im(Z)=9.5298e-04
+
+All local maxima of |Z18| up to 100 MHz (anti-resonances) (n=1):
+  f=9.120108e+06 Hz  |Z|=1.681772e-03 Ohm  Re(Z)=1.3715e-03  Im(Z)=9.7331e-04

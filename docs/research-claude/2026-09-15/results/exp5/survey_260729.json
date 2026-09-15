@@ -1,0 +1,517 @@
+[
+ {
+  "port": "Port1_SITE0",
+  "index": 1,
+  "net": "ADC_VDD_050_VDDQ_DDRH/0",
+  "decaps": 35,
+  "layers": {
+   "Signal$L15(MAIN_POWER5)": 64,
+   "Signal$L20(DGND)": 1,
+   "Signal$L21(DGND)": 16,
+   "Signal$L26(MAIN_POWER5)": 1,
+   "Signal$TOP": 7
+  }
+ },
+ {
+  "port": "Port2_SITE0",
+  "index": 2,
+  "net": "ADC_VDD_050_VDDQ_DDRL/0",
+  "decaps": 35,
+  "layers": {
+   "Signal$L15(MAIN_POWER5)": 32,
+   "Signal$L20(DGND)": 1,
+   "Signal$L21(DGND)": 16,
+   "Signal$L26(MAIN_POWER5)": 1,
+   "Signal$TOP": 5
+  }
+ },
+ {
+  "port": "Port3_SITE0",
+  "index": 3,
+  "net": "ADC_VDD_055_VTRIP/0",
+  "decaps": 3166,
+  "layers": {
+   "Signal$L09(MAIN_POWER1)": 38,
+   "Signal$L11(MAIN_POWER2)": 77,
+   "Signal$L12(MAIN_POWER3)": 38,
+   "Signal$L15(MAIN_POWER5)": 4,
+   "Signal$L20(DGND)": 10,
+   "Signal$L21(DGND)": 12,
+   "Signal$L22(MAIN_POWER2)": 1,
+   "Signal$L23(MAIN_POWER3)": 1,
+   "Signal$L26(MAIN_POWER5)": 1,
+   "Signal$TOP": 206
+  }
+ },
+ {
+  "port": "Port4_SITE0",
+  "index": 4,
+  "net": "ADC_VDD_070_VAON/0",
+  "decaps": 113,
+  "layers": {
+   "Signal$L11(MAIN_POWER2)": 9,
+   "Signal$L20(DGND)": 4,
+   "Signal$L21(DGND)": 4,
+   "Signal$L22(MAIN_POWER2)": 1,
+   "Signal$TOP": 14
+  }
+ },
+ {
+  "port": "Port7_SITE0",
+  "index": 7,
+  "net": "ADC_VDD_070_VINT/0",
+  "decaps": 1034,
+  "layers": {
+   "Signal$L09(MAIN_POWER1)": 120,
+   "Signal$L11(MAIN_POWER2)": 59,
+   "Signal$L12(MAIN_POWER3)": 139,
+   "Signal$L20(DGND)": 11,
+   "Signal$L21(DGND)": 17,
+   "Signal$L22(MAIN_POWER2)": 1,
+   "Signal$L23(MAIN_POWER3)": 1,
+   "Signal$TOP": 97
+  }
+ },
+ {
+  "port": "Port8_SITE0",
+  "index": 8,
+  "net": "ADC_VDD_070_VPDIG_PHY_PCI/0",
+  "decaps": 6,
+  "layers": {
+   "Signal$L10(DGND)": 2,
+   "Signal$L13(DGND)": 1,
+   "Signal$L21(DGND)": 1,
+   "Signal$L40(OTHER_POWER8)": 1
+  }
+ },
+ {
+  "port": "Port9_SITE0",
+  "index": 9,
+  "net": "ADC_VDD_070_VP_AON/0",
+  "decaps": 4,
+  "layers": {
+   "Signal$L10(DGND)": 1,
+   "Signal$L21(DGND)": 1,
+   "Signal$L36(OTHER_POWER5)": 1
+  }
+ },
+ {
+  "port": "Port10_SITE0",
+  "index": 10,
+  "net": "ADC_VDD_070_VP_CAM0/0",
+  "decaps": 4,
+  "layers": {
+   "Signal$L10(DGND)": 2,
+   "Signal$L21(DGND)": 1,
+   "Signal$L33(OTHER_POWER3)": 1
+  }
+ },
+ {
+  "port": "Port11_SITE0",
+  "index": 11,
+  "net": "ADC_VDD_070_VP_CAM12/0",
+  "decaps": 4,
+  "layers": {
+   "Signal$L10(DGND)": 2,
+   "Signal$L21(DGND)": 1,
+   "Signal$L34(OTHER_POWER4)": 1
+  }
+ },
+ {
+  "port": "Port12_SITE0",
+  "index": 12,
+  "net": "ADC_VDD_070_VP_HSIO/0",
+  "decaps": 4,
+  "layers": {
+   "Signal$L10(DGND)": 1,
+   "Signal$L20(DGND)": 1,
+   "Signal$L21(DGND)": 1,
+   "Signal$L37(OTHER_POWER6)": 1
+  }
+ },
+ {
+  "port": "Port13_SITE0",
+  "index": 13,
+  "net": "ADC_VDD_070_VP_PCI/0",
+  "decaps": 54,
+  "layers": {
+   "Signal$L12(MAIN_POWER3)": 20,
+   "Signal$L21(DGND)": 4,
+   "Signal$L23(MAIN_POWER3)": 1,
+   "Signal$TOP": 8
+  }
+ },
+ {
+  "port": "Port14_SITE0",
+  "index": 14,
+  "net": "ADC_VDD_075_VAON_SRAM/0",
+  "decaps": 35,
+  "layers": {
+   "Signal$L12(MAIN_POWER3)": 13,
+   "Signal$L20(DGND)": 1,
+   "Signal$L21(DGND)": 2,
+   "Signal$L23(MAIN_POWER3)": 1,
+   "Signal$TOP": 5
+  }
+ },
+ {
+  "port": "Port15_SITE0",
+  "index": 15,
+  "net": "ADC_VDD_075_VCPU/0",
+  "decaps": 293,
+  "layers": {
+   "Signal$L11(MAIN_POWER2)": 5,
+   "Signal$L21(DGND)": 6,
+   "Signal$L22(MAIN_POWER2)": 1,
+   "Signal$TOP": 24
+  }
+ },
+ {
+  "port": "Port16_SITE0",
+  "index": 16,
+  "net": "ADC_VDD_075_VINT_SRAM/0",
+  "decaps": 106,
+  "layers": {
+   "Signal$L14(MAIN_POWER4)": 112,
+   "Signal$L20(DGND)": 2,
+   "Signal$L21(DGND)": 20,
+   "Signal$L25(MAIN_POWER4)": 1,
+   "Signal$TOP": 14
+  }
+ },
+ {
+  "port": "Port17_SITE0",
+  "index": 17,
+  "net": "ADC_VDD_075_VP_UFS/0",
+  "decaps": 4,
+  "layers": {
+   "Signal$L10(DGND)": 2,
+   "Signal$L21(DGND)": 1,
+   "Signal$L33(OTHER_POWER3)": 1
+  }
+ },
+ {
+  "port": "Port18_SITE0",
+  "index": 18,
+  "net": "ADC_VDD_075_VTRIP_SRAM/0",
+  "decaps": 421,
+  "layers": {
+   "Signal$L14(MAIN_POWER4)": 110,
+   "Signal$L20(DGND)": 4,
+   "Signal$L21(DGND)": 12,
+   "Signal$L25(MAIN_POWER4)": 1,
+   "Signal$TOP": 29
+  }
+ },
+ {
+  "port": "Port19_SITE0",
+  "index": 19,
+  "net": "ADC_VDD_105_VAA_DDRH/0",
+  "decaps": 4,
+  "layers": {
+   "Signal$L10(DGND)": 2,
+   "Signal$L21(DGND)": 12,
+   "Signal$L30(OTHER_POWER1)": 1
+  }
+ },
+ {
+  "port": "Port20_SITE0",
+  "index": 20,
+  "net": "ADC_VDD_105_VAA_DDRL/0",
+  "decaps": 4,
+  "layers": {
+   "Signal$L10(DGND)": 1,
+   "Signal$L21(DGND)": 12,
+   "Signal$L30(OTHER_POWER1)": 1
+  }
+ },
+ {
+  "port": "Port21_SITE0",
+  "index": 21,
+  "net": "ADC_VDD_105_VDD2H_DDRH/0",
+  "decaps": 4,
+  "layers": {
+   "Signal$L10(DGND)": 1,
+   "Signal$L20(DGND)": 5,
+   "Signal$L21(DGND)": 12,
+   "Signal$L31(OTHER_POWER2)": 1
+  }
+ },
+ {
+  "port": "Port22_SITE0",
+  "index": 22,
+  "net": "ADC_VDD_105_VDD2H_DDRL/0",
+  "decaps": 4,
+  "layers": {
+   "Signal$L10(DGND)": 1,
+   "Signal$L20(DGND)": 2,
+   "Signal$L21(DGND)": 12,
+   "Signal$L31(OTHER_POWER2)": 1
+  }
+ },
+ {
+  "port": "Port23_SITE0",
+  "index": 23,
+  "net": "ADC_VDD_120_VDDA_LSIO/0",
+  "decaps": 4,
+  "layers": {
+   "Signal$L10(DGND)": 1,
+   "Signal$L21(DGND)": 1,
+   "Signal$L39(OTHER_POWER7)": 1
+  }
+ },
+ {
+  "port": "Port24_SITE0",
+  "index": 24,
+  "net": "ADC_VDD_120_VDDA_P_CL1_M/0",
+  "decaps": 4,
+  "layers": {
+   "Signal$L10(DGND)": 1,
+   "Signal$L21(DGND)": 1,
+   "Signal$L37(OTHER_POWER6)": 1
+  }
+ },
+ {
+  "port": "Port25_SITE0",
+  "index": 25,
+  "net": "ADC_VDD_120_VDDA_P_CL1_P/0",
+  "decaps": 4,
+  "layers": {
+   "Signal$L10(DGND)": 1,
+   "Signal$L21(DGND)": 1,
+   "Signal$L36(OTHER_POWER5)": 1
+  }
+ },
+ {
+  "port": "Port26_SITE0",
+  "index": 26,
+  "net": "ADC_VDD_120_VDDA_P_CL2_M/0",
+  "decaps": 4,
+  "layers": {
+   "Signal$L10(DGND)": 2,
+   "Signal$L21(DGND)": 12,
+   "Signal$L42(OTHER_POWER9)": 1
+  }
+ },
+ {
+  "port": "Port27_SITE0",
+  "index": 27,
+  "net": "ADC_VDD_120_VDDA_P_CL2_P/0",
+  "decaps": 4,
+  "layers": {
+   "Signal$L10(DGND)": 2,
+   "Signal$L21(DGND)": 9,
+   "Signal$L40(OTHER_POWER8)": 1
+  }
+ },
+ {
+  "port": "Port28_SITE0",
+  "index": 28,
+  "net": "ADC_VDD_120_VDDA_P_CL3_M/0",
+  "decaps": 4,
+  "layers": {
+   "Signal$L10(DGND)": 1,
+   "Signal$L21(DGND)": 10,
+   "Signal$L43(OTHER_POWER10)": 1
+  }
+ },
+ {
+  "port": "Port29_SITE0",
+  "index": 29,
+  "net": "ADC_VDD_120_VDDA_P_CL3_P/0",
+  "decaps": 4,
+  "layers": {
+   "Signal$L10(DGND)": 2,
+   "Signal$L21(DGND)": 8,
+   "Signal$L42(OTHER_POWER9)": 1
+  }
+ },
+ {
+  "port": "Port30_SITE0",
+  "index": 30,
+  "net": "ADC_VDD_120_VDDA_P_CL4_M/0",
+  "decaps": 6,
+  "layers": {
+   "Signal$L10(DGND)": 2,
+   "Signal$L21(DGND)": 8,
+   "Signal$L45(OTHER_POWER11)": 1
+  }
+ },
+ {
+  "port": "Port31_SITE0",
+  "index": 31,
+  "net": "ADC_VDD_120_VDDA_P_CL4_P/0",
+  "decaps": 4,
+  "layers": {
+   "Signal$L10(DGND)": 2,
+   "Signal$L21(DGND)": 6,
+   "Signal$L43(OTHER_POWER10)": 1
+  }
+ },
+ {
+  "port": "Port32_SITE0",
+  "index": 32,
+  "net": "ADC_VDD_120_VDDA_P_CL5_M/0",
+  "decaps": 4,
+  "layers": {
+   "Signal$L10(DGND)": 2,
+   "Signal$L21(DGND)": 3,
+   "Signal$L46(OTHER_POWER12)": 1
+  }
+ },
+ {
+  "port": "Port33_SITE0",
+  "index": 33,
+  "net": "ADC_VDD_120_VDDA_P_CL5_P/0",
+  "decaps": 4,
+  "layers": {
+   "Signal$L10(DGND)": 2,
+   "Signal$L21(DGND)": 1,
+   "Signal$L40(OTHER_POWER8)": 1
+  }
+ },
+ {
+  "port": "Port34_SITE0",
+  "index": 34,
+  "net": "ADC_VDD_120_VPH_AON/0",
+  "decaps": 4,
+  "layers": {
+   "Signal$L10(DGND)": 2,
+   "Signal$L21(DGND)": 2,
+   "Signal$L37(OTHER_POWER6)": 1
+  }
+ },
+ {
+  "port": "Port35_SITE0",
+  "index": 35,
+  "net": "ADC_VDD_120_VPH_CAM/0",
+  "decaps": 4,
+  "layers": {
+   "Signal$L10(DGND)": 2,
+   "Signal$L21(DGND)": 2,
+   "Signal$L36(OTHER_POWER5)": 1
+  }
+ },
+ {
+  "port": "Port36_SITE0",
+  "index": 36,
+  "net": "ADC_VDD_120_VPH_HSIO/0",
+  "decaps": 4,
+  "layers": {
+   "Signal$L10(DGND)": 2,
+   "Signal$L20(DGND)": 1,
+   "Signal$L21(DGND)": 1,
+   "Signal$L39(OTHER_POWER7)": 1
+  }
+ },
+ {
+  "port": "Port37_SITE0",
+  "index": 37,
+  "net": "ADC_VDD_120_VPH_PCI/0",
+  "decaps": 54,
+  "layers": {
+   "Signal$L15(MAIN_POWER5)": 66,
+   "Signal$L20(DGND)": 1,
+   "Signal$L21(DGND)": 4,
+   "Signal$L26(MAIN_POWER5)": 1,
+   "Signal$TOP": 9
+  }
+ },
+ {
+  "port": "Port38_SITE0",
+  "index": 38,
+  "net": "ADC_VDD_120_VPH_UFS/0",
+  "decaps": 4,
+  "layers": {
+   "Signal$L10(DGND)": 2,
+   "Signal$L21(DGND)": 1,
+   "Signal$L34(OTHER_POWER4)": 1
+  }
+ },
+ {
+  "port": "Port39_SITE0",
+  "index": 39,
+  "net": "ADC_VDD_120_VP_OD_PCI/0",
+  "decaps": 47,
+  "layers": {
+   "Signal$L11(MAIN_POWER2)": 20,
+   "Signal$L20(DGND)": 1,
+   "Signal$L21(DGND)": 3,
+   "Signal$L22(MAIN_POWER2)": 1,
+   "Signal$TOP": 6
+  }
+ },
+ {
+  "port": "Port40_SITE0",
+  "index": 40,
+  "net": "ADC_VDD_180_VIO_AON/0",
+  "decaps": 11,
+  "layers": {
+   "Signal$L10(DGND)": 3,
+   "Signal$L20(DGND)": 2,
+   "Signal$L21(DGND)": 4,
+   "Signal$L39(OTHER_POWER7)": 1
+  }
+ },
+ {
+  "port": "Port41_SITE0",
+  "index": 41,
+  "net": "ADC_VDD_180_VIO_LSIO/0",
+  "decaps": 9,
+  "layers": {
+   "Signal$L10(DGND)": 1,
+   "Signal$L21(DGND)": 1,
+   "Signal$L46(OTHER_POWER12)": 1
+  }
+ },
+ {
+  "port": "Port42_SITE0",
+  "index": 42,
+  "net": "ADC_VDD_180_VQPS_OTP_TOP_AON/0",
+  "decaps": 0,
+  "layers": {
+   "Signal$L21(DGND)": 1,
+   "Signal$L42(OTHER_POWER9)": 1
+  }
+ },
+ {
+  "port": "Port43_SITE0",
+  "index": 43,
+  "net": "ADC_VDD_180_VQPS_SYS_0_AON/0",
+  "decaps": 0,
+  "layers": {
+   "Signal$L21(DGND)": 1,
+   "Signal$L43(OTHER_POWER10)": 1
+  }
+ },
+ {
+  "port": "Port44_SITE0",
+  "index": 44,
+  "net": "ADC_VDD_180_VQPS_SYS_1_AON/0",
+  "decaps": 0,
+  "layers": {
+   "Signal$L21(DGND)": 1,
+   "Signal$L30(OTHER_POWER1)": 1
+  }
+ },
+ {
+  "port": "Port45_SITE0",
+  "index": 45,
+  "net": "ADC_VDD_180_VQPS_SYS_2_AON/0",
+  "decaps": 0,
+  "layers": {
+   "Signal$L21(DGND)": 1,
+   "Signal$L31(OTHER_POWER2)": 1
+  }
+ },
+ {
+  "port": "Port46_SITE0",
+  "index": 46,
+  "net": "ADC_VDD_180_VQPS_SYS_3_AON/0",
+  "decaps": 0,
+  "layers": {
+   "Signal$L21(DGND)": 1,
+   "Signal$L45(OTHER_POWER11)": 1
+  }
+ }
+]
