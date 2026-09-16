@@ -10,3 +10,7 @@
 
 - `CODEX_HANDOVER_RETROSPECTIVE.md` — Codex 인계 작업 회고(오판·수정·개선 결과·후속 과제)
 - `reviews/` — 세션 검토 산출물 사본(deep/fresh review, 데이터 특성, Sigrity void 조사)
+
+- `MODEL_PHYSICS.md` — 채택 모델의 물리 수식·코드 위치·참고문헌, 구현상 단순화 목록
+- `figures/` — 보고서용 설명 그림 F1–F7 (+ CAPTIONS.md)
+- `SPD_PI_연구보고서_2026-09-15.docx` — 사람이 읽기 위한 Word 보고서(회고 + 물리 + 결과)
