@@ -26,13 +26,15 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 for p in ("../exp5", "../exp4", "../exp3", "../exp1"):
     sys.path.insert(0, os.path.join(HERE, p))
+sys.path.insert(0, os.path.join(HERE, "..", "common"))
+from paths import work_dir  # noqa: E402
 import pipeline as P5  # noqa: E402
 import homog as H  # noqa: E402
 import run4 as R4  # noqa: E402
 from run3 import ladder_gates  # noqa: E402
 from run_exp1 import resonance  # noqa: E402
 
-OUT = "/home/claude/work/exp6"
+OUT = work_dir("exp6")
 
 
 def poly_area(pts):

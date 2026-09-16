@@ -12,6 +12,8 @@ and compare with the analytic value using r (physical) and r_eq = h*exp(-pi/2) (
 point-source equivalent radius).  L25: d = 100 um (single side, as in the kernel), t = 32 um.
 """
 import json, math, sys
+from pathlib import Path; sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "common"))  # noqa: E702
+from paths import work_file  # noqa: E402
 import numpy as np
 from scipy import sparse
 from scipy.sparse.linalg import spsolve
@@ -66,4 +68,4 @@ for s in (1000.0, 3000.0):
                              err_node_vs_analytic_r=nn / ana - 1, err_node_vs_analytic_req=nn / ana_eq - 1, err_disc_vs_analytic_r=nd / ana - 1,
                              L_node_pH=MU0 * D * nn * 1e12, L_analytic_pH=MU0 * D * ana * 1e12, R_node_mOhm=RS * nn * 1e3, R_analytic_mOhm=RS * ana * 1e3))
             print({k: (round(v, 4) if isinstance(v, float) else v) for k, v in rows[-1].items()}, flush=True)
-json.dump(rows, open("/home/claude/work/exp7/kernel_check.json", "w"), indent=1)
+json.dump(rows, open(work_file("exp7", "kernel_check.json"), "w"), indent=1)

@@ -8,9 +8,11 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "exp1"))
+sys.path.insert(0, os.path.join(HERE, "..", "common"))
+from paths import work_dir  # noqa: E402
 from run_exp1 import plot  # noqa: E402
 
-OUT = "/home/claude/work/exp5"
+OUT = work_dir("exp5")
 
 
 def load(fn):

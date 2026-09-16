@@ -27,7 +27,6 @@ import json
 import math
 import os
 import pickle
-import resource
 import sys
 import time
 
@@ -39,6 +38,8 @@ from scipy.spatial import cKDTree
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "exp1"))
+sys.path.insert(0, os.path.join(HERE, "..", "common"))
+from paths import local_spd, peak_rss_mb, ref_npz, work_dir, work_file  # noqa: E402
 import model as M  # noqa: E402
 from exp1b import TwoSided  # noqa: E402
 from run_exp1 import gates, pick_freqs, plot, resonance  # noqa: E402
@@ -605,7 +606,7 @@ class Solver:
             Z.append(V[self.b.P])
             nnz = lu.nnz
             stats.append(dict(f=float(f), assemble_s=t1 - t0, factor_s=t2 - t1, nnz_Y=int(Y.nnz), nnz_LU=int(nnz),
-                              rss_MB=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024))
+                              rss_MB=peak_rss_mb()))
             if want_v:
                 Vs.append(V)
             if verbose:
@@ -675,16 +676,16 @@ def main():
     ap.add_argument("--decouple-groups", action="store_true")
     ap.add_argument("--all-gnd", action="store_true", help="diagnosis: every DGND plane L02-L28 explicit")
     ap.add_argument("--solver", default="superlu", choices=["superlu", "pardiso"])
-    ap.add_argument("--out", default="/home/claude/work/exp2")
+    ap.add_argument("--out", default=str(work_dir("exp2")))
     a = ap.parse_args()
     T0 = time.time()
-    ex = pickle.load(open("/home/claude/work/exp1/extract_port18.pkl", "rb"))
+    ex = pickle.load(open(work_file("exp1", "extract_port18.pkl"), "rb"))
     gnd = pickle.load(open(os.path.join(a.out, "extract_gnd.pkl"), "rb"))
-    shapes = pickle.load(open("/home/claude/work/exp1/neighbour_shapes.pkl", "rb"))
-    res1 = json.load(open("/home/claude/work/exp1/result.json"))
+    shapes = pickle.load(open(work_file("exp1", "neighbour_shapes.pkl"), "rb"))
+    res1 = json.load(open(work_file("exp1", "result.json")))
     fbox = res1["discretisation"]["fine_box_um"]
     win = gnd["window"]
-    ref = np.load("/home/claude/data/S4LB002_260729_Zdiag.npz", allow_pickle=True)
+    ref = np.load(ref_npz("260729"), allow_pickle=True)
     fref = ref["freq"]; zref = ref["Zdiag"][:, 17]
     global EXPLICIT
     if a.all_gnd:
@@ -692,8 +693,8 @@ def main():
         need = [L for L, _ in EXPLICIT if L not in shapes]
         if need:
             from exp1b import load_layer_shapes
-            shapes.update(load_layer_shapes(ex["spd_path"], need))
-            pickle.dump(shapes, open("/home/claude/work/exp1/neighbour_shapes.pkl", "wb"))
+            shapes.update(load_layer_shapes(local_spd(ex["spd_path"]), need))
+            pickle.dump(shapes, open(work_file("exp1", "neighbour_shapes.pkl"), "wb"))
     b = Builder(ex, gnd, shapes, a.h, a.fine_h, a.top_h, win, fbox, decouple_groups=a.decouple_groups)
     b.build()
     S = Solver(b)
@@ -734,12 +735,12 @@ def main():
                                        rel_change=float(abs(Z[i1] - Z2[0]) / abs(Z2[0])) if i1 is not None else None,
                                        rel_err_h_half=float(abs(Z2[0] - zref[np.argmin(abs(fref - 1e6))]) / abs(zref[np.argmin(abs(fref - 1e6))])), stats=st2)
         print("conv", out["convergence_1MHz"], flush=True)
-    out["peak_rss_MB"] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
+    out["peak_rss_MB"] = peak_rss_mb()
     out["wall_seconds"] = time.time() - T0
     fn = os.path.join(a.out, f"result{a.tag}.json")
     json.dump(out, open(fn, "w"), indent=1, default=lambda o: o.item() if hasattr(o, "item") else str(o))
     if not a.freqs:
-        r1b = json.load(open("/home/claude/work/exp1/result_exp1b.json"))
+        r1b = json.load(open(work_file("exp1", "result_exp1b.json")))
         plot(os.path.join(a.out, f"exp2_Z18{a.tag}.png"), {
             "EXP-1b (two-sided d_eff, ideal GND)": dict(freq=r1b["freq"], Z_re=r1b["Z_re"], Z_im=r1b["Z_im"]),
             f"EXP-2 multiconductor (h={a.h:g}/{a.fine_h:g}um)": dict(freq=out["freq"], Z_re=out["Z_re"], Z_im=out["Z_im"])}, fref, zref)

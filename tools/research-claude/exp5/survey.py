@@ -1,6 +1,8 @@
 """EXP-5: SITE0 rail survey (positive shape layers, decap count, port pin counts) for rail selection."""
 import mmap, re, collections, json, sys
-F = sys.argv[1] if len(sys.argv) > 1 else "/home/claude/data/S4LB002-2Para_260729_1_injected.spd"
+from pathlib import Path; sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "common"))  # noqa: E702
+from paths import spd_path, work_file  # noqa: E402
+F = sys.argv[1] if len(sys.argv) > 1 else str(spd_path("260729"))
 with open(F, "rb") as fh:
     d = mmap.mmap(fh.fileno(), 0, access=mmap.ACCESS_READ)
     end = d.find(b"* Layer description lines")
@@ -25,4 +27,4 @@ for full, idx, net in ports:
     out.append(dict(port=full.decode().split("::")[0], index=int(idx), net=net, decaps=conns.get(net, 0), layers=dict(lay.get(net, {}))))
 for o in out:
     print(o["index"], o["net"], "decaps", o["decaps"], o["layers"])
-json.dump(out, open("/home/claude/work/exp5/survey_" + ("260729" if "0729" in F else "260804") + ".json", "w"), indent=1)
+json.dump(out, open(work_file("exp5", "survey_" + ("260729" if "0729" in F else "260804") + ".json"), "w"), indent=1)

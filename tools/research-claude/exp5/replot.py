@@ -1,11 +1,13 @@
 """Per-rail overlay plots with auto-scaled Re axis (run_exp1.plot fixes Re to 0-4 mOhm)."""
-import glob, json, os
+import glob, json, os, sys
+from pathlib import Path; sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "common"))  # noqa: E702
+from paths import ref_npz, work_dir  # noqa: E402
 import numpy as np
 import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
-OUT = "/home/claude/work/exp5"
+OUT = work_dir("exp5")
 for fn in glob.glob(os.path.join(OUT, "result_*_Port*_*.json")):
     r = json.load(open(fn))
-    ref = np.load(f"/home/claude/data/S4LB002_{r['tag']}_Zdiag.npz", allow_pickle=True)
+    ref = np.load(ref_npz(r['tag']), allow_pickle=True)
     col = [i for i, n in enumerate(ref["port_names"]) if str(n).split("::")[0] == r["port"]][0]
     fr = ref["freq"]; m = (fr >= 1e3) & (fr <= 1e8); zr = ref["Zdiag"][m, col]; fr = fr[m]
     f = np.array(r["freq"]); z = np.array(r["Z_re"]) + 1j * np.array(r["Z_im"])

@@ -9,6 +9,8 @@ import time
 import numpy as np
 
 from spd_decap_pi._core.io import spd as P
+from pathlib import Path; sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "common"))  # noqa: E702
+from paths import local_spd, work_file  # noqa: E402
 
 
 def extract_gnd(spd_path, window, layers, gnd=b"DGND"):
@@ -48,7 +50,7 @@ def extract_gnd(spd_path, window, layers, gnd=b"DGND"):
 
 
 if __name__ == "__main__":
-    ex = pickle.load(open("/home/claude/work/exp1/extract_port18.pkl", "rb"))
+    ex = pickle.load(open(work_file("exp1", "extract_port18.pkl"), "rb"))
     rn = ex["rail_nodes"]
     pts = [(v[0], v[1]) for v in ex["gnd_port_nodes"].values()]
     pts += [(rn[x][0], rn[x][1]) for x in ex["port_pos_nodes"]]
@@ -59,6 +61,6 @@ if __name__ == "__main__":
     window = (pts[:, 0].min() - m, pts[:, 1].min() - m, pts[:, 0].max() + m, pts[:, 1].max() + m)
     names = [r["name"] for r in ex["stackup"] if r["conductivity"] is not None]
     layers = names[: names.index("Signal$L28(DGND)") + 1]
-    g = extract_gnd(ex["spd_path"], window, layers)
-    pickle.dump(g, open("/home/claude/work/exp2/extract_gnd.pkl", "wb"))
+    g = extract_gnd(local_spd(ex["spd_path"]), window, layers)
+    pickle.dump(g, open(work_file("exp2", "extract_gnd.pkl"), "wb"))
     print("window", window)

@@ -1,8 +1,10 @@
 """Plot dL(h) and dRe(h) for the coarse-mesh emulation (port 18, port 1) with the adopted-model point."""
-import glob, json
+import glob, json, sys
+from pathlib import Path; sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "common"))  # noqa: E702
+from paths import work_dir, work_file  # noqa: E402
 import numpy as np
 import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
-OUT = "/home/claude/work/exp7"
+OUT = work_dir("exp7")
 
 
 def fitdl(fn, lo=2.9e4, hi=3.1e5):
@@ -14,7 +16,7 @@ def fitdl(fn, lo=2.9e4, hi=3.1e5):
 
 fig, ax = plt.subplots(1, 2, figsize=(12, 4.5))
 rows = {}
-for port, adopted in (("Port18_SITE0", "/home/claude/work/exp6/result_Port18_SITE0_V0.json"), ("Port1_SITE0", "/home/claude/work/exp6/result_Port1_SITE0_V0.json")):
+for port, adopted in (("Port18_SITE0", work_file("exp6", "result_Port18_SITE0_V0.json")), ("Port1_SITE0", work_file("exp6", "result_Port1_SITE0_V0.json"))):
     pts = [(50.0, *fitdl(adopted))]
     for fn in glob.glob(f"{OUT}/coarse_{port}_B_h*.json"):
         r = json.load(open(fn)); pts.append((r["h_um"], r["fit_dL_30k_300k_pH"], r["dRe_100k_mOhm"]))

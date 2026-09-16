@@ -2,7 +2,7 @@
 """EXP-1: plane-pair + circuit hybrid Z(f) for one SPD port vs PowerSI.
 
 Example:
-  python run_exp1.py --spd /home/claude/data/S4LB002-2Para_260729_1_injected.spd \
+  python run_exp1.py --spd $SPD_PI_DATA_DIR/S4LB002-2Para_260729_1_injected.spd \
       --port Port18_SITE0 --h 200 --h-check 100 --variant A --variant B
 """
 from __future__ import annotations
@@ -12,13 +12,14 @@ import json
 import math
 import os
 import pickle
-import resource
 import sys
 import time
 
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "common"))
+from paths import peak_rss_mb, ref_npz, spd_path, work_dir, work_file  # noqa: E402
 import extract as EX  # noqa: E402
 import model as M  # noqa: E402
 
@@ -111,8 +112,8 @@ def plot(path, results, fref_all, zref_all):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--spd", default="/home/claude/data/S4LB002-2Para_260729_1_injected.spd")
-    ap.add_argument("--ref", default="/home/claude/data/S4LB002_260729_Zdiag.npz")
+    ap.add_argument("--spd", default=str(spd_path("260729")))
+    ap.add_argument("--ref", default=str(ref_npz("260729")))
     ap.add_argument("--port", default="Port18_SITE0")
     ap.add_argument("--port-index", type=int, default=18, help="one-based column in the reference npz")
     ap.add_argument("--h", type=float, default=200.0, help="plane grid cell [um]")
@@ -124,15 +125,15 @@ def main():
     ap.add_argument("--nfreq", type=int, default=25)
     ap.add_argument("--freqs", type=str, default="", help="comma list overriding the log sweep")
     ap.add_argument("--variant", action="append", default=None, choices=sorted(VARIANTS))
-    ap.add_argument("--out", default="/home/claude/work/exp1")
-    ap.add_argument("--cache", default="/home/claude/work/exp1/extract_port18.pkl")
+    ap.add_argument("--out", default=str(work_dir("exp1")))
+    ap.add_argument("--cache", default=str(work_file("exp1", "extract_port18.pkl")))
     a = ap.parse_args()
     variants = a.variant or ["A"]
     os.makedirs(a.out, exist_ok=True)
     T0 = time.time()
     if os.path.exists(a.cache):
         ex = pickle.load(open(a.cache, "rb"))
-        if ex["spd_path"] != a.spd or a.port not in (ex["port_header"], ex["port_header"].split("::")[0]):
+        if os.path.basename(str(ex["spd_path"]).replace("\\", "/")) != os.path.basename(a.spd) or a.port not in (ex["port_header"], ex["port_header"].split("::")[0]):
             ex = None
     else:
         ex = None
@@ -209,7 +210,7 @@ def main():
                                             stats_h_half=st2)
             print("convergence", result["convergence"][v]["rel_change"], flush=True)
             del mdl2
-    result["peak_rss_MB" + ("_convergence_run" if a.skip_sweep else "")] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
+    result["peak_rss_MB" + ("_convergence_run" if a.skip_sweep else "")] = peak_rss_mb()
     result["wall_seconds" + ("_convergence_run" if a.skip_sweep else "")] = time.time() - T0
     tag = "_".join(variants)
     with open(os.path.join(a.out, "result.json" if tag == "A_B" or tag == "A" else f"result_{tag}.json"), "w") as fh:

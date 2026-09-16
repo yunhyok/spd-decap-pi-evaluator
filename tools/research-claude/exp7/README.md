@@ -5,4 +5,4 @@
 - `runB.sh`: port 18, H = 5, 2, 1, 0.5, 0.25 mm. `runP.sh`: ports 1 and 19 at H = 1 and 5 mm, then port 18 C at 1 mm (stopped).
 - `plot_h.py`: plots ΔL(h) and ΔRe(h) → `exp7_dL_dRe_vs_h.png`, `h_series.json`.
 
-Report: `/home/claude/work/exp7/EXP7_REPORT.md`.
+Report: `$SPD_PI_WORK_DIR/exp7/EXP7_REPORT.md`.

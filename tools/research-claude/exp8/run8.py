@@ -27,6 +27,8 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 for p in ("../exp5", "../exp4", "../exp3", "../exp1"):
     sys.path.insert(0, os.path.join(HERE, p))
+sys.path.insert(0, os.path.join(HERE, "..", "common"))
+from paths import work_dir  # noqa: E402
 import pipeline as P5  # noqa: E402
 import model3 as M3  # noqa: E402
 import model as M  # noqa: E402
@@ -35,7 +37,7 @@ from exp1b import TwoSided  # noqa: E402
 from run3 import ladder_gates  # noqa: E402
 from run_exp1 import resonance  # noqa: E402
 
-OUT = "/home/claude/work/exp8"
+OUT = work_dir("exp8")
 CASES = [("260729", "Port18_SITE0"), ("260729", "Port16_SITE0"), ("260729", "Port1_SITE0"), ("260729", "Port14_SITE0"),
          ("260729", "Port7_SITE0"), ("260729", "Port19_SITE0"), ("260804", "Port18_SITE0")]
 EXP5 = {("260729", "Port18_SITE0"): "result_260729_Port18_SITE0_sweep.json", ("260804", "Port18_SITE0"): "result_260804_Port18_SITE0_sweep.json"}
@@ -70,7 +72,7 @@ def fit_dl(f, dIm, lo=2.9e4, hi=1.001e6):
 
 
 def exp5_file(tag, port):
-    return os.path.join("/home/claude/work/exp5", EXP5.get((tag, port), f"result_{tag}_{port}_ladder.json"))
+    return os.path.join(work_dir("exp5"), EXP5.get((tag, port), f"result_{tag}_{port}_ladder.json"))
 
 
 def predict():

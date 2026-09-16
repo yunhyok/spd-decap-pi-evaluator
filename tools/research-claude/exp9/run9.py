@@ -9,7 +9,7 @@ R) are then closed analytically:  Zp = Z_PP - Z_Pd (Z_dd + diag(Zdec+Rx))^-1 Z_d
 With Rx = 0 this must reproduce the EXP-8 result (checked).
 
   --tag T --port P [--freqs ladder|few] [--gnd none|s3|s3scaled] [--loops]
-     writes /home/claude/work/exp9/mp_{tag}_{port}_{gnd}.npz  (freq, Zmp, labels, decap models)
+     writes WORK_DIR/exp9/mp_{tag}_{port}_{gnd}.npz  (freq, Zmp, labels, decap models)
      --loops: per-decap loop (port+ -> decap pad, 1 A in, 1 A out) power breakdown at 10 kHz
   --trace  : SPD/extract path audit for port 19 decaps and port pins (no solve)
 DIAGNOSTIC ONLY: the +R per decap / common-R cases are hypothesis tests, not model changes.
@@ -22,7 +22,6 @@ import json
 import math
 import os
 import pickle
-import resource
 import sys
 import time
 
@@ -32,6 +31,8 @@ from scipy.sparse.linalg import splu
 HERE = os.path.dirname(os.path.abspath(__file__))
 for p in ("../exp8", "../exp5", "../exp4", "../exp3", "../exp1"):
     sys.path.insert(0, os.path.join(HERE, p))
+sys.path.insert(0, os.path.join(HERE, "..", "common"))
+from paths import peak_rss_mb, work_dir, work_file  # noqa: E402
 import pipeline as P5  # noqa: E402
 import model3 as M3  # noqa: E402
 import model as M  # noqa: E402
@@ -39,7 +40,7 @@ import run4 as R4  # noqa: E402
 import run8 as R8  # noqa: E402
 from spd_decap_pi._core.via_model import estimate_via_segment_rl  # noqa: E402
 
-OUT = "/home/claude/work/exp9"
+OUT = work_dir("exp9")
 
 
 class ModelB9(P5.ModelB):
@@ -123,7 +124,7 @@ def build(tag, port, gnd="none", nonewidth=None, mesh="std"):
             ISLAND_H.update({g["layer"]: 50.0 for g in ex["rail_geoms"] if g["layer"] != "Signal$TOP" and sum(len(p) for p in g["neg_polys"]) < 1 and len(g["pos_polys"]) < 50})
         print("[diag] mesh", mesh, ISLAND_H, flush=True)
     if gnd != "none":
-        g = pickle.load(open("/home/claude/work/exp3/extract_gnd3.pkl", "rb"))
+        g = pickle.load(open(work_file("exp3", "extract_gnd3.pkl"), "rb"))
         w = g["window"]
         pts = [(v[0], v[1]) for v in ex["rail_nodes"].values()]
         assert all(w[0] <= x <= w[2] and w[1] <= y <= w[3] for x, y in pts), "rail outside S3 GND window"
@@ -168,7 +169,7 @@ def multiport(mdl, freqs, loops_f=None, chunk=24):
             del V, B
         del lu
         Zs.append(Zm)
-        print(f"  f={f:.4e} K={K} {time.time()-t0:.1f}s rss {resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1024:.0f}MB", flush=True)
+        print(f"  f={f:.4e} K={K} {time.time()-t0:.1f}s rss {peak_rss_mb():.0f}MB", flush=True)
     mdl.dec = dec
     return np.array(Zs), ports, loopV
 

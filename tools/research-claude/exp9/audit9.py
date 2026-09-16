@@ -9,7 +9,9 @@ Also reports which plane cell size each decap-site node snapped with (coarse 200
 import collections, json, math, os, sys
 import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
+sys.path.insert(0, os.path.join(HERE, "..", "common"))
 import run9 as R9
+from paths import work_file
 
 tag, port = "260729", sys.argv[1] if len(sys.argv) > 1 else "Port19_SITE0"
 ex, mdl = R9.build(tag, port)
@@ -43,4 +45,4 @@ print(json.dumps(out, indent=1))
 print({str(k): v for k, v in cnt.items()})
 # nodes whose snap fails (standalone)
 print("standalone plane-layer nodes:", sum(1 for v in snap.values() if v is None))
-json.dump(dict(series_sum_mOhm=out, counts={str(k): v for k, v in cnt.items()}), open(f"/home/claude/work/exp9/audit_{tag}_{port}.json", "w"), indent=1)
+json.dump(dict(series_sum_mOhm=out, counts={str(k): v for k, v in cnt.items()}), open(work_file("exp9", f"audit_{tag}_{port}.json"), "w"), indent=1)

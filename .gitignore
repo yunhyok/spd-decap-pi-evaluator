@@ -17,3 +17,7 @@ outputs/
 validation-output/
 *.spec
 *.log
+
+# research-claude local fallbacks (tools/research-claude/common/paths.py)
+/data/
+/work/

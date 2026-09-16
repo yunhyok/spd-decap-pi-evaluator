@@ -14,14 +14,18 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 
 import numpy as np
 
-OUT = "/home/claude/work/exp9"
+from pathlib import Path; sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "common"))  # noqa: E702
+from paths import ref_npz, work_dir, work_file  # noqa: E402
+
+OUT = work_dir("exp9")
 CASES = [("260729", "Port18_SITE0"), ("260804", "Port18_SITE0"), ("260729", "Port16_SITE0"), ("260729", "Port1_SITE0"),
          ("260729", "Port14_SITE0"), ("260729", "Port7_SITE0"), ("260729", "Port19_SITE0")]
 EXP5 = {("260729", "Port18_SITE0"): "result_260729_Port18_SITE0_sweep.json", ("260804", "Port18_SITE0"): "result_260804_Port18_SITE0_sweep.json"}
-REF = {k: f"/home/claude/data/S4LB002_{k}_Zdiag.npz" for k in ("260729", "260804")}
+REF = {k: ref_npz(k) for k in ("260729", "260804")}
 
 
 def zero_cross(f, im, fmin=1e5):
@@ -63,8 +67,8 @@ def main():
         fref = ref["freq"]; zref = ref["Zdiag"][:, col]
         f0r = zero_cross(fref, zref.imag)
         row = dict(tag=tag, port=port, f0_imz_ref_dense=f0r, Q_ref=q_factor(fref, zref, f0r))
-        for mode, fn in (("gnd", os.path.join("/home/claude/work/exp5", EXP5.get((tag, port), f"result_{tag}_{port}_ladder.json"))),
-                         ("any", f"/home/claude/work/exp8/result_{tag}_{port}_any.json")):
+        for mode, fn in (("gnd", os.path.join(work_dir("exp5"), EXP5.get((tag, port), f"result_{tag}_{port}_ladder.json"))),
+                         ("any", work_file("exp8", f"result_{tag}_{port}_any.json"))):
             m = metrics(fn, fref, zref)
             m["f0_err"] = m["f0_imz_model"] / f0r - 1
             m["f0_err_vs_sparse_ref"] = m["f0_imz_model"] / m["f0_imz_ref_sparse"] - 1
@@ -81,7 +85,7 @@ def main():
                          f"{m['f0_imz_model']/1e6:.3f} / {r['f0_imz_ref_dense']/1e6:.3f} ({100*m['f0_err']:+.1f}%) | "
                          f"{100*(m['f0_imz_ref_sparse']/r['f0_imz_ref_dense']-1):+.1f}% | "
                          f"{m['fres_minZ_model']/1e6:.3f} / {m['fres_minZ_ref']/1e6:.3f} ({100*m['fres_err']:+.1f}%) |")
-    open(os.path.join(OUT, "table_ext.md"), "w").write("\n".join(lines) + "\n")
+    open(os.path.join(OUT, "table_ext.md"), "w", encoding="utf-8").write("\n".join(lines) + "\n")
     print("\n".join(lines))
 
 

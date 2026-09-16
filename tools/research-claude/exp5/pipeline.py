@@ -14,7 +14,6 @@ import argparse
 import json
 import os
 import pickle
-import resource
 import sys
 import time
 
@@ -23,16 +22,17 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 for p in ("../exp4", "../exp3", "../exp1"):
     sys.path.insert(0, os.path.join(HERE, p))
+sys.path.insert(0, os.path.join(HERE, "..", "common"))
+from paths import peak_rss_mb, ref_npz, spd_path, work_dir, work_file  # noqa: E402
 import extract as EX  # noqa: E402
 import run4 as R4  # noqa: E402
 from exp1b import TwoSided, load_layer_shapes  # noqa: E402
 from run3 import ladder_gates  # noqa: E402
 from run_exp1 import gates, pick_freqs, plot, resonance  # noqa: E402
 
-OUT = "/home/claude/work/exp5"
-SPD = {"260729": "/home/claude/data/S4LB002-2Para_260729_1_injected.spd",
-       "260804": "/home/claude/data/S4LB002-2Para_260804_1_injected.spd"}
-REF = {k: f"/home/claude/data/S4LB002_{k}_Zdiag.npz" for k in SPD}
+OUT = work_dir("exp5")
+SPD = {k: str(spd_path(k)) for k in ("260729", "260804")}
+REF = {k: str(ref_npz(k)) for k in SPD}
 LADDER = [3.0e4, 1.0e5, 3.0e5, 1.0e6, 2.5e6, 1.0e7, 1.0e8]
 
 
@@ -69,7 +69,7 @@ def prepare(tag, port):
     else:
         ex = EX.extract(SPD[tag], port)
         pickle.dump(ex, open(ex_fn, "wb"))
-    sh_fn = os.path.join(OUT, f"shapes_{tag}.pkl") if tag != "260729" else "/home/claude/work/exp1/neighbour_shapes.pkl"
+    sh_fn = os.path.join(OUT, f"shapes_{tag}.pkl") if tag != "260729" else str(work_file("exp1", "neighbour_shapes.pkl"))
     shapes = pickle.load(open(sh_fn, "rb")) if os.path.exists(sh_fn) else {}
     ts = TwoSided(ex, {}, 3)
     need = set()
@@ -130,7 +130,7 @@ def main():
         _, _, Vs = mdl.solve([fb], verbose=False, want_v=True)
         bd[f"{fb:.0e}"] = R4.split_breakdown(mdl, fb, Vs[0])
     out["breakdown"] = bd
-    out["peak_rss_MB"] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
+    out["peak_rss_MB"] = peak_rss_mb()
     out["wall_seconds"] = time.time() - T0
     fn = os.path.join(OUT, f"result_{a.tag}_{a.port}_{a.freqset}.json")
     json.dump(out, open(fn, "w"), indent=1, default=lambda o: o.item() if hasattr(o, "item") else str(o))

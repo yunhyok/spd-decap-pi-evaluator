@@ -1,6 +1,6 @@
 #!/bin/sh
 # EXP-9 run chain (diagnostics). PIDs waited on are the runs already in flight when this was started.
-export PYTHONPATH=/home/claude/spd-decap-pi-evaluator/src
+export PYTHONPATH="$(cd "$(dirname "$0")/../../.." && pwd)/src"
 while kill -0 6719 2>/dev/null; do sleep 5; done
 python run9.py --port Port19_SITE0 --freqs few --nonewidth 60
 python run9.py --port Port19_SITE0 --freqs few --nonewidth drop

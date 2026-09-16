@@ -24,7 +24,6 @@ import json
 import math
 import os
 import pickle
-import resource
 import sys
 import time
 
@@ -33,12 +32,14 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "exp3"))
 sys.path.insert(0, os.path.join(HERE, "..", "exp1"))
+sys.path.insert(0, os.path.join(HERE, "..", "common"))
+from paths import peak_rss_mb, ref_npz, work_dir, work_file  # noqa: E402
 import model3 as M3  # noqa: E402
 from run3 import ladder_gates  # noqa: E402
 from run_exp1 import resonance, plot  # noqa: E402
 from spd_decap_pi._core.solver.mfdm import copper_surface_impedance as zs_one  # noqa: E402
 
-OUT = "/home/claude/work/exp4"
+OUT = work_dir("exp4")
 MU0 = M3.MU0
 TWO_SIDED = {"Signal$L14(MAIN_POWER4)", "Signal$L25(MAIN_POWER4)"}
 N_GND = 13  # L02 L04 L06 L08 L10 L13 L16 L18 L20 L21 L24 L27 L28
@@ -134,7 +135,7 @@ def run_mode(mdl, mode, freqs, zr, fref, zref, tag):
                dL_pH=[float(x) for x in (Z.imag - zr.imag) / (2 * np.pi * freqs) * 1e12],
                dRe_mOhm=[float(x) for x in (Z.real - zr.real) * 1e3], rel_err=[float(x) for x in np.abs(Z - zr) / np.abs(zr)],
                gates=g, breakdown=bd, solve_seconds=time.time() - t, info={k: v for k, v in mdl.info.items() if k != "reference_search"},
-               peak_rss_MB=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024, stats=st)
+               peak_rss_MB=peak_rss_mb(), stats=st)
     json.dump(res, open(os.path.join(OUT, f"result_{tag}.json"), "w"), indent=1, default=lambda o: o.item() if hasattr(o, "item") else str(o))
     print("GATES", tag, json.dumps(g, default=str), flush=True)
     return res
@@ -145,10 +146,10 @@ def main():
     ap.add_argument("--which", default="ab", choices=["ab", "c", "s4b", "s4c"])
     a = ap.parse_args()
     os.makedirs(OUT, exist_ok=True)
-    ex = pickle.load(open("/home/claude/work/exp1/extract_port18.pkl", "rb"))
-    shapes = pickle.load(open("/home/claude/work/exp1/neighbour_shapes.pkl", "rb"))
-    fine_box = json.load(open("/home/claude/work/exp1/result.json"))["discretisation"]["fine_box_um"]
-    ref = np.load("/home/claude/data/S4LB002_260729_Zdiag.npz", allow_pickle=True)
+    ex = pickle.load(open(work_file("exp1", "extract_port18.pkl"), "rb"))
+    shapes = pickle.load(open(work_file("exp1", "neighbour_shapes.pkl"), "rb"))
+    fine_box = json.load(open(work_file("exp1", "result.json")))["discretisation"]["fine_box_um"]
+    ref = np.load(ref_npz("260729"), allow_pickle=True)
     fref = ref["freq"]; zref = ref["Zdiag"][:, 17]
     lad = [3.0e4, 1.0e5, 3.0e5, 1.0e6, 2.5e6, 1.0e7, 1.0e8]
     if a.which == "ab":
@@ -160,7 +161,7 @@ def main():
     elif a.which == "c":
         idx = sorted({int(np.argmin(abs(fref - x))) for x in lad + [1.2e6, 1.445e6, 1.585e6, 1.738e6, 2.0e6]})
         freqs = fref[idx]; zr = zref[idx]
-        gnd = pickle.load(open("/home/claude/work/exp3/extract_gnd3.pkl", "rb"))
+        gnd = pickle.load(open(work_file("exp3", "extract_gnd3.pkl"), "rb"))
         mdl = Model4(ex, shapes, h=200.0, fh=50.0, top_h=50.0, fine_box=fine_box, sub_c=20, sub_f=10, sub_top=10, fringe=True,
                      gnd=gnd, gnd_h=400.0, gnd_fh=100.0)
         mdl.gnd_scale = 6.0 / N_GND

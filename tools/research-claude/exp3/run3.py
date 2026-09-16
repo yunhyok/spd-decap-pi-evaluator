@@ -15,7 +15,6 @@ import json
 import math
 import os
 import pickle
-import resource
 import sys
 import time
 
@@ -24,12 +23,14 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "..", "exp1"))
+sys.path.insert(0, os.path.join(HERE, "..", "common"))
+from paths import peak_rss_mb, ref_npz, work_dir, work_file  # noqa: E402
 import model as M  # noqa: E402
 import model3 as M3  # noqa: E402
 from exp1b import TwoSided  # noqa: E402
 from run_exp1 import pick_freqs, plot, resonance, gates  # noqa: E402
 
-OUT = "/home/claude/work/exp3"
+OUT = work_dir("exp3")
 LADDER = [3.0e4, 1.0e5, 3.0e5, 1.0e6, 2.5e6, 1.0e7, 1.0e8]
 
 
@@ -83,10 +84,10 @@ def main():
     ap.add_argument("--gnd-fine-h", type=float, default=100.0)
     a = ap.parse_args()
     T0 = time.time()
-    ex = pickle.load(open("/home/claude/work/exp1/extract_port18.pkl", "rb"))
-    shapes = pickle.load(open("/home/claude/work/exp1/neighbour_shapes.pkl", "rb"))
-    fine_box = json.load(open("/home/claude/work/exp1/result.json"))["discretisation"]["fine_box_um"]
-    ref = np.load("/home/claude/data/S4LB002_260729_Zdiag.npz", allow_pickle=True)
+    ex = pickle.load(open(work_file("exp1", "extract_port18.pkl"), "rb"))
+    shapes = pickle.load(open(work_file("exp1", "neighbour_shapes.pkl"), "rb"))
+    fine_box = json.load(open(work_file("exp1", "result.json")))["discretisation"]["fine_box_um"]
+    ref = np.load(ref_npz("260729"), allow_pickle=True)
     fref = ref["freq"]; zref = ref["Zdiag"][:, 17]
     if a.freqs:
         idx = sorted({int(np.argmin(abs(fref - float(x)))) for x in a.freqs.split(",")})
@@ -127,7 +128,7 @@ def main():
         bd[f"{fb:.0e}"] = mdl.breakdown(fb, Vs[0])
         print("BREAKDOWN", fb, {k: (round(v["mOhm"], 4), round(v.get("pH", 0), 2)) for k, v in bd[f"{fb:.0e}"].items() if isinstance(v, dict) and "mOhm" in v and (abs(v["mOhm"]) > 0.002 or abs(v.get("pH", 0)) > 0.2)}, flush=True)
     out["breakdown"] = bd
-    out["peak_rss_MB"] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
+    out["peak_rss_MB"] = peak_rss_mb()
     out["wall_seconds"] = time.time() - T0
     fn = os.path.join(OUT, f"result_{a.step}{'_sweep' if a.sweep else ''}{a.tag}.json")
     json.dump(out, open(fn, "w"), indent=1, default=lambda o: o.item() if hasattr(o, "item") else str(o))

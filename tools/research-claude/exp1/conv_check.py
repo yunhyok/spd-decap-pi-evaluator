@@ -3,19 +3,20 @@ for variants A and B; merges into result.json["convergence"]."""
 import json
 import os
 import pickle
-import resource
 import sys
 import time
 
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "common"))
+from paths import peak_rss_mb, ref_npz, work_dir  # noqa: E402
 import model as M  # noqa: E402
 from run_exp1 import VARIANTS  # noqa: E402
 
-OUT = "/home/claude/work/exp1"
+OUT = work_dir("exp1")
 ex = pickle.load(open(os.path.join(OUT, "extract_port18.pkl"), "rb"))
-ref = np.load("/home/claude/data/S4LB002_260729_Zdiag.npz", allow_pickle=True)
+ref = np.load(ref_npz("260729"), allow_pickle=True)
 fref = ref["freq"]; zref = ref["Zdiag"][:, 17]
 res = json.load(open(os.path.join(OUT, "result.json")))
 box = res["discretisation"]["fine_box_um"]
@@ -55,6 +56,6 @@ for v in ("A", "B"):
     print(v, "dZ(1MHz)", conv[v]["rel_change"][i1], "dZ(10MHz)", conv[v]["rel_change"][i10],
           "peaks", conv[v]["antiresonance_ReZ_peak_h"], conv[v]["antiresonance_ReZ_peak_h_half"], conv[v]["antiresonance_ReZ_peak_ref"], flush=True)
 res["convergence"] = conv
-res["peak_rss_MB_convergence_run"] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
+res["peak_rss_MB_convergence_run"] = peak_rss_mb()
 json.dump(res, open(os.path.join(OUT, "result.json"), "w"), indent=1)
 print("peak RSS MB", res["peak_rss_MB_convergence_run"])

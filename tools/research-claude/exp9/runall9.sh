@@ -1,5 +1,5 @@
 #!/bin/sh
-export PYTHONPATH=/home/claude/spd-decap-pi-evaluator/src
+export PYTHONPATH="$(cd "$(dirname "$0")/../../.." && pwd)/src"
 set -x
 python run9.py --port Port18_SITE0 --freqs few
 python run9.py --port Port7_SITE0 --freqs few

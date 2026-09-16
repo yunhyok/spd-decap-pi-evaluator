@@ -58,7 +58,7 @@ via R); `B` = diagnosis (ideal GND return).
 ## Run
 
 ```bash
-. /home/claude/venv/bin/activate
+. /home/claude/venv/bin/activate   # Windows: .venv\Scripts\Activate.ps1, see NEXT_SESSION_HANDOFF.md
 cd tools/research-claude/exp1
 python extract.py                                   # optional, run_exp1 does it if the cache is missing
 python run_exp1.py --variant A --variant B --h 200 --fine-h 50 --top-h 50 --h-check 0
@@ -66,7 +66,7 @@ python conv_check.py      # mesh-halving check (use this, not run_exp1 --skip-sw
                           # compares the nearest *sweep* point, e.g. 9.12 MHz vs 10 MHz)
 ```
 
-Outputs go to `/home/claude/work/exp1/` (`result.json`, `exp1_Z18.png`).
+Outputs go to `$SPD_PI_WORK_DIR/exp1/` (`result.json`, `exp1_Z18.png`).
 
 `conv_check.py` repeats the h / h/2 check (h=200/50/50 um vs 100/25/25 um) at
 1 MHz, 10 MHz and every reference point 6–16 MHz and merges it into

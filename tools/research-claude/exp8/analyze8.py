@@ -3,8 +3,10 @@ import json, os, sys
 import numpy as np
 import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
+sys.path.insert(0, os.path.join(HERE, "..", "common"))
 from run8 import CASES, exp5_file, fit_dl
-OUT = "/home/claude/work/exp8"
+from paths import ref_npz, work_dir
+OUT = work_dir("exp8")
 
 
 def metrics(fn):
@@ -24,7 +26,7 @@ for tag, port in CASES:
         continue
     mg, (fg, Zg, Zrg) = metrics(exp5_file(tag, port)); ma, (fa_, Za, Zra) = metrics(fa)
     rows.append(dict(tag=tag, port=port, gnd=mg, any=ma))
-    ref = np.load(f"/home/claude/data/S4LB002_{tag}_Zdiag.npz", allow_pickle=True)
+    ref = np.load(ref_npz(tag), allow_pickle=True)
     col = [i for i, n in enumerate(ref["port_names"]) if str(n).split("::")[0] == port][0]
     fr = ref["freq"]; mm = (fr >= 1e4) & (fr <= 1e8); zr = ref["Zdiag"][mm, col]; fr = fr[mm]
     fig, ax = plt.subplots(2, 2, figsize=(12, 8))

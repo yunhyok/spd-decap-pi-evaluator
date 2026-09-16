@@ -21,13 +21,14 @@ import math
 import mmap
 import os
 import pickle
-import resource
 import sys
 import time
 
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "common"))
+from paths import peak_rss_mb, ref_npz, spd_path, work_dir  # noqa: E402
 import model as M  # noqa: E402
 from run_exp1 import VARIANTS, gates, pick_freqs, plot, resonance  # noqa: E402
 from spd_decap_pi._core.io import spd as P  # noqa: E402
@@ -165,15 +166,15 @@ class TwoSided:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--spd", default="/home/claude/data/S4LB002-2Para_260729_1_injected.spd")
-    ap.add_argument("--ref", default="/home/claude/data/S4LB002_260729_Zdiag.npz")
+    ap.add_argument("--spd", default=str(spd_path("260729")))
+    ap.add_argument("--ref", default=str(ref_npz("260729")))
     ap.add_argument("--port-index", type=int, default=18)
     ap.add_argument("--h", type=float, default=200.0)
     ap.add_argument("--fine-h", type=float, default=50.0)
     ap.add_argument("--top-h", type=float, default=50.0)
     ap.add_argument("--max-layers", type=int, default=3)
     ap.add_argument("--h-check", action="store_true", help="also solve h/2 at 1 MHz")
-    ap.add_argument("--out", default="/home/claude/work/exp1")
+    ap.add_argument("--out", default=str(work_dir("exp1")))
     ap.add_argument("--tag", default="", help="suffix for result/plot file names")
     a = ap.parse_args()
     T0 = time.time()
@@ -233,7 +234,7 @@ def main():
                                        rel_change=float(abs(Z[i1] - Z2[0]) / abs(Z2[0])),
                                        rel_err_h_half=float(abs(Z2[0] - zref[all_idx][i1]) / abs(zref[all_idx][i1])), stats=st2)
         print("conv", out["convergence_1MHz"]["rel_change"], out["convergence_1MHz"]["rel_err_h_half"])
-    out["peak_rss_MB"] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
+    out["peak_rss_MB"] = peak_rss_mb()
     out["wall_seconds"] = time.time() - T0
     json.dump(out, open(os.path.join(a.out, f"result_exp1b{a.tag}.json"), "w"), indent=1,
               default=lambda o: o.item() if hasattr(o, "item") else str(o))

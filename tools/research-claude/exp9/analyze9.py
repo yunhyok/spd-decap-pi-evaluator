@@ -20,7 +20,9 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "exp1"))
-OUT = "/home/claude/work/exp9"
+sys.path.insert(0, os.path.join(HERE, "..", "common"))
+from paths import work_dir, work_file  # noqa: E402
+OUT = work_dir("exp9")
 
 
 def close(Zm, zdec, rx):
@@ -47,7 +49,7 @@ def analyse(fn):
     mids = [str(x) for x in d["mids"]]
     Z0 = sweep(d, lambda k: np.zeros(Nd))
     out = dict(tag=tag, port=port, gnd=gnd, n_decaps=Nd, unknowns=int(d["unknowns"]), freq=f.tolist())
-    e8 = f"/home/claude/work/exp8/result_{tag}_{port}_any.json"
+    e8 = work_file("exp8", f"result_{tag}_{port}_any.json")
     if gnd.startswith("none") and os.path.exists(e8):
         r = json.load(open(e8)); f8 = np.array(r["freq"]); z8 = np.array(r["Z_re"]) + 1j * np.array(r["Z_im"])
         dev = [abs(Z0[int(np.argmin(abs(f - x)))] - z) / abs(z) for x, z in zip(f8, z8) if np.min(abs(f - x)) < 1]

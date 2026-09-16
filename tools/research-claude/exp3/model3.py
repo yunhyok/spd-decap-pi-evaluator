@@ -24,6 +24,8 @@ from scipy.spatial import cKDTree
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "exp1"))
+sys.path.insert(0, os.path.join(HERE, "..", "common"))
+from paths import peak_rss_mb  # noqa: E402
 import model as M  # noqa: E402
 import homog as H  # noqa: E402
 from exp1b import TwoSided  # noqa: E402
@@ -500,14 +502,13 @@ class Model3:
 
     def solve(self, freqs, verbose=True, want_v=False):
         Z, stats, Vs = [], [], []
-        import resource
         for f in freqs:
             t0 = time.time(); Y = self.assemble(f); t1 = time.time()
             lu = splu(Y, permc_spec="COLAMD"); t2 = time.time()
             rhs = np.zeros(self.N, complex); rhs[self.P] = 1.0
             V = lu.solve(rhs); Z.append(V[self.P])
             stats.append(dict(f=float(f), assemble_s=t1 - t0, factor_s=t2 - t1, nnz_LU=int(lu.nnz),
-                              rss_MB=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024))
+                              rss_MB=peak_rss_mb()))
             if want_v:
                 Vs.append(V)
             if verbose:

@@ -1,9 +1,12 @@
-"""Print the EXP-3 ablation tables (markdown) from /home/claude/work/exp3/result_S*.json."""
+"""Print the EXP-3 ablation tables (markdown) from WORK_DIR/exp3/result_S*.json."""
 import json
 import os
 import sys
 
-OUT = "/home/claude/work/exp3"
+from pathlib import Path; sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "common"))  # noqa: E702
+from paths import work_dir  # noqa: E402
+
+OUT = work_dir("exp3")
 steps = sys.argv[1:] or ["S0", "S1", "S2", "S3"]
 LAD = [3.0e4, 1.2e5, 3.02e5, 1.0e6, 2.51e6, 9.12e6, 1.0e8]
 rows = []

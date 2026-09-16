@@ -27,6 +27,10 @@ import numpy as np
 
 from spd_decap_pi._core.io import spd as P
 
+import sys  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "common"))
+from paths import spd_path as design_spd, work_file  # noqa: E402
+
 
 def _mm_um(tok: bytes) -> float:
     return P._length_um(tok)
@@ -212,9 +216,9 @@ def extract(spd_path: str, port_name: str, gnd_net: str = "DGND") -> dict:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--spd", default="/home/claude/data/S4LB002-2Para_260729_1_injected.spd")
+    ap.add_argument("--spd", default=str(design_spd("260729")))
     ap.add_argument("--port", default="Port18_SITE0")
-    ap.add_argument("--out", default="/home/claude/work/exp1/extract_port18.pkl")
+    ap.add_argument("--out", default=str(work_file("exp1", "extract_port18.pkl")))
     a = ap.parse_args()
     res = extract(a.spd, a.port)
     with open(a.out, "wb") as fh:

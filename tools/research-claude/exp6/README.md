@@ -7,4 +7,4 @@
 - `--port P --dmax D`: V3 diagnostic, which fills every rail-plane void with equivalent diameter < D µm.
 
 `runall6.sh` runs port 18 (stats, V0, D = 200/400/1500). `runall6b.sh` runs ports 1 and 19 (stats, V0, D = 400/1500).
-Report: `/home/claude/work/exp6/EXP6_REPORT.md`.
+Report: `$SPD_PI_WORK_DIR/exp6/EXP6_REPORT.md`.
