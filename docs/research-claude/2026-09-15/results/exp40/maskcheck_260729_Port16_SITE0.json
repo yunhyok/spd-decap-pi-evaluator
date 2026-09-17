@@ -1,0 +1,13 @@
+{
+ "requests": 444,
+ "scanline_polygons": 8737,
+ "mpl_polygons": 0,
+ "differing_blocks": 0,
+ "differing_cells": 0,
+ "cells_checked": 40208372,
+ "wall_seconds": 742.7402033805847,
+ "tag": "260729",
+ "port": "Port16_SITE0",
+ "V0": 64,
+ "worst": []
+}

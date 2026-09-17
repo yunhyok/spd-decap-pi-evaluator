@@ -1,0 +1,96 @@
+         8373499 function calls (8370587 primitive calls) in 361.208 seconds
+
+   Ordered by: cumulative time
+   List reduced from 1357 to 45 due to restriction <45>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000  361.209  361.209 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp11\run11.py:96(setup)
+        1    0.000    0.000  360.731  360.731 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\model3.py:236(__init__)
+        1    0.015    0.015  360.731  360.731 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp11\../exp5\pipeline.py:42(build)
+        1    1.551    1.551  360.716  360.716 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\model3.py:271(build)
+        9    0.042    0.005  351.853   39.095 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp3\..\exp1\exp1b.py:119(__call__)
+      548    0.003    0.000  351.729    0.642 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp11\../exp8\run8.py:53(mask)
+      869    0.003    0.000  351.725    0.405 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp3\..\exp1\exp1b.py:106(mask)
+      427    1.505    0.004  351.687    0.824 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp1\model.py:124(rasterize)
+    16093    0.015    0.000  347.074    0.022 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\matplotlib\path.py:572(contains_points)
+    16093  347.016    0.022  347.026    0.022 {built-in method matplotlib._path.points_in_path}
+        5    0.083    0.017    5.342    1.068 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\model3.py:89(__init__)
+        9    0.001    0.000    4.095    0.455 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\homog.py:207(cell_edges)
+       22    0.018    0.001    3.784    0.172 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\homog.py:188(window_conductance)
+       22    0.011    0.000    3.524    0.160 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\homog.py:84(batched_gx)
+       22    0.000    0.000    3.125    0.142 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\homog.py:109(_run)
+       22    1.927    0.088    2.524    0.115 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\homog.py:122(_gx)
+   344055    1.908    0.000    1.908    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+    34864    0.223    0.000    1.130    0.000 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\lib\_function_base_impl.py:5050(meshgrid)
+        9    0.297    0.033    1.087    0.121 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\homog.py:52(raster_image)
+    34864    0.099    0.000    0.743    0.000 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\lib\_stride_tricks_impl.py:514(broadcast_arrays)
+   121438    0.065    0.000    0.633    0.000 {method 'min' of 'numpy.ndarray' objects}
+   121433    0.063    0.000    0.606    0.000 {method 'max' of 'numpy.ndarray' objects}
+       44    0.000    0.000    0.601    0.014 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\homog.py:31(_gpu)
+   121438    0.036    0.000    0.567    0.000 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\_core\_methods.py:43(_amin)
+    69367    0.387    0.000    0.557    0.000 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\lib\_stride_tricks_impl.py:373(_broadcast_to)
+    97948    0.053    0.000    0.553    0.000 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\_core\fromnumeric.py:207(reshape)
+   121433    0.034    0.000    0.543    0.000 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\_core\_methods.py:39(_amax)
+    98035    0.115    0.000    0.505    0.000 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\_core\fromnumeric.py:48(_wrapfunc)
+    279/2    0.002    0.000    0.486    0.243 <frozen importlib._bootstrap>:1349(_find_and_load)
+    277/2    0.001    0.000    0.486    0.243 <frozen importlib._bootstrap>:1304(_find_and_load_unlocked)
+    212/4    0.001    0.000    0.481    0.120 <frozen importlib._bootstrap_external>:993(exec_module)
+    674/5    0.000    0.000    0.481    0.096 <frozen importlib._bootstrap>:480(_call_with_frames_removed)
+    272/4    0.005    0.000    0.479    0.120 {built-in method builtins.exec}
+        1    0.016    0.016    0.478    0.478 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp11\../exp5\pipeline.py:65(prepare)
+   270/12    0.001    0.000    0.477    0.040 <frozen importlib._bootstrap>:911(_load_unlocked)
+        2    0.453    0.227    0.462    0.231 {built-in method _pickle.load}
+    18629    0.190    0.000    0.422    0.000 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\model3.py:181(snap)
+        1    0.000    0.000    0.422    0.422 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\cupy\__init__.py:1(<module>)
+       71    0.003    0.000    0.418    0.006 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\_core\_methods.py:115(_mean)
+       31    0.000    0.000    0.417    0.013 {method 'mean' of 'numpy.ndarray' objects}
+       22    0.001    0.000    0.380    0.017 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\lib\_arraysetops_impl.py:145(unique)
+       22    0.035    0.002    0.377    0.017 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\lib\_arraysetops_impl.py:350(_unique1d)
+    97965    0.207    0.000    0.371    0.000 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\_core\fromnumeric.py:38(_wrapit)
+   313540    0.347    0.000    0.347    0.000 {method 'reshape' of 'numpy.ndarray' objects}
+    49188    0.081    0.000    0.337    0.000 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\_core\fromnumeric.py:66(_wrapreduction)
+
+
+         8373499 function calls (8370587 primitive calls) in 361.208 seconds
+
+   Ordered by: internal time
+   List reduced from 1357 to 35 due to restriction <35>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+    16093  347.016    0.022  347.026    0.022 {built-in method matplotlib._path.points_in_path}
+       22    1.927    0.088    2.524    0.115 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\homog.py:122(_gx)
+   344055    1.908    0.000    1.908    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+        1    1.551    1.551  360.716  360.716 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\model3.py:271(build)
+      427    1.505    0.004  351.687    0.824 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp1\model.py:124(rasterize)
+        2    0.453    0.227    0.462    0.231 {built-in method _pickle.load}
+    69367    0.387    0.000    0.557    0.000 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\lib\_stride_tricks_impl.py:373(_broadcast_to)
+   313540    0.347    0.000    0.347    0.000 {method 'reshape' of 'numpy.ndarray' objects}
+     3747    0.331    0.000    0.331    0.000 {method 'draw_polygon' of 'ImagingDraw' objects}
+       22    0.331    0.015    0.331    0.015 {method 'argsort' of 'numpy.ndarray' objects}
+        9    0.297    0.033    1.087    0.121 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\homog.py:52(raster_image)
+    34864    0.223    0.000    1.130    0.000 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\lib\_function_base_impl.py:5050(meshgrid)
+    97965    0.207    0.000    0.371    0.000 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\_core\fromnumeric.py:38(_wrapit)
+    18629    0.190    0.000    0.422    0.000 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\model3.py:181(snap)
+     1370    0.190    0.000    0.193    0.000 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\homog.py:150(A)
+     2491    0.158    0.000    0.158    0.000 {built-in method nt.stat}
+   618382    0.141    0.000    0.142    0.000 {built-in method builtins.max}
+   623632    0.135    0.000    0.140    0.000 {built-in method builtins.min}
+        1    0.131    0.131    0.131    0.131 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\cupy\_creation\basic.py:233(zeros)
+     4089    0.118    0.000    0.118    0.000 {method 'sum' of 'cupy._core.core._ndarray_base' objects}
+    98035    0.115    0.000    0.505    0.000 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\_core\fromnumeric.py:48(_wrapfunc)
+   438992    0.107    0.000    0.107    0.000 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\homog.py:58(P)
+    16102    0.101    0.000    0.129    0.000 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\lib\_shape_base_impl.py:625(column_stack)
+    34864    0.099    0.000    0.743    0.000 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\lib\_stride_tricks_impl.py:514(broadcast_arrays)
+   186888    0.096    0.000    0.096    0.000 {built-in method numpy.array}
+   359445    0.088    0.000    0.088    0.000 {method 'endswith' of 'str' objects}
+   508434    0.087    0.000    0.087    0.000 {method 'append' of 'list' objects}
+        5    0.083    0.017    5.342    1.068 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\model3.py:89(__init__)
+    49188    0.081    0.000    0.337    0.000 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\_core\fromnumeric.py:66(_wrapreduction)
+    16250    0.081    0.000    0.155    0.000 {built-in method numpy.asarray}
+    69749    0.071    0.000    0.071    0.000 {method 'copy' of 'numpy.ndarray' objects}
+        1    0.067    0.067    0.103    0.103 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\model3.py:458(_pad_links)
+    34864    0.066    0.000    0.071    0.000 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\lib\_stride_tricks_impl.py:446(_broadcast_shape)
+   121438    0.065    0.000    0.633    0.000 {method 'min' of 'numpy.ndarray' objects}
+    85495    0.065    0.000    0.107    0.000 {built-in method builtins.any}
+
+

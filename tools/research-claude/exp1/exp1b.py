@@ -28,6 +28,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "common"))
+from fast_assemble import ON as FAST_ON  # noqa: E402
 from paths import peak_rss_mb, ref_npz, spd_path, work_dir  # noqa: E402
 import model as M  # noqa: E402
 from run_exp1 import VARIANTS, gates, pick_freqs, plot, resonance  # noqa: E402
@@ -109,7 +110,9 @@ class TwoSided:
             if g is None or not g["order"]:
                 m = np.zeros((blk["ny"], blk["nx"]), bool)
             else:
-                m = M.rasterize(g, blk["h"], window=(blk["x0"], blk["y0"], blk["x0"] + blk["nx"] * blk["h"], blk["y0"] + blk["ny"] * blk["h"]))["mask"]
+                m = M.fast_layer_mask(self, (layer, net, blk["h"]), g, blk) if FAST_ON else None  # EXP-39
+                if m is None:
+                    m = M.rasterize(g, blk["h"], window=(blk["x0"], blk["y0"], blk["x0"] + blk["nx"] * blk["h"], blk["y0"] + blk["ny"] * blk["h"]))["mask"]
             self.cache[key] = m
         return self.cache[key]
 

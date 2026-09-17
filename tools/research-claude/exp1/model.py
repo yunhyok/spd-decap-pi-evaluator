@@ -25,6 +25,8 @@ Elements
 from __future__ import annotations
 
 import math
+import os
+import sys
 import time
 from dataclasses import dataclass, field
 
@@ -37,6 +39,10 @@ from scipy.spatial import cKDTree
 
 from spd_decap_pi._core.solver.mfdm import copper_surface_impedance, MU_0_H_PER_M
 from spd_decap_pi._core.via_model import estimate_via_segment_rl
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "common"))
+import scanline  # noqa: E402  EXP-40 (opt-in, SPD_PI_FAST=1)
+_SCAN_ON = scanline.ON
 
 EPS0 = 8.8541878128e-12
 MU0 = MU_0_H_PER_M
@@ -146,16 +152,61 @@ def rasterize(geom, h, window=None):
         j0 = max(0, int((by0 - y0) / h - 0.5)); j1 = min(ny, int((by1 - y0) / h + 1.5))
         if i1 <= i0 or j1 <= j0:
             continue
-        X, Y = np.meshgrid(xc[i0:i1], yc[j0:j1])
-        if kind.endswith("polygon"):
-            inside = MplPath(pts).contains_points(np.column_stack([X.ravel(), Y.ravel()])).reshape(X.shape)
-        else:
-            inside = (X - item[0]) ** 2 + (Y - item[1]) ** 2 <= item[2] ** 2
+        inside = None
+        if _SCAN_ON and kind.endswith("polygon") and len(pts) >= scanline.V0:   # EXP-40
+            inside = scanline.inside(pts, xc[i0:i1], yc[j0:j1])
+        if inside is None:
+            X, Y = np.meshgrid(xc[i0:i1], yc[j0:j1])
+            if kind.endswith("polygon"):
+                inside = MplPath(pts).contains_points(np.column_stack([X.ravel(), Y.ravel()])).reshape(X.shape)
+            else:
+                inside = (X - item[0]) ** 2 + (Y - item[1]) ** 2 <= item[2] ** 2
         if kind.startswith("positive"):
             mask[j0:j1, i0:i1] |= inside
         else:
             mask[j0:j1, i0:i1] &= ~inside
     return dict(x0=x0, y0=y0, nx=nx, ny=ny, h=h, mask=mask)
+
+
+def fast_layer_mask(owner, key, geom, blk):
+    """EXP-39 (opt-in, SPD_PI_FAST=1): one block's mask cut out of a whole-layer raster.
+
+    Returns None when the caller must rasterise the block itself -- that is the default path, and
+    it is what happens for every block unless the slice is provably the same array.
+
+    The cached raster is ``rasterize(geom, h)`` verbatim, so its cell centres are
+    ``floor(bbox/h)*h + (k+0.5)h``.  A block whose origin sits on that same lattice samples the
+    same centres, and every cell outside the layer bbox is outside every primitive, i.e. False --
+    so a block that sticks out of the raster is zero-filled there, exactly as
+    ``rasterize(window=block)`` would leave it.  Off-lattice blocks fall back.
+
+    The raster is only built when the layer bbox already fits inside the requesting block, in
+    which case it evaluates a subset of that block's own points and so is free.  Building it for a
+    net wider than the window would not be: ``contains_points`` is O(points x vertices) and these
+    planes carry 45k-vertex outlines (EXP-39 §1), so one oversized raster costs more than all the
+    repeat calls it could ever save.
+    """
+    h = blk["h"]
+    store = owner.__dict__.setdefault("_layer_rasters", {})
+    r = store.get(key)
+    if r is None:
+        bx = geom_bbox(geom)
+        x0 = math.floor(bx[0] / h) * h; y0 = math.floor(bx[1] / h) * h
+        nx = int(math.ceil((bx[2] - x0) / h)); ny = int(math.ceil((bx[3] - y0) / h))
+        if not (blk["x0"] <= x0 and blk["y0"] <= y0 and x0 + nx * h <= blk["x0"] + blk["nx"] * h
+                and y0 + ny * h <= blk["y0"] + blk["ny"] * h):
+            return None
+        r = store[key] = rasterize(geom, h)
+    di = (blk["x0"] - r["x0"]) / h; dj = (blk["y0"] - r["y0"]) / h
+    if abs(di - round(di)) > 1e-9 or abs(dj - round(dj)) > 1e-9:
+        return None
+    di = int(round(di)); dj = int(round(dj))
+    m = np.zeros((blk["ny"], blk["nx"]), bool)
+    i0 = max(di, 0); j0 = max(dj, 0)
+    i1 = min(di + blk["nx"], r["nx"]); j1 = min(dj + blk["ny"], r["ny"])
+    if i1 > i0 and j1 > j0:
+        m[j0 - dj:j1 - dj, i0 - di:i1 - di] = r["mask"][j0:j1, i0:i1]
+    return m
 
 
 def _cell_of(blk, x, y):

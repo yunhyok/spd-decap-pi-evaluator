@@ -48,7 +48,7 @@ python tools\research-claude\common\run_chain.py --list   # .sh 체인의 크로
 - 이 노트북에는 Intel Iris Xe(iGPU)와 NVIDIA RTX A2000 8GB가 있다. 계산에는 **A2000만** 쓴다. Xe는 화면 표시용이며 어떤 수치 계산에도 쓰지 않는다.
 - 연구 코드의 주파수별 희소 인수분해는 `SPD_PI_SOLVER=cudss`로 A2000(cuDSS via nvmath-python)에서 돈다. **사용 가능하면 적극 사용한다**: 92포트 sweep, 변형 실험, 대형 포트(미지수 ≥ 10만)는 항상 이 플래그로 실행한다(`runall15.py`는 cudss일 때 `--jobs`를 4로 클램프). CPU splu는 (1) 재현 게이트 `smoke_port18.py`·`--smoke` 비교, (2) GPU 경로의 정확도 검증 기준, (3) GPU 불가 시 폴백에만 쓴다.
 - 기본 경로(splu)는 바꾸지 않는다. GPU 경로의 정확도 기준은 같은 입력의 CPU 결과 대비 max |ΔZ|/|Z| ≤ 1e-8이다(cuDSS 반복 정제 1단계 기본, 실측 N 5.9e5 포트 1.8e-9; 정제 없이는 3.3e-8로 초과).
-- assemble 가속 `SPD_PI_FAST=1`(EXP-37, Y 비트 동일)도 함께 켠다. 표준 실행: `SPD_PI_SOLVER=cudss SPD_PI_FAST=1`(포트 전체 벽시계 약 3.3배 단축).
+- assemble 가속 `SPD_PI_FAST=1`(EXP-37, Y 비트 동일; EXP-38부터 균질화 창 중복 제거 포함)도 함께 켠다. `SPD_PI_SOLVER=cudss`는 EXP-38부터 균질화 CG(`homog.batched_gx`, CuPy)도 A2000에서 돌린다. 표준 실행: `SPD_PI_SOLVER=cudss SPD_PI_FAST=1`(EXP-40까지 반영 시 포트 벽시계 P18 1095 → 33 s, Port49 4459 → 155 s; 92포트 sweep 수 분). CuPy(`cupy-cuda12x[ctk]`)가 없으면 균질화는 numpy로 폴백한다.
 - 알려진 제약: cuDSS 0.8.0.10에서 `DirectSolver.free()`와 `SYMMETRIC` 타입은 크래시(0xC0000005)한다 → `common/cudss_solver.py`는 GENERAL 타입, 해제 생략. `cuda-bindings`는 `12.*` 고정(드라이버 528.79 = CUDA 12.0). `CUDA_VISIBLE_DEVICES`를 비우지 않는다.
 - 새 계산 코드를 쓸 때도 같은 원칙이다: 병목이 선형대수라면 먼저 A2000(cuDSS/cuBLAS) 경로를 옵트인 플래그로 붙이고, CPU 경로를 기준으로 정확도를 검증한 뒤 GPU를 기본 실행 수단으로 쓴다.
 - 자세한 사용법·수치는 `docs/research-claude/2026-09-15/NEXT_SESSION_HANDOFF.md` §11.

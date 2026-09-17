@@ -1,0 +1,14 @@
+{
+ "polygons": 240,
+ "families": {
+  "convex": 40,
+  "concave": 40,
+  "selfint": 40,
+  "staircase": 40,
+  "on_lattice": 40,
+  "degenerate": 40
+ },
+ "cells": 279215,
+ "differing_cells": 0,
+ "worst": []
+}

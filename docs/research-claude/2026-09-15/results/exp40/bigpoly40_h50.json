@@ -1,0 +1,15 @@
+{
+ "layer": "Signal$L11(MAIN_POWER2)",
+ "net": "ADC_VDD_055_VTRIP/1",
+ "vertices": 102456,
+ "h": 50.0,
+ "sub": false,
+ "nx": 1403,
+ "ny": 994,
+ "cells": 1394582,
+ "inside_cells": 1168872,
+ "differing_cells": 0,
+ "scanline_seconds": 0.3018062114715576,
+ "matplotlib_seconds": 1910.3072476387024,
+ "speedup": 6329.582278391016
+}

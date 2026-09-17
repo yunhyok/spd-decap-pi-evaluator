@@ -62,15 +62,37 @@ class ModelB(R4.Model4):
         return one
 
 
+def _atomic_pickle_dump(obj, fn):
+    # ponytail: same-volume os.replace is atomic on Windows, so concurrent readers
+    # never observe a partially-written file. os.replace itself can raise
+    # PermissionError if another process has fn open for read right now
+    # (no FILE_SHARE_DELETE) -> retry briefly instead of crashing the writer.
+    tmp = fn + f".tmp{os.getpid()}"
+    with open(tmp, "wb") as f:
+        pickle.dump(obj, f)
+    for attempt in range(100):
+        try:
+            os.replace(tmp, fn)
+            return
+        except PermissionError:
+            if attempt == 99:
+                raise
+            time.sleep(0.05)
+
+
 def prepare(tag, port):
     ex_fn = os.path.join(OUT, f"extract_{tag}_{port}.pkl")
     if os.path.exists(ex_fn):
         ex = pickle.load(open(ex_fn, "rb"))
     else:
         ex = EX.extract(SPD[tag], port)
-        pickle.dump(ex, open(ex_fn, "wb"))
+        _atomic_pickle_dump(ex, ex_fn)
     sh_fn = os.path.join(OUT, f"shapes_{tag}.pkl") if tag != "260729" else str(work_file("exp1", "neighbour_shapes.pkl"))
-    shapes = pickle.load(open(sh_fn, "rb")) if os.path.exists(sh_fn) else {}
+    try:
+        shapes = pickle.load(open(sh_fn, "rb")) if os.path.exists(sh_fn) else {}
+    except (EOFError, pickle.UnpicklingError):
+        print(f"WARNING: {sh_fn} unreadable (concurrent write?), falling back to empty shapes cache")
+        shapes = {}
     ts = TwoSided(ex, {}, 3)
     need = set()
     for g in ex["rail_geoms"]:
@@ -79,7 +101,7 @@ def prepare(tag, port):
     miss = [L for L in sorted(need) if L not in shapes]
     if miss:
         shapes.update(load_layer_shapes(SPD[tag], miss))
-        pickle.dump(shapes, open(sh_fn, "wb"))
+        _atomic_pickle_dump(shapes, sh_fn)
     rn = ex["rail_nodes"]
     P = np.array([(rn[x][0], rn[x][1]) for x in ex["port_pos_nodes"] if x in rn])
     fine_box = (P[:, 0].min() - 1000.0, P[:, 1].min() - 1000.0, P[:, 0].max() + 1000.0, P[:, 1].max() + 1000.0)

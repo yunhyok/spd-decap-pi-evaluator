@@ -30,4 +30,7 @@
 - `results/exp30,31/` — 2026-09-17: PCB s5m6585 160포트 err 중앙값 0.58 %·G3 80 % → R 결손은 패키지 특유; 요소 회귀로 급전 경로(via·trace) ×2–2.5, 평면 ×1.
 - `results/exp32,33/` — 2026-09-17: via 길이 표면 간(q) 92포트 err 31.7 → 24.4 %(문턱 미달, 기록만); f_res 편향은 C·L이 아니라 지표 조건 불량.
 - `results/exp34/` — EXP-34(2026-09-17): f0 지표는 PCB에서 이점 없음 → G4 유지(D8). D7: 기준선 exp28/p 채택.
-- `results/exp35,36/`(계획만), `reviews/powersi_options_2026-09-17.md`, `reviews/mlo_design_rules_2024_note.md` — 2026-09-17 마감. 실행 중인 pmk/pv 결과는 다음 세션이 판정.
+- `results/exp35,36/` — EXP-35(pmk: via·벽 표피 R, 기록만)·EXP-36(pv: Special Void 채움, 결손 확대 → 기록만). `reviews/powersi_options_2026-09-17.md`(Mesh 설정 포함), `reviews/mlo_design_rules_2024_note.md`.
+- `results/exp37..40/` — 효율(물리 불변): cuDSS(A2000) + assemble 캐시(37), 균질화 중복 제거·CuPy(38), 레이어 래스터 캐시(39, 가설 기각), 스캔라인 점-포함 판정(40). 포트 벽시계 33배 단축. 표준 플래그 `SPD_PI_SOLVER=cudss SPD_PI_FAST=1`.
+- `results/exp41/` — held-out 260804 전 92포트(p): G3 14/92, R 비 1.47, 260729와 포트별 상관 0.95.
+- `PROGRESS_SUMMARY_2026-09-18.md`: 인계 시점(Astra) → EXP-8 → 현재(exp28/p + GPU) 정량 비교와 목표 도달 정도(그래프 `figures/progress_*.png`).

@@ -1,0 +1,14 @@
+{
+ "requests": 427,
+ "served": 16,
+ "reused": 0,
+ "layer_rasters": 16,
+ "fallback": 411,
+ "differing_blocks": 0,
+ "differing_cells": 0,
+ "cells_checked": 561905,
+ "wall_seconds": 458.7383711338043,
+ "tag": "260804",
+ "port": "Port18_SITE0",
+ "worst": []
+}
