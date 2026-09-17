@@ -1,0 +1,2847 @@
+{
+  "exp": "exp10b_lowfreq_diag",
+  "params": {
+    "fit_band_hz": [
+      0.1,
+      2.0
+    ],
+    "B_threshold_mS": 0.01
+  },
+  "designs": {
+    "260729": {
+      "n_ports": 92,
+      "B_mS_stats": {
+        "min": -0.4742237465102057,
+        "median": 0.09193123141425558,
+        "max": 13.43574955064041
+      },
+      "n_B_over_0p01mS": 80,
+      "frac_B_over_0p01mS": 0.8695652173913043,
+      "G_mS_stats": {
+        "min": -0.2899458961166975,
+        "median": 0.09930021439170422,
+        "max": 7.883413016347451
+      },
+      "n_G_negative": 8,
+      "n_reZ_negative": 10,
+      "max_reZ_negative_f_hz": 173.780082874938,
+      "median_max_relative_residual": 6.6885275873126575e-06,
+      "median_z0_relative_diff": 0.5751065245342095,
+      "dc_bbs_setting_line": ".DC_BBS_Setting DCFitted = 1 BBSFitted = 1 PDCEqualPotential = 0",
+      "spd_path": "D:\\Downloads\\examples\\S4LB002-2Para_260729_1_injected.spd",
+      "npz_path": "D:\\Downloads\\examples\\analysis\\S4LB002_260729_Zdiag.npz",
+      "npz_sha256": "ee4e78530b3d8ef744ccd14b56a2f0a5f18bd67891ee96058efbf823d5c18870",
+      "ports": [
+        {
+          "name": "Port1_SITE0::ADC_VDD_050_VDDQ_DDRH/0",
+          "G_mS": 0.19819510264873116,
+          "B_mS": 0.18052155597569708,
+          "C_uF": 23.895953634576173,
+          "max_resid": 3.4873642370966e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port2_SITE0::ADC_VDD_050_VDDQ_DDRL/0",
+          "G_mS": 0.17785872772285094,
+          "B_mS": 0.09568657028915847,
+          "C_uF": 23.95281707028509,
+          "max_resid": 5.812646591048813e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port3_SITE0::ADC_VDD_055_VTRIP/0",
+          "G_mS": 7.883413016347451,
+          "B_mS": 9.70054092238679,
+          "C_uF": 1943.743404527572,
+          "max_resid": 5.489158436848684e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port4_SITE0::ADC_VDD_070_VAON/0",
+          "G_mS": 0.23751078008244364,
+          "B_mS": 0.92648687219829,
+          "C_uF": 82.81988920018986,
+          "max_resid": 3.298713626943577e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port5_SITE0_1721::ADC_VDD_070_VDDA_DDRH_REF_CLK/0",
+          "G_mS": 0.04326250555650187,
+          "B_mS": 0.052238296063684804,
+          "C_uF": 8.786662132614007,
+          "max_resid": 1.8426214497094643e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port6_SITE0_19216::ADC_VDD_070_VDDA_DDRL_REF_CLK/0",
+          "G_mS": 0.036674458759718045,
+          "B_mS": 0.02076900593353519,
+          "C_uF": 8.818235181725441,
+          "max_resid": 3.7475597023298254e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port7_SITE0::ADC_VDD_070_VINT/0",
+          "G_mS": 3.273956778519767,
+          "B_mS": 2.5759267540305433,
+          "C_uF": 625.8133417543912,
+          "max_resid": 5.432274013376785e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port8_SITE0::ADC_VDD_070_VPDIG_PHY_PCI/0",
+          "G_mS": 0.08028460050841067,
+          "B_mS": 0.10789047399003174,
+          "C_uF": 9.58167846383762,
+          "max_resid": 6.6378279585686185e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port9_SITE0::ADC_VDD_070_VP_AON/0",
+          "G_mS": 0.24510282528092323,
+          "B_mS": 0.00884072109641186,
+          "C_uF": 8.60841726573937,
+          "max_resid": 9.538245269932407e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port10_SITE0::ADC_VDD_070_VP_CAM0/0",
+          "G_mS": 0.1437251046080878,
+          "B_mS": 0.09669154336479367,
+          "C_uF": 8.67498466449487,
+          "max_resid": 3.4502442808672763e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port11_SITE0::ADC_VDD_070_VP_CAM12/0",
+          "G_mS": 0.14141316183733946,
+          "B_mS": 0.06479663783633127,
+          "C_uF": 8.689830786866187,
+          "max_resid": 4.6181124791842135e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port12_SITE0::ADC_VDD_070_VP_HSIO/0",
+          "G_mS": 0.17274635036928263,
+          "B_mS": 0.025767327531175003,
+          "C_uF": 8.673171825270696,
+          "max_resid": 3.6980627053390477e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port13_SITE0::ADC_VDD_070_VP_PCI/0",
+          "G_mS": 0.2710536250244503,
+          "B_mS": 0.13935519328354565,
+          "C_uF": 33.92231512619521,
+          "max_resid": 4.576986552706713e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port14_SITE0::ADC_VDD_075_VAON_SRAM/0",
+          "G_mS": 0.20796494894156267,
+          "B_mS": 0.09638552435284813,
+          "C_uF": 23.93180868536022,
+          "max_resid": 5.082639547250871e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port15_SITE0::ADC_VDD_075_VCPU/0",
+          "G_mS": 1.6157721984437754,
+          "B_mS": 1.3110764825807926,
+          "C_uF": 199.31150245468632,
+          "max_resid": 3.851222741870226e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port16_SITE0::ADC_VDD_075_VINT_SRAM/0",
+          "G_mS": 0.7448727058841319,
+          "B_mS": 0.5051126013798574,
+          "C_uF": 78.76345653462947,
+          "max_resid": 4.0138108624464146e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port17_SITE0::ADC_VDD_075_VP_UFS/0",
+          "G_mS": 0.09892271161704447,
+          "B_mS": -0.023857827414739047,
+          "C_uF": 8.767681622174821,
+          "max_resid": 2.336524738671606e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port18_SITE0::ADC_VDD_075_VTRIP_SRAM/0",
+          "G_mS": 2.2461791439079257,
+          "B_mS": 1.2627944978549064,
+          "C_uF": 264.70507774854144,
+          "max_resid": 1.8414680829122355e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port19_SITE0::ADC_VDD_105_VAA_DDRH/0",
+          "G_mS": 0.12033005016316206,
+          "B_mS": 0.11352509534105931,
+          "C_uF": 8.67943101790014,
+          "max_resid": 3.6608773817156352e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port20_SITE0::ADC_VDD_105_VAA_DDRL/0",
+          "G_mS": 0.16071794501265801,
+          "B_mS": 0.11991287215204635,
+          "C_uF": 8.6550725194791,
+          "max_resid": 2.807933166375179e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port21_SITE0::ADC_VDD_105_VDD2H_DDRH/0",
+          "G_mS": 0.13164132575498858,
+          "B_mS": 0.12501330015816695,
+          "C_uF": 8.666196834048339,
+          "max_resid": 2.8292237641235535e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port22_SITE0::ADC_VDD_105_VDD2H_DDRL/0",
+          "G_mS": 0.0737233817333571,
+          "B_mS": -0.039600900560463316,
+          "C_uF": 8.793744067017139,
+          "max_resid": 3.529311082374986e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port23_SITE0::ADC_VDD_120_VDDA_LSIO/0",
+          "G_mS": 0.20676454485377715,
+          "B_mS": -0.0636512914869928,
+          "C_uF": 8.627365713614475,
+          "max_resid": 7.850826014374487e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port24_SITE0::ADC_VDD_120_VDDA_P_CL1_M/0",
+          "G_mS": -0.23557415470005608,
+          "B_mS": -0.31581524754692564,
+          "C_uF": 9.97620787081633,
+          "max_resid": 0.0002774995725083412,
+          "reZ_neg_max_f": 109.647819614319
+        },
+        {
+          "name": "Port25_SITE0::ADC_VDD_120_VDDA_P_CL1_P/0",
+          "G_mS": -0.13047700653834687,
+          "B_mS": 0.10487806325826728,
+          "C_uF": 8.928803650359576,
+          "max_resid": 4.9926504037967115e-05,
+          "reZ_neg_max_f": 57.5439937337157
+        },
+        {
+          "name": "Port26_SITE0::ADC_VDD_120_VDDA_P_CL2_M/0",
+          "G_mS": 0.0037968393966836623,
+          "B_mS": 0.11133933073247351,
+          "C_uF": 8.77022300180476,
+          "max_resid": 1.6373259513277374e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port27_SITE0::ADC_VDD_120_VDDA_P_CL2_P/0",
+          "G_mS": 0.09405587188302297,
+          "B_mS": 0.09076661621861802,
+          "C_uF": 8.714430848218177,
+          "max_resid": 6.739227216056696e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port28_SITE0::ADC_VDD_120_VDDA_P_CL3_M/0",
+          "G_mS": 0.15950318728097776,
+          "B_mS": 0.09309584660989315,
+          "C_uF": 8.664160921048213,
+          "max_resid": 2.790792343276372e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port29_SITE0::ADC_VDD_120_VDDA_P_CL3_P/0",
+          "G_mS": 0.05294711205473504,
+          "B_mS": 0.17797713775211912,
+          "C_uF": 8.660702192457999,
+          "max_resid": 5.574342574750103e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port30_SITE0::ADC_VDD_120_VDDA_P_CL4_M/0",
+          "G_mS": 0.18481474055546424,
+          "B_mS": 0.13775732590090495,
+          "C_uF": 9.515692681953674,
+          "max_resid": 1.8335032458964462e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port31_SITE0::ADC_VDD_120_VDDA_P_CL4_P/0",
+          "G_mS": 0.02935802007776267,
+          "B_mS": 0.10075630170987501,
+          "C_uF": 8.75956373493253,
+          "max_resid": 1.3644868790463147e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port32_SITE0::ADC_VDD_120_VDDA_P_CL5_M/0",
+          "G_mS": 0.052230048803910974,
+          "B_mS": 0.16117060651918994,
+          "C_uF": 8.679403027299792,
+          "max_resid": 6.424478574589117e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port33_SITE0::ADC_VDD_120_VDDA_P_CL5_P/0",
+          "G_mS": 0.4845718166304324,
+          "B_mS": -0.4742237465102057,
+          "C_uF": 7.4151991451248875,
+          "max_resid": 0.00012705188237136715,
+          "reZ_neg_max_f": 158.489319246111
+        },
+        {
+          "name": "Port34_SITE0::ADC_VDD_120_VPH_AON/0",
+          "G_mS": 0.3177166548802962,
+          "B_mS": -0.23511530530370742,
+          "C_uF": 8.358282803834259,
+          "max_resid": 3.3692822946645733e-05,
+          "reZ_neg_max_f": 173.780082874938
+        },
+        {
+          "name": "Port35_SITE0::ADC_VDD_120_VPH_CAM/0",
+          "G_mS": 0.18047264473523325,
+          "B_mS": 0.014214146032654685,
+          "C_uF": 8.666674458691183,
+          "max_resid": 3.39529028029237e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port36_SITE0::ADC_VDD_120_VPH_HSIO/0",
+          "G_mS": 0.03881322635477327,
+          "B_mS": 0.04255608175088999,
+          "C_uF": 8.79758946539286,
+          "max_resid": 2.2801160063992758e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port37_SITE0::ADC_VDD_120_VPH_PCI/0",
+          "G_mS": 0.23695056640956996,
+          "B_mS": 0.14231523886230046,
+          "C_uF": 33.93936415371482,
+          "max_resid": 4.872900959822909e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port38_SITE0::ADC_VDD_120_VPH_UFS/0",
+          "G_mS": 0.02330858478982522,
+          "B_mS": -0.03858281100801112,
+          "C_uF": 8.878162640985119,
+          "max_resid": 0.00010410874236177008,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port39_SITE0::ADC_VDD_120_VP_OD_PCI/0",
+          "G_mS": 0.2223104474294811,
+          "B_mS": 0.12496798911261646,
+          "C_uF": 30.548427459270975,
+          "max_resid": 5.106137504754542e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port40_SITE0::ADC_VDD_180_VIO_AON/0",
+          "G_mS": 0.09271902855961411,
+          "B_mS": 0.12821029824001828,
+          "C_uF": 12.092620541740283,
+          "max_resid": 4.747183208905884e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port41_SITE0::ADC_VDD_180_VIO_LSIO/0",
+          "G_mS": 0.1531553664387043,
+          "B_mS": 0.04394319624113319,
+          "C_uF": 11.227231108557609,
+          "max_resid": 6.194512185931714e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port42_SITE0::ADC_VDD_180_VQPS_OTP_TOP_AON/0",
+          "G_mS": 0.0004960056651257871,
+          "B_mS": -1.0635523169306318e-07,
+          "C_uF": 0.0008063430591167521,
+          "max_resid": 2.0404142419786782e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port43_SITE0::ADC_VDD_180_VQPS_SYS_0_AON/0",
+          "G_mS": 0.00039109887549636875,
+          "B_mS": -1.6698195060602312e-05,
+          "C_uF": 0.0008464133450075721,
+          "max_resid": 1.9137560158037447e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port44_SITE0::ADC_VDD_180_VQPS_SYS_1_AON/0",
+          "G_mS": 0.000506192791102689,
+          "B_mS": 7.683144840751093e-07,
+          "C_uF": 0.0008262365008451136,
+          "max_resid": 1.596001108119726e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port45_SITE0::ADC_VDD_180_VQPS_SYS_2_AON/0",
+          "G_mS": 0.0005013177129777116,
+          "B_mS": 3.812402122650317e-07,
+          "C_uF": 0.0007862414739013547,
+          "max_resid": 1.5962589103350127e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port46_SITE0::ADC_VDD_180_VQPS_SYS_3_AON/0",
+          "G_mS": 0.0005000278024375045,
+          "B_mS": -2.3580951927371877e-08,
+          "C_uF": 0.0007749745134323541,
+          "max_resid": 7.096118369556382e-09,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port47_SITE1::ADC_VDD_050_VDDQ_DDRH/1",
+          "G_mS": 0.1869499542715148,
+          "B_mS": 0.13766000097515482,
+          "C_uF": 23.92195904712471,
+          "max_resid": 4.310558709957824e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port48_SITE1::ADC_VDD_050_VDDQ_DDRL/1",
+          "G_mS": 0.21153198528372236,
+          "B_mS": 0.125665955716621,
+          "C_uF": 23.917740769199586,
+          "max_resid": 4.372672277831075e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port49_SITE1::ADC_VDD_055_VTRIP/1",
+          "G_mS": 6.4274244974926305,
+          "B_mS": 13.43574955064041,
+          "C_uF": 1941.8564605230827,
+          "max_resid": 4.0670792159018945e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port50_SITE1::ADC_VDD_070_VAON/1",
+          "G_mS": 0.6677734726233655,
+          "B_mS": 0.3520246159759185,
+          "C_uF": 83.00959129633273,
+          "max_resid": 6.529085577301724e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port51_SITE1_1721::ADC_VDD_070_VDDA_DDRH_REF_CLK/1",
+          "G_mS": 0.035413230937620235,
+          "B_mS": 0.06012465625679031,
+          "C_uF": 8.792058727287477,
+          "max_resid": 3.5255602175225096e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port52_SITE1_19216::ADC_VDD_070_VDDA_DDRL_REF_CLK/1",
+          "G_mS": 0.006507903832117215,
+          "B_mS": -0.034240619316891686,
+          "C_uF": 8.910414412714953,
+          "max_resid": 0.0003654449434905849,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port53_SITE1::ADC_VDD_070_VINT/1",
+          "G_mS": 4.662942817975339,
+          "B_mS": 3.7315239234047555,
+          "C_uF": 624.459313617747,
+          "max_resid": 3.7391937025533517e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port54_SITE1::ADC_VDD_070_VPDIG_PHY_PCI/1",
+          "G_mS": 0.03824445417565108,
+          "B_mS": 0.13824197620695863,
+          "C_uF": 9.581187422554478,
+          "max_resid": 8.02312945137672e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port55_SITE1::ADC_VDD_070_VP_AON/1",
+          "G_mS": 0.004397387536000841,
+          "B_mS": 0.036448042636243766,
+          "C_uF": 8.844677481534132,
+          "max_resid": 4.3400704091822204e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port56_SITE1::ADC_VDD_070_VP_CAM0/1",
+          "G_mS": 0.0631826300183731,
+          "B_mS": 0.0662159148352659,
+          "C_uF": 8.758082245081837,
+          "max_resid": 1.282772839166242e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port57_SITE1::ADC_VDD_070_VP_CAM12/1",
+          "G_mS": 0.1356397479522015,
+          "B_mS": 0.029563304123888558,
+          "C_uF": 8.706568530267576,
+          "max_resid": 6.9603537016638426e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port58_SITE1::ADC_VDD_070_VP_HSIO/1",
+          "G_mS": 0.07323361970378746,
+          "B_mS": 0.038867024544601926,
+          "C_uF": 8.767053961004791,
+          "max_resid": 1.5144508895742103e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port59_SITE1::ADC_VDD_070_VP_PCI/1",
+          "G_mS": 0.24758832630344338,
+          "B_mS": 0.11943904784862791,
+          "C_uF": 33.94611150812436,
+          "max_resid": 9.262824735363313e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port60_SITE1::ADC_VDD_075_VAON_SRAM/1",
+          "G_mS": 0.059480728676402646,
+          "B_mS": 0.014991942201933884,
+          "C_uF": 24.075323218342625,
+          "max_resid": 2.9176283551730767e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port61_SITE1::ADC_VDD_075_VCPU/1",
+          "G_mS": 1.6481565204108113,
+          "B_mS": 1.1959061101313762,
+          "C_uF": 199.34462301966542,
+          "max_resid": 4.064140147712057e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port62_SITE1::ADC_VDD_075_VINT_SRAM/1",
+          "G_mS": 0.6892366646471426,
+          "B_mS": 0.49039455317184505,
+          "C_uF": 78.80378977549614,
+          "max_resid": 4.366668023145471e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port63_SITE1::ADC_VDD_075_VP_UFS/1",
+          "G_mS": 0.09764178181173823,
+          "B_mS": 0.0853926287507657,
+          "C_uF": 8.713561158498516,
+          "max_resid": 6.847989583373494e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port64_SITE1::ADC_VDD_075_VTRIP_SRAM/1",
+          "G_mS": 1.6568180518250133,
+          "B_mS": 1.308220367270541,
+          "C_uF": 264.9845608298742,
+          "max_resid": 4.6877496193787784e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port65_SITE1::ADC_VDD_105_VAA_DDRH/1",
+          "G_mS": -0.02369322526666829,
+          "B_mS": -0.06541787934907695,
+          "C_uF": 8.942107694589593,
+          "max_resid": 0.0001453886487413766,
+          "reZ_neg_max_f": 57.5439937337157
+        },
+        {
+          "name": "Port66_SITE1::ADC_VDD_105_VAA_DDRL/1",
+          "G_mS": 0.08058771719398548,
+          "B_mS": 0.014629572161235553,
+          "C_uF": 8.76611109245492,
+          "max_resid": 1.6571197331799675e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port67_SITE1::ADC_VDD_105_VDD2H_DDRH/1",
+          "G_mS": 0.08269129497366208,
+          "B_mS": 0.11550333373859294,
+          "C_uF": 8.700975351093222,
+          "max_resid": 3.1544856379891455e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port68_SITE1::ADC_VDD_105_VDD2H_DDRL/1",
+          "G_mS": 0.3365594594673784,
+          "B_mS": 0.08023318333157294,
+          "C_uF": 8.585343084234516,
+          "max_resid": 8.816454790149646e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port69_SITE1::ADC_VDD_120_VDDA_LSIO/1",
+          "G_mS": 0.025058299688932705,
+          "B_mS": -0.006423686604417623,
+          "C_uF": 8.853072953259034,
+          "max_resid": 7.864497168356561e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port70_SITE1::ADC_VDD_120_VDDA_P_CL1_M/1",
+          "G_mS": -0.167801669773085,
+          "B_mS": -0.026585970124166147,
+          "C_uF": 9.21647129511955,
+          "max_resid": 0.00010726246670192856,
+          "reZ_neg_max_f": 83.1763771102671
+        },
+        {
+          "name": "Port71_SITE1::ADC_VDD_120_VDDA_P_CL1_P/1",
+          "G_mS": -0.0232980198135525,
+          "B_mS": 0.23274657032405477,
+          "C_uF": 8.614500099015343,
+          "max_resid": 1.2657760347887124e-05,
+          "reZ_neg_max_f": 12.0226443461741
+        },
+        {
+          "name": "Port72_SITE1::ADC_VDD_120_VDDA_P_CL2_M/1",
+          "G_mS": 0.02443912951705019,
+          "B_mS": 0.15792509589793724,
+          "C_uF": 8.69634594246056,
+          "max_resid": 8.87311448461524e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port73_SITE1::ADC_VDD_120_VDDA_P_CL2_P/1",
+          "G_mS": 0.095738550853733,
+          "B_mS": 0.0174079885530235,
+          "C_uF": 8.754001609551594,
+          "max_resid": 1.3964151382353918e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port74_SITE1::ADC_VDD_120_VDDA_P_CL3_M/1",
+          "G_mS": -0.2899458961166975,
+          "B_mS": -0.11872318728090744,
+          "C_uF": 9.766972767032046,
+          "max_resid": 0.00019372364349103536,
+          "reZ_neg_max_f": 100.0
+        },
+        {
+          "name": "Port75_SITE1::ADC_VDD_120_VDDA_P_CL3_P/1",
+          "G_mS": -0.0371111919859501,
+          "B_mS": 0.377690839007363,
+          "C_uF": 8.371721468340047,
+          "max_resid": 1.9598004354437137e-05,
+          "reZ_neg_max_f": 15.8489319246111
+        },
+        {
+          "name": "Port76_SITE1::ADC_VDD_120_VDDA_P_CL4_M/1",
+          "G_mS": 0.1390561238964329,
+          "B_mS": 0.12416378524927643,
+          "C_uF": 9.539932653883872,
+          "max_resid": 2.93437982346436e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port77_SITE1::ADC_VDD_120_VDDA_P_CL4_P/1",
+          "G_mS": 0.09967771716636398,
+          "B_mS": 0.08616052015082563,
+          "C_uF": 8.710862612399346,
+          "max_resid": 6.541803713068276e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port78_SITE1::ADC_VDD_120_VDDA_P_CL5_M/1",
+          "G_mS": 0.1718701446358597,
+          "B_mS": 0.11937934752838239,
+          "C_uF": 8.651691780223727,
+          "max_resid": 2.209814082630255e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port79_SITE1::ADC_VDD_120_VDDA_P_CL5_P/1",
+          "G_mS": 0.06415545061690527,
+          "B_mS": 0.14399738872633544,
+          "C_uF": 8.688688111205424,
+          "max_resid": 7.756343457427715e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port80_SITE1::ADC_VDD_120_VPH_AON/1",
+          "G_mS": -0.05027647793716088,
+          "B_mS": -0.03864438596762657,
+          "C_uF": 9.011281064160984,
+          "max_resid": 0.00011989514219933075,
+          "reZ_neg_max_f": 63.0957344480193
+        },
+        {
+          "name": "Port81_SITE1::ADC_VDD_120_VPH_CAM/1",
+          "G_mS": 0.14884670689446172,
+          "B_mS": 0.08053024745556088,
+          "C_uF": 8.678374262970625,
+          "max_resid": 3.7571839808661853e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port82_SITE1::ADC_VDD_120_VPH_HSIO/1",
+          "G_mS": 0.14159030944800682,
+          "B_mS": -0.028124930004977497,
+          "C_uF": 8.71062706912704,
+          "max_resid": 1.2431036946304968e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port83_SITE1::ADC_VDD_120_VPH_PCI/1",
+          "G_mS": 0.2456678659958271,
+          "B_mS": 0.15080972407415646,
+          "C_uF": 33.930986886210995,
+          "max_resid": 4.632170461645378e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port84_SITE1::ADC_VDD_120_VPH_UFS/1",
+          "G_mS": 0.0763762348455898,
+          "B_mS": 0.1569502232250994,
+          "C_uF": 8.672390796063787,
+          "max_resid": 4.871660908963374e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port85_SITE1::ADC_VDD_120_VP_OD_PCI/1",
+          "G_mS": 0.23923533158413968,
+          "B_mS": 0.12923189968657595,
+          "C_uF": 30.53793183144106,
+          "max_resid": 4.840545675099281e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port86_SITE1::ADC_VDD_180_VIO_AON/1",
+          "G_mS": 0.11262119948661459,
+          "B_mS": 0.11545823437959006,
+          "C_uF": 12.09007306450396,
+          "max_resid": 4.597978602685577e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port87_SITE1::ADC_VDD_180_VIO_LSIO/1",
+          "G_mS": 0.14268542070215884,
+          "B_mS": 0.034035803534011526,
+          "C_uF": 11.238286820476649,
+          "max_resid": 7.090180162828066e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port88_SITE1::ADC_VDD_180_VQPS_OTP_TOP_AON/1",
+          "G_mS": 0.0005006169203847828,
+          "B_mS": -3.922381523030086e-07,
+          "C_uF": 0.001394388851178279,
+          "max_resid": 4.07483685467321e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port89_SITE1::ADC_VDD_180_VQPS_SYS_0_AON/1",
+          "G_mS": 0.0005025122333680224,
+          "B_mS": -6.455317371604626e-07,
+          "C_uF": 0.0012594632673155989,
+          "max_resid": 4.0598680830342556e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port90_SITE1::ADC_VDD_180_VQPS_SYS_1_AON/1",
+          "G_mS": 0.000500947130195499,
+          "B_mS": -1.1070119018402534e-07,
+          "C_uF": 0.0012708705137293894,
+          "max_resid": 4.172602245738426e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port91_SITE1::ADC_VDD_180_VQPS_SYS_2_AON/1",
+          "G_mS": 0.0005043342005868666,
+          "B_mS": -1.2900311274038847e-07,
+          "C_uF": 0.0013112672300925213,
+          "max_resid": 4.1728320712504884e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port92_SITE1::ADC_VDD_180_VQPS_SYS_3_AON/1",
+          "G_mS": 0.0005257917231373613,
+          "B_mS": -1.3846154310933934e-06,
+          "C_uF": 0.001408851789598566,
+          "max_resid": 1.2236688964707448e-07,
+          "reZ_neg_max_f": null
+        }
+      ]
+    },
+    "260804": {
+      "n_ports": 92,
+      "B_mS_stats": {
+        "min": -0.34620753918842173,
+        "median": 0.11507456160364377,
+        "max": 8.525314805376551
+      },
+      "n_B_over_0p01mS": 82,
+      "frac_B_over_0p01mS": 0.8913043478260869,
+      "G_mS_stats": {
+        "min": 0.00035927549062634103,
+        "median": 0.14261196801828885,
+        "max": 13.066674698131767
+      },
+      "n_G_negative": 0,
+      "n_reZ_negative": 0,
+      "max_reZ_negative_f_hz": null,
+      "median_max_relative_residual": 4.731687556003319e-06,
+      "median_z0_relative_diff": 0.6010270203960821,
+      "dc_bbs_setting_line": ".DC_BBS_Setting DCFitted = 1 BBSFitted = 1 PDCEqualPotential = 0",
+      "spd_path": "D:\\Downloads\\examples\\S4LB002-2Para_260804_1_injected.spd",
+      "npz_path": "D:\\Downloads\\examples\\analysis\\S4LB002_260804_Zdiag.npz",
+      "npz_sha256": "b9fc8f4a45542328e34b329c1e39915e25c50ba59b72b781fd92f5edc52c042a",
+      "ports": [
+        {
+          "name": "Port1_SITE0::ADC_VDD_050_VDDQ_DDRH/0",
+          "G_mS": 0.21831570287763002,
+          "B_mS": 0.10449505083829241,
+          "C_uF": 23.923660701256924,
+          "max_resid": 4.723567079259821e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port2_SITE0::ADC_VDD_050_VDDQ_DDRL/0",
+          "G_mS": 0.1946849091976175,
+          "B_mS": 0.11429243612509093,
+          "C_uF": 23.932252981228757,
+          "max_resid": 4.923653361143169e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port3_SITE0::ADC_VDD_055_VTRIP/0",
+          "G_mS": 12.865735702564914,
+          "B_mS": 7.822642810149171,
+          "C_uF": 1690.1187789694027,
+          "max_resid": 4.768184015123144e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port4_SITE0::ADC_VDD_070_VAON/0",
+          "G_mS": 1.53610973645531,
+          "B_mS": -0.34620753918842173,
+          "C_uF": 82.67353277391028,
+          "max_resid": 8.213818680706124e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port5_SITE0_1721::ADC_VDD_070_VDDA_DDRH_REF_CLK/0",
+          "G_mS": 0.13755328524028004,
+          "B_mS": 0.11585797301365265,
+          "C_uF": 15.304889485821455,
+          "max_resid": 5.002780945055019e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port6_SITE0_19216::ADC_VDD_070_VDDA_DDRL_REF_CLK/0",
+          "G_mS": 0.13538320397705217,
+          "B_mS": 0.11697711922764714,
+          "C_uF": 15.306010081225946,
+          "max_resid": 4.995215678731106e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port7_SITE0::ADC_VDD_070_VINT/0",
+          "G_mS": 4.213634091179111,
+          "B_mS": 2.72329741360953,
+          "C_uF": 619.7616502427887,
+          "max_resid": 4.704829394048386e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port8_SITE0::ADC_VDD_070_VPDIG_PHY_PCI/0",
+          "G_mS": 0.15140257967268395,
+          "B_mS": 0.13120830862601704,
+          "C_uF": 15.289901376729595,
+          "max_resid": 3.952862302268144e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port9_SITE0::ADC_VDD_070_VP_AON/0",
+          "G_mS": 0.12610148688028078,
+          "B_mS": 0.13123666339314127,
+          "C_uF": 15.30013695390857,
+          "max_resid": 4.45611153893118e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port10_SITE0::ADC_VDD_070_VP_CAM0/0",
+          "G_mS": 0.15811853772276882,
+          "B_mS": 0.08055569395546058,
+          "C_uF": 15.320378740523276,
+          "max_resid": 6.132375942604294e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port11_SITE0::ADC_VDD_070_VP_CAM12/0",
+          "G_mS": 0.1518855174006753,
+          "B_mS": 0.09695963589134501,
+          "C_uF": 15.312165735852666,
+          "max_resid": 5.218559955575075e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port12_SITE0::ADC_VDD_070_VP_HSIO/0",
+          "G_mS": 0.15734565755885632,
+          "B_mS": 0.09922627008857332,
+          "C_uF": 15.30766184089166,
+          "max_resid": 4.999106952867326e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port13_SITE0::ADC_VDD_070_VP_PCI/0",
+          "G_mS": 0.25113797574257796,
+          "B_mS": 0.12040533385180802,
+          "C_uF": 33.94495821098236,
+          "max_resid": 5.235922444764408e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port14_SITE0::ADC_VDD_075_VAON_SRAM/0",
+          "G_mS": 0.35950536192870275,
+          "B_mS": 0.09069317164927243,
+          "C_uF": 23.847240708650375,
+          "max_resid": 3.1215322644337912e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port15_SITE0::ADC_VDD_075_VCPU/0",
+          "G_mS": 1.4573768957297633,
+          "B_mS": 1.2549552875527061,
+          "C_uF": 199.3991834056874,
+          "max_resid": 4.064110650552998e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port16_SITE0::ADC_VDD_075_VINT_SRAM/0",
+          "G_mS": 0.7302967590746484,
+          "B_mS": 0.5153330979598709,
+          "C_uF": 78.77460825287481,
+          "max_resid": 4.293952536145054e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port17_SITE0::ADC_VDD_075_VP_UFS/0",
+          "G_mS": 0.1290780968408069,
+          "B_mS": 0.1287716480806361,
+          "C_uF": 15.30096803149615,
+          "max_resid": 4.3675088375025115e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port18_SITE0::ADC_VDD_075_VTRIP_SRAM/0",
+          "G_mS": 1.8741568838833993,
+          "B_mS": 1.305340982041719,
+          "C_uF": 264.8846603152997,
+          "max_resid": 4.534970542861205e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port19_SITE0::ADC_VDD_105_VAA_DDRH/0",
+          "G_mS": 0.14512714103219398,
+          "B_mS": 0.11072025868153719,
+          "C_uF": 15.306898669328758,
+          "max_resid": 4.599431020470433e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port20_SITE0::ADC_VDD_105_VAA_DDRL/0",
+          "G_mS": 0.127818098639753,
+          "B_mS": 0.10740891068697542,
+          "C_uF": 15.31718567215138,
+          "max_resid": 5.117404753244735e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port21_SITE0::ADC_VDD_105_VDD2H_DDRH/0",
+          "G_mS": 0.1671235719612494,
+          "B_mS": 0.09184006212235918,
+          "C_uF": 15.305763811291548,
+          "max_resid": 4.804805445740037e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port22_SITE0::ADC_VDD_105_VDD2H_DDRL/0",
+          "G_mS": 0.13747591502614104,
+          "B_mS": 0.11043516720231177,
+          "C_uF": 15.310028931995811,
+          "max_resid": 4.7244789179371716e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port23_SITE0::ADC_VDD_120_VDDA_LSIO/0",
+          "G_mS": 0.22251298542058548,
+          "B_mS": 0.0474478445287259,
+          "C_uF": 15.247145014291855,
+          "max_resid": 2.6621492033402935e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port24_SITE0::ADC_VDD_120_VDDA_P_CL1_M/0",
+          "G_mS": 0.1376356778755984,
+          "B_mS": 0.11593411740539525,
+          "C_uF": 15.305093865900814,
+          "max_resid": 4.912772716704488e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port25_SITE0::ADC_VDD_120_VDDA_P_CL1_P/0",
+          "G_mS": 0.14022359598935766,
+          "B_mS": 0.1167732910394336,
+          "C_uF": 15.303310604731935,
+          "max_resid": 4.805915173169436e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port26_SITE0::ADC_VDD_120_VDDA_P_CL2_M/0",
+          "G_mS": 0.13045264090708564,
+          "B_mS": 0.11713202076063849,
+          "C_uF": 15.31250306875993,
+          "max_resid": 4.68546094827583e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port27_SITE0::ADC_VDD_120_VDDA_P_CL2_P/0",
+          "G_mS": 0.146820788271012,
+          "B_mS": 0.10948251052689278,
+          "C_uF": 15.308507948362896,
+          "max_resid": 4.6841368321857225e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port28_SITE0::ADC_VDD_120_VDDA_P_CL3_M/0",
+          "G_mS": 0.1424122110943464,
+          "B_mS": 0.12894076823049289,
+          "C_uF": 15.300544553053093,
+          "max_resid": 4.08289738783357e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port29_SITE0::ADC_VDD_120_VDDA_P_CL3_P/0",
+          "G_mS": 0.14044444191674255,
+          "B_mS": 0.12227721073364411,
+          "C_uF": 15.30669849043154,
+          "max_resid": 4.32834525799968e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port30_SITE0::ADC_VDD_120_VDDA_P_CL4_M/0",
+          "G_mS": 0.12934935139646309,
+          "B_mS": 0.1397308177978808,
+          "C_uF": 15.306657239598989,
+          "max_resid": 3.634438178436193e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port31_SITE0::ADC_VDD_120_VDDA_P_CL4_P/0",
+          "G_mS": 0.11229013913343068,
+          "B_mS": 0.13897388900492844,
+          "C_uF": 15.30534683091225,
+          "max_resid": 4.111439378639658e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port32_SITE0::ADC_VDD_120_VDDA_P_CL5_M/0",
+          "G_mS": 0.138455503535081,
+          "B_mS": 0.13293536685825483,
+          "C_uF": 15.299446162767675,
+          "max_resid": 4.091690855062453e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port33_SITE0::ADC_VDD_120_VDDA_P_CL5_P/0",
+          "G_mS": 0.1428117249422313,
+          "B_mS": 0.15061049848356722,
+          "C_uF": 15.278736428367141,
+          "max_resid": 3.776601581372833e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port34_SITE0::ADC_VDD_120_VPH_AON/0",
+          "G_mS": 0.1313601762605175,
+          "B_mS": 0.1334112700041066,
+          "C_uF": 15.296556523535678,
+          "max_resid": 4.148193326025073e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port35_SITE0::ADC_VDD_120_VPH_CAM/0",
+          "G_mS": 0.15533064507367117,
+          "B_mS": 0.09137102287014143,
+          "C_uF": 15.313778532163562,
+          "max_resid": 5.333507395894838e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port36_SITE0::ADC_VDD_120_VPH_HSIO/0",
+          "G_mS": 0.13875433699125186,
+          "B_mS": 0.11874139546109229,
+          "C_uF": 15.30304397130745,
+          "max_resid": 4.738896194069466e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port37_SITE0::ADC_VDD_120_VPH_PCI/0",
+          "G_mS": 0.24194093392625904,
+          "B_mS": 0.04139731826453479,
+          "C_uF": 33.98153630262881,
+          "max_resid": 6.849902588184567e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port38_SITE0::ADC_VDD_120_VPH_UFS/0",
+          "G_mS": 0.13904519404235455,
+          "B_mS": 0.14701105609779028,
+          "C_uF": 15.285069506603845,
+          "max_resid": 3.6605092425666348e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port39_SITE0::ADC_VDD_120_VP_OD_PCI/0",
+          "G_mS": 0.24006361179394042,
+          "B_mS": 0.08932592769513517,
+          "C_uF": 30.557049758401757,
+          "max_resid": 5.872626230745063e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port40_SITE0::ADC_VDD_180_VIO_AON/0",
+          "G_mS": 0.1652261076455114,
+          "B_mS": 0.11185248183293026,
+          "C_uF": 15.295022270028928,
+          "max_resid": 4.108126208802864e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port41_SITE0::ADC_VDD_180_VIO_LSIO/0",
+          "G_mS": 0.137898725244425,
+          "B_mS": 0.10581064406674155,
+          "C_uF": 15.317088113130598,
+          "max_resid": 6.604675978576706e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port42_SITE0::ADC_VDD_180_VQPS_OTP_TOP_AON/0",
+          "G_mS": 0.0004865316897323925,
+          "B_mS": -1.8958759657673648e-07,
+          "C_uF": 0.0021981529817574107,
+          "max_resid": 0.00011833448546268578,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port43_SITE0::ADC_VDD_180_VQPS_SYS_0_AON/0",
+          "G_mS": 0.0005330866120260204,
+          "B_mS": -3.732196608349246e-07,
+          "C_uF": 0.0023300031322227442,
+          "max_resid": 0.000118391350772432,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port44_SITE0::ADC_VDD_180_VQPS_SYS_1_AON/0",
+          "G_mS": 0.00035927549062634103,
+          "B_mS": -6.795881251409766e-05,
+          "C_uF": 0.0010044024443823859,
+          "max_resid": 4.344312726167953e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port45_SITE0::ADC_VDD_180_VQPS_SYS_2_AON/0",
+          "G_mS": 0.0004999500784412515,
+          "B_mS": 2.5660003485253844e-08,
+          "C_uF": 0.001077343069659639,
+          "max_resid": 4.2345601457377814e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port46_SITE0::ADC_VDD_180_VQPS_SYS_3_AON/0",
+          "G_mS": 0.0005716336232496233,
+          "B_mS": 1.26398968748067e-05,
+          "C_uF": 0.0021030370080790148,
+          "max_resid": 3.860398217270182e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port47_SITE1::ADC_VDD_050_VDDQ_DDRH/1",
+          "G_mS": 0.20187968337391546,
+          "B_mS": 0.12143886543413822,
+          "C_uF": 23.924753076997,
+          "max_resid": 4.595998776501641e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port48_SITE1::ADC_VDD_050_VDDQ_DDRL/1",
+          "G_mS": 0.20485306994319116,
+          "B_mS": 0.10938789739832969,
+          "C_uF": 23.930395354442773,
+          "max_resid": 4.8980555827739626e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port49_SITE1::ADC_VDD_055_VTRIP/1",
+          "G_mS": 13.066674698131767,
+          "B_mS": 8.525314805376551,
+          "C_uF": 1704.303294386083,
+          "max_resid": 4.444007220433721e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port50_SITE1::ADC_VDD_070_VAON/1",
+          "G_mS": 0.7317862039287973,
+          "B_mS": 0.5431187756513144,
+          "C_uF": 82.84886325125898,
+          "max_resid": 4.189394997843601e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port51_SITE1_1721::ADC_VDD_070_VDDA_DDRH_REF_CLK/1",
+          "G_mS": 0.13815518563628004,
+          "B_mS": 0.14104972241914057,
+          "C_uF": 15.286877749038094,
+          "max_resid": 5.504086051430904e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port52_SITE1_19216::ADC_VDD_070_VDDA_DDRL_REF_CLK/1",
+          "G_mS": 0.12863962888680006,
+          "B_mS": 0.12277467911422053,
+          "C_uF": 15.304844890923437,
+          "max_resid": 4.884479019446019e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port53_SITE1::ADC_VDD_070_VINT/1",
+          "G_mS": 5.679410727066751,
+          "B_mS": 4.244580045095822,
+          "C_uF": 618.5732458680543,
+          "max_resid": 3.2137864352635387e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port54_SITE1::ADC_VDD_070_VPDIG_PHY_PCI/1",
+          "G_mS": 0.14013393815967023,
+          "B_mS": 0.13020415716243286,
+          "C_uF": 15.294490341820286,
+          "max_resid": 4.122479717655671e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port55_SITE1::ADC_VDD_070_VP_AON/1",
+          "G_mS": 0.1420769221827366,
+          "B_mS": 0.09585187426746242,
+          "C_uF": 15.316643808914655,
+          "max_resid": 5.670438633952904e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port56_SITE1::ADC_VDD_070_VP_CAM0/1",
+          "G_mS": 0.14367468451689777,
+          "B_mS": 0.10072563408490508,
+          "C_uF": 15.313962738281237,
+          "max_resid": 5.397454731126308e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port57_SITE1::ADC_VDD_070_VP_CAM12/1",
+          "G_mS": 0.14679129995029735,
+          "B_mS": 0.10061143170684424,
+          "C_uF": 15.312245465336336,
+          "max_resid": 5.161535277804259e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port58_SITE1::ADC_VDD_070_VP_HSIO/1",
+          "G_mS": 0.16062401168436746,
+          "B_mS": 0.10145297980132013,
+          "C_uF": 15.303360001903796,
+          "max_resid": 4.649887852526955e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port59_SITE1::ADC_VDD_070_VP_PCI/1",
+          "G_mS": 0.032735110336602154,
+          "B_mS": -0.18096714920095477,
+          "C_uF": 34.26537452040408,
+          "max_resid": 9.225174059445923e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port60_SITE1::ADC_VDD_075_VAON_SRAM/1",
+          "G_mS": 0.19370651655715998,
+          "B_mS": 0.11561216816795568,
+          "C_uF": 23.93313267272198,
+          "max_resid": 4.9295756269917465e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port61_SITE1::ADC_VDD_075_VCPU/1",
+          "G_mS": 1.5323365019361663,
+          "B_mS": 1.2578249076366197,
+          "C_uF": 199.3709879148808,
+          "max_resid": 4.1727162445537765e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port62_SITE1::ADC_VDD_075_VINT_SRAM/1",
+          "G_mS": 0.40054284074325724,
+          "B_mS": 0.6983655244661323,
+          "C_uF": 78.77443865055966,
+          "max_resid": 3.684454988132582e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port63_SITE1::ADC_VDD_075_VP_UFS/1",
+          "G_mS": 0.13570797150616268,
+          "B_mS": 0.11512742092394823,
+          "C_uF": 15.307394907573995,
+          "max_resid": 4.948901087732472e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port64_SITE1::ADC_VDD_075_VTRIP_SRAM/1",
+          "G_mS": 1.640268328501863,
+          "B_mS": 1.4726752852899114,
+          "C_uF": 264.8831478889293,
+          "max_resid": 4.284447867950762e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port65_SITE1::ADC_VDD_105_VAA_DDRH/1",
+          "G_mS": 0.12996926888492133,
+          "B_mS": 0.12054022145487757,
+          "C_uF": 15.307423161032546,
+          "max_resid": 4.320700627227788e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port66_SITE1::ADC_VDD_105_VAA_DDRL/1",
+          "G_mS": 0.13801231963544802,
+          "B_mS": 0.112850523231073,
+          "C_uF": 15.307692950005547,
+          "max_resid": 4.556036972411234e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port67_SITE1::ADC_VDD_105_VDD2H_DDRH/1",
+          "G_mS": 0.12070045146399316,
+          "B_mS": 0.011456729714086384,
+          "C_uF": 15.379838975571147,
+          "max_resid": 1.1822269417398902e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port68_SITE1::ADC_VDD_105_VDD2H_DDRL/1",
+          "G_mS": 0.13749027329527425,
+          "B_mS": 0.10403553749488371,
+          "C_uF": 15.314974818613406,
+          "max_resid": 5.014680027236622e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port69_SITE1::ADC_VDD_120_VDDA_LSIO/1",
+          "G_mS": 0.1334725551058271,
+          "B_mS": 0.11502170228333931,
+          "C_uF": 15.30770576247486,
+          "max_resid": 5.042702206596897e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port70_SITE1::ADC_VDD_120_VDDA_P_CL1_M/1",
+          "G_mS": 0.1443227664252996,
+          "B_mS": 0.12490805546395685,
+          "C_uF": 15.295504347083478,
+          "max_resid": 4.4271353153945435e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port71_SITE1::ADC_VDD_120_VDDA_P_CL1_P/1",
+          "G_mS": 0.14339478669123099,
+          "B_mS": 0.1113419198214785,
+          "C_uF": 15.304384318061626,
+          "max_resid": 4.9555768865810085e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port72_SITE1::ADC_VDD_120_VDDA_P_CL2_M/1",
+          "G_mS": 0.14365747653755717,
+          "B_mS": 0.12098454763861852,
+          "C_uF": 15.304898535995935,
+          "max_resid": 4.377942848598786e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port73_SITE1::ADC_VDD_120_VDDA_P_CL2_P/1",
+          "G_mS": 0.14985843625391132,
+          "B_mS": 0.12069184204676987,
+          "C_uF": 15.299287166267298,
+          "max_resid": 4.19740753439562e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port74_SITE1::ADC_VDD_120_VDDA_P_CL3_M/1",
+          "G_mS": 0.13760650966350627,
+          "B_mS": 0.12030807727694369,
+          "C_uF": 15.307291774000774,
+          "max_resid": 4.45856323712433e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port75_SITE1::ADC_VDD_120_VDDA_P_CL3_P/1",
+          "G_mS": 0.09676125795095397,
+          "B_mS": 0.20106655165423787,
+          "C_uF": 15.270873378548446,
+          "max_resid": 2.7055320863738057e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port76_SITE1::ADC_VDD_120_VDDA_P_CL4_M/1",
+          "G_mS": 0.14590588643488267,
+          "B_mS": 0.12787641403493621,
+          "C_uF": 15.304307592551373,
+          "max_resid": 4.000051262121385e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port77_SITE1::ADC_VDD_120_VDDA_P_CL4_P/1",
+          "G_mS": 0.1578701997121321,
+          "B_mS": 0.13936170149229324,
+          "C_uF": 15.28960317337009,
+          "max_resid": 3.806935077616858e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port78_SITE1::ADC_VDD_120_VDDA_P_CL5_M/1",
+          "G_mS": 0.12808669701971326,
+          "B_mS": 0.10785042458661846,
+          "C_uF": 15.322128110217388,
+          "max_resid": 6.1690520527148866e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port79_SITE1::ADC_VDD_120_VDDA_P_CL5_P/1",
+          "G_mS": 0.07888213364281274,
+          "B_mS": 0.08340483890433217,
+          "C_uF": 15.373777568900204,
+          "max_resid": 1.0395398145361679e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port80_SITE1::ADC_VDD_120_VPH_AON/1",
+          "G_mS": 0.1486993396746991,
+          "B_mS": 0.1017726168060459,
+          "C_uF": 15.309593277244371,
+          "max_resid": 5.136409961589119e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port81_SITE1::ADC_VDD_120_VPH_CAM/1",
+          "G_mS": 0.15687490155797934,
+          "B_mS": 0.10504358946153627,
+          "C_uF": 15.303401741316689,
+          "max_resid": 4.551828285355779e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port82_SITE1::ADC_VDD_120_VPH_HSIO/1",
+          "G_mS": 0.12512191024385347,
+          "B_mS": 0.13003823029641312,
+          "C_uF": 15.300678026927821,
+          "max_resid": 4.477591027401611e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port83_SITE1::ADC_VDD_120_VPH_PCI/1",
+          "G_mS": 0.24478266713978225,
+          "B_mS": 0.11815927765524102,
+          "C_uF": 33.95023792835078,
+          "max_resid": 5.327055844068231e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port84_SITE1::ADC_VDD_120_VPH_UFS/1",
+          "G_mS": 0.144512903503545,
+          "B_mS": 0.10734376708617421,
+          "C_uF": 15.307543332480106,
+          "max_resid": 5.015241273251338e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port85_SITE1::ADC_VDD_120_VP_OD_PCI/1",
+          "G_mS": 0.22236073217308475,
+          "B_mS": 0.15030523168991058,
+          "C_uF": 30.535800442913025,
+          "max_resid": 4.10624647318101e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port86_SITE1::ADC_VDD_180_VIO_AON/1",
+          "G_mS": 0.1275456230314248,
+          "B_mS": 0.037055970660699884,
+          "C_uF": 15.370626700768636,
+          "max_resid": 1.0082589937401107e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port87_SITE1::ADC_VDD_180_VIO_LSIO/1",
+          "G_mS": 0.13731945155119402,
+          "B_mS": 0.1108547947319065,
+          "C_uF": 15.314064122173251,
+          "max_resid": 4.882592828435798e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port88_SITE1::ADC_VDD_180_VQPS_OTP_TOP_AON/1",
+          "G_mS": 0.00038838363532252035,
+          "B_mS": -4.3402352172718486e-07,
+          "C_uF": 0.0038116240938799385,
+          "max_resid": 0.0003799816340211051,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port89_SITE1::ADC_VDD_180_VQPS_SYS_0_AON/1",
+          "G_mS": 0.0005370092577821311,
+          "B_mS": 3.414389296735838e-05,
+          "C_uF": 0.0034434582033286702,
+          "max_resid": 0.00038163406373546726,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port90_SITE1::ADC_VDD_180_VQPS_SYS_1_AON/1",
+          "G_mS": 0.0005059108979184253,
+          "B_mS": -9.617287225099759e-08,
+          "C_uF": 0.0017439445967440815,
+          "max_resid": 7.704989468643639e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port91_SITE1::ADC_VDD_180_VQPS_SYS_2_AON/1",
+          "G_mS": 0.0005125570602062667,
+          "B_mS": -9.84802055779059e-08,
+          "C_uF": 0.0017973248999229887,
+          "max_resid": 7.706966142452847e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port92_SITE1::ADC_VDD_180_VQPS_SYS_3_AON/1",
+          "G_mS": 0.00046927030901053795,
+          "B_mS": 1.2005787918123793e-07,
+          "C_uF": 0.0038304939604472993,
+          "max_resid": 9.403105196050955e-07,
+          "reZ_neg_max_f": null
+        }
+      ]
+    },
+    "s5m6585": {
+      "n_ports": 160,
+      "B_mS_stats": {
+        "min": -0.0010754050273616414,
+        "median": 0.0015668090277043975,
+        "max": 0.006638554767730762
+      },
+      "n_B_over_0p01mS": 0,
+      "frac_B_over_0p01mS": 0.0,
+      "G_mS_stats": {
+        "min": -0.0017451917780318441,
+        "median": 0.0032433697384073625,
+        "max": 0.008348902431686232
+      },
+      "n_G_negative": 17,
+      "n_reZ_negative": 20,
+      "max_reZ_negative_f_hz": 1096.47819614319,
+      "median_max_relative_residual": 2.1695180446620244e-06,
+      "median_z0_relative_diff": 0.43516897647420866,
+      "dc_bbs_setting_line": ".DC_BBS_Setting DCFitted = 1 BBSFitted = 1 PDCEqualPotential = 0",
+      "spd_path": "D:\\Downloads\\examples\\s5m6585_32p_260414_length3_1.spd",
+      "npz_path": "D:\\Downloads\\examples\\analysis\\s5m6585_Zdiag.npz",
+      "npz_sha256": "29f344d06dbe50d57af4bcccc3726f2dc8d88ae13229196fb97550c6c2f4dcb8",
+      "ports": [
+        {
+          "name": "Port1_U1_0::ADC_AVDD08_LO/0",
+          "G_mS": 0.0067116326085497734,
+          "B_mS": 0.0033149063945258207,
+          "C_uF": 0.5739331428680704,
+          "max_resid": 8.495160598815706e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port2_U1_0::ADC_AVDD08_LO/1",
+          "G_mS": 0.007530416538346465,
+          "B_mS": 0.004019610284189607,
+          "C_uF": 0.5740235270116434,
+          "max_resid": 7.77070985530957e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port3_U1_0::ADC_AVDD08_LO/2",
+          "G_mS": 0.008342507904358042,
+          "B_mS": 0.0016615649790801693,
+          "C_uF": 0.5741019939862009,
+          "max_resid": 8.594810186502214e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port4_U1_0::ADC_AVDD08_LO/3",
+          "G_mS": 0.006071947901391429,
+          "B_mS": 0.00292728337414734,
+          "C_uF": 0.5751211421603053,
+          "max_resid": 9.7486095208807e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port5_U1_0::ADC_AVDD08_LO/4",
+          "G_mS": 0.0074360235792317085,
+          "B_mS": 0.0003522312285426236,
+          "C_uF": 0.5768947093437091,
+          "max_resid": 1.5853291245211852e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port6_U1_0::ADC_AVDD08_LO/5",
+          "G_mS": 0.00739243031293215,
+          "B_mS": 0.0037392436009161104,
+          "C_uF": 0.5758588376989473,
+          "max_resid": 9.312309126013536e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port7_U1_0::ADC_AVDD08_LO/6",
+          "G_mS": 0.008028911700148824,
+          "B_mS": 0.004094778615705805,
+          "C_uF": 0.57603654165363,
+          "max_resid": 1.3561583818556997e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port8_U1_0::ADC_AVDD08_LO/7",
+          "G_mS": 0.007467301262772181,
+          "B_mS": 0.002427873839705085,
+          "C_uF": 0.5754533595689408,
+          "max_resid": 1.001962387322093e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port9_U1_0::ADC_AVDD08_LO/8",
+          "G_mS": 0.0067344319054793555,
+          "B_mS": 0.00314209567453609,
+          "C_uF": 0.5752826916492271,
+          "max_resid": 1.0742337453154172e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port10_U1_0::ADC_AVDD08_LO/9",
+          "G_mS": 0.0074306109680099,
+          "B_mS": 0.003275804278834151,
+          "C_uF": 0.5755176397859686,
+          "max_resid": 9.674741095334055e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port11_U1_0::ADC_AVDD08_LO/10",
+          "G_mS": 0.007664994578208583,
+          "B_mS": 0.002725925600418277,
+          "C_uF": 0.5753110467251238,
+          "max_resid": 9.49989555403568e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port12_U1_0::ADC_AVDD08_LO/11",
+          "G_mS": 0.006815091491923525,
+          "B_mS": 0.003977266711478577,
+          "C_uF": 0.5754613069636341,
+          "max_resid": 9.840815385387142e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port13_U1_0::ADC_AVDD08_LO/12",
+          "G_mS": 0.00744721938653289,
+          "B_mS": 0.0032550060276523157,
+          "C_uF": 0.5747885165061514,
+          "max_resid": 8.495791582956504e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port14_U1_0::ADC_AVDD08_LO/13",
+          "G_mS": 0.007719174877302176,
+          "B_mS": 0.003953692795739532,
+          "C_uF": 0.5742502161182053,
+          "max_resid": 7.490201970261498e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port15_U1_0::ADC_AVDD08_LO/14",
+          "G_mS": 0.0077104441944109755,
+          "B_mS": 0.003818755019410873,
+          "C_uF": 0.5746214477124598,
+          "max_resid": 7.952492275475799e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port16_U1_0::ADC_AVDD08_LO/15",
+          "G_mS": 0.007304574741030719,
+          "B_mS": 0.0037197805034833486,
+          "C_uF": 0.5743499281849139,
+          "max_resid": 7.861623148667689e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port17_U1_0::ADC_AVDD08_LO/16",
+          "G_mS": 0.007265326553499029,
+          "B_mS": 0.004303107475915191,
+          "C_uF": 0.5738982456537023,
+          "max_resid": 6.662274956200914e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port18_U1_0::ADC_AVDD08_LO/17",
+          "G_mS": 0.006755584999331279,
+          "B_mS": 0.0036522590205754243,
+          "C_uF": 0.5738234001591853,
+          "max_resid": 7.523557278185658e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port19_U1_0::ADC_AVDD08_LO/18",
+          "G_mS": 0.006694049309374234,
+          "B_mS": 0.0037711795911393514,
+          "C_uF": 0.5742977755651966,
+          "max_resid": 7.626833053434329e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port20_U1_0::ADC_AVDD08_LO/19",
+          "G_mS": 0.0072471888468407936,
+          "B_mS": 0.00361959061924847,
+          "C_uF": 0.574947356418267,
+          "max_resid": 7.440238241055158e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port21_U1_0::ADC_AVDD08_LO/20",
+          "G_mS": 0.007442603140491144,
+          "B_mS": 0.0033650847080922944,
+          "C_uF": 0.5758559478335161,
+          "max_resid": 1.0169351236488332e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port22_U1_0::ADC_AVDD08_LO/21",
+          "G_mS": 0.0071690054678339,
+          "B_mS": 0.0038301963828747164,
+          "C_uF": 0.5761161934442578,
+          "max_resid": 8.438863333504146e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port23_U1_0::ADC_AVDD08_LO/22",
+          "G_mS": 0.007242336043788159,
+          "B_mS": 0.003205343878262615,
+          "C_uF": 0.5757526389517214,
+          "max_resid": 1.0397103967846979e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port24_U1_0::ADC_AVDD08_LO/23",
+          "G_mS": 0.0060812925050772225,
+          "B_mS": 0.0026725242825433207,
+          "C_uF": 0.5752794886496452,
+          "max_resid": 1.0704004196583071e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port25_U1_0::ADC_AVDD08_LO/24",
+          "G_mS": 0.007926828812324089,
+          "B_mS": 0.0032530553278958397,
+          "C_uF": 0.5752991687615284,
+          "max_resid": 8.099732987072232e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port26_U1_0::ADC_AVDD08_LO/25",
+          "G_mS": 0.0072893777465195455,
+          "B_mS": 0.003346621695432293,
+          "C_uF": 0.5756371745625828,
+          "max_resid": 9.95865337119859e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port27_U1_0::ADC_AVDD08_LO/26",
+          "G_mS": 0.008348902431686232,
+          "B_mS": 0.006638554767730762,
+          "C_uF": 0.5744201706715889,
+          "max_resid": 7.533421546699072e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port28_U1_0::ADC_AVDD08_LO/27",
+          "G_mS": 0.007472011975962906,
+          "B_mS": 0.004042431959662951,
+          "C_uF": 0.5759986034766104,
+          "max_resid": 9.28242996929418e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port29_U1_0::ADC_AVDD08_LO/28",
+          "G_mS": 0.007125391916091686,
+          "B_mS": 0.003412785878497341,
+          "C_uF": 0.5748760427597219,
+          "max_resid": 7.892182058532764e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port30_U1_0::ADC_AVDD08_LO/29",
+          "G_mS": 0.006943965250810224,
+          "B_mS": 0.003451776092864846,
+          "C_uF": 0.5745998080359719,
+          "max_resid": 7.863468512724849e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port31_U1_0::ADC_AVDD08_LO/30",
+          "G_mS": 0.007271496643115941,
+          "B_mS": 0.0030167863730011057,
+          "C_uF": 0.5744355826675213,
+          "max_resid": 8.366293250642406e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port32_U1_0::ADC_AVDD08_LO/31",
+          "G_mS": 0.006919923995456772,
+          "B_mS": 0.0038254400748930287,
+          "C_uF": 0.5739272063593273,
+          "max_resid": 7.329731064377465e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port33_U1_0::ADC_DVDD08_CORE/0",
+          "G_mS": 0.002599761139606869,
+          "B_mS": 0.001418572112648383,
+          "C_uF": 0.19338678090010336,
+          "max_resid": 2.4502596450173884e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port34_U1_0::ADC_DVDD08_CORE/1",
+          "G_mS": 0.0029220581794924486,
+          "B_mS": 0.0016263498223462803,
+          "C_uF": 0.19339515717094782,
+          "max_resid": 2.4826915963420166e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port35_U1_0::ADC_DVDD08_CORE/2",
+          "G_mS": 0.0038985851490040027,
+          "B_mS": 0.0010431705207440028,
+          "C_uF": 0.19407737394407315,
+          "max_resid": 2.0740635343665673e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port36_U1_0::ADC_DVDD08_CORE/3",
+          "G_mS": 0.002885977683433427,
+          "B_mS": 0.0010802221777295676,
+          "C_uF": 0.19413501870547925,
+          "max_resid": 2.6100142081588046e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port37_U1_0::ADC_DVDD08_CORE/4",
+          "G_mS": 0.002891380492001197,
+          "B_mS": 0.0018301403834030591,
+          "C_uF": 0.19522728613812107,
+          "max_resid": 4.034464867511215e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port38_U1_0::ADC_DVDD08_CORE/5",
+          "G_mS": 0.0028595528051264265,
+          "B_mS": 0.0014609406512955739,
+          "C_uF": 0.1952282193863109,
+          "max_resid": 4.734496948719669e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port39_U1_0::ADC_DVDD08_CORE/6",
+          "G_mS": 0.002393010601608446,
+          "B_mS": 0.0014183698700424342,
+          "C_uF": 0.194733217942124,
+          "max_resid": 4.288614549544717e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port40_U1_0::ADC_DVDD08_CORE/7",
+          "G_mS": 0.0020304744620556077,
+          "B_mS": 0.001012548522713839,
+          "C_uF": 0.1947649428931394,
+          "max_resid": 5.272904717164538e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port41_U1_0::ADC_DVDD08_CORE/8",
+          "G_mS": 0.0030163805092705016,
+          "B_mS": 0.0014616468146229737,
+          "C_uF": 0.19450813225865526,
+          "max_resid": 2.345522353654245e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port42_U1_0::ADC_DVDD08_CORE/9",
+          "G_mS": 0.003024646463681262,
+          "B_mS": 0.0026974395469287187,
+          "C_uF": 0.19416412308443884,
+          "max_resid": 3.4512231492867974e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port43_U1_0::ADC_DVDD08_CORE/10",
+          "G_mS": 0.00021092348828821388,
+          "B_mS": 0.005842455303153928,
+          "C_uF": 0.19447033296279032,
+          "max_resid": 2.548766619729416e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port44_U1_0::ADC_DVDD08_CORE/11",
+          "G_mS": 0.0032433867188845786,
+          "B_mS": 0.0010469993161557345,
+          "C_uF": 0.1952098700688568,
+          "max_resid": 4.028351101005177e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port45_U1_0::ADC_DVDD08_CORE/12",
+          "G_mS": 0.003266946371209085,
+          "B_mS": 0.0012465855061506484,
+          "C_uF": 0.19393285730646626,
+          "max_resid": 2.0003392020355494e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port46_U1_0::ADC_DVDD08_CORE/13",
+          "G_mS": 0.003581593368441226,
+          "B_mS": 0.001712879799881699,
+          "C_uF": 0.19378704870152447,
+          "max_resid": 2.134410101497957e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port47_U1_0::ADC_DVDD08_CORE/14",
+          "G_mS": 0.0026632052816962367,
+          "B_mS": 0.0020402786888597557,
+          "C_uF": 0.19321740108210747,
+          "max_resid": 2.2046259878260917e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port48_U1_0::ADC_DVDD08_CORE/15",
+          "G_mS": 0.0032579701008657084,
+          "B_mS": 0.001215510933455846,
+          "C_uF": 0.19330415751966606,
+          "max_resid": 2.1215208355355178e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port49_U1_0::ADC_DVDD08_CORE/16",
+          "G_mS": 0.0034857893142448302,
+          "B_mS": 0.0009535965421833389,
+          "C_uF": 0.19367932471908594,
+          "max_resid": 2.5899773436944495e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port50_U1_0::ADC_DVDD08_CORE/17",
+          "G_mS": 0.0029406330309282172,
+          "B_mS": 0.0011603856345971345,
+          "C_uF": 0.19288261319189698,
+          "max_resid": 1.700766148571628e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port51_U1_0::ADC_DVDD08_CORE/18",
+          "G_mS": 0.0032394278590511605,
+          "B_mS": 0.0011866668806125912,
+          "C_uF": 0.19372246421776937,
+          "max_resid": 2.734574837900618e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port52_U1_0::ADC_DVDD08_CORE/19",
+          "G_mS": 0.0033540178871929904,
+          "B_mS": 0.0015528274895684694,
+          "C_uF": 0.19350622170093962,
+          "max_resid": 1.6614726813678948e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port53_U1_0::ADC_DVDD08_CORE/20",
+          "G_mS": 0.0029598804478590812,
+          "B_mS": 0.001381635320361603,
+          "C_uF": 0.1948353545449657,
+          "max_resid": 4.34537114168991e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port54_U1_0::ADC_DVDD08_CORE/21",
+          "G_mS": 0.0025940410806419194,
+          "B_mS": 0.001853027934613535,
+          "C_uF": 0.19552449680741701,
+          "max_resid": 5.406819941954815e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port55_U1_0::ADC_DVDD08_CORE/22",
+          "G_mS": 0.0023837496598441824,
+          "B_mS": 0.0014655137570502236,
+          "C_uF": 0.1949408928770037,
+          "max_resid": 4.875304620406439e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port56_U1_0::ADC_DVDD08_CORE/23",
+          "G_mS": 0.0033612581353586455,
+          "B_mS": 0.0010080258216703325,
+          "C_uF": 0.1949795109094525,
+          "max_resid": 4.584230380173334e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port57_U1_0::ADC_DVDD08_CORE/24",
+          "G_mS": 0.0027969636588839213,
+          "B_mS": 0.0016262836943721972,
+          "C_uF": 0.19496222228831928,
+          "max_resid": 4.7087608400293005e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port58_U1_0::ADC_DVDD08_CORE/25",
+          "G_mS": 0.0030346197587961653,
+          "B_mS": 0.0013880991658123557,
+          "C_uF": 0.1950281192285781,
+          "max_resid": 4.132129240856058e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port59_U1_0::ADC_DVDD08_CORE/26",
+          "G_mS": 0.0029011652540858373,
+          "B_mS": 0.0015022437423989074,
+          "C_uF": 0.19517516003219762,
+          "max_resid": 4.61473968246299e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port60_U1_0::ADC_DVDD08_CORE/27",
+          "G_mS": 0.002691244609257212,
+          "B_mS": 0.0015402239977036804,
+          "C_uF": 0.19518896165431848,
+          "max_resid": 4.5465507564277105e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port61_U1_0::ADC_DVDD08_CORE/28",
+          "G_mS": 0.0026690046070379295,
+          "B_mS": 0.0014958687053507997,
+          "C_uF": 0.193778835714329,
+          "max_resid": 2.6497626309949094e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port62_U1_0::ADC_DVDD08_CORE/29",
+          "G_mS": 0.002879090746966062,
+          "B_mS": 0.001748368716835636,
+          "C_uF": 0.19364381919970075,
+          "max_resid": 2.3101016356335843e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port63_U1_0::ADC_DVDD08_CORE/30",
+          "G_mS": 0.0032329460346661085,
+          "B_mS": 0.0014367401303805672,
+          "C_uF": 0.1933923272465215,
+          "max_resid": 2.3053386798637466e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port64_U1_0::ADC_DVDD08_CORE/31",
+          "G_mS": 0.0036737920630298547,
+          "B_mS": 0.001508032943254312,
+          "C_uF": 0.1933812790533148,
+          "max_resid": 2.0648756069749444e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port65_U1_0::ADC_DVDDQ12/0",
+          "G_mS": 0.0031427711032501215,
+          "B_mS": 0.0013824975173026325,
+          "C_uF": 0.19309716843287264,
+          "max_resid": 1.7718716453483187e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port66_U1_0::ADC_DVDDQ12/1",
+          "G_mS": 0.0031421839488053487,
+          "B_mS": 0.0013535618803334737,
+          "C_uF": 0.19344841299470417,
+          "max_resid": 3.4389266448829106e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port67_U1_0::ADC_DVDDQ12/2",
+          "G_mS": 0.0025606742373783012,
+          "B_mS": 0.0015630895952807868,
+          "C_uF": 0.1937521717883384,
+          "max_resid": 1.7816049259651968e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port68_U1_0::ADC_DVDDQ12/3",
+          "G_mS": 0.0023088205153532788,
+          "B_mS": 0.0006001424722915922,
+          "C_uF": 0.19401953778832623,
+          "max_resid": 4.077888445022874e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port69_U1_0::ADC_DVDDQ12/4",
+          "G_mS": 0.0036033882136737765,
+          "B_mS": 0.001240517085652813,
+          "C_uF": 0.19557073119311735,
+          "max_resid": 4.50272273572761e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port70_U1_0::ADC_DVDDQ12/5",
+          "G_mS": 0.00270459437477398,
+          "B_mS": 0.0018436589622215463,
+          "C_uF": 0.19515606707056674,
+          "max_resid": 4.561743199416783e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port71_U1_0::ADC_DVDDQ12/6",
+          "G_mS": 0.0032019515111734644,
+          "B_mS": 0.0013741977138958328,
+          "C_uF": 0.1949635026062982,
+          "max_resid": 4.841902855239421e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port72_U1_0::ADC_DVDDQ12/7",
+          "G_mS": 0.003144045765011465,
+          "B_mS": 0.0014411693370346686,
+          "C_uF": 0.19489422292196643,
+          "max_resid": 4.078156323098735e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port73_U1_0::ADC_DVDDQ12/8",
+          "G_mS": 0.0031211143351900297,
+          "B_mS": 0.0013468217480272324,
+          "C_uF": 0.1944165196820406,
+          "max_resid": 3.7753470236093713e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port74_U1_0::ADC_DVDDQ12/9",
+          "G_mS": 0.003434050013408747,
+          "B_mS": 0.0015522519796339195,
+          "C_uF": 0.19436423658709925,
+          "max_resid": 3.532342801331175e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port75_U1_0::ADC_DVDDQ12/10",
+          "G_mS": 0.002789516421921267,
+          "B_mS": 0.0015606827866390394,
+          "C_uF": 0.1948675994978227,
+          "max_resid": 4.070837518114808e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port76_U1_0::ADC_DVDDQ12/11",
+          "G_mS": 0.0028308043719053417,
+          "B_mS": 0.0015436180198282823,
+          "C_uF": 0.1950579359115991,
+          "max_resid": 3.9967454658775925e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port77_U1_0::ADC_DVDDQ12/12",
+          "G_mS": 0.003046404769120348,
+          "B_mS": 0.001439204126941562,
+          "C_uF": 0.1939898367067155,
+          "max_resid": 2.7161912671358625e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port78_U1_0::ADC_DVDDQ12/13",
+          "G_mS": 0.004108197619956831,
+          "B_mS": 0.0020749714701658243,
+          "C_uF": 0.19373776937125772,
+          "max_resid": 1.80816701051827e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port79_U1_0::ADC_DVDDQ12/14",
+          "G_mS": 0.0031251447245709075,
+          "B_mS": 0.0011500695357716357,
+          "C_uF": 0.19357772348737678,
+          "max_resid": 2.615971719501999e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port80_U1_0::ADC_DVDDQ12/15",
+          "G_mS": 0.0034546752772665968,
+          "B_mS": 0.0015197080284033559,
+          "C_uF": 0.1933298611527117,
+          "max_resid": 1.8615296168895783e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port81_U1_0::ADC_DVDDQ12/16",
+          "G_mS": 0.002514124358560783,
+          "B_mS": 0.00046545445253079774,
+          "C_uF": 0.19336734218618667,
+          "max_resid": 2.990294715648871e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port82_U1_0::ADC_DVDDQ12/17",
+          "G_mS": 0.003313314769241783,
+          "B_mS": 0.0013614361448613802,
+          "C_uF": 0.1930431480086202,
+          "max_resid": 1.7988751599666355e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port83_U1_0::ADC_DVDDQ12/18",
+          "G_mS": 0.0032433527579301467,
+          "B_mS": 0.0016058617225797702,
+          "C_uF": 0.19363103205000018,
+          "max_resid": 2.788954788602661e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port84_U1_0::ADC_DVDDQ12/19",
+          "G_mS": 0.0031625031128977472,
+          "B_mS": 0.001308394848697081,
+          "C_uF": 0.19384222156686065,
+          "max_resid": 1.984156802964872e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port85_U1_0::ADC_DVDDQ12/20",
+          "G_mS": 0.0028832172706019744,
+          "B_mS": 0.0014544335838494993,
+          "C_uF": 0.1950445419264909,
+          "max_resid": 4.25145506488556e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port86_U1_0::ADC_DVDDQ12/21",
+          "G_mS": 0.003317301163239193,
+          "B_mS": 0.001629031296344648,
+          "C_uF": 0.19535695838374992,
+          "max_resid": 3.5585165732860995e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port87_U1_0::ADC_DVDDQ12/22",
+          "G_mS": 0.0031140977668561664,
+          "B_mS": 0.0013849972259642638,
+          "C_uF": 0.19479418986585278,
+          "max_resid": 4.022803229003341e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port88_U1_0::ADC_DVDDQ12/23",
+          "G_mS": 0.003360202994412025,
+          "B_mS": 0.002265831470009051,
+          "C_uF": 0.19438106995306928,
+          "max_resid": 3.3276198233036005e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port89_U1_0::ADC_DVDDQ12/24",
+          "G_mS": 0.0020959564280487856,
+          "B_mS": 0.0009108638335091951,
+          "C_uF": 0.19501286843090995,
+          "max_resid": 6.054160617565821e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port90_U1_0::ADC_DVDDQ12/25",
+          "G_mS": 0.0031123732698386474,
+          "B_mS": 0.0013109115447869416,
+          "C_uF": 0.19498142484307956,
+          "max_resid": 5.472793328260819e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port91_U1_0::ADC_DVDDQ12/26",
+          "G_mS": 0.0029523776593903222,
+          "B_mS": 0.0012180783026411186,
+          "C_uF": 0.1953652647942089,
+          "max_resid": 5.384412297870071e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port92_U1_0::ADC_DVDDQ12/27",
+          "G_mS": 0.002768647907210354,
+          "B_mS": 0.0015705284601280085,
+          "C_uF": 0.19544626095158105,
+          "max_resid": 5.1581026864843085e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port93_U1_0::ADC_DVDDQ12/28",
+          "G_mS": 0.0031327194129811275,
+          "B_mS": 0.001978151716149347,
+          "C_uF": 0.19375238599025987,
+          "max_resid": 1.6667022474758926e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port94_U1_0::ADC_DVDDQ12/29",
+          "G_mS": 0.0028688957080653063,
+          "B_mS": 0.0017485685515475442,
+          "C_uF": 0.19364199734728305,
+          "max_resid": 1.9658645405374185e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port95_U1_0::ADC_DVDDQ12/30",
+          "G_mS": 0.0031331599017400034,
+          "B_mS": 0.0021352229007741445,
+          "C_uF": 0.19313343320517862,
+          "max_resid": 1.6570413122519003e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port96_U1_0::ADC_DVDDQ12/31",
+          "G_mS": 0.0028457717872716884,
+          "B_mS": 0.0015470991893617577,
+          "C_uF": 0.19317372677037867,
+          "max_resid": 1.9249017991543657e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port97_U1_0::ADC_DVDDQ18/0",
+          "G_mS": 0.005391449684188222,
+          "B_mS": 0.002738908125458632,
+          "C_uF": 0.38391689227502285,
+          "max_resid": 1.0082924927193828e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port98_U1_0::ADC_DVDDQ18/1",
+          "G_mS": 0.005452687324653911,
+          "B_mS": 0.0024274065544567756,
+          "C_uF": 0.3839301346190224,
+          "max_resid": 1.0529149590243722e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port99_U1_0::ADC_DVDDQ18/2",
+          "G_mS": 0.005338497531177001,
+          "B_mS": 0.0029051136968118608,
+          "C_uF": 0.38402381274,
+          "max_resid": 9.929058195137734e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port100_U1_0::ADC_DVDDQ18/3",
+          "G_mS": 0.005586348289083534,
+          "B_mS": 0.0026702072314897345,
+          "C_uF": 0.38410799520231387,
+          "max_resid": 1.1926295189257836e-05,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port101_U1_0::ADC_DVDDQ18/4",
+          "G_mS": 0.006329844670405612,
+          "B_mS": 0.005401820370136643,
+          "C_uF": 0.3840541062462956,
+          "max_resid": 1.149682621200752e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port102_U1_0::ADC_DVDDQ18/5",
+          "G_mS": 0.004629423318135117,
+          "B_mS": 0.002592868757455537,
+          "C_uF": 0.38552542228584485,
+          "max_resid": 1.5593625793885327e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port103_U1_0::ADC_DVDDQ18/6",
+          "G_mS": 0.005580567212752987,
+          "B_mS": 0.002426406097465618,
+          "C_uF": 0.38528811268096713,
+          "max_resid": 1.867044863267224e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port104_U1_0::ADC_DVDDQ18/7",
+          "G_mS": 0.005602417466218856,
+          "B_mS": 0.0030148633502670836,
+          "C_uF": 0.3850316340606341,
+          "max_resid": 1.3093168297987595e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port105_U1_0::ADC_DVDDQ18/8",
+          "G_mS": 0.005418442889835077,
+          "B_mS": 0.0033130029361715216,
+          "C_uF": 0.3850138573240497,
+          "max_resid": 1.3273356111734648e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port106_U1_0::ADC_DVDDQ18/9",
+          "G_mS": 0.006112526542940337,
+          "B_mS": 0.002765707135993404,
+          "C_uF": 0.38469717046265106,
+          "max_resid": 1.3161242878592909e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port107_U1_0::ADC_DVDDQ18/10",
+          "G_mS": 0.005228903169547007,
+          "B_mS": 0.002020807570599677,
+          "C_uF": 0.3853029332451173,
+          "max_resid": 1.5029551969139023e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port108_U1_0::ADC_DVDDQ18/11",
+          "G_mS": 0.005357489680438624,
+          "B_mS": 0.0024735039654565157,
+          "C_uF": 0.3851294420229857,
+          "max_resid": 1.7639415921066604e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port109_U1_0::ADC_DVDDQ18/12",
+          "G_mS": 0.00509632444960455,
+          "B_mS": 0.002394643260629248,
+          "C_uF": 0.38384527121130374,
+          "max_resid": 8.697100316469391e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port110_U1_0::ADC_DVDDQ18/13",
+          "G_mS": 0.0055041940205103074,
+          "B_mS": 0.0022913002348556705,
+          "C_uF": 0.38434122946189453,
+          "max_resid": 9.669897877086673e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port111_U1_0::ADC_DVDDQ18/14",
+          "G_mS": 0.004059932956958806,
+          "B_mS": 0.00340547448076515,
+          "C_uF": 0.38393558538464007,
+          "max_resid": 1.006485058335025e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port112_U1_0::ADC_DVDDQ18/15",
+          "G_mS": 0.004999015629626786,
+          "B_mS": 0.003232459107418883,
+          "C_uF": 0.383856242105968,
+          "max_resid": 9.039567748652022e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port113_U1_0::ADC_DVDDQ18/16",
+          "G_mS": 0.005348510686804937,
+          "B_mS": 0.002502147227511444,
+          "C_uF": 0.3839501006413681,
+          "max_resid": 9.699645708548566e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port114_U1_0::ADC_DVDDQ18/17",
+          "G_mS": 0.005055831505187773,
+          "B_mS": 0.002309934510160844,
+          "C_uF": 0.3833116065432358,
+          "max_resid": 8.732269078423687e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port115_U1_0::ADC_DVDDQ18/18",
+          "G_mS": 0.005038793286664712,
+          "B_mS": 0.003112871061833986,
+          "C_uF": 0.38390914866104753,
+          "max_resid": 9.269425176877191e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port116_U1_0::ADC_DVDDQ18/19",
+          "G_mS": 0.004946676212838223,
+          "B_mS": 0.0023295024277306666,
+          "C_uF": 0.38429834407075186,
+          "max_resid": 9.396184827829728e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port117_U1_0::ADC_DVDDQ18/20",
+          "G_mS": 0.00511742460596203,
+          "B_mS": 0.002395096418342889,
+          "C_uF": 0.3851513355284734,
+          "max_resid": 1.4654070906067425e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port118_U1_0::ADC_DVDDQ18/21",
+          "G_mS": 0.0049977072332595875,
+          "B_mS": 0.002464301308004672,
+          "C_uF": 0.38595662660611674,
+          "max_resid": 1.5987972219255491e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port119_U1_0::ADC_DVDDQ18/22",
+          "G_mS": 0.00550827703776902,
+          "B_mS": 0.002786413236188191,
+          "C_uF": 0.3851315214126853,
+          "max_resid": 1.3719769017583362e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port120_U1_0::ADC_DVDDQ18/23",
+          "G_mS": 0.005805964341819299,
+          "B_mS": 0.0025828177522439016,
+          "C_uF": 0.38491923839701386,
+          "max_resid": 1.393210838602858e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port121_U1_0::ADC_DVDDQ18/24",
+          "G_mS": 0.005345813151984264,
+          "B_mS": 0.0023900074347225947,
+          "C_uF": 0.3855187821140733,
+          "max_resid": 1.56999828713164e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port122_U1_0::ADC_DVDDQ18/25",
+          "G_mS": 0.005667992919472972,
+          "B_mS": 0.0026176852225309995,
+          "C_uF": 0.38488740220689166,
+          "max_resid": 1.7595115637819486e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port123_U1_0::ADC_DVDDQ18/26",
+          "G_mS": 0.004987369770160987,
+          "B_mS": 0.0025052848437844793,
+          "C_uF": 0.38563360854348877,
+          "max_resid": 1.7061557359394825e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port124_U1_0::ADC_DVDDQ18/27",
+          "G_mS": 0.005311124315885985,
+          "B_mS": 0.001239830500601282,
+          "C_uF": 0.38572179256851896,
+          "max_resid": 1.786723251180877e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port125_U1_0::ADC_DVDDQ18/28",
+          "G_mS": 0.005627199386563576,
+          "B_mS": 0.0029309727960031952,
+          "C_uF": 0.3839084736338487,
+          "max_resid": 7.865302331498981e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port126_U1_0::ADC_DVDDQ18/29",
+          "G_mS": 0.004234141470377149,
+          "B_mS": 0.002928890325249136,
+          "C_uF": 0.38452706808708015,
+          "max_resid": 1.0548750246878362e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port127_U1_0::ADC_DVDDQ18/30",
+          "G_mS": 0.004722821474759261,
+          "B_mS": 0.002555989214586452,
+          "C_uF": 0.3837451332391526,
+          "max_resid": 1.0099682312714441e-06,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port128_U1_0::ADC_DVDDQ18/31",
+          "G_mS": 0.005611128353469943,
+          "B_mS": 0.0029540647909120634,
+          "C_uF": 0.3836017534953626,
+          "max_resid": 8.047928245094858e-07,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port129_U1_0::ADC_IO_BUCK13/0",
+          "G_mS": 8.901123141712657e-07,
+          "B_mS": 4.272711347014261e-06,
+          "C_uF": 0.002663727791269776,
+          "max_resid": 0.01772918420844227,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port130_U1_0::ADC_IO_BUCK13/1",
+          "G_mS": 2.3756993202368406e-05,
+          "B_mS": -1.4963682336886512e-05,
+          "C_uF": 0.0029060073291437925,
+          "max_resid": 0.018586224692723335,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port131_U1_0::ADC_IO_BUCK13/2",
+          "G_mS": 0.00014497965452751915,
+          "B_mS": 8.750927545983527e-05,
+          "C_uF": 0.0032750537035686517,
+          "max_resid": 0.0014518741957596701,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port132_U1_0::ADC_IO_BUCK13/3",
+          "G_mS": -8.657818588418166e-05,
+          "B_mS": 2.3416425340712572e-05,
+          "C_uF": 0.002991316343255539,
+          "max_resid": 0.023118336999211272,
+          "reZ_neg_max_f": 912.01083935591
+        },
+        {
+          "name": "Port133_U1_0::ADC_IO_BUCK13/4",
+          "G_mS": -1.9391152417905816e-05,
+          "B_mS": 1.2982966072451195e-05,
+          "C_uF": 0.004530254345708972,
+          "max_resid": 0.027033830378560574,
+          "reZ_neg_max_f": 25.1188643150958
+        },
+        {
+          "name": "Port134_U1_0::ADC_IO_BUCK13/5",
+          "G_mS": 0.00015229004373893743,
+          "B_mS": -8.049108795204066e-05,
+          "C_uF": 0.004801138318535822,
+          "max_resid": 0.0008303570906017831,
+          "reZ_neg_max_f": 229.086765276777
+        },
+        {
+          "name": "Port135_U1_0::ADC_IO_BUCK13/6",
+          "G_mS": -3.107446341319035e-05,
+          "B_mS": 7.663710502554619e-06,
+          "C_uF": 0.0033822561189333737,
+          "max_resid": 0.01284607766221244,
+          "reZ_neg_max_f": 1096.47819614319
+        },
+        {
+          "name": "Port136_U1_0::ADC_IO_BUCK13/7",
+          "G_mS": -0.0010905166143083604,
+          "B_mS": 0.00021640820768196447,
+          "C_uF": 0.00467421381145245,
+          "max_resid": 0.0008170846963719464,
+          "reZ_neg_max_f": 275.422870333817
+        },
+        {
+          "name": "Port137_U1_0::ADC_IO_BUCK13/8",
+          "G_mS": 0.0007995328324335397,
+          "B_mS": 0.00046347212324810853,
+          "C_uF": 0.0036337972970111954,
+          "max_resid": 0.0005233020957874096,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port138_U1_0::ADC_IO_BUCK13/9",
+          "G_mS": 3.307116195401533e-05,
+          "B_mS": 3.151922994685333e-06,
+          "C_uF": 0.003454567758038653,
+          "max_resid": 0.012932734182664645,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port139_U1_0::ADC_IO_BUCK13/10",
+          "G_mS": 6.715824022295546e-05,
+          "B_mS": 0.00010131799487323415,
+          "C_uF": 0.004688036015115821,
+          "max_resid": 0.0008412126177938977,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port140_U1_0::ADC_IO_BUCK13/11",
+          "G_mS": 1.69198368948311e-05,
+          "B_mS": 2.9944040459728317e-05,
+          "C_uF": 0.0034161403136005577,
+          "max_resid": 0.019348102867643886,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port141_U1_0::ADC_IO_BUCK13/12",
+          "G_mS": -4.326400764884403e-05,
+          "B_mS": -9.244103191843876e-07,
+          "C_uF": 0.00339199462152335,
+          "max_resid": 0.006903873016602444,
+          "reZ_neg_max_f": 1096.47819614319
+        },
+        {
+          "name": "Port142_U1_0::ADC_IO_BUCK13/13",
+          "G_mS": -0.00010667014315844131,
+          "B_mS": 3.422532972061579e-05,
+          "C_uF": 0.0036076753532503785,
+          "max_resid": 0.0003337504218246955,
+          "reZ_neg_max_f": 831.763771102671
+        },
+        {
+          "name": "Port143_U1_0::ADC_IO_BUCK13/14",
+          "G_mS": -3.6452847310532736e-06,
+          "B_mS": 7.788230156055254e-05,
+          "C_uF": 0.0027709283440075705,
+          "max_resid": 0.007707384614041873,
+          "reZ_neg_max_f": 20.8929613085404
+        },
+        {
+          "name": "Port144_U1_0::ADC_IO_BUCK13/15",
+          "G_mS": -0.0017451917780318441,
+          "B_mS": -0.0009300021220038491,
+          "C_uF": 0.0028682487886743397,
+          "max_resid": 0.00030488021299920155,
+          "reZ_neg_max_f": 301.995172040202
+        },
+        {
+          "name": "Port145_U1_0::ADC_IO_BUCK13/16",
+          "G_mS": 2.7338256104021252e-05,
+          "B_mS": 1.8192364657166227e-05,
+          "C_uF": 0.002975316434906467,
+          "max_resid": 0.002837103427584461,
+          "reZ_neg_max_f": 691.830970918936
+        },
+        {
+          "name": "Port146_U1_0::ADC_IO_BUCK13/17",
+          "G_mS": 0.0008086830271065124,
+          "B_mS": 2.0397013178723915e-05,
+          "C_uF": 0.0025015348088900653,
+          "max_resid": 0.0007555309957958151,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port147_U1_0::ADC_IO_BUCK13/18",
+          "G_mS": -0.0003417161794197445,
+          "B_mS": -4.6699915240286324e-05,
+          "C_uF": 0.003324001194586107,
+          "max_resid": 0.0018902390145560356,
+          "reZ_neg_max_f": 691.830970918936
+        },
+        {
+          "name": "Port148_U1_0::ADC_IO_BUCK13/19",
+          "G_mS": 5.85909020695376e-05,
+          "B_mS": 1.955038223321657e-06,
+          "C_uF": 0.002636909843774134,
+          "max_resid": 0.0008243962889556401,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port149_U1_0::ADC_IO_BUCK13/20",
+          "G_mS": -0.0001508846496605049,
+          "B_mS": 0.0001166293606907521,
+          "C_uF": 0.004718067499338902,
+          "max_resid": 0.000933897084620661,
+          "reZ_neg_max_f": 91.201083935591
+        },
+        {
+          "name": "Port150_U1_0::ADC_IO_BUCK13/21",
+          "G_mS": -0.0001193477463284198,
+          "B_mS": 0.0001103261957938529,
+          "C_uF": 0.004992012230720518,
+          "max_resid": 0.0011564483937086419,
+          "reZ_neg_max_f": 524.807460249773
+        },
+        {
+          "name": "Port151_U1_0::ADC_IO_BUCK13/22",
+          "G_mS": 0.0004631077595438499,
+          "B_mS": 1.3137932850044066e-05,
+          "C_uF": 0.003880839002581701,
+          "max_resid": 0.000881719613624937,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port152_U1_0::ADC_IO_BUCK13/23",
+          "G_mS": -0.0006980100703080378,
+          "B_mS": -0.00011419930882207861,
+          "C_uF": 0.004711173039869205,
+          "max_resid": 0.0009582227287019976,
+          "reZ_neg_max_f": 831.763771102671
+        },
+        {
+          "name": "Port153_U1_0::ADC_IO_BUCK13/24",
+          "G_mS": -0.00022704017533178449,
+          "B_mS": 8.882331088437932e-06,
+          "C_uF": 0.004534327722493846,
+          "max_resid": 0.0035850021307186164,
+          "reZ_neg_max_f": 758.577575029184
+        },
+        {
+          "name": "Port154_U1_0::ADC_IO_BUCK13/25",
+          "G_mS": 0.00011990084715900152,
+          "B_mS": -0.0010754050273616414,
+          "C_uF": 0.0039128057469969765,
+          "max_resid": 0.001101210209438855,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port155_U1_0::ADC_IO_BUCK13/26",
+          "G_mS": -0.0001726555954814482,
+          "B_mS": -5.30240560939556e-05,
+          "C_uF": 0.004826980775920922,
+          "max_resid": 0.003432631194115137,
+          "reZ_neg_max_f": 758.577575029184
+        },
+        {
+          "name": "Port156_U1_0::ADC_IO_BUCK13/27",
+          "G_mS": -5.895766017637767e-05,
+          "B_mS": 2.1227082561539686e-05,
+          "C_uF": 0.0046141627191465025,
+          "max_resid": 0.0015207079788744503,
+          "reZ_neg_max_f": 17.3780082874938
+        },
+        {
+          "name": "Port157_U1_0::ADC_IO_BUCK13/28",
+          "G_mS": 5.202164386820771e-06,
+          "B_mS": 4.636043131559134e-06,
+          "C_uF": 0.003327482398104711,
+          "max_resid": 0.052806006200783975,
+          "reZ_neg_max_f": 13.1825673855641
+        },
+        {
+          "name": "Port158_U1_0::ADC_IO_BUCK13/29",
+          "G_mS": 3.516046814982308e-05,
+          "B_mS": 1.5051800560486697e-06,
+          "C_uF": 0.0031848616111313315,
+          "max_resid": 0.007392428157644824,
+          "reZ_neg_max_f": null
+        },
+        {
+          "name": "Port159_U1_0::ADC_IO_BUCK13/30",
+          "G_mS": -5.251697123578318e-05,
+          "B_mS": 2.151055970399654e-06,
+          "C_uF": 0.0024361927625211385,
+          "max_resid": 0.004468215931028105,
+          "reZ_neg_max_f": 912.01083935591
+        },
+        {
+          "name": "Port160_U1_0::ADC_IO_BUCK13/31",
+          "G_mS": -0.00011774766091476809,
+          "B_mS": 9.271587598416878e-05,
+          "C_uF": 0.0028441661956327426,
+          "max_resid": 0.005949475270571049,
+          "reZ_neg_max_f": 363.078054770101
+        }
+      ]
+    }
+  },
+  "H_common": false,
+  "stats": {
+    "wall_seconds": 6.201024055480957,
+    "peak_rss_mb": 65.828125
+  }
+}

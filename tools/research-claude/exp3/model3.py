@@ -26,13 +26,17 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "exp1"))
 sys.path.insert(0, os.path.join(HERE, "..", "common"))
 from paths import peak_rss_mb  # noqa: E402
+import fast_assemble as FA  # noqa: E402  (EXP-37: no-op unless SPD_PI_FAST=1)
 import model as M  # noqa: E402
 import homog as H  # noqa: E402
 from exp1b import TwoSided  # noqa: E402
 from spd_decap_pi._core.solver.mfdm import copper_surface_impedance  # noqa: E402
-from spd_decap_pi._core.via_model import estimate_via_segment_rl  # noqa: E402
+from spd_decap_pi._core.via_model import (  # noqa: E402
+    COPPER_CONDUCTIVITY_S_PER_M, HOLLOW_PLATED_BARREL, classify_via_conductor, estimate_via_segment_rl)
+from scipy.special import jv  # noqa: E402
 
 MU0, EPS0 = M.MU0, M.EPS0
+VIA_NONE, VIA_SOLID, VIA_HOLLOW = 0, 1, 2  # EXP-20 via_R_skin conductor kinds (NONE = pad link, no skin)
 GND_SHEETS = ["Signal$L02(DGND)", "Signal$L13(DGND)", "Signal$L16(DGND)", "Signal$L18(DGND)",
               "Signal$L24(DGND)", "Signal$L27(DGND)"]
 
@@ -54,10 +58,35 @@ def pad_traces(nodes, padstacks, layer):
     return out
 
 
+def fill_small_voids(geom, dmax):
+    """EXP-36: drop the negative primitives of one layer geometry smaller than `dmax` um.
+
+    Size measure copied verbatim from EXP-6 `run6.fill_small` / `void_sizes`: the area-equivalent
+    diameter 2*sqrt(A/pi) (for a circle exactly its diameter 2r; for a polygon NOT the bbox max side).
+    Only `order` is filtered -- `homog.raster_image` walks `order` and indexes the (untouched)
+    pos_*/neg_* lists through it, so the indices must stay valid.  Returns (filtered copy, n_removed).
+    """
+    drop = set()
+    for k, (kind, i) in enumerate(geom["order"]):
+        if kind == "negative_polygon":
+            p = geom["neg_polys"][i].reshape(-1, 2)
+            x, y = p[:, 0], p[:, 1]
+            a = 0.5 * abs(np.dot(x, np.roll(y, -1)) - np.dot(y, np.roll(x, -1)))
+        elif kind == "negative_circle":
+            a = math.pi * geom["neg_circles"][i][2] ** 2
+        else:
+            continue
+        if 2.0 * math.sqrt(a / math.pi) < dmax:
+            drop.add(k)
+    g = dict(geom)
+    g["order"] = [st for k, st in enumerate(geom["order"]) if k not in drop]
+    return g, len(drop)
+
+
 class Sheet:
     """Homogenised conductor sheet for one layer: coarse block (+ optional fine block)."""
 
-    def __init__(self, layer, geom, traces, h, sub_c, fh, sub_f, fine_box, bbox, n0, log=print):
+    def __init__(self, layer, geom, traces, h, sub_c, fh, sub_f, fine_box, bbox, n0, log=print, face_fix=False):
         self.layer = layer
         self.iface = None
         t0 = time.time()
@@ -65,7 +94,7 @@ class Sheet:
         nx = int(math.ceil((bbox[2] - X0) / h)); ny = int(math.ceil((bbox[3] - Y0) / h))
         s = h / sub_c
         img = H.raster_image(geom, traces, X0, Y0, nx * sub_c, ny * sub_c, s)
-        fill, Gx, Gy = H.cell_edges(img, sub_c)
+        fill, Gx, Gy = H.cell_edges(img, sub_c, face_fix=face_fix)
         c = dict(x0=X0, y0=Y0, nx=nx, ny=ny, h=h, fill=fill, Gx=Gx, Gy=Gy)
         self.blocks = [c]
         f = None
@@ -75,7 +104,7 @@ class Sheet:
             if fx1 > fx0 and fy1 > fy0:
                 fnx = int(round((fx1 - fx0) / fh)); fny = int(round((fy1 - fy0) / fh))
                 fimg = H.raster_image(geom, traces, fx0, fy0, fnx * sub_f, fny * sub_f, fh / sub_f)
-                ffill, fGx, fGy = H.cell_edges(fimg, sub_f)
+                ffill, fGx, fGy = H.cell_edges(fimg, sub_f, face_fix=face_fix)
                 f = dict(x0=fx0, y0=fy0, nx=fnx, ny=fny, h=fh, fill=ffill, Gx=fGx, Gy=fGy)
                 ci0 = int(round((fx0 - X0) / h)); ci1 = int(round((fx1 - X0) / h)); cj0 = int(round((fy0 - Y0) / h)); cj1 = int(round((fy1 - Y0) / h))
                 c["fill"] = c["fill"].copy(); c["fill"][cj0:cj1, ci0:ci1] = 0.0
@@ -205,8 +234,23 @@ def reduce_series(elems, fixed):
 
 class Model3:
     def __init__(self, ex, shapes, h=200.0, fh=50.0, top_h=50.0, fine_box=None, sub_c=20, sub_f=10, sub_top=10,
-                 fringe=False, fringe_wd=5.0, gnd=None, gnd_h=None, gnd_fh=None, log=print):
+                 fringe=False, fringe_wd=5.0, gnd=None, gnd_h=None, gnd_fh=None, log=print, eps_table=False, c_all_refs=False,
+                 zs_cell=False, zs_wall=False, c_unit_fix=False, fringe_no_thresh=False, fringe_no_cap=False,
+                 homog_L_noG=False, via_area_exact=False, via_L_twowire=False, zs_wall_skin=False, zs_wall_skin_re=False,
+                 via_R_skin=False, homog_face_fix=False, via_len_surface=False, void_fill_um=0.0):
         self.gnd_h = gnd_h or h; self.gnd_fh = gnd_fh or fh
+        self.eps_table, self.c_all_refs = eps_table, c_all_refs  # EXP-11 flags (default False = frozen behaviour)
+        self.zs_cell, self.zs_wall = zs_cell, zs_wall  # EXP-12 flags (default False = frozen behaviour)
+        self.c_unit_fix = c_unit_fix  # EXP-13 flag (default False = frozen (bugged) behaviour)
+        self.zs_wall_skin = zs_wall_skin  # EXP-18 flag (default False = frozen behaviour)
+        self.zs_wall_skin_re = zs_wall_skin_re  # EXP-18b flag (default False = frozen behaviour)
+        self.via_R_skin = via_R_skin  # EXP-20 flag (default False = frozen behaviour)
+        self.homog_face_fix = homog_face_fix  # EXP-28 flag (default False = frozen behaviour)
+        self.via_len_surface = via_len_surface  # EXP-32 flag (default False = frozen behaviour)
+        self.void_fill_um = void_fill_um  # EXP-36 flag (0.0 = off = frozen behaviour)
+        # EXP-14 flags (default False = frozen behaviour)
+        self.fringe_no_thresh, self.fringe_no_cap = fringe_no_thresh, fringe_no_cap
+        self.homog_L_noG, self.via_area_exact, self.via_L_twowire = homog_L_noG, via_area_exact, via_L_twowire
         self.ex, self.shapes, self.log = ex, shapes, log
         self.h, self.fh, self.top_h, self.fine_box = h, fh, top_h, fine_box
         self.fringe, self.fringe_wd = fringe, fringe_wd
@@ -214,7 +258,12 @@ class Model3:
         self.st = M.Stack(ex["stackup"])
         self.info = dict(h=h, fine_h=fh, top_h=top_h, sub_um_coarse=h / sub_c, sub_um_fine=fh / sub_f, sub_um_top=top_h / sub_top,
                          fringe=fringe, fringe_w_over_d_max=fringe_wd, explicit_gnd=gnd is not None,
-                         gnd_sheet_h=gnd_h or h, gnd_sheet_fine_h=gnd_fh or fh)
+                         gnd_sheet_h=gnd_h or h, gnd_sheet_fine_h=gnd_fh or fh, eps_table=eps_table, c_all_refs=c_all_refs,
+                         zs_cell=zs_cell, zs_wall=zs_wall, c_unit_fix=c_unit_fix,
+                         fringe_no_thresh=fringe_no_thresh, fringe_no_cap=fringe_no_cap, homog_L_noG=homog_L_noG,
+                         via_area_exact=via_area_exact, via_L_twowire=via_L_twowire, zs_wall_skin=zs_wall_skin,
+                         zs_wall_skin_re=zs_wall_skin_re, via_R_skin=via_R_skin, homog_face_fix=homog_face_fix,
+                         via_len_surface=via_len_surface, void_fill_um=void_fill_um)
         self.sub = (sub_c, sub_f, sub_top)
         self.build()
 
@@ -225,6 +274,13 @@ class Model3:
         rn = ex["rail_nodes"]
         lwd = ex.get("layer_default_width_um", {})
         geoms = {g["layer"]: g for g in ex["rail_geoms"]}
+        # EXP-36: PowerSI "Special Void" convention -- small voids are metal-filled before rasterising.
+        # Rail plane artwork only; ex is not mutated, so the TwoSided reference search keeps the real voids.
+        if self.void_fill_um > 0:
+            removed = {}
+            for L in list(geoms):
+                geoms[L], removed[L] = fill_small_voids(geoms[L], self.void_fill_um)
+            self.info["void_fill_removed"] = removed
         plane_layers = list(geoms)
         # rail traces drawn into their plane layer
         drawn = set()
@@ -235,6 +291,11 @@ class Model3:
                 traces_by_layer[L].append((rn[s_][0], rn[s_][1], rn[e_][0], rn[e_][1], w or lwd.get(L, 25.0)))
                 drawn.add(k)
         ts = TwoSided(ex, self.shapes, 3)
+        ts.eps_table = self.eps_table; ts.c_all_refs = self.c_all_refs  # set on the instance: TwoSidedAny's signature is frozen
+        ts.c_unit_fix = self.c_unit_fix
+        # stackup row index -> (sigma, t) for the wall impedance (EXP-12 (d)); non-conductor rows never referenced
+        self.row_sigma = np.array([r["conductivity"] or 0.0 for r in ex["stackup"]], float)
+        self.row_t = np.array([r["thickness_um"] * 1e-6 for r in ex["stackup"]], float)
         n = 0
         self.sheets = {}
         for L in plane_layers:
@@ -243,25 +304,41 @@ class Model3:
             pad = 500.0
             bbox = (pts[:, 0].min() - pad, pts[:, 1].min() - pad, pts[:, 0].max() + pad, pts[:, 1].max() + pad)
             if L == "Signal$TOP":
-                sh = Sheet(L, geoms[L], tr, self.top_h, self.sub[2], None, None, None, bbox, n, self.log)
+                sh = Sheet(L, geoms[L], tr, self.top_h, self.sub[2], None, None, None, bbox, n, self.log, self.homog_face_fix)
             else:
-                sh = Sheet(L, geoms[L], tr, self.h, self.sub[0], self.fh, self.sub[1], self.fine_box, bbox, n, self.log)
+                sh = Sheet(L, geoms[L], tr, self.h, self.sub[0], self.fh, self.sub[1], self.fine_box, bbox, n, self.log, self.homog_face_fix)
             n = sh.n
             # two-sided d_eff per cell (EXP-1b rule), capacitance per metal area
             base = sh.cells.min() if len(sh.cells) else 0
             dloc = np.zeros(n - base); cloc = np.zeros(n - base); tloc = np.zeros(n - base)
+            twoloc = np.zeros(n - base, bool); wuloc = np.full(n - base, -1, np.int16); wdloc = np.full(n - base, -1, np.int16)
+            ct = []
             for b in sh.blocks:
                 blk = dict(x0=b["x0"], y0=b["y0"], nx=b["nx"], ny=b["ny"], h=b["h"], mask=b["mask"])
                 r = ts(L, blk)
                 m = b["mask"]
                 dloc[b["ids"][m] - base] = r["d_eff"][m]; cloc[b["ids"][m] - base] = r["c_um2"][m]; tloc[b["ids"][m] - base] = r["tand"][m]
+                twoloc[b["ids"][m] - base] = r["two_sided"][m]
+                wuloc[b["ids"][m] - base] = r["wall_up"][m]; wdloc[b["ids"][m] - base] = r["wall_dn"][m]
+                if self.eps_table:
+                    ct.append((b["ids"][m], m, r["c_tand_at"]))
             a, bb, ell, wid, g = sh.edges
             sh.d_edge = 0.5 * (dloc[a - base] + dloc[bb - base])
             sh.c_cell = cloc[sh.cells - base]; sh.tand_cell = tloc[sh.cells - base]
+            # EXP-12: per-cell two-sidedness and wall rows (cheap, kept regardless of the flags)
+            sh.two_cell = twoloc[sh.cells - base]
+            sh.wall_up_cell = wuloc[sh.cells - base]; sh.wall_dn_cell = wdloc[sh.cells - base]
+            sh.two_edge = twoloc[a - base] & twoloc[bb - base]
+            # per edge: stackup rows of the up/down wall at endpoint a and at endpoint b (-1 = no wall)
+            sh.wall_rows_edge = np.stack([wuloc[a - base], wdloc[a - base], wuloc[bb - base], wdloc[bb - base]])
+            if self.eps_table:
+                sh.ct_blocks, sh.ct_base, sh.ct_size = ct, base, n - base
             row = st.row(L); sh.sigma = row["conductivity"]; sh.t = row["thickness_um"] * 1e-6
             self.sheets[L] = sh
         self.info["reference_search"] = ts.report
         self.info["rail_traces_drawn_into_planes"] = len(drawn)
+        # total shunt plane C at the fixed-eps_r default (nF); reflects c_unit_fix
+        self.info["plane_C_total_nF"] = float(sum((sh.c_cell * sh.cell_area).sum() for sh in self.sheets.values())) * 1e9
         # ---------------- rail nodes ----------------------------------
         idx = {}; nh = {}; snapped = 0
         for nid, (x, y, lay, ps) in rn.items():
@@ -292,7 +369,10 @@ class Model3:
         # rail vias (R, coax L) + pad links
         gxy = ex["gnd_xy_by_layer"]; gtrees = {L: cKDTree(v) for L, v in gxy.items() if len(v)}
         va, vb, vR, vL = [], [], [], []
+        vkind, vD, vell, vtp = [], [], [], []  # EXP-20 (via_R_skin): per-via R(f) inputs
         rc = {}
+        scaled_keys = set(); n_scaled = 0  # EXP-14 (g)
+        vlr = []  # EXP-32: ell'/ell per rail via
         for up, lo, ps in ex["rail_vias"]:
             if up not in rn or lo not in rn:
                 continue
@@ -301,20 +381,42 @@ class Model3:
             if a_ == b_:
                 continue
             ln = abs(st.z_center_um[Ll] - st.z_center_um[Lu])
+            if self.via_len_surface:  # EXP-32: layer centres -> layer surfaces; one length for R, L and the skin term
+                ln0 = ln
+                ln += 0.5 * (st.row(Lu)["thickness_um"] + st.row(Ll)["thickness_um"])
+                if ln0 > 0:
+                    vlr.append(ln / ln0)
             pad = ex["padstacks"].get(ps, {}); drill = pad.get("drill_um") or 40.0
-            key = (ps, Lu, Ll)
+            key = (ps, Lu, Ll, ln)
             if key not in rc:
-                rc[key] = estimate_via_segment_rl(length_um=ln, drill_diameter_um=drill, padstack_material=pad.get("material"),
-                                                  start_layer=Lu, end_layer=Ll, stackup_layers=ex["stackup_layers_obj"]).resistance_ohm
+                r_ = estimate_via_segment_rl(length_um=ln, drill_diameter_um=drill, padstack_material=pad.get("material"),
+                                             start_layer=Lu, end_layer=Ll, stackup_layers=ex["stackup_layers_obj"]).resistance_ohm
+                cl = classify_via_conductor(drill_diameter_um=drill, padstack_material=pad.get("material"),
+                                            start_layer=Lu, end_layer=Ll, stackup_layers=ex["stackup_layers_obj"])
+                hollow = cl.conductor_model == HOLLOW_PLATED_BARREL
+                if self.via_area_exact and hollow:  # EXP-14 (g): pi*D*t_p -> pi*(D*t_p - t_p^2) on plated barrels
+                    r_ *= drill / (drill - min(20.0, drill / 4.0))
+                    scaled_keys.add(key)
+                rc[key] = (r_, VIA_HOLLOW if hollow else VIA_SOLID)
             sd = min(max(float(gtrees[Lu].query([xu, yu])[0]) if Lu in gtrees else 1000.0, drill), 1000.0)
-            va.append(a_); vb.append(b_); vR.append(rc[key]); vL.append(MU0 / (2 * math.pi) * ln * 1e-6 * math.log(sd / (drill / 2)))
+            n_scaled += key in scaled_keys
+            mu_2pi = MU0 / math.pi if self.via_L_twowire else MU0 / (2 * math.pi)  # EXP-14 (h)
+            va.append(a_); vb.append(b_); vR.append(rc[key][0]); vL.append(mu_2pi * ln * 1e-6 * math.log(sd / (drill / 2)))
+            vkind.append(rc[key][1]); vD.append(drill); vell.append(ln); vtp.append(min(20.0, drill / 4.0))
+        self.via_len_ratio = np.array(vlr)  # EXP-32 diagnostics (empty when the flag is off)
         nvia = len(va)
         for a_, b_, r_ in self._pad_links(rn):
             a2, b2 = Rm(idx[a_]), Rm(idx[b_])
             if a2 != b2:
                 va.append(a2); vb.append(b2); vR.append(r_); vL.append(1e-15)
+                vkind.append(VIA_NONE); vD.append(0.0); vell.append(0.0); vtp.append(0.0)
         self.vias = [np.array(x) for x in (va, vb, vR, vL)]
+        # EXP-20: aligned with self.vias[2]; Rdc is that same (already via_area_exact-scaled) DC value
+        self.via_skin = (np.array(vkind, np.int8), np.array(vD, float), np.array(vell, float),
+                         np.array(vtp, float), self.vias[2])
         self.info.update(rail_vias=nvia, rail_pad_links=len(va) - nvia, off_plane_traces=len(ta))
+        if self.via_area_exact:
+            self.info.update(via_area_exact_scaled=n_scaled, via_total=nvia)
         # ---------------- GND (S3) ------------------------------------
         self.gsheets = {}
         self.gnd_r = [np.zeros(0, np.int64), np.zeros(0, np.int64), np.zeros(0)]
@@ -393,9 +495,9 @@ class Model3:
                 # TOP DGND only where the rail TOP sheet is (DUT + decap area)
                 b0 = self.sheets["Signal$TOP"].blocks[0]
                 bbox = (b0["x0"], b0["y0"], b0["x0"] + b0["nx"] * b0["h"], b0["y0"] + b0["ny"] * b0["h"])
-                sh = Sheet("GND:" + L, geom, tr, self.top_h, self.sub[2], None, None, None, bbox, n, self.log)
+                sh = Sheet("GND:" + L, geom, tr, self.top_h, self.sub[2], None, None, None, bbox, n, self.log, self.homog_face_fix)
             else:
-                sh = Sheet("GND:" + L, geom, tr, self.gnd_h, int(round(self.gnd_h / 10)), self.gnd_fh, int(round(self.gnd_fh / 5)), self.fine_box, win, n, self.log)
+                sh = Sheet("GND:" + L, geom, tr, self.gnd_h, int(round(self.gnd_h / 10)), self.gnd_fh, int(round(self.gnd_fh / 5)), self.fine_box, win, n, self.log, self.homog_face_fix)
             n = sh.n
             row = st.row(L); sh.sigma = row["conductivity"]; sh.t = row["thickness_um"] * 1e-6
             self.gsheets[L] = sh
@@ -423,8 +525,15 @@ class Model3:
             pad = ex["padstacks"].get(ps, {}); drill = pad.get("drill_um") or 40.0
             key = (ps, Lu, Ll)
             if key not in rc:
-                rc[key] = estimate_via_segment_rl(length_um=ln, drill_diameter_um=drill, padstack_material=pad.get("material"),
-                                                  start_layer=Lu, end_layer=Ll, stackup_layers=ex["stackup_layers_obj"]).resistance_ohm
+                r_ = estimate_via_segment_rl(length_um=ln, drill_diameter_um=drill, padstack_material=pad.get("material"),
+                                             start_layer=Lu, end_layer=Ll, stackup_layers=ex["stackup_layers_obj"]).resistance_ohm
+                cl = classify_via_conductor(drill_diameter_um=drill, padstack_material=pad.get("material"),
+                                            start_layer=Lu, end_layer=Ll, stackup_layers=ex["stackup_layers_obj"])
+                hollow = cl.conductor_model == HOLLOW_PLATED_BARREL
+                if self.via_area_exact and hollow:  # EXP-14 (g): pi*D*t_p -> pi*(D*t_p - t_p^2) on plated barrels
+                    r_ *= drill / (drill - min(20.0, drill / 4.0))
+                    scaled_keys.add(key)
+                rc[key] = (r_, VIA_HOLLOW if hollow else VIA_SOLID)
             elems.append((up, lo, rc[key], "via"))
         for a_, b_, r_ in self._pad_links(gn):
             elems.append((a_, b_, r_, "pad"))
@@ -464,12 +573,57 @@ class Model3:
         XL = w * MU0 * d * 1e-6 * ell / weff
         return R, XL
 
+    def sheet_c_tand(self, sh, f):
+        """eps_table: (c_cell, tand_cell) for this sheet with the dielectric table evaluated at f."""
+        cloc = np.zeros(sh.ct_size); tloc = np.zeros(sh.ct_size)
+        for ids, m, at in sh.ct_blocks:
+            c, td = at(f)
+            cloc[ids - sh.ct_base] = c[m]; tloc[ids - sh.ct_base] = td[m]
+        return cloc[sh.cells - sh.ct_base], tloc[sh.cells - sh.ct_base]
+
+    def via_R(self, f):
+        """Per-via series R at f.  Flag off -> the frozen DC array itself (bit-identical).
+
+        EXP-20 (via_R_skin): SOLID = round-wire exact solution l*Re[gamma/(2 pi a sigma) J0(gamma a)/J1(gamma a)],
+        HOLLOW = Re[Zs1(f, sigma, t_p)]*l/(pi D) (times the via_area_exact factor D/(D-t_p) when that flag is on),
+        NONE (pad links) = the DC value.  Both AC forms tend to their DC value as f -> 0.
+        """
+        if not self.via_R_skin:
+            return self.vias[2]
+        kind, D_um, ell_um, tp_um, Rdc = self.via_skin
+        R = Rdc.copy()
+        if f <= 0:
+            return R
+        sig = COPPER_CONDUCTIVITY_S_PER_M
+        gam = (1.0 + 1j) * math.sqrt(math.pi * f * MU0 * sig)  # (1+j)/delta
+        k = np.nonzero(kind == VIA_SOLID)[0]
+        if len(k):
+            a = D_um[k] * 0.5e-6
+            ga = gam * a
+            ok = np.abs(ga) >= 1e-3  # below that J0/J1 -> 2/(gamma a) numerically: keep Rdc
+            k, a, ga = k[ok], a[ok], ga[ok]
+            if len(k):
+                R[k] = ell_um[k] * 1e-6 * (gam / (2 * math.pi * a * sig) * jv(0, ga) / jv(1, ga)).real
+        k = np.nonzero(kind == VIA_HOLLOW)[0]
+        if len(k):
+            for tp in np.unique(tp_um[k]):
+                kk = k[tp_um[k] == tp]
+                zs = complex(copper_surface_impedance(f, sig, tp * 1e-6)).real
+                R[kk] = zs * (ell_um[kk] * 1e-6) / (math.pi * D_um[kk] * 1e-6)
+            if self.via_area_exact:
+                R[k] *= D_um[k] / (D_um[k] - tp_um[k])
+        return R
+
     def assemble(self, f):
         w = 2 * math.pi * f
         rows, cols, vals = [], [], []
         N = self.N
+        pat = getattr(self, "_fa_pat", None) if FA.ON else None  # EXP-37: cached -> skip rows/cols
 
         def st_(a, b, y):
+            if pat is not None:  # same value order, rows/cols already in the cached pattern
+                y = np.broadcast_to(y, np.shape(a))
+                vals.extend([y, y, -y, -y]); return
             a = self.map(a); b = self.map(b)
             a = np.where(a < 0, N, a); b = np.where(b < 0, N, b)
             y = np.broadcast_to(y, a.shape)
@@ -478,22 +632,34 @@ class Model3:
         for sh in self.sheets.values():
             R, XL = self.edge_z(sh, f)
             st_(sh.edges[0], sh.edges[1], 1.0 / (R + 1j * XL))
-            y = (w * sh.c_cell * sh.tand_cell + 1j * w * sh.c_cell) * sh.cell_area
-            diag_rows.append(self.map(sh.cells)); diag_vals.append(y)
+            c_cell, tand_cell = self.sheet_c_tand(sh, f) if self.eps_table else (sh.c_cell, sh.tand_cell)
+            y = (w * c_cell * tand_cell + 1j * w * c_cell) * sh.cell_area
+            if pat is None:
+                diag_rows.append(self.map(sh.cells))
+            diag_vals.append(y)
         for sh in self.gsheets.values():
             R, _ = self.edge_z(sh, f, rail=False)
             st_(sh.edges[0], sh.edges[1], 1.0 / R)
         a, b, sq, sig, t, Lt = self.traces
         if len(a):
-            zst = np.array([complex(copper_surface_impedance(f, s_, t_)) for s_, t_ in zip(sig, t)])
+            zst = (FA.trace_zs(self, copper_surface_impedance, f, sig, t) if FA.ON else
+                   np.array([complex(copper_surface_impedance(f, s_, t_)) for s_, t_ in zip(sig, t)]))
             st_(a, b, 1.0 / (zst * sq + 1j * w * Lt))
-        a, b, Rv, Lv = self.vias
+        a, b, _, Lv = self.vias
+        Rv = self.via_R(f)
         st_(a, b, 1.0 / (Rv + 1j * w * Lv))
         a, b, Rg = self.gnd_r
         if len(a):
             st_(a, b, (1.0 / Rg).astype(complex))
         ys = {mid: 1.0 / self.ex["models"][mid].impedance([f])[0] for mid in {d[2] for d in self.dec}}
         st_(np.array([d[0] for d in self.dec]), np.array([d[1] for d in self.dec]), np.array([ys[d[2]] for d in self.dec]))
+        if FA.ON:  # EXP-37: values only; the COO -> CSC map is frequency-independent
+            V_ = np.concatenate([np.ravel(x) for x in vals] + [np.ravel(x) for x in diag_vals])
+            if pat is None:
+                pat = self._fa_pat = FA.YPattern(
+                    np.concatenate([np.ravel(x) for x in rows] + [np.ravel(x) for x in diag_rows]),
+                    np.concatenate([np.ravel(x) for x in cols] + [np.ravel(x) for x in diag_rows]), N)
+            return pat.csc(V_)
         R_ = np.concatenate([np.ravel(x) for x in rows] + [np.ravel(x) for x in diag_rows])
         C_ = np.concatenate([np.ravel(x) for x in cols] + [np.ravel(x) for x in diag_rows])
         V_ = np.concatenate([np.ravel(x) for x in vals] + [np.ravel(x) for x in diag_vals])
@@ -502,18 +668,35 @@ class Model3:
 
     def solve(self, freqs, verbose=True, want_v=False):
         Z, stats, Vs = [], [], []
+        gpu = None  # SPD_PI_SOLVER=cudss: a CudssLU once it is up, False once known unusable
         for f in freqs:
             t0 = time.time(); Y = self.assemble(f); t1 = time.time()
-            lu = splu(Y, permc_spec="COLAMD"); t2 = time.time()
-            rhs = np.zeros(self.N, complex); rhs[self.P] = 1.0
-            V = lu.solve(rhs); Z.append(V[self.P])
-            stats.append(dict(f=float(f), assemble_s=t1 - t0, factor_s=t2 - t1, nnz_LU=int(lu.nnz),
-                              rss_MB=peak_rss_mb()))
+            if gpu is None and os.environ.get("SPD_PI_SOLVER", "").lower() == "cudss":
+                gpu = getattr(self, "_cudss", None)  # one solver per model, reused by every
+                if gpu is None:                      # solve() call: cuDSS 0.8 faults on a
+                    try:                             # second solver and on an early free()
+                        from cudss_solver import CudssLU
+                        gpu = CudssLU(Y, self.P, self.log)
+                        self.log(f"[solver] cudss on {gpu.device}")
+                    except Exception as e:  # unattended 92-port drivers must not die on the GPU
+                        gpu = False
+                        self.log(f"[solver] cudss unavailable ({type(e).__name__}: {e}) -- using splu")
+                    self._cudss = gpu
+            if gpu:
+                V, st = gpu.solve(Y); t2 = time.time()
+                Z.append(V[self.P])
+                stats.append(dict(f=float(f), assemble_s=t1 - t0, rss_MB=peak_rss_mb(), **st))
+            else:
+                lu = splu(Y, permc_spec="COLAMD"); t2 = time.time()
+                rhs = np.zeros(self.N, complex); rhs[self.P] = 1.0
+                V = lu.solve(rhs); Z.append(V[self.P])
+                stats.append(dict(f=float(f), assemble_s=t1 - t0, factor_s=t2 - t1, nnz_LU=int(lu.nnz),
+                                  rss_MB=peak_rss_mb(), solver="splu"))
+                del lu
             if want_v:
                 Vs.append(V)
             if verbose:
-                self.log(f"  f={f:11.4e} Z={Z[-1].real:+.4e}{Z[-1].imag:+.4e}j asm {t1-t0:.1f}s fact {t2-t1:.1f}s nnzLU {lu.nnz/1e6:.1f}M")
-            del lu
+                self.log(f"  f={f:11.4e} Z={Z[-1].real:+.4e}{Z[-1].imag:+.4e}j asm {t1-t0:.1f}s fact {t2-t1:.1f}s nnzLU {stats[-1]['nnz_LU']/1e6:.1f}M")
         return (np.array(Z), stats, Vs) if want_v else (np.array(Z), stats)
 
     def breakdown(self, f, V):
@@ -533,8 +716,8 @@ class Model3:
         a, b, sq, sig, t, Lt = self.traces
         z = np.array([complex(copper_surface_impedance(f, s_, t_)) for s_, t_ in zip(sig, t)]) * sq + 1j * w * Lt
         i = (gv(a) - gv(b)) / z; out["rail_traces"] = np.sum(np.abs(i) ** 2 * z)
-        a, b, Rv, Lv = self.vias
-        z = Rv + 1j * w * Lv; i = (gv(a) - gv(b)) / z
+        a, b, _, Lv = self.vias
+        z = self.via_R(f) + 1j * w * Lv; i = (gv(a) - gv(b)) / z
         pl = Lv < 1e-14
         out["rail_vias"] = np.sum(np.abs(i[~pl]) ** 2 * z[~pl]); out["rail_pad_links"] = np.sum(np.abs(i[pl]) ** 2 * z[pl])
         a, b, Rg = self.gnd_r

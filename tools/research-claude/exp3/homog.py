@@ -48,8 +48,12 @@ def raster_image(geom, traces, x0, y0, nx, ny, s):
     return np.asarray(img, dtype=bool)
 
 
-def batched_gx(W, tol=1e-7, maxit=600):
-    """W bool (N, ny, nx). Relative x-conductance of each window."""
+def batched_gx(W, tol=1e-7, maxit=600, face_fix=False):
+    """W bool (N, ny, nx). Relative x-conductance of each window.
+
+    face_fix (EXP-28): inject/extract on the first/last column that has any metal instead of
+    columns 0 / nx-1, so a window whose centre-line faces are bare copper-free does not read G = 0.
+    Windows with metal on both faces (k0 = 0, k1 = nx-1) are bit-identical to the default path."""
     W = W.astype(bool)
     N, ny, nx = W.shape
     if N == 0:
@@ -60,11 +64,22 @@ def batched_gx(W, tol=1e-7, maxit=600):
     diag = np.zeros_like(Wf)
     diag[:, :, :-1] += gh; diag[:, :, 1:] += gh
     diag[:, :-1, :] += gv; diag[:, 1:, :] += gv
-    diag[:, :, 0] += 2.0 * Wf[:, :, 0]; diag[:, :, -1] += 2.0 * Wf[:, :, -1]
+    if face_fix:
+        colany = W.any(axis=1)                             # (N, nx): column has metal
+        an = np.arange(N)
+        k0 = colany.argmax(axis=1)
+        k1 = nx - 1 - colany[:, ::-1].argmax(axis=1)
+        diag[an, :, k0] += 2.0 * Wf[an, :, k0]
+        diag[an, :, k1] += 2.0 * Wf[an, :, k1]
+    else:
+        diag[:, :, 0] += 2.0 * Wf[:, :, 0]; diag[:, :, -1] += 2.0 * Wf[:, :, -1]
     active = diag > 0
     dinv = np.where(active, 1.0 / np.where(active, diag, 1.0), 0.0)
-    b = 2.0 * Wf[:, :, 0].copy()
-    bfull = np.zeros_like(Wf); bfull[:, :, 0] = b
+    bfull = np.zeros_like(Wf)
+    if face_fix:
+        bfull[an, :, k0] = 2.0 * Wf[an, :, k0]
+    else:
+        bfull[:, :, 0] = 2.0 * Wf[:, :, 0]
 
     def A(v):
         out = diag * v
@@ -94,11 +109,14 @@ def batched_gx(W, tol=1e-7, maxit=600):
         beta = np.where(rz > 0, rz_new / np.where(rz > 0, rz, 1), 0.0)
         p = z + beta[:, None, None] * p
         rz = rz_new
-    I = np.sum(2.0 * (1.0 - x[:, :, 0]) * Wf[:, :, 0], axis=1)
+    if face_fix:
+        I = np.sum(2.0 * (1.0 - x[an, :, k0]) * Wf[an, :, k0], axis=1)
+    else:
+        I = np.sum(2.0 * (1.0 - x[:, :, 0]) * Wf[:, :, 0], axis=1)
     return I * nx / ny
 
 
-def window_conductance(windows, chunk_tiles=6_000_000):
+def window_conductance(windows, chunk_tiles=6_000_000, face_fix=False):
     """windows bool (N, ny, nx) -> relative x conductance; exact 1/0 for full/empty."""
     N = windows.shape[0]
     out = np.zeros(N)
@@ -110,11 +128,11 @@ def window_conductance(windows, chunk_tiles=6_000_000):
     step = max(1, chunk_tiles // per)
     for k in range(0, len(mixed), step):
         sel = mixed[k:k + step]
-        out[sel] = batched_gx(windows[sel])
+        out[sel] = batched_gx(windows[sel], face_fix=face_fix)
     return out
 
 
-def cell_edges(img, sub):
+def cell_edges(img, sub, face_fix=False):
     """img (ny*sub, nx*sub) -> fill (ny,nx), Gx (ny, nx-1) between (j,i)-(j,i+1),
     Gy (ny-1, nx) between (j,i)-(j+1,i). Windows span centre-to-centre, width = one cell."""
     H, Wd = img.shape
@@ -126,13 +144,39 @@ def cell_edges(img, sub):
     if nx > 1:
         core = im[:, half: half + (nx - 1) * sub]
         wx = core.reshape(ny, sub, nx - 1, sub).transpose(0, 2, 1, 3).reshape(-1, sub, sub)
-        Gx = window_conductance(wx).reshape(ny, nx - 1)
+        Gx = window_conductance(wx, face_fix=face_fix).reshape(ny, nx - 1)
     else:
         Gx = np.zeros((ny, 0))
     if ny > 1:
         core = im[half: half + (ny - 1) * sub, :]
         wy = core.reshape(ny - 1, sub, nx, sub).transpose(0, 2, 3, 1).reshape(-1, sub, sub)  # rotate: x<->y
-        Gy = window_conductance(wy).reshape(ny - 1, nx)
+        Gy = window_conductance(wy, face_fix=face_fix).reshape(ny - 1, nx)
     else:
         Gy = np.zeros((0, nx))
     return fill, Gx, Gy
+
+
+def selfcheck_face_fix():
+    """EXP-28 synthetic check of batched_gx(face_fix=...).  Nothing is read or written."""
+    ny = nx = 20
+    strip = np.zeros((1, ny, nx), bool); strip[0, :, 3:17] = True      # columns 3..16, full rows
+    g0 = batched_gx(strip)[0]
+    g1 = batched_gx(strip, face_fix=True)[0]
+    m = 17 - 3                                                        # conducting columns k0..k1
+    # series: 1/2 (source) + (m-1) bonds + 1/2 (sink) per row -> I = ny/m, G = I*nx/ny = nx/m
+    print(f"[selfcheck] strip cols 3..16  G_orig={g0:.12f}  G_face_fix={g1:.12f}  "
+          f"analytic nx/m={nx/m:.12f}  (plan section 2 predicted 1.0)")
+
+    hole = np.ones((1, ny, nx), bool); hole[0, 8:12, 5:15] = False     # full faces, hole in the middle
+    h0 = batched_gx(hole)[0]
+    h1 = batched_gx(hole, face_fix=True)[0]
+    print(f"[selfcheck] full-face w/ hole G_orig={h0:.12f}  G_face_fix={h1:.12f}  maxabsdiff={abs(h0-h1):.3e}")
+
+    ok = (g0 == 0.0) and abs(g1 - nx / m) <= 1e-9 and abs(h0 - h1) == 0.0
+    assert ok, (g0, g1, nx / m, h0, h1)
+    print("SELFCHECK-HOMOG", "PASS" if ok else "FAIL")
+    return 0 if ok else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(selfcheck_face_fix())

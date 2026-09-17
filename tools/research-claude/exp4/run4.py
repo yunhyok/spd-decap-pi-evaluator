@@ -73,20 +73,56 @@ class Model4(M3.Model3):
             return zs_two(f, sh.sigma, sh.t) if sh.layer in TWO_SIDED else one
         return complex(zs_two(f, sh.sigma, sh.t).real, 0.0) if self.mode == "c" else one
 
+    def wall_zs(self, sh, f, skin=False):
+        """EXP-12 (d): per rail edge, the mean over its two endpoint cells of the return-plane Zs
+        (one wall: that layer's Zs1; two walls: parallel; no wall: 0).
+        EXP-18: skin=True uses Zs1 - 1/(sigma t) per wall (DC term removed, complex) before the
+        parallel combination and edge averaging."""
+        rows = sh.wall_rows_edge  # 4 x nedge: up/dn at endpoint a, up/dn at endpoint b
+        z = np.zeros(rows.shape, complex)
+        for i in np.unique(rows[rows >= 0]):
+            zi = complex(zs_one(f, self.row_sigma[i], self.row_t[i]))
+            if skin:
+                zi = zi - 1.0 / (self.row_sigma[i] * self.row_t[i])
+            z[rows == i] = zi
+        out = np.zeros(rows.shape[1], complex)
+        for k in (0, 2):
+            zu, zd = z[k], z[k + 1]
+            both = (rows[k] >= 0) & (rows[k + 1] >= 0)
+            out += np.where(both, zu * zd / np.where(both, zu + zd, 1.0), zu + zd)
+        return 0.5 * out
+
     def edge_z(self, sh, f, rail=True):
         a, b, ell, wid, G = sh.edges
         zs = self.zs_plane(f, sh, rail)
+        if rail and self.zs_cell:  # EXP-12 (c): cell-wise Zs2/Zs1 instead of the layer-majority rule
+            zs = np.where(sh.two_edge, zs_two(f, sh.sigma, sh.t), complex(zs_one(f, sh.sigma, sh.t)))
+        if rail and self.zs_wall:  # EXP-12 (d): add the return-plane (wall) Zs
+            zs = zs + self.wall_zs(sh, f)
+        if rail and self.zs_wall_skin:  # EXP-18: add the return-plane skin-only term (DC removed)
+            zs = zs + self.wall_zs(sh, f, skin=True)
+        if rail and self.zs_wall_skin_re:  # EXP-18b: real part only of the skin-only term (skin R, no added L)
+            zs = zs + self.wall_zs(sh, f, skin=True).real
         R = zs * (ell / wid) / G
         if not rail:
             return R * (self.gnd_scale if self.mode == "c" else 1.0), np.zeros(len(a))
         w = 2 * math.pi * f
-        weff = G * wid
-        d = sh.d_edge
-        if self.fringe:
-            use = weff < self.fringe_wd * d
-            weff = np.where(use, np.minimum(weff + 2 * d, wid), weff)
-        XL = w * MU0 * d * 1e-6 * ell / weff
+        weff = M3.FA.weff(self, sh) if M3.FA.ON else self.weff_of(sh)[0]  # EXP-37: weff has no f
+        XL = w * MU0 * sh.d_edge * 1e-6 * ell / weff
         return R, XL
+
+    def weff_of(self, sh):
+        """(effective width per rail edge, fringing-applied mask).  EXP-14 flags are additive:
+        fringe_no_thresh (apply to every edge), fringe_no_cap (no min(., wid)), homog_L_noG (start from wid)."""
+        _, _, ell, wid, G = sh.edges
+        d = sh.d_edge
+        weff = wid if self.homog_L_noG else G * wid
+        use = np.zeros(len(wid), bool)
+        if self.fringe:
+            use = np.ones(len(wid), bool) if self.fringe_no_thresh else (weff < self.fringe_wd * d)
+            grown = weff + 2 * d if self.fringe_no_cap else np.minimum(weff + 2 * d, wid)
+            weff = np.where(use, grown, weff)
+        return weff, use
 
 
 def patch_traces(mode):

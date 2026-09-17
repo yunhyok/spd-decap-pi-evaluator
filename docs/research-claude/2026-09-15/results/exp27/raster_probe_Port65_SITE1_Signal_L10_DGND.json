@@ -1,0 +1,2750 @@
+{
+ "port": "Port65_SITE1",
+ "layer": "Signal$L10(DGND)",
+ "x_um": 36062.0,
+ "y_um": -33480.0,
+ "radius_um": 1200.0,
+ "sheet_cells": 127,
+ "sheet_edges": 74,
+ "sheet_patches": 65,
+ "patch_sizes": {
+  "2": 12,
+  "7": 5,
+  "8": 5,
+  "0": 4,
+  "4": 4,
+  "29": 4,
+  "31": 4,
+  "33": 4,
+  "35": 4,
+  "54": 4,
+  "56": 4,
+  "58": 4,
+  "60": 4,
+  "62": 4,
+  "64": 4,
+  "3": 3,
+  "27": 3,
+  "43": 3,
+  "14": 2,
+  "1": 1
+ },
+ "blocks": [
+  {
+   "kind": "coarse",
+   "h_um": 200.0,
+   "nx": 219,
+   "ny": 130,
+   "x0": -6800.0,
+   "y0": -34200.0
+  },
+  {
+   "kind": "fine",
+   "h_um": 50.0,
+   "nx": 348,
+   "ny": 80,
+   "x0": -6800.0,
+   "y0": -12200.0
+  }
+ ],
+ "cells": [
+  {
+   "cell": 7,
+   "block": "coarse",
+   "j": 3,
+   "i": 214,
+   "x_um": 36100.0,
+   "y_um": -33500.0,
+   "h_um": 200.0,
+   "fill": 1.0,
+   "patch": 2,
+   "dist_um": 42.941821107167776,
+   "edges": [
+    {
+     "other": 6,
+     "G": 1.0
+    },
+    {
+     "other": 8,
+     "G": 1.0
+    },
+    {
+     "other": 12,
+     "G": 1.0
+    }
+   ]
+  },
+  {
+   "cell": 6,
+   "block": "coarse",
+   "j": 3,
+   "i": 213,
+   "x_um": 35900.0,
+   "y_um": -33500.0,
+   "h_um": 200.0,
+   "fill": 1.0,
+   "patch": 2,
+   "dist_um": 163.22989922192565,
+   "edges": [
+    {
+     "other": 5,
+     "G": 1.0
+    },
+    {
+     "other": 7,
+     "G": 1.0
+    },
+    {
+     "other": 11,
+     "G": 1.0
+    }
+   ]
+  },
+  {
+   "cell": 12,
+   "block": "coarse",
+   "j": 4,
+   "i": 214,
+   "x_um": 36100.0,
+   "y_um": -33300.0,
+   "h_um": 200.0,
+   "fill": 1.0,
+   "patch": 2,
+   "dist_um": 183.96738841436002,
+   "edges": [
+    {
+     "other": 11,
+     "G": 1.0
+    },
+    {
+     "other": 13,
+     "G": 1.0
+    },
+    {
+     "other": 7,
+     "G": 1.0
+    },
+    {
+     "other": 17,
+     "G": 1.0
+    }
+   ]
+  },
+  {
+   "cell": 2,
+   "block": "coarse",
+   "j": 2,
+   "i": 214,
+   "x_um": 36100.0,
+   "y_um": -33700.0,
+   "h_um": 200.0,
+   "fill": 0.35,
+   "patch": 0,
+   "dist_um": 223.2576986354558,
+   "edges": [
+    {
+     "other": 1,
+     "G": 0.35000000000000164
+    },
+    {
+     "other": 3,
+     "G": 0.35000000000000164
+    }
+   ]
+  },
+  {
+   "cell": 8,
+   "block": "coarse",
+   "j": 3,
+   "i": 215,
+   "x_um": 36300.0,
+   "y_um": -33500.0,
+   "h_um": 200.0,
+   "fill": 1.0,
+   "patch": 2,
+   "dist_um": 238.83885781003056,
+   "edges": [
+    {
+     "other": 7,
+     "G": 1.0
+    },
+    {
+     "other": 13,
+     "G": 1.0
+    }
+   ]
+  },
+  {
+   "cell": 11,
+   "block": "coarse",
+   "j": 4,
+   "i": 213,
+   "x_um": 35900.0,
+   "y_um": -33300.0,
+   "h_um": 200.0,
+   "fill": 1.0,
+   "patch": 2,
+   "dist_um": 242.1652328473268,
+   "edges": [
+    {
+     "other": 10,
+     "G": 1.0
+    },
+    {
+     "other": 12,
+     "G": 1.0
+    },
+    {
+     "other": 6,
+     "G": 1.0
+    },
+    {
+     "other": 16,
+     "G": 1.0
+    }
+   ]
+  },
+  {
+   "cell": 1,
+   "block": "coarse",
+   "j": 2,
+   "i": 213,
+   "x_um": 35900.0,
+   "y_um": -33700.0,
+   "h_um": 200.0,
+   "fill": 0.35,
+   "patch": 0,
+   "dist_um": 273.2105415242977,
+   "edges": [
+    {
+     "other": 0,
+     "G": 0.35000000000000164
+    },
+    {
+     "other": 2,
+     "G": 0.35000000000000164
+    }
+   ]
+  },
+  {
+   "cell": 13,
+   "block": "coarse",
+   "j": 4,
+   "i": 215,
+   "x_um": 36300.0,
+   "y_um": -33300.0,
+   "h_um": 200.0,
+   "fill": 1.0,
+   "patch": 2,
+   "dist_um": 298.40241285887754,
+   "edges": [
+    {
+     "other": 12,
+     "G": 1.0
+    },
+    {
+     "other": 8,
+     "G": 1.0
+    },
+    {
+     "other": 18,
+     "G": 1.0
+    }
+   ]
+  },
+  {
+   "cell": 3,
+   "block": "coarse",
+   "j": 2,
+   "i": 215,
+   "x_um": 36300.0,
+   "y_um": -33700.0,
+   "h_um": 200.0,
+   "fill": 0.35,
+   "patch": 0,
+   "dist_um": 324.1049212832166,
+   "edges": [
+    {
+     "other": 2,
+     "G": 0.35000000000000164
+    }
+   ]
+  },
+  {
+   "cell": 5,
+   "block": "coarse",
+   "j": 3,
+   "i": 212,
+   "x_um": 35700.0,
+   "y_um": -33500.0,
+   "h_um": 200.0,
+   "fill": 0.6,
+   "patch": 2,
+   "dist_um": 362.55206522649956,
+   "edges": [
+    {
+     "other": 6,
+     "G": 1.0
+    },
+    {
+     "other": 10,
+     "G": 0.6000000000000005
+    }
+   ]
+  },
+  {
+   "cell": 17,
+   "block": "coarse",
+   "j": 5,
+   "i": 214,
+   "x_um": 36100.0,
+   "y_um": -33100.0,
+   "h_um": 200.0,
+   "fill": 1.0,
+   "patch": 2,
+   "dist_um": 381.8952736025938,
+   "edges": [
+    {
+     "other": 16,
+     "G": 1.0
+    },
+    {
+     "other": 18,
+     "G": 1.0
+    },
+    {
+     "other": 12,
+     "G": 1.0
+    }
+   ]
+  },
+  {
+   "cell": 10,
+   "block": "coarse",
+   "j": 4,
+   "i": 212,
+   "x_um": 35700.0,
+   "y_um": -33300.0,
+   "h_um": 200.0,
+   "fill": 0.6,
+   "patch": 2,
+   "dist_um": 404.2820797413608,
+   "edges": [
+    {
+     "other": 11,
+     "G": 1.0
+    },
+    {
+     "other": 5,
+     "G": 0.6000000000000005
+    },
+    {
+     "other": 15,
+     "G": 0.6000000000000005
+    }
+   ]
+  },
+  {
+   "cell": 16,
+   "block": "coarse",
+   "j": 5,
+   "i": 213,
+   "x_um": 35900.0,
+   "y_um": -33100.0,
+   "h_um": 200.0,
+   "fill": 1.0,
+   "patch": 2,
+   "dist_um": 413.09078905247935,
+   "edges": [
+    {
+     "other": 15,
+     "G": 1.0
+    },
+    {
+     "other": 17,
+     "G": 1.0
+    },
+    {
+     "other": 11,
+     "G": 1.0
+    }
+   ]
+  },
+  {
+   "cell": 0,
+   "block": "coarse",
+   "j": 2,
+   "i": 212,
+   "x_um": 35700.0,
+   "y_um": -33700.0,
+   "h_um": 200.0,
+   "fill": 0.2075,
+   "patch": 0,
+   "dist_um": 423.60830964465276,
+   "edges": [
+    {
+     "other": 1,
+     "G": 0.35000000000000164
+    }
+   ]
+  },
+  {
+   "cell": 9,
+   "block": "coarse",
+   "j": 3,
+   "i": 216,
+   "x_um": 36500.0,
+   "y_um": -33500.0,
+   "h_um": 200.0,
+   "fill": 0.4,
+   "patch": 3,
+   "dist_um": 438.45638323555056,
+   "edges": [
+    {
+     "other": 14,
+     "G": 0.4000000000000026
+    }
+   ]
+  },
+  {
+   "cell": 18,
+   "block": "coarse",
+   "j": 5,
+   "i": 215,
+   "x_um": 36300.0,
+   "y_um": -33100.0,
+   "h_um": 200.0,
+   "fill": 1.0,
+   "patch": 2,
+   "dist_um": 448.37930371505774,
+   "edges": [
+    {
+     "other": 17,
+     "G": 1.0
+    },
+    {
+     "other": 13,
+     "G": 1.0
+    }
+   ]
+  },
+  {
+   "cell": 14,
+   "block": "coarse",
+   "j": 4,
+   "i": 216,
+   "x_um": 36500.0,
+   "y_um": -33300.0,
+   "h_um": 200.0,
+   "fill": 0.4,
+   "patch": 3,
+   "dist_um": 473.5440845370154,
+   "edges": [
+    {
+     "other": 9,
+     "G": 0.4000000000000026
+    },
+    {
+     "other": 19,
+     "G": 0.4000000000000026
+    }
+   ]
+  },
+  {
+   "cell": 4,
+   "block": "coarse",
+   "j": 2,
+   "i": 216,
+   "x_um": 36500.0,
+   "y_um": -33700.0,
+   "h_um": 200.0,
+   "fill": 0.13,
+   "patch": 1,
+   "dist_um": 490.146916750478,
+   "edges": []
+  },
+  {
+   "cell": 15,
+   "block": "coarse",
+   "j": 5,
+   "i": 212,
+   "x_um": 35700.0,
+   "y_um": -33100.0,
+   "h_um": 200.0,
+   "fill": 0.6,
+   "patch": 2,
+   "dist_um": 524.8275907381394,
+   "edges": [
+    {
+     "other": 16,
+     "G": 1.0
+    },
+    {
+     "other": 10,
+     "G": 0.6000000000000005
+    }
+   ]
+  },
+  {
+   "cell": 19,
+   "block": "coarse",
+   "j": 5,
+   "i": 216,
+   "x_um": 36500.0,
+   "y_um": -33100.0,
+   "h_um": 200.0,
+   "fill": 0.4,
+   "patch": 3,
+   "dist_um": 579.865501646718,
+   "edges": [
+    {
+     "other": 14,
+     "G": 0.4000000000000026
+    }
+   ]
+  },
+  {
+   "cell": 22,
+   "block": "coarse",
+   "j": 6,
+   "i": 214,
+   "x_um": 36100.0,
+   "y_um": -32900.0,
+   "h_um": 200.0,
+   "fill": 0.35,
+   "patch": 4,
+   "dist_um": 581.2434945872512,
+   "edges": [
+    {
+     "other": 21,
+     "G": 0.35000000000000187
+    },
+    {
+     "other": 23,
+     "G": 0.35000000000000187
+    }
+   ]
+  },
+  {
+   "cell": 21,
+   "block": "coarse",
+   "j": 6,
+   "i": 213,
+   "x_um": 35900.0,
+   "y_um": -32900.0,
+   "h_um": 200.0,
+   "fill": 0.35,
+   "patch": 4,
+   "dist_um": 602.1993025568861,
+   "edges": [
+    {
+     "other": 20,
+     "G": 0.3434751637829725
+    },
+    {
+     "other": 22,
+     "G": 0.35000000000000187
+    }
+   ]
+  },
+  {
+   "cell": 23,
+   "block": "coarse",
+   "j": 6,
+   "i": 215,
+   "x_um": 36300.0,
+   "y_um": -32900.0,
+   "h_um": 200.0,
+   "fill": 0.35,
+   "patch": 4,
+   "dist_um": 626.9322132415912,
+   "edges": [
+    {
+     "other": 22,
+     "G": 0.35000000000000187
+    }
+   ]
+  },
+  {
+   "cell": 20,
+   "block": "coarse",
+   "j": 6,
+   "i": 212,
+   "x_um": 35700.0,
+   "y_um": -32900.0,
+   "h_um": 200.0,
+   "fill": 0.2,
+   "patch": 4,
+   "dist_um": 683.6987640766948,
+   "edges": [
+    {
+     "other": 21,
+     "G": 0.3434751637829725
+    }
+   ]
+  },
+  {
+   "cell": 24,
+   "block": "coarse",
+   "j": 6,
+   "i": 216,
+   "x_um": 36500.0,
+   "y_um": -32900.0,
+   "h_um": 200.0,
+   "fill": 0.12,
+   "patch": 5,
+   "dist_um": 726.8039625648721,
+   "edges": []
+  }
+ ],
+ "nodes": [
+  {
+   "node": "Node1991976",
+   "x_um": 35961.9,
+   "y_um": -33430.0,
+   "padstack": null,
+   "dist_um": 111.89285053121003,
+   "snap_cell": 6,
+   "patch": 2
+  },
+  {
+   "node": "Node1991977",
+   "x_um": 35961.9,
+   "y_um": -33530.0,
+   "padstack": null,
+   "dist_um": 111.89285053121003,
+   "snap_cell": 6,
+   "patch": 2
+  },
+  {
+   "node": "Node1991981",
+   "x_um": 35780.0,
+   "y_um": -33630.0,
+   "padstack": null,
+   "dist_um": 319.41195970094793,
+   "snap_cell": 0,
+   "patch": 0
+  },
+  {
+   "node": "Node1991972",
+   "x_um": 36370.0,
+   "y_um": -33630.0,
+   "padstack": null,
+   "dist_um": 342.58429619584143,
+   "snap_cell": 3,
+   "patch": 0
+  },
+  {
+   "node": "Node1991980",
+   "x_um": 35720.0,
+   "y_um": -33630.0,
+   "padstack": null,
+   "dist_um": 373.44879167029046,
+   "snap_cell": 0,
+   "patch": 0
+  },
+  {
+   "node": "Node1991973",
+   "x_um": 36430.0,
+   "y_um": -33630.0,
+   "padstack": null,
+   "dist_um": 397.39652741311164,
+   "snap_cell": 4,
+   "patch": 1
+  },
+  {
+   "node": "Node1991969",
+   "x_um": 35780.0,
+   "y_um": -32980.0,
+   "padstack": null,
+   "dist_um": 574.041810323952,
+   "snap_cell": 20,
+   "patch": 4
+  },
+  {
+   "node": "Node1991964",
+   "x_um": 36370.0,
+   "y_um": -32980.0,
+   "padstack": null,
+   "dist_um": 587.2512239237991,
+   "snap_cell": 23,
+   "patch": 4
+  },
+  {
+   "node": "Node1991968",
+   "x_um": 35720.0,
+   "y_um": -32980.0,
+   "padstack": null,
+   "dist_um": 605.7755359867217,
+   "snap_cell": 20,
+   "patch": 4
+  },
+  {
+   "node": "Node1991965",
+   "x_um": 36430.0,
+   "y_um": -32980.0,
+   "padstack": null,
+   "dist_um": 620.8252572181644,
+   "snap_cell": 24,
+   "patch": 5
+  }
+ ],
+ "walks": [
+  {
+   "from_node": "Node1991976",
+   "to_node": "Node1991981",
+   "from_cell": 6,
+   "to_cell": 0,
+   "from_patch": 2,
+   "to_patch": 0,
+   "steps": [
+    {
+     "axis": "x",
+     "block_index": 0,
+     "frm": [
+      3,
+      213
+     ],
+     "to": [
+      3,
+      212
+     ],
+     "from_cell": 6,
+     "to_cell": 5,
+     "from_fill": 1.0,
+     "to_fill": 0.6,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 1.0,
+     "edge_in_model": true,
+     "why": "ok"
+    },
+    {
+     "axis": "y",
+     "block_index": 0,
+     "frm": [
+      3,
+      212
+     ],
+     "to": [
+      2,
+      212
+     ],
+     "from_cell": 5,
+     "to_cell": 0,
+     "from_fill": 0.6,
+     "to_fill": 0.2075,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 0.0,
+     "edge_in_model": false,
+     "why": "G <= 1e-6 threshold"
+    }
+   ],
+   "first_break": {
+    "axis": "y",
+    "block_index": 0,
+    "frm": [
+     3,
+     212
+    ],
+    "to": [
+     2,
+     212
+    ],
+    "from_cell": 5,
+    "to_cell": 0,
+    "from_fill": 0.6,
+    "to_fill": 0.2075,
+    "from_metal": true,
+    "to_metal": true,
+    "G": 0.0,
+    "edge_in_model": false,
+    "why": "G <= 1e-6 threshold"
+   },
+   "n_steps": 2,
+   "n_breaks": 1
+  },
+  {
+   "from_node": "Node1991976",
+   "to_node": "Node1991973",
+   "from_cell": 6,
+   "to_cell": 4,
+   "from_patch": 2,
+   "to_patch": 1,
+   "steps": [
+    {
+     "axis": "x",
+     "block_index": 0,
+     "frm": [
+      3,
+      213
+     ],
+     "to": [
+      3,
+      214
+     ],
+     "from_cell": 6,
+     "to_cell": 7,
+     "from_fill": 1.0,
+     "to_fill": 1.0,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 1.0,
+     "edge_in_model": true,
+     "why": "ok"
+    },
+    {
+     "axis": "x",
+     "block_index": 0,
+     "frm": [
+      3,
+      214
+     ],
+     "to": [
+      3,
+      215
+     ],
+     "from_cell": 7,
+     "to_cell": 8,
+     "from_fill": 1.0,
+     "to_fill": 1.0,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 1.0,
+     "edge_in_model": true,
+     "why": "ok"
+    },
+    {
+     "axis": "x",
+     "block_index": 0,
+     "frm": [
+      3,
+      215
+     ],
+     "to": [
+      3,
+      216
+     ],
+     "from_cell": 8,
+     "to_cell": 9,
+     "from_fill": 1.0,
+     "to_fill": 0.4,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 1.6497914145929826e-13,
+     "edge_in_model": false,
+     "why": "G <= 1e-6 threshold"
+    },
+    {
+     "axis": "y",
+     "block_index": 0,
+     "frm": [
+      3,
+      216
+     ],
+     "to": [
+      2,
+      216
+     ],
+     "from_cell": 9,
+     "to_cell": 4,
+     "from_fill": 0.4,
+     "to_fill": 0.13,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 0.0,
+     "edge_in_model": false,
+     "why": "G <= 1e-6 threshold"
+    }
+   ],
+   "first_break": {
+    "axis": "x",
+    "block_index": 0,
+    "frm": [
+     3,
+     215
+    ],
+    "to": [
+     3,
+     216
+    ],
+    "from_cell": 8,
+    "to_cell": 9,
+    "from_fill": 1.0,
+    "to_fill": 0.4,
+    "from_metal": true,
+    "to_metal": true,
+    "G": 1.6497914145929826e-13,
+    "edge_in_model": false,
+    "why": "G <= 1e-6 threshold"
+   },
+   "n_steps": 4,
+   "n_breaks": 2
+  },
+  {
+   "from_node": "Node1991976",
+   "to_node": "Node1991969",
+   "from_cell": 6,
+   "to_cell": 20,
+   "from_patch": 2,
+   "to_patch": 4,
+   "steps": [
+    {
+     "axis": "y",
+     "block_index": 0,
+     "frm": [
+      3,
+      213
+     ],
+     "to": [
+      4,
+      213
+     ],
+     "from_cell": 6,
+     "to_cell": 11,
+     "from_fill": 1.0,
+     "to_fill": 1.0,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 1.0,
+     "edge_in_model": true,
+     "why": "ok"
+    },
+    {
+     "axis": "y",
+     "block_index": 0,
+     "frm": [
+      4,
+      213
+     ],
+     "to": [
+      5,
+      213
+     ],
+     "from_cell": 11,
+     "to_cell": 16,
+     "from_fill": 1.0,
+     "to_fill": 1.0,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 1.0,
+     "edge_in_model": true,
+     "why": "ok"
+    },
+    {
+     "axis": "x",
+     "block_index": 0,
+     "frm": [
+      5,
+      213
+     ],
+     "to": [
+      5,
+      212
+     ],
+     "from_cell": 16,
+     "to_cell": 15,
+     "from_fill": 1.0,
+     "to_fill": 0.6,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 1.0,
+     "edge_in_model": true,
+     "why": "ok"
+    },
+    {
+     "axis": "y",
+     "block_index": 0,
+     "frm": [
+      5,
+      212
+     ],
+     "to": [
+      6,
+      212
+     ],
+     "from_cell": 15,
+     "to_cell": 20,
+     "from_fill": 0.6,
+     "to_fill": 0.2,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 4.218847493575595e-15,
+     "edge_in_model": false,
+     "why": "G <= 1e-6 threshold"
+    }
+   ],
+   "first_break": {
+    "axis": "y",
+    "block_index": 0,
+    "frm": [
+     5,
+     212
+    ],
+    "to": [
+     6,
+     212
+    ],
+    "from_cell": 15,
+    "to_cell": 20,
+    "from_fill": 0.6,
+    "to_fill": 0.2,
+    "from_metal": true,
+    "to_metal": true,
+    "G": 4.218847493575595e-15,
+    "edge_in_model": false,
+    "why": "G <= 1e-6 threshold"
+   },
+   "n_steps": 4,
+   "n_breaks": 1
+  },
+  {
+   "from_node": "Node1991976",
+   "to_node": "Node1991965",
+   "from_cell": 6,
+   "to_cell": 24,
+   "from_patch": 2,
+   "to_patch": 5,
+   "steps": [
+    {
+     "axis": "x",
+     "block_index": 0,
+     "frm": [
+      3,
+      213
+     ],
+     "to": [
+      3,
+      214
+     ],
+     "from_cell": 6,
+     "to_cell": 7,
+     "from_fill": 1.0,
+     "to_fill": 1.0,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 1.0,
+     "edge_in_model": true,
+     "why": "ok"
+    },
+    {
+     "axis": "y",
+     "block_index": 0,
+     "frm": [
+      3,
+      214
+     ],
+     "to": [
+      4,
+      214
+     ],
+     "from_cell": 7,
+     "to_cell": 12,
+     "from_fill": 1.0,
+     "to_fill": 1.0,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 1.0,
+     "edge_in_model": true,
+     "why": "ok"
+    },
+    {
+     "axis": "x",
+     "block_index": 0,
+     "frm": [
+      4,
+      214
+     ],
+     "to": [
+      4,
+      215
+     ],
+     "from_cell": 12,
+     "to_cell": 13,
+     "from_fill": 1.0,
+     "to_fill": 1.0,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 1.0,
+     "edge_in_model": true,
+     "why": "ok"
+    },
+    {
+     "axis": "y",
+     "block_index": 0,
+     "frm": [
+      4,
+      215
+     ],
+     "to": [
+      5,
+      215
+     ],
+     "from_cell": 13,
+     "to_cell": 18,
+     "from_fill": 1.0,
+     "to_fill": 1.0,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 1.0,
+     "edge_in_model": true,
+     "why": "ok"
+    },
+    {
+     "axis": "x",
+     "block_index": 0,
+     "frm": [
+      5,
+      215
+     ],
+     "to": [
+      5,
+      216
+     ],
+     "from_cell": 18,
+     "to_cell": 19,
+     "from_fill": 1.0,
+     "to_fill": 0.4,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 1.6497914145929826e-13,
+     "edge_in_model": false,
+     "why": "G <= 1e-6 threshold"
+    },
+    {
+     "axis": "y",
+     "block_index": 0,
+     "frm": [
+      5,
+      216
+     ],
+     "to": [
+      6,
+      216
+     ],
+     "from_cell": 19,
+     "to_cell": 24,
+     "from_fill": 0.4,
+     "to_fill": 0.12,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 3.774758283725532e-15,
+     "edge_in_model": false,
+     "why": "G <= 1e-6 threshold"
+    }
+   ],
+   "first_break": {
+    "axis": "x",
+    "block_index": 0,
+    "frm": [
+     5,
+     215
+    ],
+    "to": [
+     5,
+     216
+    ],
+    "from_cell": 18,
+    "to_cell": 19,
+    "from_fill": 1.0,
+    "to_fill": 0.4,
+    "from_metal": true,
+    "to_metal": true,
+    "G": 1.6497914145929826e-13,
+    "edge_in_model": false,
+    "why": "G <= 1e-6 threshold"
+   },
+   "n_steps": 6,
+   "n_breaks": 2
+  },
+  {
+   "from_node": "Node1991981",
+   "to_node": "Node1991973",
+   "from_cell": 0,
+   "to_cell": 4,
+   "from_patch": 0,
+   "to_patch": 1,
+   "steps": [
+    {
+     "axis": "x",
+     "block_index": 0,
+     "frm": [
+      2,
+      212
+     ],
+     "to": [
+      2,
+      213
+     ],
+     "from_cell": 0,
+     "to_cell": 1,
+     "from_fill": 0.2075,
+     "to_fill": 0.35,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 0.35000000000000164,
+     "edge_in_model": true,
+     "why": "ok"
+    },
+    {
+     "axis": "x",
+     "block_index": 0,
+     "frm": [
+      2,
+      213
+     ],
+     "to": [
+      2,
+      214
+     ],
+     "from_cell": 1,
+     "to_cell": 2,
+     "from_fill": 0.35,
+     "to_fill": 0.35,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 0.35000000000000164,
+     "edge_in_model": true,
+     "why": "ok"
+    },
+    {
+     "axis": "x",
+     "block_index": 0,
+     "frm": [
+      2,
+      214
+     ],
+     "to": [
+      2,
+      215
+     ],
+     "from_cell": 2,
+     "to_cell": 3,
+     "from_fill": 0.35,
+     "to_fill": 0.35,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 0.35000000000000164,
+     "edge_in_model": true,
+     "why": "ok"
+    },
+    {
+     "axis": "x",
+     "block_index": 0,
+     "frm": [
+      2,
+      215
+     ],
+     "to": [
+      2,
+      216
+     ],
+     "from_cell": 3,
+     "to_cell": 4,
+     "from_fill": 0.35,
+     "to_fill": 0.13,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 8.881784197001252e-16,
+     "edge_in_model": false,
+     "why": "G <= 1e-6 threshold"
+    }
+   ],
+   "first_break": {
+    "axis": "x",
+    "block_index": 0,
+    "frm": [
+     2,
+     215
+    ],
+    "to": [
+     2,
+     216
+    ],
+    "from_cell": 3,
+    "to_cell": 4,
+    "from_fill": 0.35,
+    "to_fill": 0.13,
+    "from_metal": true,
+    "to_metal": true,
+    "G": 8.881784197001252e-16,
+    "edge_in_model": false,
+    "why": "G <= 1e-6 threshold"
+   },
+   "n_steps": 4,
+   "n_breaks": 1
+  },
+  {
+   "from_node": "Node1991981",
+   "to_node": "Node1991969",
+   "from_cell": 0,
+   "to_cell": 20,
+   "from_patch": 0,
+   "to_patch": 4,
+   "steps": [
+    {
+     "axis": "y",
+     "block_index": 0,
+     "frm": [
+      2,
+      212
+     ],
+     "to": [
+      3,
+      212
+     ],
+     "from_cell": 0,
+     "to_cell": 5,
+     "from_fill": 0.2075,
+     "to_fill": 0.6,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 0.0,
+     "edge_in_model": false,
+     "why": "G <= 1e-6 threshold"
+    },
+    {
+     "axis": "y",
+     "block_index": 0,
+     "frm": [
+      3,
+      212
+     ],
+     "to": [
+      4,
+      212
+     ],
+     "from_cell": 5,
+     "to_cell": 10,
+     "from_fill": 0.6,
+     "to_fill": 0.6,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 0.6000000000000005,
+     "edge_in_model": true,
+     "why": "ok"
+    },
+    {
+     "axis": "y",
+     "block_index": 0,
+     "frm": [
+      4,
+      212
+     ],
+     "to": [
+      5,
+      212
+     ],
+     "from_cell": 10,
+     "to_cell": 15,
+     "from_fill": 0.6,
+     "to_fill": 0.6,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 0.6000000000000005,
+     "edge_in_model": true,
+     "why": "ok"
+    },
+    {
+     "axis": "y",
+     "block_index": 0,
+     "frm": [
+      5,
+      212
+     ],
+     "to": [
+      6,
+      212
+     ],
+     "from_cell": 15,
+     "to_cell": 20,
+     "from_fill": 0.6,
+     "to_fill": 0.2,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 4.218847493575595e-15,
+     "edge_in_model": false,
+     "why": "G <= 1e-6 threshold"
+    }
+   ],
+   "first_break": {
+    "axis": "y",
+    "block_index": 0,
+    "frm": [
+     2,
+     212
+    ],
+    "to": [
+     3,
+     212
+    ],
+    "from_cell": 0,
+    "to_cell": 5,
+    "from_fill": 0.2075,
+    "to_fill": 0.6,
+    "from_metal": true,
+    "to_metal": true,
+    "G": 0.0,
+    "edge_in_model": false,
+    "why": "G <= 1e-6 threshold"
+   },
+   "n_steps": 4,
+   "n_breaks": 2
+  },
+  {
+   "from_node": "Node1991981",
+   "to_node": "Node1991965",
+   "from_cell": 0,
+   "to_cell": 24,
+   "from_patch": 0,
+   "to_patch": 5,
+   "steps": [
+    {
+     "axis": "x",
+     "block_index": 0,
+     "frm": [
+      2,
+      212
+     ],
+     "to": [
+      2,
+      213
+     ],
+     "from_cell": 0,
+     "to_cell": 1,
+     "from_fill": 0.2075,
+     "to_fill": 0.35,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 0.35000000000000164,
+     "edge_in_model": true,
+     "why": "ok"
+    },
+    {
+     "axis": "y",
+     "block_index": 0,
+     "frm": [
+      2,
+      213
+     ],
+     "to": [
+      3,
+      213
+     ],
+     "from_cell": 1,
+     "to_cell": 6,
+     "from_fill": 0.35,
+     "to_fill": 1.0,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 0.0,
+     "edge_in_model": false,
+     "why": "G <= 1e-6 threshold"
+    },
+    {
+     "axis": "x",
+     "block_index": 0,
+     "frm": [
+      3,
+      213
+     ],
+     "to": [
+      3,
+      214
+     ],
+     "from_cell": 6,
+     "to_cell": 7,
+     "from_fill": 1.0,
+     "to_fill": 1.0,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 1.0,
+     "edge_in_model": true,
+     "why": "ok"
+    },
+    {
+     "axis": "y",
+     "block_index": 0,
+     "frm": [
+      3,
+      214
+     ],
+     "to": [
+      4,
+      214
+     ],
+     "from_cell": 7,
+     "to_cell": 12,
+     "from_fill": 1.0,
+     "to_fill": 1.0,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 1.0,
+     "edge_in_model": true,
+     "why": "ok"
+    },
+    {
+     "axis": "x",
+     "block_index": 0,
+     "frm": [
+      4,
+      214
+     ],
+     "to": [
+      4,
+      215
+     ],
+     "from_cell": 12,
+     "to_cell": 13,
+     "from_fill": 1.0,
+     "to_fill": 1.0,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 1.0,
+     "edge_in_model": true,
+     "why": "ok"
+    },
+    {
+     "axis": "y",
+     "block_index": 0,
+     "frm": [
+      4,
+      215
+     ],
+     "to": [
+      5,
+      215
+     ],
+     "from_cell": 13,
+     "to_cell": 18,
+     "from_fill": 1.0,
+     "to_fill": 1.0,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 1.0,
+     "edge_in_model": true,
+     "why": "ok"
+    },
+    {
+     "axis": "x",
+     "block_index": 0,
+     "frm": [
+      5,
+      215
+     ],
+     "to": [
+      5,
+      216
+     ],
+     "from_cell": 18,
+     "to_cell": 19,
+     "from_fill": 1.0,
+     "to_fill": 0.4,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 1.6497914145929826e-13,
+     "edge_in_model": false,
+     "why": "G <= 1e-6 threshold"
+    },
+    {
+     "axis": "y",
+     "block_index": 0,
+     "frm": [
+      5,
+      216
+     ],
+     "to": [
+      6,
+      216
+     ],
+     "from_cell": 19,
+     "to_cell": 24,
+     "from_fill": 0.4,
+     "to_fill": 0.12,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 3.774758283725532e-15,
+     "edge_in_model": false,
+     "why": "G <= 1e-6 threshold"
+    }
+   ],
+   "first_break": {
+    "axis": "y",
+    "block_index": 0,
+    "frm": [
+     2,
+     213
+    ],
+    "to": [
+     3,
+     213
+    ],
+    "from_cell": 1,
+    "to_cell": 6,
+    "from_fill": 0.35,
+    "to_fill": 1.0,
+    "from_metal": true,
+    "to_metal": true,
+    "G": 0.0,
+    "edge_in_model": false,
+    "why": "G <= 1e-6 threshold"
+   },
+   "n_steps": 8,
+   "n_breaks": 3
+  },
+  {
+   "from_node": "Node1991973",
+   "to_node": "Node1991969",
+   "from_cell": 4,
+   "to_cell": 20,
+   "from_patch": 1,
+   "to_patch": 4,
+   "steps": [
+    {
+     "axis": "x",
+     "block_index": 0,
+     "frm": [
+      2,
+      216
+     ],
+     "to": [
+      2,
+      215
+     ],
+     "from_cell": 4,
+     "to_cell": 3,
+     "from_fill": 0.13,
+     "to_fill": 0.35,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 8.881784197001252e-16,
+     "edge_in_model": false,
+     "why": "G <= 1e-6 threshold"
+    },
+    {
+     "axis": "y",
+     "block_index": 0,
+     "frm": [
+      2,
+      215
+     ],
+     "to": [
+      3,
+      215
+     ],
+     "from_cell": 3,
+     "to_cell": 8,
+     "from_fill": 0.35,
+     "to_fill": 1.0,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 0.0,
+     "edge_in_model": false,
+     "why": "G <= 1e-6 threshold"
+    },
+    {
+     "axis": "x",
+     "block_index": 0,
+     "frm": [
+      3,
+      215
+     ],
+     "to": [
+      3,
+      214
+     ],
+     "from_cell": 8,
+     "to_cell": 7,
+     "from_fill": 1.0,
+     "to_fill": 1.0,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 1.0,
+     "edge_in_model": true,
+     "why": "ok"
+    },
+    {
+     "axis": "y",
+     "block_index": 0,
+     "frm": [
+      3,
+      214
+     ],
+     "to": [
+      4,
+      214
+     ],
+     "from_cell": 7,
+     "to_cell": 12,
+     "from_fill": 1.0,
+     "to_fill": 1.0,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 1.0,
+     "edge_in_model": true,
+     "why": "ok"
+    },
+    {
+     "axis": "x",
+     "block_index": 0,
+     "frm": [
+      4,
+      214
+     ],
+     "to": [
+      4,
+      213
+     ],
+     "from_cell": 12,
+     "to_cell": 11,
+     "from_fill": 1.0,
+     "to_fill": 1.0,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 1.0,
+     "edge_in_model": true,
+     "why": "ok"
+    },
+    {
+     "axis": "y",
+     "block_index": 0,
+     "frm": [
+      4,
+      213
+     ],
+     "to": [
+      5,
+      213
+     ],
+     "from_cell": 11,
+     "to_cell": 16,
+     "from_fill": 1.0,
+     "to_fill": 1.0,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 1.0,
+     "edge_in_model": true,
+     "why": "ok"
+    },
+    {
+     "axis": "x",
+     "block_index": 0,
+     "frm": [
+      5,
+      213
+     ],
+     "to": [
+      5,
+      212
+     ],
+     "from_cell": 16,
+     "to_cell": 15,
+     "from_fill": 1.0,
+     "to_fill": 0.6,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 1.0,
+     "edge_in_model": true,
+     "why": "ok"
+    },
+    {
+     "axis": "y",
+     "block_index": 0,
+     "frm": [
+      5,
+      212
+     ],
+     "to": [
+      6,
+      212
+     ],
+     "from_cell": 15,
+     "to_cell": 20,
+     "from_fill": 0.6,
+     "to_fill": 0.2,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 4.218847493575595e-15,
+     "edge_in_model": false,
+     "why": "G <= 1e-6 threshold"
+    }
+   ],
+   "first_break": {
+    "axis": "x",
+    "block_index": 0,
+    "frm": [
+     2,
+     216
+    ],
+    "to": [
+     2,
+     215
+    ],
+    "from_cell": 4,
+    "to_cell": 3,
+    "from_fill": 0.13,
+    "to_fill": 0.35,
+    "from_metal": true,
+    "to_metal": true,
+    "G": 8.881784197001252e-16,
+    "edge_in_model": false,
+    "why": "G <= 1e-6 threshold"
+   },
+   "n_steps": 8,
+   "n_breaks": 3
+  },
+  {
+   "from_node": "Node1991973",
+   "to_node": "Node1991965",
+   "from_cell": 4,
+   "to_cell": 24,
+   "from_patch": 1,
+   "to_patch": 5,
+   "steps": [
+    {
+     "axis": "y",
+     "block_index": 0,
+     "frm": [
+      2,
+      216
+     ],
+     "to": [
+      3,
+      216
+     ],
+     "from_cell": 4,
+     "to_cell": 9,
+     "from_fill": 0.13,
+     "to_fill": 0.4,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 0.0,
+     "edge_in_model": false,
+     "why": "G <= 1e-6 threshold"
+    },
+    {
+     "axis": "y",
+     "block_index": 0,
+     "frm": [
+      3,
+      216
+     ],
+     "to": [
+      4,
+      216
+     ],
+     "from_cell": 9,
+     "to_cell": 14,
+     "from_fill": 0.4,
+     "to_fill": 0.4,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 0.4000000000000026,
+     "edge_in_model": true,
+     "why": "ok"
+    },
+    {
+     "axis": "y",
+     "block_index": 0,
+     "frm": [
+      4,
+      216
+     ],
+     "to": [
+      5,
+      216
+     ],
+     "from_cell": 14,
+     "to_cell": 19,
+     "from_fill": 0.4,
+     "to_fill": 0.4,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 0.4000000000000026,
+     "edge_in_model": true,
+     "why": "ok"
+    },
+    {
+     "axis": "y",
+     "block_index": 0,
+     "frm": [
+      5,
+      216
+     ],
+     "to": [
+      6,
+      216
+     ],
+     "from_cell": 19,
+     "to_cell": 24,
+     "from_fill": 0.4,
+     "to_fill": 0.12,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 3.774758283725532e-15,
+     "edge_in_model": false,
+     "why": "G <= 1e-6 threshold"
+    }
+   ],
+   "first_break": {
+    "axis": "y",
+    "block_index": 0,
+    "frm": [
+     2,
+     216
+    ],
+    "to": [
+     3,
+     216
+    ],
+    "from_cell": 4,
+    "to_cell": 9,
+    "from_fill": 0.13,
+    "to_fill": 0.4,
+    "from_metal": true,
+    "to_metal": true,
+    "G": 0.0,
+    "edge_in_model": false,
+    "why": "G <= 1e-6 threshold"
+   },
+   "n_steps": 4,
+   "n_breaks": 2
+  },
+  {
+   "from_node": "Node1991969",
+   "to_node": "Node1991965",
+   "from_cell": 20,
+   "to_cell": 24,
+   "from_patch": 4,
+   "to_patch": 5,
+   "steps": [
+    {
+     "axis": "x",
+     "block_index": 0,
+     "frm": [
+      6,
+      212
+     ],
+     "to": [
+      6,
+      213
+     ],
+     "from_cell": 20,
+     "to_cell": 21,
+     "from_fill": 0.2,
+     "to_fill": 0.35,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 0.3434751637829725,
+     "edge_in_model": true,
+     "why": "ok"
+    },
+    {
+     "axis": "x",
+     "block_index": 0,
+     "frm": [
+      6,
+      213
+     ],
+     "to": [
+      6,
+      214
+     ],
+     "from_cell": 21,
+     "to_cell": 22,
+     "from_fill": 0.35,
+     "to_fill": 0.35,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 0.35000000000000187,
+     "edge_in_model": true,
+     "why": "ok"
+    },
+    {
+     "axis": "x",
+     "block_index": 0,
+     "frm": [
+      6,
+      214
+     ],
+     "to": [
+      6,
+      215
+     ],
+     "from_cell": 22,
+     "to_cell": 23,
+     "from_fill": 0.35,
+     "to_fill": 0.35,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 0.35000000000000187,
+     "edge_in_model": true,
+     "why": "ok"
+    },
+    {
+     "axis": "x",
+     "block_index": 0,
+     "frm": [
+      6,
+      215
+     ],
+     "to": [
+      6,
+      216
+     ],
+     "from_cell": 23,
+     "to_cell": 24,
+     "from_fill": 0.35,
+     "to_fill": 0.12,
+     "from_metal": true,
+     "to_metal": true,
+     "G": 5.995204332975845e-15,
+     "edge_in_model": false,
+     "why": "G <= 1e-6 threshold"
+    }
+   ],
+   "first_break": {
+    "axis": "x",
+    "block_index": 0,
+    "frm": [
+     6,
+     215
+    ],
+    "to": [
+     6,
+     216
+    ],
+    "from_cell": 23,
+    "to_cell": 24,
+    "from_fill": 0.35,
+    "to_fill": 0.12,
+    "from_metal": true,
+    "to_metal": true,
+    "G": 5.995204332975845e-15,
+    "edge_in_model": false,
+    "why": "G <= 1e-6 threshold"
+   },
+   "n_steps": 4,
+   "n_breaks": 1
+  }
+ ],
+ "subtiles": [
+  {
+   "axis": "y",
+   "frm": [
+    3,
+    212
+   ],
+   "to": [
+    2,
+    212
+   ],
+   "sub_um": 10.0,
+   "sub": 20,
+   "box_um": [
+    35600.0,
+    -33800.0,
+    35800.0,
+    -33400.0
+   ],
+   "img_shape": [
+    40,
+    20
+   ],
+   "img_fill": 0.40375,
+   "window_fill": 0.5075,
+   "face_fill_low_cell": 0.0,
+   "face_fill_high_cell": 0.6,
+   "low_cell": [
+    2,
+    212
+   ],
+   "high_cell": [
+    3,
+    212
+   ],
+   "window_shape": [
+    20,
+    20
+   ],
+   "metal_rows_y_um": [
+    -33665.0,
+    -33655.0,
+    -33645.0,
+    -33635.0,
+    -33625.0,
+    -33615.0,
+    -33605.0,
+    -33595.0,
+    -33585.0,
+    -33575.0,
+    -33565.0,
+    -33555.0,
+    -33545.0,
+    -33535.0,
+    -33525.0,
+    -33515.0,
+    -33505.0,
+    -33495.0,
+    -33485.0,
+    -33475.0,
+    -33465.0,
+    -33455.0,
+    -33445.0,
+    -33435.0,
+    -33425.0,
+    -33415.0,
+    -33405.0
+   ],
+   "metal_cols_x_um": [
+    35685.0,
+    35695.0,
+    35705.0,
+    35715.0,
+    35725.0,
+    35735.0,
+    35745.0,
+    35755.0,
+    35765.0,
+    35775.0,
+    35785.0,
+    35795.0
+   ],
+   "ascii_top_down": [
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    ".........###########",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "...................."
+   ]
+  },
+  {
+   "axis": "x",
+   "frm": [
+    3,
+    215
+   ],
+   "to": [
+    3,
+    216
+   ],
+   "sub_um": 10.0,
+   "sub": 20,
+   "box_um": [
+    36200.0,
+    -33600.0,
+    36600.0,
+    -33400.0
+   ],
+   "img_shape": [
+    20,
+    40
+   ],
+   "img_fill": 0.7,
+   "window_fill": 0.9,
+   "face_fill_low_cell": 1.0,
+   "face_fill_high_cell": 0.0,
+   "low_cell": [
+    3,
+    215
+   ],
+   "high_cell": [
+    3,
+    216
+   ],
+   "window_shape": [
+    20,
+    20
+   ],
+   "metal_rows_y_um": [
+    -33595.0,
+    -33585.0,
+    -33575.0,
+    -33565.0,
+    -33555.0,
+    -33545.0,
+    -33535.0,
+    -33525.0,
+    -33515.0,
+    -33505.0,
+    -33495.0,
+    -33485.0,
+    -33475.0,
+    -33465.0,
+    -33455.0,
+    -33445.0,
+    -33435.0,
+    -33425.0,
+    -33415.0,
+    -33405.0
+   ],
+   "metal_cols_x_um": [
+    36205.0,
+    36215.0,
+    36225.0,
+    36235.0,
+    36245.0,
+    36255.0,
+    36265.0,
+    36275.0,
+    36285.0,
+    36295.0,
+    36305.0,
+    36315.0,
+    36325.0,
+    36335.0,
+    36345.0,
+    36355.0,
+    36365.0,
+    36375.0,
+    36385.0,
+    36395.0,
+    36405.0,
+    36415.0,
+    36425.0,
+    36435.0,
+    36445.0,
+    36455.0,
+    36465.0,
+    36475.0
+   ],
+   "ascii_top_down": [
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............"
+   ]
+  },
+  {
+   "axis": "y",
+   "frm": [
+    3,
+    216
+   ],
+   "to": [
+    2,
+    216
+   ],
+   "sub_um": 10.0,
+   "sub": 20,
+   "box_um": [
+    36400.0,
+    -33800.0,
+    36600.0,
+    -33400.0
+   ],
+   "img_shape": [
+    40,
+    20
+   ],
+   "img_fill": 0.265,
+   "window_fill": 0.33,
+   "face_fill_low_cell": 0.0,
+   "face_fill_high_cell": 0.4,
+   "low_cell": [
+    2,
+    216
+   ],
+   "high_cell": [
+    3,
+    216
+   ],
+   "window_shape": [
+    20,
+    20
+   ],
+   "metal_rows_y_um": [
+    -33665.0,
+    -33655.0,
+    -33645.0,
+    -33635.0,
+    -33625.0,
+    -33615.0,
+    -33605.0,
+    -33595.0,
+    -33585.0,
+    -33575.0,
+    -33565.0,
+    -33555.0,
+    -33545.0,
+    -33535.0,
+    -33525.0,
+    -33515.0,
+    -33505.0,
+    -33495.0,
+    -33485.0,
+    -33475.0,
+    -33465.0,
+    -33455.0,
+    -33445.0,
+    -33435.0,
+    -33425.0,
+    -33415.0,
+    -33405.0
+   ],
+   "metal_cols_x_um": [
+    36405.0,
+    36415.0,
+    36425.0,
+    36435.0,
+    36445.0,
+    36455.0,
+    36465.0,
+    36475.0
+   ],
+   "ascii_top_down": [
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "#######.............",
+    "#######.............",
+    "######..............",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "...................."
+   ]
+  },
+  {
+   "axis": "y",
+   "frm": [
+    5,
+    212
+   ],
+   "to": [
+    6,
+    212
+   ],
+   "sub_um": 10.0,
+   "sub": 20,
+   "box_um": [
+    35600.0,
+    -33200.0,
+    35800.0,
+    -32800.0
+   ],
+   "img_shape": [
+    40,
+    20
+   ],
+   "img_fill": 0.4,
+   "window_fill": 0.5,
+   "face_fill_low_cell": 0.6,
+   "face_fill_high_cell": 0.0,
+   "low_cell": [
+    5,
+    212
+   ],
+   "high_cell": [
+    6,
+    212
+   ],
+   "window_shape": [
+    20,
+    20
+   ],
+   "metal_rows_y_um": [
+    -33195.0,
+    -33185.0,
+    -33175.0,
+    -33165.0,
+    -33155.0,
+    -33145.0,
+    -33135.0,
+    -33125.0,
+    -33115.0,
+    -33105.0,
+    -33095.0,
+    -33085.0,
+    -33075.0,
+    -33065.0,
+    -33055.0,
+    -33045.0,
+    -33035.0,
+    -33025.0,
+    -33015.0,
+    -33005.0,
+    -32995.0,
+    -32985.0,
+    -32975.0,
+    -32965.0,
+    -32955.0,
+    -32945.0,
+    -32935.0
+   ],
+   "metal_cols_x_um": [
+    35685.0,
+    35695.0,
+    35705.0,
+    35715.0,
+    35725.0,
+    35735.0,
+    35745.0,
+    35755.0,
+    35765.0,
+    35775.0,
+    35785.0,
+    35795.0
+   ],
+   "ascii_top_down": [
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "...........#########",
+    ".........###########",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############",
+    "........############"
+   ]
+  },
+  {
+   "axis": "x",
+   "frm": [
+    5,
+    215
+   ],
+   "to": [
+    5,
+    216
+   ],
+   "sub_um": 10.0,
+   "sub": 20,
+   "box_um": [
+    36200.0,
+    -33200.0,
+    36600.0,
+    -33000.0
+   ],
+   "img_shape": [
+    20,
+    40
+   ],
+   "img_fill": 0.7,
+   "window_fill": 0.9,
+   "face_fill_low_cell": 1.0,
+   "face_fill_high_cell": 0.0,
+   "low_cell": [
+    5,
+    215
+   ],
+   "high_cell": [
+    5,
+    216
+   ],
+   "window_shape": [
+    20,
+    20
+   ],
+   "metal_rows_y_um": [
+    -33195.0,
+    -33185.0,
+    -33175.0,
+    -33165.0,
+    -33155.0,
+    -33145.0,
+    -33135.0,
+    -33125.0,
+    -33115.0,
+    -33105.0,
+    -33095.0,
+    -33085.0,
+    -33075.0,
+    -33065.0,
+    -33055.0,
+    -33045.0,
+    -33035.0,
+    -33025.0,
+    -33015.0,
+    -33005.0
+   ],
+   "metal_cols_x_um": [
+    36205.0,
+    36215.0,
+    36225.0,
+    36235.0,
+    36245.0,
+    36255.0,
+    36265.0,
+    36275.0,
+    36285.0,
+    36295.0,
+    36305.0,
+    36315.0,
+    36325.0,
+    36335.0,
+    36345.0,
+    36355.0,
+    36365.0,
+    36375.0,
+    36385.0,
+    36395.0,
+    36405.0,
+    36415.0,
+    36425.0,
+    36435.0,
+    36445.0,
+    36455.0,
+    36465.0,
+    36475.0
+   ],
+   "ascii_top_down": [
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............",
+    "############################............"
+   ]
+  },
+  {
+   "axis": "y",
+   "frm": [
+    5,
+    216
+   ],
+   "to": [
+    6,
+    216
+   ],
+   "sub_um": 10.0,
+   "sub": 20,
+   "box_um": [
+    36400.0,
+    -33200.0,
+    36600.0,
+    -32800.0
+   ],
+   "img_shape": [
+    40,
+    20
+   ],
+   "img_fill": 0.26,
+   "window_fill": 0.32,
+   "face_fill_low_cell": 0.4,
+   "face_fill_high_cell": 0.0,
+   "low_cell": [
+    5,
+    216
+   ],
+   "high_cell": [
+    6,
+    216
+   ],
+   "window_shape": [
+    20,
+    20
+   ],
+   "metal_rows_y_um": [
+    -33195.0,
+    -33185.0,
+    -33175.0,
+    -33165.0,
+    -33155.0,
+    -33145.0,
+    -33135.0,
+    -33125.0,
+    -33115.0,
+    -33105.0,
+    -33095.0,
+    -33085.0,
+    -33075.0,
+    -33065.0,
+    -33055.0,
+    -33045.0,
+    -33035.0,
+    -33025.0,
+    -33015.0,
+    -33005.0,
+    -32995.0,
+    -32985.0,
+    -32975.0,
+    -32965.0,
+    -32955.0,
+    -32945.0,
+    -32935.0
+   ],
+   "metal_cols_x_um": [
+    36405.0,
+    36415.0,
+    36425.0,
+    36435.0,
+    36445.0,
+    36455.0,
+    36465.0,
+    36475.0
+   ],
+   "ascii_top_down": [
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "####................",
+    "######..............",
+    "#######.............",
+    "#######.............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............",
+    "########............"
+   ]
+  }
+ ],
+ "wall_seconds": 93.04765915870667,
+ "peak_rss_MB": 1336.9921875
+}

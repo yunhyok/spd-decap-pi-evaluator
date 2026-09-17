@@ -1,0 +1,137 @@
+EXP-37 profile -- run11.py --variant p --tag 260729 --port Port14_SITE0 --outdir exp37
+SPD_PI_SOLVER=cudss (RTX A2000), global Python 3.12, cProfile (python -m cProfile).
+N = 34424 unknowns, 27 sweep frequencies + 1 extra solve (run11 calls mdl.solve() twice:
+the 27-point ladder and one 1e5 Hz want_v=True solve for the breakdown) -> 28 assemble() calls.
+Wall under the profiler 48.8 s; the run's own receipt reports wall 47 s.
+
+BREAKDOWN
+  build (Model3.__init__ -> build)              40.86 s   83.7 % of total
+      Sheet.__init__ x5 (homogenisation)        22.50 s     homog.cell_edges -> window_conductance
+                                                            -> batched_gx 22.10 s (tottime 12.00 s
+                                                            + its inner A() 8.91 s): batched CG over
+                                                            the 20x20 sub-tile windows.
+      TwoSided(Any).__call__ x9 (ref. search)   17.86 s     model.rasterize 17.81 s, of which
+                                                            matplotlib _path.points_in_path 15.04 s
+                                                            (6331 calls, one per artwork primitive
+                                                            bbox per (layer, net) mask).
+      everything else in build                   0.50 s
+  per-frequency assemble() x28                   2.49 s    6.8 % ; 0.089 s per frequency
+      copper_surface_impedance python loop       1.98 s   79.5 % of assemble.  35224 scalar calls
+                                                            = 1258 off-plane traces x 28: the list
+                                                            comprehension in assemble() calls the
+                                                            scalar mfdm entry point once per trace.
+      coo_matrix(...).tocsc() (dup summing)      0.17 s    6.7 %
+      assemble() itself (concatenate + `ok`)     0.24 s    9.4 %
+      edge_z x150 (incl. weff_of 0.009 s)        0.04 s    1.7 %
+      st_ x224 (incl. self.map 0.02 s)           0.04 s    1.7 %
+      decap SPICE impedance() x84                0.02 s    0.7 %
+      via_R (via_R_skin off in variant p)        0.00 s
+  cuDSS: plan 2.14 s once, 28 factor+solve 0.60 s total (nnz_LU 0.8 M, ~0.02 s each)
+
+====================================================================================================
+SORTED BY CUMULATIVE TIME (top 40)
+====================================================================================================
+Thu Sep 17 16:59:51 2026    D:\Downloads\examples\analysis\claude-2026-09-15\work\exp37\prof_Port14.prof
+
+         7978945 function calls (7933948 primitive calls) in 48.826 seconds
+
+   Ordered by: cumulative time
+   List reduced from 6074 to 40 due to restriction <40>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+   2533/1    0.138    0.000   48.832   48.832 {built-in method builtins.exec}
+        1    0.076    0.076   48.832   48.832 tools\research-claude\exp11\run11.py:1(<module>)
+        1    0.002    0.002   46.934   46.934 tools\research-claude\exp11\run11.py:268(run)
+        1    0.000    0.000   41.330   41.330 tools\research-claude\exp11\run11.py:96(setup)
+        1    0.000    0.000   40.863   40.863 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\model3.py:235(__init__)
+        1    0.008    0.008   40.863   40.863 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp11\../exp5\pipeline.py:42(build)
+        1    0.308    0.308   40.856   40.856 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\model3.py:270(build)
+        5    0.018    0.004   22.503    4.501 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\model3.py:88(__init__)
+        9    0.001    0.000   22.310    2.479 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\homog.py:135(cell_edges)
+       22    0.052    0.002   22.214    1.010 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\homog.py:119(window_conductance)
+       20   11.999    0.600   22.096    1.105 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\homog.py:51(batched_gx)
+        9    0.017    0.002   17.855    1.984 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp3\..\exp1\exp1b.py:116(__call__)
+      900    0.003    0.000   17.813    0.020 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp11\../exp8\run8.py:53(mask)
+     1584    0.004    0.000   17.809    0.011 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp3\..\exp1\exp1b.py:105(mask)
+      798    1.014    0.001   17.805    0.022 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp3\..\exp1\model.py:124(rasterize)
+     6331    0.005    0.000   15.057    0.002 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\matplotlib\path.py:572(contains_points)
+     6331   15.041    0.002   15.044    0.002 {built-in method matplotlib._path.points_in_path}
+     1178    8.908    0.008    8.908    0.008 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\homog.py:84(A)
+        2    0.051    0.025    5.500    2.750 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\model3.py:654(solve)
+  1273/98    0.011    0.000    2.979    0.030 <frozen importlib._bootstrap>:1349(_find_and_load)
+  1228/69    0.006    0.000    2.975    0.043 <frozen importlib._bootstrap>:1304(_find_and_load_unlocked)
+  1138/10    0.004    0.000    2.744    0.274 <frozen importlib._bootstrap>:911(_load_unlocked)
+    919/9    0.003    0.000    2.744    0.305 <frozen importlib._bootstrap_external>:993(exec_module)
+  2857/77    0.004    0.000    2.744    0.036 <frozen importlib._bootstrap>:480(_call_with_frames_removed)
+       28    0.235    0.008    2.490    0.089 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\model3.py:616(assemble)
+   476515    2.328    0.000    2.328    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+   684/85    0.001    0.000    2.156    0.025 {built-in method builtins.__import__}
+        1    0.000    0.000    2.141    2.141 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp8\..\common\cudss_solver.py:56(__init__)
+    36632    0.059    0.000    2.060    0.000 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\src\spd_decap_pi\_core\solver\mfdm.py:782(copper_surface_impedance)
+    36632    1.068    0.000    1.980    0.000 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\src\spd_decap_pi\_core\solver\mfdm.py:735(_copper_two_face_terms)
+  948/279    0.002    0.000    1.880    0.007 <frozen importlib._bootstrap>:1390(_handle_fromlist)
+        1    0.000    0.000    1.661    1.661 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp11\../exp5\pipeline.py:1(<module>)
+     7661    0.018    0.000    1.183    0.000 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\_core\fromnumeric.py:66(_wrapreduction)
+     3542    0.010    0.000    1.119    0.000 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\_core\fromnumeric.py:2304(sum)
+        1    0.933    0.933    1.063    1.063 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\nvmath\sparse\advanced\direct_solver.py:540(__init__)
+        1    0.000    0.000    1.062    1.062 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp5\../exp1\extract.py:1(<module>)
+        1    0.000    0.000    1.056    1.056 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\src\spd_decap_pi\_core\io\__init__.py:1(<module>)
+        1    0.000    0.000    1.050    1.050 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\src\spd_decap_pi\_core\io\spd.py:1(<module>)
+        1    0.000    0.000    0.925    0.925 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\nvmath\__init__.py:1(<module>)
+     1215    0.011    0.000    0.879    0.001 <frozen importlib._bootstrap>:1240(_find_spec)
+
+
+
+====================================================================================================
+SORTED BY TOTAL (self) TIME (top 40)
+====================================================================================================
+Thu Sep 17 16:59:51 2026    D:\Downloads\examples\analysis\claude-2026-09-15\work\exp37\prof_Port14.prof
+
+         7978945 function calls (7933948 primitive calls) in 48.826 seconds
+
+   Ordered by: internal time
+   List reduced from 6074 to 40 due to restriction <40>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+     6331   15.041    0.002   15.044    0.002 {built-in method matplotlib._path.points_in_path}
+       20   11.999    0.600   22.096    1.105 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\homog.py:51(batched_gx)
+     1178    8.908    0.008    8.908    0.008 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\homog.py:84(A)
+   476515    2.328    0.000    2.328    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+    36632    1.068    0.000    1.980    0.000 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\src\spd_decap_pi\_core\solver\mfdm.py:735(_copper_two_face_terms)
+      798    1.014    0.001   17.805    0.022 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp3\..\exp1\model.py:124(rasterize)
+        1    0.933    0.933    1.063    1.063 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\nvmath\sparse\advanced\direct_solver.py:540(__init__)
+     8263    0.676    0.000    0.676    0.000 {built-in method nt.stat}
+        3    0.442    0.147    0.444    0.148 {built-in method _pickle.load}
+      114    0.409    0.004    0.411    0.004 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\nvmath\internal\utils.py:473(cuda_call_ctx)
+      189    0.384    0.002    0.385    0.002 {built-in method _imp.create_dynamic}
+        1    0.308    0.308   40.856   40.856 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\model3.py:270(build)
+       28    0.235    0.008    2.490    0.089 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\model3.py:616(assemble)
+      919    0.208    0.000    0.208    0.000 {built-in method _io.open_code}
+   147878    0.164    0.000    0.569    0.000 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\_core\fromnumeric.py:86(_wrapreduction_any_all)
+   2533/1    0.138    0.000   48.832   48.832 {built-in method builtins.exec}
+   659286    0.116    0.000    0.119    0.000 {built-in method builtins.max}
+   109896    0.115    0.000    0.115    0.000 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\src\spd_decap_pi\_core\solver\mfdm.py:91(_positive)
+       57    0.113    0.002    0.546    0.010 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\nvmath\sparse\advanced\direct_solver.py:1782(_execute)
+   680824    0.111    0.000    0.111    0.000 {built-in method builtins.min}
+       87    0.109    0.001    0.111    0.001 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\nvmath\internal\_device_utils.py:12(get_device)
+   196081    0.108    0.000    0.108    0.000 {method 'reshape' of 'numpy.ndarray' objects}
+    26463    0.099    0.000    0.151    0.000 <frozen importlib._bootstrap_external>:96(_path_join)
+   109922    0.097    0.000    0.257    0.000 {method 'any' of 'numpy.generic' objects}
+    23677    0.095    0.000    0.143    0.000 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\lib\_stride_tricks_impl.py:373(_broadcast_to)
+      919    0.089    0.000    0.089    0.000 {built-in method marshal.loads}
+      195    0.083    0.000    0.083    0.000 {built-in method nt.listdir}
+       84    0.081    0.001    0.084    0.001 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\nvmath\internal\tensor_ifc_ndbuffer.py:110(copy_)
+   433195    0.079    0.000    0.079    0.000 {method 'endswith' of 'str' objects}
+        4    0.077    0.019    0.077    0.019 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\cuda\pathfinder\_dynamic_libs\load_dl_windows.py:160(load_with_abs_path)
+       34    0.076    0.002    0.076    0.002 {built-in method scipy.sparse._sparsetools.coo_tocsr}
+        1    0.076    0.076   48.832   48.832 tools\research-claude\exp11\run11.py:1(<module>)
+   189/90    0.072    0.000    0.830    0.009 {built-in method _imp.exec_dynamic}
+   157378    0.064    0.000    0.520    0.000 {method 'min' of 'numpy.ndarray' objects}
+   121260    0.064    0.000    0.083    0.000 {built-in method numpy.asarray}
+   157388    0.063    0.000    0.505    0.000 {method 'max' of 'numpy.ndarray' objects}
+   110001    0.062    0.000    0.472    0.000 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\_core\fromnumeric.py:2436(any)
+    36632    0.059    0.000    2.060    0.000 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\src\spd_decap_pi\_core\solver\mfdm.py:782(copper_surface_impedance)
+    11889    0.059    0.000    0.287    0.000 C:\Users\User\AppData\Local\Programs\Python\Python312\Lib\site-packages\numpy\lib\_function_base_impl.py:5050(meshgrid)
+       22    0.052    0.002   22.214    1.010 C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research-claude\exp4\..\exp3\homog.py:119(window_conductance)
+
+

@@ -1,0 +1,1076 @@
+{
+ "experiment": "exp26",
+ "tag": "260729",
+ "variant": "j",
+ "f": 100000.0,
+ "ports": [
+  {
+   "port": "Port19_SITE0",
+   "tag": "260729",
+   "variant": "j",
+   "flags": {
+    "eps_table": false,
+    "c_all_refs": false,
+    "zs_cell": false,
+    "zs_wall": false,
+    "c_unit_fix": true,
+    "fringe_no_thresh": false,
+    "fringe_no_cap": false,
+    "homog_L_noG": false,
+    "via_area_exact": false,
+    "via_L_twowire": false,
+    "zs_wall_skin": false,
+    "zs_wall_skin_re": false,
+    "via_R_skin": false
+   },
+   "f": 100000.0,
+   "unknowns": 66782,
+   "port_index": 66781,
+   "decaps_total": 4,
+   "decaps_connected": 4,
+   "decaps_connected_info": 4,
+   "decaps_gnd_to_reference_directly": 4,
+   "Z_port": [
+    0.013011599603455043,
+    -0.19462272639462452
+   ],
+   "ReZ_model_mOhm": 13.011599603455043,
+   "remainder_a_mOhm": 6.134854388548764,
+   "path_R_total_mOhm": 6.876745214906279,
+   "receipt": {
+    "file": "result_260729_Port19_SITE0_any_j.json",
+    "f": 100000.0,
+    "ReZ_mOhm": 13.011599603396425,
+    "breakdown_sum_mOhm": 6.765045794880282,
+    "remainder_mOhm": 6.2465538085161425,
+    "breakdown": {
+     "Signal$L10(DGND)": {
+      "R_mOhm": 0.6797449805795182,
+      "L_ext_pH": 21.90299896482778,
+      "L_int_pH": 1.696710429301737
+     },
+     "Signal$L21(DGND)": {
+      "R_mOhm": 0.21055720319919288,
+      "L_ext_pH": 18.23173523666126,
+      "L_int_pH": 6.437644175774641
+     },
+     "Signal$L30(OTHER_POWER1)": {
+      "R_mOhm": 1.3584009000303385,
+      "L_ext_pH": 33.024192345948194,
+      "L_int_pH": 3.390702454749085
+     },
+     "rail_traces": {
+      "mOhm": 1.2176932085248593,
+      "pH": 49.4053031364697
+     },
+     "rail_vias": {
+      "mOhm": 3.298649502546373,
+      "pH": 308.8638157093212
+     }
+    }
+   },
+   "path_R_total_vs_receipt_breakdown_mOhm": [
+    6.876745214906279,
+    6.765045794880282
+   ],
+   "remainder_a_vs_receipt_remainder_mOhm": [
+    6.134854388548764,
+    6.2465538085161425
+   ],
+   "distortion_metric": 0.3113070399460399,
+   "top1_share": 0.8044877655090363,
+   "spread": 2.2732270089855824,
+   "spread_non_isolated": 2.2732270089855824,
+   "decaps_isolated": [],
+   "worst_decap": {
+    "refdes": "C10039_0",
+    "model_id": "CAP_0603_1UF",
+    "R_path_mOhm": 19.76745084975621,
+    "isolated": false,
+    "element_split_mOhm": {
+     "planes": 7.401826756486294,
+     "rail_vias": 8.349249102034813,
+     "rail_traces": 3.848559873187344,
+     "rail_pad_links": 0.16781511741406846
+    },
+    "dominant_element": "rail_vias",
+    "split_breakdown": {
+     "Signal$L10(DGND)": {
+      "R_mOhm": 4.29957751298524,
+      "L_ext_pH": 128.66016384905816,
+      "L_int_pH": 10.732168999105804
+     },
+     "Signal$L21(DGND)": {
+      "R_mOhm": 0.9161635536582132,
+      "L_ext_pH": 54.042280188375535,
+      "L_int_pH": 28.0110814337004
+     },
+     "Signal$L30(OTHER_POWER1)": {
+      "R_mOhm": 2.1860856898428405,
+      "L_ext_pH": 53.69746414797476,
+      "L_int_pH": 5.4566852205975565
+     },
+     "rail_traces": {
+      "mOhm": 3.848559873187344,
+      "pH": 149.2648597453538
+     },
+     "rail_vias": {
+      "mOhm": 8.349249102034813,
+      "pH": 878.341052122421
+     }
+    },
+    "breakdown": {
+     "plane_R:Signal$L10(DGND)": {
+      "mOhm": 4.29957751298524,
+      "pH": 0.0
+     },
+     "plane_L:Signal$L10(DGND)": {
+      "mOhm": 0.0,
+      "pH": 139.39233284816393
+     },
+     "plane_R:Signal$L21(DGND)": {
+      "mOhm": 0.9161635536582132,
+      "pH": 0.0
+     },
+     "plane_L:Signal$L21(DGND)": {
+      "mOhm": 0.0,
+      "pH": 82.05336162207593
+     },
+     "plane_R:Signal$L30(OTHER_POWER1)": {
+      "mOhm": 2.1860856898428405,
+      "pH": 0.0
+     },
+     "plane_L:Signal$L30(OTHER_POWER1)": {
+      "mOhm": 0.0,
+      "pH": 59.15414936857233
+     },
+     "rail_traces": {
+      "mOhm": 3.848559873187344,
+      "pH": 149.2648597453538
+     },
+     "rail_vias": {
+      "mOhm": 8.349249102034813,
+      "pH": 878.341052122421
+     },
+     "rail_pad_links": {
+      "mOhm": 0.16781511741406846,
+      "pH": 0.0005000051423352169
+     },
+     "decaps": {
+      "mOhm": 0.004442606166531378,
+      "pH": -339.09012975550905
+     },
+     "_Zport": [
+      0.0022109458254485122,
+      7.324583318818051e-05
+     ]
+    }
+   },
+   "worst_decap_any": {
+    "refdes": "C10039_0",
+    "R_path_mOhm": 19.76745084975621,
+    "isolated": false
+   },
+   "decaps": [
+    {
+     "refdes": "C10002_0",
+     "part": "CAP_0402_100NF",
+     "model_id": "CAP_0402_100NF",
+     "matrix_index": 65966,
+     "raw_rail_node": 68395,
+     "Z_re": 0.21903597827971516,
+     "Z_im": -18.35953392021435,
+     "ESR_mOhm": 219.03597827971515,
+     "I_abs": 0.010619349630426492,
+     "I_re": 0.010610704351618578,
+     "I_im": 0.000428415377620653,
+     "share": 0.010622117351332443,
+     "R_path_mOhm": 16.894854979994207,
+     "offdiag_nnz_nodecap": 2,
+     "isolated": false
+    },
+    {
+     "refdes": "C10039_0",
+     "part": "CAP_0603_1UF",
+     "model_id": "CAP_0603_1UF",
+     "matrix_index": 65959,
+     "raw_rail_node": 68382,
+     "Z_re": 0.043994143662216025,
+     "Z_im": -2.1099446855554764,
+     "ESR_mOhm": 43.994143662216025,
+     "I_abs": 0.09242067433403237,
+     "I_re": 0.09240054479557903,
+     "I_im": 0.0019288249888111478,
+     "share": 0.09244476193274588,
+     "R_path_mOhm": 19.76745084975621,
+     "offdiag_nnz_nodecap": 2,
+     "isolated": false
+    },
+    {
+     "refdes": "C10040_0",
+     "part": "CAP_0603_1UF",
+     "model_id": "CAP_0603_1UF",
+     "matrix_index": 65960,
+     "raw_rail_node": 68383,
+     "Z_re": 0.043994143662216025,
+     "Z_im": -2.1099446855554764,
+     "ESR_mOhm": 43.994143662216025,
+     "I_abs": 0.09242126745358702,
+     "I_re": 0.09239832228302758,
+     "I_im": 0.002059300126069693,
+     "share": 0.09244535520688528,
+     "R_path_mOhm": 16.788248627516914,
+     "offdiag_nnz_nodecap": 2,
+     "isolated": false
+    },
+    {
+     "refdes": "C10105_0",
+     "part": "CAP_1608_10UF",
+     "model_id": "CAP_1608_10UF",
+     "matrix_index": 65961,
+     "raw_rail_node": 68384,
+     "Z_re": 0.00828395946456397,
+     "Z_im": -0.24228073112966145,
+     "ESR_mOhm": 8.283959464563969,
+     "I_abs": 0.8042781465099673,
+     "I_re": 0.8042659321087569,
+     "I_im": -0.004432539085091356,
+     "share": 0.8044877655090363,
+     "R_path_mOhm": 8.695766314415447,
+     "offdiag_nnz_nodecap": 2,
+     "isolated": false
+    }
+   ],
+   "tiny_shunt_added": false,
+   "build_seconds": 120.39135766029358,
+   "solve_a_seconds": 0.7660067081451416,
+   "solve_b_seconds": 0.918710470199585,
+   "wall_seconds": 122.0760748386383,
+   "peak_rss_MB": 1323.88671875
+  },
+  {
+   "port": "Port65_SITE1",
+   "tag": "260729",
+   "variant": "j",
+   "flags": {
+    "eps_table": false,
+    "c_all_refs": false,
+    "zs_cell": false,
+    "zs_wall": false,
+    "c_unit_fix": true,
+    "fringe_no_thresh": false,
+    "fringe_no_cap": false,
+    "homog_L_noG": false,
+    "via_area_exact": false,
+    "via_L_twowire": false,
+    "zs_wall_skin": false,
+    "zs_wall_skin_re": false,
+    "via_R_skin": false
+   },
+   "f": 100000.0,
+   "unknowns": 66099,
+   "port_index": 66098,
+   "decaps_total": 4,
+   "decaps_connected": 4,
+   "decaps_connected_info": 4,
+   "decaps_gnd_to_reference_directly": 4,
+   "Z_port": [
+    0.029565329663790395,
+    -0.9957346577922337
+   ],
+   "ReZ_model_mOhm": 29.565329663790397,
+   "remainder_a_mOhm": 20.25615441359199,
+   "path_R_total_mOhm": 9.309175250198408,
+   "receipt": {
+    "file": "result_260729_Port65_SITE1_any_j.json",
+    "f": 100000.0,
+    "ReZ_mOhm": 29.565329661127546,
+    "breakdown_sum_mOhm": 9.22760099497561,
+    "remainder_mOhm": 20.337728666151936,
+    "breakdown": {
+     "Signal$L10(DGND)": {
+      "R_mOhm": 0.4206901688558676,
+      "L_ext_pH": 17.83536838042554,
+      "L_int_pH": 1.0500841012373738
+     },
+     "Signal$L21(DGND)": {
+      "R_mOhm": 0.4103611249242713,
+      "L_ext_pH": 30.001511459691002,
+      "L_int_pH": 12.54651403843871
+     },
+     "Signal$L30(OTHER_POWER1)": {
+      "R_mOhm": 1.9921637786399424,
+      "L_ext_pH": 47.05758966269557,
+      "L_int_pH": 4.972637028101059
+     },
+     "rail_traces": {
+      "mOhm": 1.976978684012763,
+      "pH": 76.10523264690686
+     },
+     "rail_vias": {
+      "mOhm": 4.427407238542766,
+      "pH": 437.59634051669946
+     }
+    }
+   },
+   "path_R_total_vs_receipt_breakdown_mOhm": [
+    9.309175250198408,
+    9.22760099497561
+   ],
+   "remainder_a_vs_receipt_remainder_mOhm": [
+    20.25615441359199,
+    20.337728666151936
+   ],
+   "distortion_metric": 1.0278782627597016,
+   "top1_share": 0.4728300912523887,
+   "spread": 735511.2699974077,
+   "spread_non_isolated": 1.4800810675758,
+   "decaps_isolated": [
+    "C10105_1"
+   ],
+   "worst_decap": {
+    "refdes": "C10002_1",
+    "model_id": "CAP_0402_100NF",
+    "R_path_mOhm": 16.35670242279011,
+    "isolated": false,
+    "element_split_mOhm": {
+     "planes": 3.1887122752218433,
+     "rail_vias": 8.577786289925058,
+     "rail_traces": 4.42239046542637,
+     "rail_pad_links": 0.1678133915139475
+    },
+    "dominant_element": "rail_vias",
+    "split_breakdown": {
+     "Signal$L10(DGND)": {
+      "R_mOhm": 1.2197026595982692,
+      "L_ext_pH": 32.55933985022602,
+      "L_int_pH": 3.0444979842633164
+     },
+     "Signal$L21(DGND)": {
+      "R_mOhm": 0.6013972951571145,
+      "L_ext_pH": 39.29877067588966,
+      "L_int_pH": 18.387315825202133
+     },
+     "Signal$L30(OTHER_POWER1)": {
+      "R_mOhm": 1.3676123204664596,
+      "L_ext_pH": 34.21286243508299,
+      "L_int_pH": 3.413695067521784
+     },
+     "rail_traces": {
+      "mOhm": 4.42239046542637,
+      "pH": 172.36661048959644
+     },
+     "rail_vias": {
+      "mOhm": 8.577786289925058,
+      "pH": 846.7772052605961
+     }
+    },
+    "breakdown": {
+     "plane_R:Signal$L10(DGND)": {
+      "mOhm": 1.2197026595982692,
+      "pH": 0.0
+     },
+     "plane_L:Signal$L10(DGND)": {
+      "mOhm": 0.0,
+      "pH": 35.60383783448932
+     },
+     "plane_R:Signal$L21(DGND)": {
+      "mOhm": 0.6013972951571145,
+      "pH": 0.0
+     },
+     "plane_L:Signal$L21(DGND)": {
+      "mOhm": 0.0,
+      "pH": 57.6860865010918
+     },
+     "plane_R:Signal$L30(OTHER_POWER1)": {
+      "mOhm": 1.3676123204664596,
+      "pH": 0.0
+     },
+     "plane_L:Signal$L30(OTHER_POWER1)": {
+      "mOhm": 0.0,
+      "pH": 37.62655750260477
+     },
+     "rail_traces": {
+      "mOhm": 4.42239046542637,
+      "pH": 172.36661048959644
+     },
+     "rail_vias": {
+      "mOhm": 8.577786289925058,
+      "pH": 846.7772052605961
+     },
+     "rail_pad_links": {
+      "mOhm": 0.1678133915139475,
+      "pH": 0.0005000000000158067
+     },
+     "decaps": {
+      "mOhm": 0.0001262766639840681,
+      "pH": -16.799226940701008
+     },
+     "_Zport": [
+      0.002475658241354938,
+      7.712020452376642e-05
+     ]
+    }
+   },
+   "worst_decap_any": {
+    "refdes": "C10105_1",
+    "R_path_mOhm": 8128297.317971,
+    "isolated": true
+   },
+   "decaps": [
+    {
+     "refdes": "C10002_1",
+     "part": "CAP_0402_100NF",
+     "model_id": "CAP_0402_100NF",
+     "matrix_index": 66090,
+     "raw_rail_node": 68305,
+     "Z_re": 0.21903597827971516,
+     "Z_im": -18.35953392021435,
+     "ESR_mOhm": 219.03597827971515,
+     "I_abs": 0.05425698032209901,
+     "I_re": 0.05425141874175506,
+     "I_im": 0.0007768385800066081,
+     "share": 0.054339961485363346,
+     "R_path_mOhm": 16.35670242279011,
+     "offdiag_nnz_nodecap": 2,
+     "isolated": false
+    },
+    {
+     "refdes": "C10039_1",
+     "part": "CAP_0603_1UF",
+     "model_id": "CAP_0603_1UF",
+     "matrix_index": 66091,
+     "raw_rail_node": 68312,
+     "Z_re": 0.043994143662216025,
+     "Z_im": -2.1099446855554764,
+     "ESR_mOhm": 43.994143662216025,
+     "I_abs": 0.472108044531596,
+     "I_re": 0.47210771942853536,
+     "I_im": -0.0005540464193259884,
+     "share": 0.4728300912523887,
+     "R_path_mOhm": 12.375195576683987,
+     "offdiag_nnz_nodecap": 2,
+     "isolated": false
+    },
+    {
+     "refdes": "C10040_1",
+     "part": "CAP_0603_1UF",
+     "model_id": "CAP_0603_1UF",
+     "matrix_index": 66092,
+     "raw_rail_node": 68313,
+     "Z_re": 0.043994143662216025,
+     "Z_im": -2.1099446855554764,
+     "ESR_mOhm": 43.994143662216025,
+     "I_abs": 0.472107900761339,
+     "I_re": 0.4721078303862462,
+     "I_im": -0.00025777755855015605,
+     "share": 0.47282994726224803,
+     "R_path_mOhm": 11.051220626435335,
+     "offdiag_nnz_nodecap": 2,
+     "isolated": false
+    },
+    {
+     "refdes": "C10105_1",
+     "part": "CAP_1608_10UF",
+     "model_id": "CAP_1608_10UF",
+     "matrix_index": 66093,
+     "raw_rail_node": 68314,
+     "Z_re": 0.00828395946456397,
+     "Z_im": -0.24228073112966145,
+     "ESR_mOhm": 8.283959464563969,
+     "I_abs": 0.0,
+     "I_re": 0.0,
+     "I_im": -0.0,
+     "share": 0.0,
+     "R_path_mOhm": 8128297.317971,
+     "offdiag_nnz_nodecap": 2,
+     "isolated": true
+    }
+   ],
+   "tiny_shunt_added": false,
+   "build_seconds": 119.32763290405273,
+   "solve_a_seconds": 0.9046318531036377,
+   "solve_b_seconds": 1.0536890029907227,
+   "wall_seconds": 121.2859537601471,
+   "peak_rss_MB": 1323.88671875
+  },
+  {
+   "port": "Port29_SITE0",
+   "tag": "260729",
+   "variant": "j",
+   "flags": {
+    "eps_table": false,
+    "c_all_refs": false,
+    "zs_cell": false,
+    "zs_wall": false,
+    "c_unit_fix": true,
+    "fringe_no_thresh": false,
+    "fringe_no_cap": false,
+    "homog_L_noG": false,
+    "via_area_exact": false,
+    "via_L_twowire": false,
+    "zs_wall_skin": false,
+    "zs_wall_skin_re": false,
+    "via_R_skin": false
+   },
+   "f": 100000.0,
+   "unknowns": 69568,
+   "port_index": 69567,
+   "decaps_total": 4,
+   "decaps_connected": 4,
+   "decaps_connected_info": 4,
+   "decaps_gnd_to_reference_directly": 4,
+   "Z_port": [
+    0.015637338039915096,
+    -0.1966564868527146
+   ],
+   "ReZ_model_mOhm": 15.637338039915097,
+   "remainder_a_mOhm": 6.241787160239579,
+   "path_R_total_mOhm": 9.395550879675518,
+   "receipt": {
+    "file": "result_260729_Port29_SITE0_any_j.json",
+    "f": 100000.0,
+    "ReZ_mOhm": 15.637338039796271,
+    "breakdown_sum_mOhm": 9.281430166368336,
+    "remainder_mOhm": 6.355907873427935,
+    "breakdown": {
+     "Signal$L10(DGND)": {
+      "R_mOhm": 0.5360241850459752,
+      "L_ext_pH": 20.101074587152297,
+      "L_int_pH": 1.3379691665396232
+     },
+     "Signal$L21(DGND)": {
+      "R_mOhm": 0.17819451739206096,
+      "L_ext_pH": 16.089881583720974,
+      "L_int_pH": 5.448176930611753
+     },
+     "Signal$L42(OTHER_POWER9)": {
+      "R_mOhm": 3.070366959113149,
+      "L_ext_pH": 70.61017663839583,
+      "L_int_pH": 7.663938374166955
+     },
+     "rail_traces": {
+      "mOhm": 1.7982023449283477,
+      "pH": 69.59708791337275
+     },
+     "rail_vias": {
+      "mOhm": 3.698642159888804,
+      "pH": 332.8790314995453
+     }
+    }
+   },
+   "path_R_total_vs_receipt_breakdown_mOhm": [
+    9.395550879675518,
+    9.281430166368336
+   ],
+   "remainder_a_vs_receipt_remainder_mOhm": [
+    6.241787160239579,
+    6.355907873427935
+   ],
+   "distortion_metric": 0.3167332363184314,
+   "top1_share": 0.8131628445798027,
+   "spread": 27714413.132759206,
+   "spread_non_isolated": 1.441839057502818,
+   "decaps_isolated": [
+    "C10030_0"
+   ],
+   "worst_decap": {
+    "refdes": "C10092_0",
+    "model_id": "CAP_0603_1UF",
+    "R_path_mOhm": 15.956046846843979,
+    "isolated": false,
+    "element_split_mOhm": {
+     "planes": 6.052231906848194,
+     "rail_vias": 6.5023235474209375,
+     "rail_traces": 3.233676158310334,
+     "rail_pad_links": 0.16781522366407525
+    },
+    "dominant_element": "rail_vias",
+    "split_breakdown": {
+     "Signal$L10(DGND)": {
+      "R_mOhm": 2.3251740176996254,
+      "L_ext_pH": 70.51088420868398,
+      "L_int_pH": 5.803863387720689
+     },
+     "Signal$L21(DGND)": {
+      "R_mOhm": 0.4226189405078862,
+      "L_ext_pH": 32.12163838247895,
+      "L_int_pH": 12.92128846505818
+     },
+     "Signal$L42(OTHER_POWER9)": {
+      "R_mOhm": 3.304438948640682,
+      "L_ext_pH": 76.63781757987954,
+      "L_int_pH": 8.248205117115434
+     },
+     "rail_traces": {
+      "mOhm": 3.233676158310334,
+      "pH": 124.34521372378248
+     },
+     "rail_vias": {
+      "mOhm": 6.5023235474209375,
+      "pH": 671.3139279639731
+     }
+    },
+    "breakdown": {
+     "plane_R:Signal$L10(DGND)": {
+      "mOhm": 2.3251740176996254,
+      "pH": 0.0
+     },
+     "plane_L:Signal$L10(DGND)": {
+      "mOhm": 0.0,
+      "pH": 76.31474759640466
+     },
+     "plane_R:Signal$L21(DGND)": {
+      "mOhm": 0.4226189405078862,
+      "pH": 0.0
+     },
+     "plane_L:Signal$L21(DGND)": {
+      "mOhm": 0.0,
+      "pH": 45.042926847537125
+     },
+     "plane_R:Signal$L42(OTHER_POWER9)": {
+      "mOhm": 3.304438948640682,
+      "pH": 0.0
+     },
+     "plane_L:Signal$L42(OTHER_POWER9)": {
+      "mOhm": 0.0,
+      "pH": 84.88602269699497
+     },
+     "rail_traces": {
+      "mOhm": 3.233676158310334,
+      "pH": 124.34521372378248
+     },
+     "rail_vias": {
+      "mOhm": 6.5023235474209375,
+      "pH": 671.3139279639731
+     },
+     "rail_pad_links": {
+      "mOhm": 0.16781522366407525,
+      "pH": 0.0005000054589071124
+     },
+     "decaps": {
+      "mOhm": 0.002629639400982786,
+      "pH": -189.00307614877048
+     },
+     "_Zport": [
+      0.0036066845960592633,
+      9.566781093793604e-05
+     ]
+    }
+   },
+   "worst_decap_any": {
+    "refdes": "C10030_0",
+    "R_path_mOhm": 306700301.93590426,
+    "isolated": true
+   },
+   "decaps": [
+    {
+     "refdes": "C10030_0",
+     "part": "CAP_0402_100NF",
+     "model_id": "CAP_0402_100NF",
+     "matrix_index": 68296,
+     "raw_rail_node": 70186,
+     "Z_re": 0.21903597827971516,
+     "Z_im": -18.35953392021435,
+     "ESR_mOhm": 219.03597827971515,
+     "I_abs": 0.0,
+     "I_re": 0.0,
+     "I_im": -0.0,
+     "share": 0.0,
+     "R_path_mOhm": 306700301.93590426,
+     "offdiag_nnz_nodecap": 2,
+     "isolated": true
+    },
+    {
+     "refdes": "C10091_0",
+     "part": "CAP_0603_1UF",
+     "model_id": "CAP_0603_1UF",
+     "matrix_index": 68289,
+     "raw_rail_node": 70171,
+     "Z_re": 0.043994143662216025,
+     "Z_im": -2.1099446855554764,
+     "ESR_mOhm": 43.994143662216025,
+     "I_abs": 0.09339085050731492,
+     "I_re": 0.09336366629029988,
+     "I_im": 0.0022531700586431768,
+     "share": 0.09341870158679852,
+     "R_path_mOhm": 14.459645047693453,
+     "offdiag_nnz_nodecap": 2,
+     "isolated": false
+    },
+    {
+     "refdes": "C10092_0",
+     "part": "CAP_0603_1UF",
+     "model_id": "CAP_0603_1UF",
+     "matrix_index": 68290,
+     "raw_rail_node": 70172,
+     "Z_re": 0.043994143662216025,
+     "Z_im": -2.1099446855554764,
+     "ESR_mOhm": 43.994143662216025,
+     "I_abs": 0.0933906028277783,
+     "I_re": 0.09336499688106692,
+     "I_im": 0.002186790784275858,
+     "share": 0.09341845383339875,
+     "R_path_mOhm": 15.956046846843979,
+     "offdiag_nnz_nodecap": 2,
+     "isolated": false
+    },
+    {
+     "refdes": "C10127_0",
+     "part": "CAP_1608_10UF",
+     "model_id": "CAP_1608_10UF",
+     "matrix_index": 68291,
+     "raw_rail_node": 70173,
+     "Z_re": 0.00828395946456397,
+     "Z_im": -0.24228073112966145,
+     "ESR_mOhm": 8.283959464563969,
+     "I_abs": 0.8129204149309978,
+     "I_re": 0.8129081764698226,
+     "I_im": -0.004460677089115961,
+     "share": 0.8131628445798027,
+     "R_path_mOhm": 11.066454861112538,
+     "offdiag_nnz_nodecap": 2,
+     "isolated": false
+    }
+   ],
+   "tiny_shunt_added": false,
+   "build_seconds": 120.61748242378235,
+   "solve_a_seconds": 0.9179327487945557,
+   "solve_b_seconds": 1.1005167961120605,
+   "wall_seconds": 122.63692331314087,
+   "peak_rss_MB": 1392.578125
+  },
+  {
+   "port": "Port75_SITE1",
+   "tag": "260729",
+   "variant": "j",
+   "flags": {
+    "eps_table": false,
+    "c_all_refs": false,
+    "zs_cell": false,
+    "zs_wall": false,
+    "c_unit_fix": true,
+    "fringe_no_thresh": false,
+    "fringe_no_cap": false,
+    "homog_L_noG": false,
+    "via_area_exact": false,
+    "via_L_twowire": false,
+    "zs_wall_skin": false,
+    "zs_wall_skin_re": false,
+    "via_R_skin": false
+   },
+   "f": 100000.0,
+   "unknowns": 50865,
+   "port_index": 50864,
+   "decaps_total": 4,
+   "decaps_connected": 4,
+   "decaps_connected_info": 4,
+   "decaps_gnd_to_reference_directly": 4,
+   "Z_port": [
+    0.026641141983026674,
+    -0.1940904073281393
+   ],
+   "ReZ_model_mOhm": 26.641141983026674,
+   "remainder_a_mOhm": 6.13650198522499,
+   "path_R_total_mOhm": 20.504639997801686,
+   "receipt": {
+    "file": "result_260729_Port75_SITE1_any_j.json",
+    "f": 100000.0,
+    "ReZ_mOhm": 26.641141983148117,
+    "breakdown_sum_mOhm": 20.392967586965323,
+    "remainder_mOhm": 6.248174396182794,
+    "breakdown": {
+     "Signal$L10(DGND)": {
+      "R_mOhm": 2.6211351067732873,
+      "L_ext_pH": 69.40835099175727,
+      "L_int_pH": 6.542611419476164
+     },
+     "Signal$L21(DGND)": {
+      "R_mOhm": 0.546732039436666,
+      "L_ext_pH": 34.756178275636664,
+      "L_int_pH": 16.71596257886814
+     },
+     "Signal$L42(OTHER_POWER9)": {
+      "R_mOhm": 2.5455163526627875,
+      "L_ext_pH": 63.61271595079857,
+      "L_int_pH": 6.353859560447058
+     },
+     "rail_traces": {
+      "mOhm": 5.1049766720389185,
+      "pH": 191.08553028056613
+     },
+     "rail_vias": {
+      "mOhm": 9.574607416053663,
+      "pH": 968.2546715939282
+     }
+    }
+   },
+   "path_R_total_vs_receipt_breakdown_mOhm": [
+    20.504639997801686,
+    20.392967586965323
+   ],
+   "remainder_a_vs_receipt_remainder_mOhm": [
+    6.13650198522499,
+    6.248174396182794
+   ],
+   "distortion_metric": 0.3113906455887848,
+   "top1_share": 0.8044893112651246,
+   "spread": 1.1414586936089839,
+   "spread_non_isolated": 1.1414586936089839,
+   "decaps_isolated": [],
+   "worst_decap": {
+    "refdes": "C10030_1",
+    "model_id": "CAP_0402_100NF",
+    "R_path_mOhm": 22.589344949227403,
+    "isolated": false,
+    "element_split_mOhm": {
+     "planes": 5.624851030473393,
+     "rail_vias": 10.529158357512886,
+     "rail_traces": 6.267522165116919,
+     "rail_pad_links": 0.16781339550269356
+    },
+    "dominant_element": "rail_vias",
+    "split_breakdown": {
+     "Signal$L10(DGND)": {
+      "R_mOhm": 2.9852872619584323,
+      "L_ext_pH": 88.12470795376997,
+      "L_int_pH": 7.451571069356301
+     },
+     "Signal$L21(DGND)": {
+      "R_mOhm": 0.6003740287836649,
+      "L_ext_pH": 38.94194994470871,
+      "L_int_pH": 18.356030147442286
+     },
+     "Signal$L42(OTHER_POWER9)": {
+      "R_mOhm": 2.0391897397312957,
+      "L_ext_pH": 47.60758244117992,
+      "L_int_pH": 5.090018459242505
+     },
+     "rail_traces": {
+      "mOhm": 6.267522165116919,
+      "pH": 240.94464848471227
+     },
+     "rail_vias": {
+      "mOhm": 10.529158357512886,
+      "pH": 1003.6349357377306
+     }
+    },
+    "breakdown": {
+     "plane_R:Signal$L10(DGND)": {
+      "mOhm": 2.9852872619584323,
+      "pH": 0.0
+     },
+     "plane_L:Signal$L10(DGND)": {
+      "mOhm": 0.0,
+      "pH": 95.57627902312628
+     },
+     "plane_R:Signal$L21(DGND)": {
+      "mOhm": 0.6003740287836649,
+      "pH": 0.0
+     },
+     "plane_L:Signal$L21(DGND)": {
+      "mOhm": 0.0,
+      "pH": 57.297980092151015
+     },
+     "plane_R:Signal$L42(OTHER_POWER9)": {
+      "mOhm": 2.0391897397312957,
+      "pH": 0.0
+     },
+     "plane_L:Signal$L42(OTHER_POWER9)": {
+      "mOhm": 0.0,
+      "pH": 52.69760090042242
+     },
+     "rail_traces": {
+      "mOhm": 6.267522165116919,
+      "pH": 240.94464848471227
+     },
+     "rail_vias": {
+      "mOhm": 10.529158357512886,
+      "pH": 1003.6349357377306
+     },
+     "rail_pad_links": {
+      "mOhm": 0.16781339550269356,
+      "pH": 0.0005000000119002755
+     },
+     "decaps": {
+      "mOhm": 0.0002630472191696182,
+      "pH": -34.66727454929977
+     },
+     "_Zport": [
+      0.002681451145711602,
+      8.113238532206944e-05
+     ]
+    }
+   },
+   "worst_decap_any": {
+    "refdes": "C10030_1",
+    "R_path_mOhm": 22.589344949227403,
+    "isolated": false
+   },
+   "decaps": [
+    {
+     "refdes": "C10030_1",
+     "part": "CAP_0402_100NF",
+     "model_id": "CAP_0402_100NF",
+     "matrix_index": 50856,
+     "raw_rail_node": 51886,
+     "Z_re": 0.21903597827971516,
+     "Z_im": -18.35953392021435,
+     "ESR_mOhm": 219.03597827971515,
+     "I_abs": 0.010656891383822566,
+     "I_re": 0.01059171437753274,
+     "I_im": 0.0011768264576214717,
+     "share": 0.010658136172293648,
+     "R_path_mOhm": 22.589344949227403,
+     "offdiag_nnz_nodecap": 2,
+     "isolated": false
+    },
+    {
+     "refdes": "C10091_1",
+     "part": "CAP_0603_1UF",
+     "model_id": "CAP_0603_1UF",
+     "matrix_index": 50858,
+     "raw_rail_node": 51898,
+     "Z_re": 0.043994143662216025,
+     "Z_im": -2.1099446855554764,
+     "ESR_mOhm": 43.994143662216025,
+     "I_abs": 0.09241347757479451,
+     "I_re": 0.09239085619232826,
+     "I_im": 0.002044634323190391,
+     "share": 0.09242427202012708,
+     "R_path_mOhm": 21.01317620545328,
+     "offdiag_nnz_nodecap": 2,
+     "isolated": false
+    },
+    {
+     "refdes": "C10092_1",
+     "part": "CAP_0603_1UF",
+     "model_id": "CAP_0603_1UF",
+     "matrix_index": 50859,
+     "raw_rail_node": 51899,
+     "Z_re": 0.043994143662216025,
+     "Z_im": -2.1099446855554764,
+     "ESR_mOhm": 43.994143662216025,
+     "I_abs": 0.09241748562895749,
+     "I_re": 0.09239117504447113,
+     "I_im": 0.0022050904472292808,
+     "share": 0.0924282805424547,
+     "R_path_mOhm": 19.78989259594318,
+     "offdiag_nnz_nodecap": 2,
+     "isolated": false
+    },
+    {
+     "refdes": "C10127_1",
+     "part": "CAP_1608_10UF",
+     "model_id": "CAP_1608_10UF",
+     "matrix_index": 50857,
+     "raw_rail_node": 51897,
+     "Z_re": 0.00828395946456397,
+     "Z_im": -0.24228073112966145,
+     "ESR_mOhm": 8.283959464563969,
+     "I_abs": 0.8043953530904884,
+     "I_re": 0.804376853016807,
+     "I_im": -0.0054554930436858905,
+     "share": 0.8044893112651246,
+     "R_path_mOhm": 22.294486252013407,
+     "offdiag_nnz_nodecap": 2,
+     "isolated": false
+    }
+   ],
+   "tiny_shunt_added": false,
+   "build_seconds": 84.16974949836731,
+   "solve_a_seconds": 0.5646159648895264,
+   "solve_b_seconds": 0.6734249591827393,
+   "wall_seconds": 85.40779042243958,
+   "peak_rss_MB": 1392.578125
+  }
+ ],
+ "verdicts": {
+  "H_split": {
+   "adopt": false,
+   "checks": {
+    "p65_remainder_ge_18": true,
+    "p65_remainder_within_20pct_of_20p3": true,
+    "p65_top1_ge_0p6": false,
+    "p19_top1_le_0p4": false
+   },
+   "p65_remainder_mOhm": 20.25615441359199,
+   "p65_top1": 0.4728300912523887,
+   "p19_top1": 0.8044877655090363
+  },
+  "H_spread": {
+   "adopt": false,
+   "checks": {
+    "p65_spread_ge_3": true,
+    "p19_spread_le_2": false
+   },
+   "p65_spread": 735511.2699974077,
+   "p19_spread": 2.2732270089855824,
+   "p65_spread_non_isolated": 1.4800810675758,
+   "p19_spread_non_isolated": 2.2732270089855824,
+   "note": "spread is dominated by decaps flagged isolated (no galvanic path); spread_non_isolated excludes them",
+   "generality": {
+    "Port19_SITE0": {
+     "spread": 2.2732270089855824,
+     "spread_non_isolated": 2.2732270089855824,
+     "isolated": []
+    },
+    "Port65_SITE1": {
+     "spread": 735511.2699974077,
+     "spread_non_isolated": 1.4800810675758,
+     "isolated": [
+      "C10105_1"
+     ]
+    },
+    "Port29_SITE0": {
+     "spread": 27714413.132759206,
+     "spread_non_isolated": 1.441839057502818,
+     "isolated": [
+      "C10030_0"
+     ]
+    },
+    "Port75_SITE1": {
+     "spread": 1.1414586936089839,
+     "spread_non_isolated": 1.1414586936089839,
+     "isolated": []
+    }
+   }
+  },
+  "isolated_decaps": {
+   "Port19_SITE0": [],
+   "Port65_SITE1": [
+    "C10105_1"
+   ],
+   "Port29_SITE0": [
+    "C10030_0"
+   ],
+   "Port75_SITE1": []
+  },
+  "H_elem": {
+   "Port65_SITE1": {
+    "dominant": "rail_vias",
+    "split_mOhm": {
+     "planes": 3.1887122752218433,
+     "rail_vias": 8.577786289925058,
+     "rail_traces": 4.42239046542637,
+     "rail_pad_links": 0.1678133915139475
+    },
+    "worst_decap": "C10002_1",
+    "R_path_mOhm": 16.35670242279011
+   },
+   "Port75_SITE1": {
+    "dominant": "rail_vias",
+    "split_mOhm": {
+     "planes": 5.624851030473393,
+     "rail_vias": 10.529158357512886,
+     "rail_traces": 6.267522165116919,
+     "rail_pad_links": 0.16781339550269356
+    },
+    "worst_decap": "C10030_1",
+    "R_path_mOhm": 22.589344949227403
+   }
+  }
+ },
+ "wall_seconds": 0.0,
+ "peak_rss_MB": 96.546875
+}

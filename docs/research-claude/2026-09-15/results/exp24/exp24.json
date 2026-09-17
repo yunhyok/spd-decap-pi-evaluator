@@ -1,0 +1,2378 @@
+{
+ "pairs": [
+  {
+   "k": 1,
+   "port_S0": "Port1_SITE0",
+   "port_S1": "Port47_SITE1",
+   "rail_S0": "ADC_VDD_050_VDDQ_DDRH/0",
+   "rail_S1": "ADC_VDD_050_VDDQ_DDRH/1",
+   "rail_net_S0": "ADC_VDD_050_VDDQ_DDRH/0",
+   "rail_net_S1": "ADC_VDD_050_VDDQ_DDRH/1",
+   "counts_S0": {
+    "n_rail_nodes": 11843,
+    "n_rail_vias": 5599,
+    "n_rail_traces": 8063,
+    "n_decaps": 35,
+    "n_port_pos_nodes": 105
+   },
+   "counts_S1": {
+    "n_rail_nodes": 11843,
+    "n_rail_vias": 5599,
+    "n_rail_traces": 8063,
+    "n_decaps": 35,
+    "n_port_pos_nodes": 105
+   },
+   "layers_S0": [
+    "Signal$L15(MAIN_POWER5)",
+    "Signal$L20(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L26(MAIN_POWER5)",
+    "Signal$TOP"
+   ],
+   "layers_S1": [
+    "Signal$L15(MAIN_POWER5)",
+    "Signal$L20(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L26(MAIN_POWER5)",
+    "Signal$TOP"
+   ],
+   "iso": true,
+   "diffs": [],
+   "R_mod_S0_mOhm": 5.289449753027428,
+   "R_mod_S1_mOhm": 3.887218928309081,
+   "R_ref_S0_mOhm": 5.2765641141730155,
+   "R_ref_S1_mOhm": 4.590902531201672,
+   "dRe_100k_S0_mOhm": 0.012885638854412754,
+   "dRe_100k_S1_mOhm": -0.703683602892591,
+   "s_mod": 0.7349004357370486,
+   "s_ref": 0.8700552920167055,
+   "s_mod_1MHz": 0.9503312532105787,
+   "s_ref_1MHz": 1.0008096697103952,
+   "decaps_S0": 35,
+   "decaps_S1": 35
+  },
+  {
+   "k": 2,
+   "port_S0": "Port2_SITE0",
+   "port_S1": "Port48_SITE1",
+   "rail_S0": "ADC_VDD_050_VDDQ_DDRL/0",
+   "rail_S1": "ADC_VDD_050_VDDQ_DDRL/1",
+   "rail_net_S0": "ADC_VDD_050_VDDQ_DDRL/0",
+   "rail_net_S1": "ADC_VDD_050_VDDQ_DDRL/1",
+   "counts_S0": {
+    "n_rail_nodes": 11596,
+    "n_rail_vias": 5629,
+    "n_rail_traces": 7627,
+    "n_decaps": 35,
+    "n_port_pos_nodes": 108
+   },
+   "counts_S1": {
+    "n_rail_nodes": 11565,
+    "n_rail_vias": 5601,
+    "n_rail_traces": 7610,
+    "n_decaps": 35,
+    "n_port_pos_nodes": 108
+   },
+   "layers_S0": [
+    "Signal$L15(MAIN_POWER5)",
+    "Signal$L20(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L26(MAIN_POWER5)",
+    "Signal$TOP"
+   ],
+   "layers_S1": [
+    "Signal$L15(MAIN_POWER5)",
+    "Signal$L20(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L26(MAIN_POWER5)",
+    "Signal$TOP"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_nodes",
+    "n_rail_vias",
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 4.363389582091802,
+   "R_mod_S1_mOhm": 4.618997408780151,
+   "R_ref_S0_mOhm": 5.058357381422146,
+   "R_ref_S1_mOhm": 5.086069184977116,
+   "dRe_100k_S0_mOhm": -0.6949677993303436,
+   "dRe_100k_S1_mOhm": -0.46707177619696466,
+   "s_mod": 1.0585801065615164,
+   "s_ref": 1.005478419468096,
+   "s_mod_1MHz": 0.9975022247461582,
+   "s_ref_1MHz": 0.9816588122398325,
+   "decaps_S0": 35,
+   "decaps_S1": 35
+  },
+  {
+   "k": 3,
+   "port_S0": "Port3_SITE0",
+   "port_S1": "Port49_SITE1",
+   "rail_S0": "ADC_VDD_055_VTRIP/0",
+   "rail_S1": "ADC_VDD_055_VTRIP/1",
+   "rail_net_S0": "ADC_VDD_055_VTRIP/0",
+   "rail_net_S1": "ADC_VDD_055_VTRIP/1",
+   "counts_S0": {
+    "n_rail_nodes": 231798,
+    "n_rail_vias": 139515,
+    "n_rail_traces": 128893,
+    "n_decaps": 3166,
+    "n_port_pos_nodes": 4046
+   },
+   "counts_S1": {
+    "n_rail_nodes": 231607,
+    "n_rail_vias": 139516,
+    "n_rail_traces": 128679,
+    "n_decaps": 3166,
+    "n_port_pos_nodes": 4046
+   },
+   "layers_S0": [
+    "Signal$L09(MAIN_POWER1)",
+    "Signal$L11(MAIN_POWER2)",
+    "Signal$L12(MAIN_POWER3)",
+    "Signal$L15(MAIN_POWER5)",
+    "Signal$L20(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L22(MAIN_POWER2)",
+    "Signal$L23(MAIN_POWER3)",
+    "Signal$L26(MAIN_POWER5)",
+    "Signal$TOP"
+   ],
+   "layers_S1": [
+    "Signal$L09(MAIN_POWER1)",
+    "Signal$L11(MAIN_POWER2)",
+    "Signal$L12(MAIN_POWER3)",
+    "Signal$L15(MAIN_POWER5)",
+    "Signal$L20(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L22(MAIN_POWER2)",
+    "Signal$L23(MAIN_POWER3)",
+    "Signal$L26(MAIN_POWER5)",
+    "Signal$TOP"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_nodes",
+    "n_rail_vias",
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 0.12274765112509721,
+   "R_mod_S1_mOhm": 0.121405599239831,
+   "R_ref_S0_mOhm": 0.13859929700904364,
+   "R_ref_S1_mOhm": 0.13650126668935786,
+   "dRe_100k_S0_mOhm": -0.015851645883946417,
+   "dRe_100k_S1_mOhm": -0.015095667449526845,
+   "s_mod": 0.9890665778695964,
+   "s_ref": 0.9848626193280845,
+   "s_mod_1MHz": 0.9885252752863397,
+   "s_ref_1MHz": 0.9835117252390747,
+   "decaps_S0": 3166,
+   "decaps_S1": 3166
+  },
+  {
+   "k": 4,
+   "port_S0": "Port4_SITE0",
+   "port_S1": "Port50_SITE1",
+   "rail_S0": "ADC_VDD_070_VAON/0",
+   "rail_S1": "ADC_VDD_070_VAON/1",
+   "rail_net_S0": "ADC_VDD_070_VAON/0",
+   "rail_net_S1": "ADC_VDD_070_VAON/1",
+   "counts_S0": {
+    "n_rail_nodes": 13539,
+    "n_rail_vias": 8468,
+    "n_rail_traces": 6768,
+    "n_decaps": 113,
+    "n_port_pos_nodes": 360
+   },
+   "counts_S1": {
+    "n_rail_nodes": 12183,
+    "n_rail_vias": 8408,
+    "n_rail_traces": 5473,
+    "n_decaps": 113,
+    "n_port_pos_nodes": 360
+   },
+   "layers_S0": [
+    "Signal$L11(MAIN_POWER2)",
+    "Signal$L20(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L22(MAIN_POWER2)",
+    "Signal$TOP"
+   ],
+   "layers_S1": [
+    "Signal$L11(MAIN_POWER2)",
+    "Signal$L20(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L22(MAIN_POWER2)",
+    "Signal$TOP"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_nodes",
+    "n_rail_vias",
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 1.7461649793979788,
+   "R_mod_S1_mOhm": 2.0549246910408905,
+   "R_ref_S0_mOhm": 1.9801061218240918,
+   "R_ref_S1_mOhm": 2.2809735166025185,
+   "dRe_100k_S0_mOhm": -0.23394114242611289,
+   "dRe_100k_S1_mOhm": -0.22604882556162814,
+   "s_mod": 1.1768216149595223,
+   "s_ref": 1.1519450859034086,
+   "s_mod_1MHz": 1.056241157748979,
+   "s_ref_1MHz": 1.0472462384718328,
+   "decaps_S0": 113,
+   "decaps_S1": 113
+  },
+  {
+   "k": 5,
+   "port_S0": "Port5_SITE0_1721",
+   "port_S1": "Port51_SITE1_1721",
+   "rail_S0": "ADC_VDD_070_VDDA_DDRH_REF_CLK/0",
+   "rail_S1": "ADC_VDD_070_VDDA_DDRH_REF_CLK/1",
+   "rail_net_S0": "ADC_VDD_070_VDDA_DDRH_REF_CLK/0",
+   "rail_net_S1": "ADC_VDD_070_VDDA_DDRH_REF_CLK/1",
+   "counts_S0": {
+    "n_rail_nodes": 509,
+    "n_rail_vias": 388,
+    "n_rail_traces": 341,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 1
+   },
+   "counts_S1": {
+    "n_rail_nodes": 507,
+    "n_rail_vias": 388,
+    "n_rail_traces": 339,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 1
+   },
+   "layers_S0": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L33(OTHER_POWER3)"
+   ],
+   "layers_S1": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L33(OTHER_POWER3)"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_nodes",
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 40.28022045241807,
+   "R_mod_S1_mOhm": 40.84007464689721,
+   "R_ref_S0_mOhm": 46.47239288992469,
+   "R_ref_S1_mOhm": 47.72903288651757,
+   "dRe_100k_S0_mOhm": -6.192172437506617,
+   "dRe_100k_S1_mOhm": -6.888958239620366,
+   "s_mod": 1.0138989853628153,
+   "s_ref": 1.0270405700771505,
+   "s_mod_1MHz": 1.0111001784655596,
+   "s_ref_1MHz": 1.0282498329867833,
+   "decaps_S0": 4,
+   "decaps_S1": 4
+  },
+  {
+   "k": 6,
+   "port_S0": "Port6_SITE0_19216",
+   "port_S1": "Port52_SITE1_19216",
+   "rail_S0": "ADC_VDD_070_VDDA_DDRL_REF_CLK/0",
+   "rail_S1": "ADC_VDD_070_VDDA_DDRL_REF_CLK/1",
+   "rail_net_S0": "ADC_VDD_070_VDDA_DDRL_REF_CLK/0",
+   "rail_net_S1": "ADC_VDD_070_VDDA_DDRL_REF_CLK/1",
+   "counts_S0": {
+    "n_rail_nodes": 516,
+    "n_rail_vias": 392,
+    "n_rail_traces": 348,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 1
+   },
+   "counts_S1": {
+    "n_rail_nodes": 514,
+    "n_rail_vias": 392,
+    "n_rail_traces": 346,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 1
+   },
+   "layers_S0": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L34(OTHER_POWER4)"
+   ],
+   "layers_S1": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L34(OTHER_POWER4)"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_nodes",
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 39.80972602384209,
+   "R_mod_S1_mOhm": 41.15410617695539,
+   "R_ref_S0_mOhm": 49.24767314365673,
+   "R_ref_S1_mOhm": 50.33665456007337,
+   "dRe_100k_S0_mOhm": -9.43794711981464,
+   "dRe_100k_S1_mOhm": -9.18254838311798,
+   "s_mod": 1.0337701433139266,
+   "s_ref": 1.022112342510885,
+   "s_mod_1MHz": 1.033370441357218,
+   "s_ref_1MHz": 1.0234169729867308,
+   "decaps_S0": 4,
+   "decaps_S1": 4
+  },
+  {
+   "k": 7,
+   "port_S0": "Port7_SITE0",
+   "port_S1": "Port53_SITE1",
+   "rail_S0": "ADC_VDD_070_VINT/0",
+   "rail_S1": "ADC_VDD_070_VINT/1",
+   "rail_net_S0": "ADC_VDD_070_VINT/0",
+   "rail_net_S1": "ADC_VDD_070_VINT/1",
+   "counts_S0": {
+    "n_rail_nodes": 123093,
+    "n_rail_vias": 73358,
+    "n_rail_traces": 62178,
+    "n_decaps": 1034,
+    "n_port_pos_nodes": 3696
+   },
+   "counts_S1": {
+    "n_rail_nodes": 123330,
+    "n_rail_vias": 73192,
+    "n_rail_traces": 62713,
+    "n_decaps": 1034,
+    "n_port_pos_nodes": 3696
+   },
+   "layers_S0": [
+    "Signal$L09(MAIN_POWER1)",
+    "Signal$L11(MAIN_POWER2)",
+    "Signal$L12(MAIN_POWER3)",
+    "Signal$L20(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L22(MAIN_POWER2)",
+    "Signal$L23(MAIN_POWER3)",
+    "Signal$TOP"
+   ],
+   "layers_S1": [
+    "Signal$L09(MAIN_POWER1)",
+    "Signal$L11(MAIN_POWER2)",
+    "Signal$L12(MAIN_POWER3)",
+    "Signal$L20(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L22(MAIN_POWER2)",
+    "Signal$L23(MAIN_POWER3)",
+    "Signal$TOP"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_nodes",
+    "n_rail_vias",
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 0.44783071856269346,
+   "R_mod_S1_mOhm": 0.5233823729353774,
+   "R_ref_S0_mOhm": 0.423493931094608,
+   "R_ref_S1_mOhm": 0.4959005847107483,
+   "dRe_100k_S0_mOhm": 0.024336787468085496,
+   "dRe_100k_S1_mOhm": 0.027481788224629003,
+   "s_mod": 1.1687058328985689,
+   "s_ref": 1.1709744775538822,
+   "s_mod_1MHz": 1.130085477713663,
+   "s_ref_1MHz": 1.1333928868826613,
+   "decaps_S0": 1034,
+   "decaps_S1": 1034
+  },
+  {
+   "k": 8,
+   "port_S0": "Port8_SITE0",
+   "port_S1": "Port54_SITE1",
+   "rail_S0": "ADC_VDD_070_VPDIG_PHY_PCI/0",
+   "rail_S1": "ADC_VDD_070_VPDIG_PHY_PCI/1",
+   "rail_net_S0": "ADC_VDD_070_VPDIG_PHY_PCI/0",
+   "rail_net_S1": "ADC_VDD_070_VPDIG_PHY_PCI/1",
+   "counts_S0": {
+    "n_rail_nodes": 1474,
+    "n_rail_vias": 1047,
+    "n_rail_traces": 800,
+    "n_decaps": 6,
+    "n_port_pos_nodes": 24
+   },
+   "counts_S1": {
+    "n_rail_nodes": 1454,
+    "n_rail_vias": 1047,
+    "n_rail_traces": 786,
+    "n_decaps": 6,
+    "n_port_pos_nodes": 24
+   },
+   "layers_S0": [
+    "Signal$L10(DGND)",
+    "Signal$L13(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L40(OTHER_POWER8)"
+   ],
+   "layers_S1": [
+    "Signal$L10(DGND)",
+    "Signal$L13(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L40(OTHER_POWER8)"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_nodes",
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 24.15498513811249,
+   "R_mod_S1_mOhm": 15.479370273276901,
+   "R_ref_S0_mOhm": 24.50822958687442,
+   "R_ref_S1_mOhm": 23.551508165987318,
+   "dRe_100k_S0_mOhm": -0.3532444487619295,
+   "dRe_100k_S1_mOhm": -8.072137892710419,
+   "s_mod": 0.64083542940596,
+   "s_ref": 0.9609632585864349,
+   "s_mod_1MHz": 0.27603019456614475,
+   "s_ref_1MHz": 0.9495294251671839,
+   "decaps_S0": 6,
+   "decaps_S1": 6
+  },
+  {
+   "k": 9,
+   "port_S0": "Port9_SITE0",
+   "port_S1": "Port55_SITE1",
+   "rail_S0": "ADC_VDD_070_VP_AON/0",
+   "rail_S1": "ADC_VDD_070_VP_AON/1",
+   "rail_net_S0": "ADC_VDD_070_VP_AON/0",
+   "rail_net_S1": "ADC_VDD_070_VP_AON/1",
+   "counts_S0": {
+    "n_rail_nodes": 598,
+    "n_rail_vias": 460,
+    "n_rail_traces": 364,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 4
+   },
+   "counts_S1": {
+    "n_rail_nodes": 702,
+    "n_rail_vias": 538,
+    "n_rail_traces": 444,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 4
+   },
+   "layers_S0": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L36(OTHER_POWER5)"
+   ],
+   "layers_S1": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L36(OTHER_POWER5)"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_nodes",
+    "n_rail_vias",
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 41.95598187143404,
+   "R_mod_S1_mOhm": 26.475167125892863,
+   "R_ref_S0_mOhm": 41.94434278250553,
+   "R_ref_S1_mOhm": 36.25035423667554,
+   "dRe_100k_S0_mOhm": 0.011639088928511176,
+   "dRe_100k_S1_mOhm": -9.775187110782676,
+   "s_mod": 0.6310224655692929,
+   "s_ref": 0.8642489506784004,
+   "s_mod_1MHz": 0.2589284974495859,
+   "s_ref_1MHz": 0.8788656538566432,
+   "decaps_S0": 4,
+   "decaps_S1": 4
+  },
+  {
+   "k": 10,
+   "port_S0": "Port10_SITE0",
+   "port_S1": "Port56_SITE1",
+   "rail_S0": "ADC_VDD_070_VP_CAM0/0",
+   "rail_S1": "ADC_VDD_070_VP_CAM0/1",
+   "rail_net_S0": "ADC_VDD_070_VP_CAM0/0",
+   "rail_net_S1": "ADC_VDD_070_VP_CAM0/1",
+   "counts_S0": {
+    "n_rail_nodes": 628,
+    "n_rail_vias": 474,
+    "n_rail_traces": 421,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 2
+   },
+   "counts_S1": {
+    "n_rail_nodes": 532,
+    "n_rail_vias": 408,
+    "n_rail_traces": 343,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 2
+   },
+   "layers_S0": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L33(OTHER_POWER3)"
+   ],
+   "layers_S1": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L33(OTHER_POWER3)"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_nodes",
+    "n_rail_vias",
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 26.810016425457327,
+   "R_mod_S1_mOhm": 28.173199830362634,
+   "R_ref_S0_mOhm": 35.74345420094924,
+   "R_ref_S1_mOhm": 37.301360397830145,
+   "dRe_100k_S0_mOhm": -8.933437775491909,
+   "dRe_100k_S1_mOhm": -9.128160567467507,
+   "s_mod": 1.0508460488525067,
+   "s_ref": 1.0435857762409413,
+   "s_mod_1MHz": 1.0351666183587604,
+   "s_ref_1MHz": 1.0223042736313985,
+   "decaps_S0": 4,
+   "decaps_S1": 4
+  },
+  {
+   "k": 11,
+   "port_S0": "Port11_SITE0",
+   "port_S1": "Port57_SITE1",
+   "rail_S0": "ADC_VDD_070_VP_CAM12/0",
+   "rail_S1": "ADC_VDD_070_VP_CAM12/1",
+   "rail_net_S0": "ADC_VDD_070_VP_CAM12/0",
+   "rail_net_S1": "ADC_VDD_070_VP_CAM12/1",
+   "counts_S0": {
+    "n_rail_nodes": 728,
+    "n_rail_vias": 548,
+    "n_rail_traces": 471,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 4
+   },
+   "counts_S1": {
+    "n_rail_nodes": 626,
+    "n_rail_vias": 478,
+    "n_rail_traces": 387,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 4
+   },
+   "layers_S0": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L34(OTHER_POWER4)"
+   ],
+   "layers_S1": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L34(OTHER_POWER4)"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_nodes",
+    "n_rail_vias",
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 35.05056572782947,
+   "R_mod_S1_mOhm": 21.499689774907395,
+   "R_ref_S0_mOhm": 25.795309772402735,
+   "R_ref_S1_mOhm": 29.565411711697067,
+   "dRe_100k_S0_mOhm": 9.255255955426735,
+   "dRe_100k_S1_mOhm": -8.065721936789672,
+   "s_mod": 0.6133906637015293,
+   "s_ref": 1.1461545518374738,
+   "s_mod_1MHz": 0.23226439058740672,
+   "s_ref_1MHz": 1.096849978195638,
+   "decaps_S0": 4,
+   "decaps_S1": 4
+  },
+  {
+   "k": 12,
+   "port_S0": "Port12_SITE0",
+   "port_S1": "Port58_SITE1",
+   "rail_S0": "ADC_VDD_070_VP_HSIO/0",
+   "rail_S1": "ADC_VDD_070_VP_HSIO/1",
+   "rail_net_S0": "ADC_VDD_070_VP_HSIO/0",
+   "rail_net_S1": "ADC_VDD_070_VP_HSIO/1",
+   "counts_S0": {
+    "n_rail_nodes": 771,
+    "n_rail_vias": 602,
+    "n_rail_traces": 396,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 10
+   },
+   "counts_S1": {
+    "n_rail_nodes": 879,
+    "n_rail_vias": 684,
+    "n_rail_traces": 478,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 10
+   },
+   "layers_S0": [
+    "Signal$L10(DGND)",
+    "Signal$L20(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L37(OTHER_POWER6)"
+   ],
+   "layers_S1": [
+    "Signal$L10(DGND)",
+    "Signal$L20(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L37(OTHER_POWER6)"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_nodes",
+    "n_rail_vias",
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 33.31163526606583,
+   "R_mod_S1_mOhm": 16.739736835807427,
+   "R_ref_S0_mOhm": 30.087220982799494,
+   "R_ref_S1_mOhm": 29.2187471845052,
+   "dRe_100k_S0_mOhm": 3.224414283266336,
+   "dRe_100k_S1_mOhm": -12.479010348697773,
+   "s_mod": 0.5025192159467476,
+   "s_ref": 0.9711347951081695,
+   "s_mod_1MHz": 0.17744305292889923,
+   "s_ref_1MHz": 1.0020544006744667,
+   "decaps_S0": 4,
+   "decaps_S1": 4
+  },
+  {
+   "k": 13,
+   "port_S0": "Port13_SITE0",
+   "port_S1": "Port59_SITE1",
+   "rail_S0": "ADC_VDD_070_VP_PCI/0",
+   "rail_S1": "ADC_VDD_070_VP_PCI/1",
+   "rail_net_S0": "ADC_VDD_070_VP_PCI/0",
+   "rail_net_S1": "ADC_VDD_070_VP_PCI/1",
+   "counts_S0": {
+    "n_rail_nodes": 3720,
+    "n_rail_vias": 2371,
+    "n_rail_traces": 1948,
+    "n_decaps": 54,
+    "n_port_pos_nodes": 54
+   },
+   "counts_S1": {
+    "n_rail_nodes": 3776,
+    "n_rail_vias": 2371,
+    "n_rail_traces": 2004,
+    "n_decaps": 54,
+    "n_port_pos_nodes": 54
+   },
+   "layers_S0": [
+    "Signal$L12(MAIN_POWER3)",
+    "Signal$L21(DGND)",
+    "Signal$L23(MAIN_POWER3)",
+    "Signal$TOP"
+   ],
+   "layers_S1": [
+    "Signal$L12(MAIN_POWER3)",
+    "Signal$L21(DGND)",
+    "Signal$L23(MAIN_POWER3)",
+    "Signal$TOP"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_nodes",
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 3.290209301382161,
+   "R_mod_S1_mOhm": 3.312978864320295,
+   "R_ref_S0_mOhm": 3.880978620312566,
+   "R_ref_S1_mOhm": 3.830743549242267,
+   "dRe_100k_S0_mOhm": -0.5907693189304047,
+   "dRe_100k_S1_mOhm": -0.5177646849219716,
+   "s_mod": 1.0069203995407128,
+   "s_ref": 0.9870560814719836,
+   "s_mod_1MHz": 1.000009040349776,
+   "s_ref_1MHz": 0.9920653501643658,
+   "decaps_S0": 54,
+   "decaps_S1": 54
+  },
+  {
+   "k": 14,
+   "port_S0": "Port14_SITE0",
+   "port_S1": "Port60_SITE1",
+   "rail_S0": "ADC_VDD_075_VAON_SRAM/0",
+   "rail_S1": "ADC_VDD_075_VAON_SRAM/1",
+   "rail_net_S0": "ADC_VDD_075_VAON_SRAM/0",
+   "rail_net_S1": "ADC_VDD_075_VAON_SRAM/1",
+   "counts_S0": {
+    "n_rail_nodes": 4155,
+    "n_rail_vias": 2294,
+    "n_rail_traces": 2478,
+    "n_decaps": 35,
+    "n_port_pos_nodes": 68
+   },
+   "counts_S1": {
+    "n_rail_nodes": 4127,
+    "n_rail_vias": 2272,
+    "n_rail_traces": 2460,
+    "n_decaps": 35,
+    "n_port_pos_nodes": 68
+   },
+   "layers_S0": [
+    "Signal$L12(MAIN_POWER3)",
+    "Signal$L20(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L23(MAIN_POWER3)",
+    "Signal$TOP"
+   ],
+   "layers_S1": [
+    "Signal$L12(MAIN_POWER3)",
+    "Signal$L20(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L23(MAIN_POWER3)",
+    "Signal$TOP"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_nodes",
+    "n_rail_vias",
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 4.219466773016859,
+   "R_mod_S1_mOhm": 4.524171894395068,
+   "R_ref_S0_mOhm": 4.700396549627848,
+   "R_ref_S1_mOhm": 5.178361319411319,
+   "dRe_100k_S0_mOhm": -0.4809297766109879,
+   "dRe_100k_S1_mOhm": -0.6541894250162517,
+   "s_mod": 1.0722141298343129,
+   "s_ref": 1.101686052386647,
+   "s_mod_1MHz": 1.0107207016486233,
+   "s_ref_1MHz": 1.0189000718710237,
+   "decaps_S0": 35,
+   "decaps_S1": 35
+  },
+  {
+   "k": 15,
+   "port_S0": "Port15_SITE0",
+   "port_S1": "Port61_SITE1",
+   "rail_S0": "ADC_VDD_075_VCPU/0",
+   "rail_S1": "ADC_VDD_075_VCPU/1",
+   "rail_net_S0": "ADC_VDD_075_VCPU/0",
+   "rail_net_S1": "ADC_VDD_075_VCPU/1",
+   "counts_S0": {
+    "n_rail_nodes": 34625,
+    "n_rail_vias": 25135,
+    "n_rail_traces": 14997,
+    "n_decaps": 293,
+    "n_port_pos_nodes": 987
+   },
+   "counts_S1": {
+    "n_rail_nodes": 35848,
+    "n_rail_vias": 25175,
+    "n_rail_traces": 16270,
+    "n_decaps": 293,
+    "n_port_pos_nodes": 987
+   },
+   "layers_S0": [
+    "Signal$L11(MAIN_POWER2)",
+    "Signal$L21(DGND)",
+    "Signal$L22(MAIN_POWER2)",
+    "Signal$TOP"
+   ],
+   "layers_S1": [
+    "Signal$L11(MAIN_POWER2)",
+    "Signal$L21(DGND)",
+    "Signal$L22(MAIN_POWER2)",
+    "Signal$TOP"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_nodes",
+    "n_rail_vias",
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 1.0380856131215002,
+   "R_mod_S1_mOhm": 0.9198994985888808,
+   "R_ref_S0_mOhm": 1.0853490103811443,
+   "R_ref_S1_mOhm": 1.003398760864833,
+   "dRe_100k_S0_mOhm": -0.0472633972596441,
+   "dRe_100k_S1_mOhm": -0.08349926227595215,
+   "s_mod": 0.8861499349969446,
+   "s_ref": 0.9244941039863916,
+   "s_mod_1MHz": 0.9476306776028258,
+   "s_ref_1MHz": 0.9835046726998292,
+   "decaps_S0": 293,
+   "decaps_S1": 293
+  },
+  {
+   "k": 16,
+   "port_S0": "Port16_SITE0",
+   "port_S1": "Port62_SITE1",
+   "rail_S0": "ADC_VDD_075_VINT_SRAM/0",
+   "rail_S1": "ADC_VDD_075_VINT_SRAM/1",
+   "rail_net_S0": "ADC_VDD_075_VINT_SRAM/0",
+   "rail_net_S1": "ADC_VDD_075_VINT_SRAM/1",
+   "counts_S0": {
+    "n_rail_nodes": 32643,
+    "n_rail_vias": 14190,
+    "n_rail_traces": 21639,
+    "n_decaps": 106,
+    "n_port_pos_nodes": 481
+   },
+   "counts_S1": {
+    "n_rail_nodes": 32789,
+    "n_rail_vias": 14320,
+    "n_rail_traces": 21721,
+    "n_decaps": 106,
+    "n_port_pos_nodes": 481
+   },
+   "layers_S0": [
+    "Signal$L14(MAIN_POWER4)",
+    "Signal$L20(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L25(MAIN_POWER4)",
+    "Signal$TOP"
+   ],
+   "layers_S1": [
+    "Signal$L14(MAIN_POWER4)",
+    "Signal$L20(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L25(MAIN_POWER4)",
+    "Signal$TOP"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_nodes",
+    "n_rail_vias",
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 1.0635857099948862,
+   "R_mod_S1_mOhm": 1.0469649677707358,
+   "R_ref_S0_mOhm": 1.3522821298845142,
+   "R_ref_S1_mOhm": 1.3461427743597623,
+   "dRe_100k_S0_mOhm": -0.288696419889628,
+   "dRe_100k_S1_mOhm": -0.29917780658902654,
+   "s_mod": 0.9843729169469283,
+   "s_ref": 0.9954600039525212,
+   "s_mod_1MHz": 1.0021905025900875,
+   "s_ref_1MHz": 1.0099975192415431,
+   "decaps_S0": 106,
+   "decaps_S1": 106
+  },
+  {
+   "k": 17,
+   "port_S0": "Port17_SITE0",
+   "port_S1": "Port63_SITE1",
+   "rail_S0": "ADC_VDD_075_VP_UFS/0",
+   "rail_S1": "ADC_VDD_075_VP_UFS/1",
+   "rail_net_S0": "ADC_VDD_075_VP_UFS/0",
+   "rail_net_S1": "ADC_VDD_075_VP_UFS/1",
+   "counts_S0": {
+    "n_rail_nodes": 679,
+    "n_rail_vias": 514,
+    "n_rail_traces": 430,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 4
+   },
+   "counts_S1": {
+    "n_rail_nodes": 679,
+    "n_rail_vias": 514,
+    "n_rail_traces": 430,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 4
+   },
+   "layers_S0": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L33(OTHER_POWER3)"
+   ],
+   "layers_S1": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L33(OTHER_POWER3)"
+   ],
+   "iso": true,
+   "diffs": [],
+   "R_mod_S0_mOhm": 30.806780875982493,
+   "R_mod_S1_mOhm": 22.593928139609794,
+   "R_ref_S0_mOhm": 33.25971299297238,
+   "R_ref_S1_mOhm": 32.23923194666771,
+   "dRe_100k_S0_mOhm": -2.452932116989888,
+   "dRe_100k_S1_mOhm": -9.645303807057914,
+   "s_mod": 0.7334076296567688,
+   "s_ref": 0.9693178035985971,
+   "s_mod_1MHz": 0.7424173544095628,
+   "s_ref_1MHz": 0.9773046713366353,
+   "decaps_S0": 4,
+   "decaps_S1": 4
+  },
+  {
+   "k": 18,
+   "port_S0": "Port18_SITE0",
+   "port_S1": "Port64_SITE1",
+   "rail_S0": "ADC_VDD_075_VTRIP_SRAM/0",
+   "rail_S1": "ADC_VDD_075_VTRIP_SRAM/1",
+   "rail_net_S0": "ADC_VDD_075_VTRIP_SRAM/0",
+   "rail_net_S1": "ADC_VDD_075_VTRIP_SRAM/1",
+   "counts_S0": {
+    "n_rail_nodes": 52001,
+    "n_rail_vias": 30520,
+    "n_rail_traces": 28647,
+    "n_decaps": 421,
+    "n_port_pos_nodes": 978
+   },
+   "counts_S1": {
+    "n_rail_nodes": 52001,
+    "n_rail_vias": 30520,
+    "n_rail_traces": 28647,
+    "n_decaps": 421,
+    "n_port_pos_nodes": 978
+   },
+   "layers_S0": [
+    "Signal$L14(MAIN_POWER4)",
+    "Signal$L20(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L25(MAIN_POWER4)",
+    "Signal$TOP"
+   ],
+   "layers_S1": [
+    "Signal$L14(MAIN_POWER4)",
+    "Signal$L20(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L25(MAIN_POWER4)",
+    "Signal$TOP"
+   ],
+   "iso": true,
+   "diffs": [],
+   "R_mod_S0_mOhm": 0.732279941203524,
+   "R_mod_S1_mOhm": 0.7318074826084261,
+   "R_ref_S0_mOhm": 0.7239775128696244,
+   "R_ref_S1_mOhm": 0.7294166014312107,
+   "dRe_100k_S0_mOhm": 0.008302428333899669,
+   "dRe_100k_S1_mOhm": 0.0023908811772154056,
+   "s_mod": 0.999354811502386,
+   "s_ref": 1.0075127866057987,
+   "s_mod_1MHz": 0.9997385001399145,
+   "s_ref_1MHz": 1.0068271936514896,
+   "decaps_S0": 421,
+   "decaps_S1": 421
+  },
+  {
+   "k": 19,
+   "port_S0": "Port19_SITE0",
+   "port_S1": "Port65_SITE1",
+   "rail_S0": "ADC_VDD_105_VAA_DDRH/0",
+   "rail_S1": "ADC_VDD_105_VAA_DDRH/1",
+   "rail_net_S0": "ADC_VDD_105_VAA_DDRH/0",
+   "rail_net_S1": "ADC_VDD_105_VAA_DDRH/1",
+   "counts_S0": {
+    "n_rail_nodes": 963,
+    "n_rail_vias": 705,
+    "n_rail_traces": 543,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 12
+   },
+   "counts_S1": {
+    "n_rail_nodes": 963,
+    "n_rail_vias": 705,
+    "n_rail_traces": 547,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 12
+   },
+   "layers_S0": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L30(OTHER_POWER1)"
+   ],
+   "layers_S1": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L30(OTHER_POWER1)"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 13.011599603396425,
+   "R_mod_S1_mOhm": 29.565329661127546,
+   "R_ref_S0_mOhm": 19.00239880533973,
+   "R_ref_S1_mOhm": 19.45616964292835,
+   "dRe_100k_S0_mOhm": -5.990799201943304,
+   "dRe_100k_S1_mOhm": 10.109160018199194,
+   "s_mod": 2.2722286699792154,
+   "s_ref": 1.0238796607858325,
+   "s_mod_1MHz": 5.663607428633166,
+   "s_ref_1MHz": 0.9961128809158034,
+   "decaps_S0": 4,
+   "decaps_S1": 4
+  },
+  {
+   "k": 20,
+   "port_S0": "Port20_SITE0",
+   "port_S1": "Port66_SITE1",
+   "rail_S0": "ADC_VDD_105_VAA_DDRL/0",
+   "rail_S1": "ADC_VDD_105_VAA_DDRL/1",
+   "rail_net_S0": "ADC_VDD_105_VAA_DDRL/0",
+   "rail_net_S1": "ADC_VDD_105_VAA_DDRL/1",
+   "counts_S0": {
+    "n_rail_nodes": 885,
+    "n_rail_vias": 651,
+    "n_rail_traces": 479,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 12
+   },
+   "counts_S1": {
+    "n_rail_nodes": 963,
+    "n_rail_vias": 705,
+    "n_rail_traces": 545,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 12
+   },
+   "layers_S0": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L30(OTHER_POWER1)"
+   ],
+   "layers_S1": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L30(OTHER_POWER1)"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_nodes",
+    "n_rail_vias",
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 15.871281692738874,
+   "R_mod_S1_mOhm": 17.957495962011958,
+   "R_ref_S0_mOhm": 22.089641410360425,
+   "R_ref_S1_mOhm": 19.813477206684407,
+   "dRe_100k_S0_mOhm": -6.218359717621552,
+   "dRe_100k_S1_mOhm": -1.855981244672452,
+   "s_mod": 1.1314458598657176,
+   "s_ref": 0.8969578472827333,
+   "s_mod_1MHz": 1.1489259934857903,
+   "s_ref_1MHz": 0.9757177654808482,
+   "decaps_S0": 4,
+   "decaps_S1": 4
+  },
+  {
+   "k": 21,
+   "port_S0": "Port21_SITE0",
+   "port_S1": "Port67_SITE1",
+   "rail_S0": "ADC_VDD_105_VDD2H_DDRH/0",
+   "rail_S1": "ADC_VDD_105_VDD2H_DDRH/1",
+   "rail_net_S0": "ADC_VDD_105_VDD2H_DDRH/0",
+   "rail_net_S1": "ADC_VDD_105_VDD2H_DDRH/1",
+   "counts_S0": {
+    "n_rail_nodes": 1529,
+    "n_rail_vias": 1164,
+    "n_rail_traces": 600,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 36
+   },
+   "counts_S1": {
+    "n_rail_nodes": 1610,
+    "n_rail_vias": 1222,
+    "n_rail_traces": 665,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 36
+   },
+   "layers_S0": [
+    "Signal$L10(DGND)",
+    "Signal$L20(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L31(OTHER_POWER2)"
+   ],
+   "layers_S1": [
+    "Signal$L10(DGND)",
+    "Signal$L20(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L31(OTHER_POWER2)"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_nodes",
+    "n_rail_vias",
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 15.938576164305625,
+   "R_mod_S1_mOhm": 17.845242314717023,
+   "R_ref_S0_mOhm": 21.52306987768373,
+   "R_ref_S1_mOhm": 19.065126154204894,
+   "dRe_100k_S0_mOhm": -5.584493713378106,
+   "dRe_100k_S1_mOhm": -1.2198838394878695,
+   "s_mod": 1.119625876913734,
+   "s_ref": 0.885799575179219,
+   "s_mod_1MHz": 0.9832016550880299,
+   "s_ref_1MHz": 0.9663602905442298,
+   "decaps_S0": 4,
+   "decaps_S1": 4
+  },
+  {
+   "k": 22,
+   "port_S0": "Port22_SITE0",
+   "port_S1": "Port68_SITE1",
+   "rail_S0": "ADC_VDD_105_VDD2H_DDRL/0",
+   "rail_S1": "ADC_VDD_105_VDD2H_DDRL/1",
+   "rail_net_S0": "ADC_VDD_105_VDD2H_DDRL/0",
+   "rail_net_S1": "ADC_VDD_105_VDD2H_DDRL/1",
+   "counts_S0": {
+    "n_rail_nodes": 1519,
+    "n_rail_vias": 1157,
+    "n_rail_traces": 613,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 36
+   },
+   "counts_S1": {
+    "n_rail_nodes": 1597,
+    "n_rail_vias": 1215,
+    "n_rail_traces": 673,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 36
+   },
+   "layers_S0": [
+    "Signal$L10(DGND)",
+    "Signal$L20(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L31(OTHER_POWER2)"
+   ],
+   "layers_S1": [
+    "Signal$L10(DGND)",
+    "Signal$L20(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L31(OTHER_POWER2)"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_nodes",
+    "n_rail_vias",
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 14.972365903366295,
+   "R_mod_S1_mOhm": 17.87083381104686,
+   "R_ref_S0_mOhm": 20.96772103629818,
+   "R_ref_S1_mOhm": 18.911946913840605,
+   "dRe_100k_S0_mOhm": -5.995355132931885,
+   "dRe_100k_S1_mOhm": -1.0411131027937455,
+   "s_mod": 1.1935878355089418,
+   "s_ref": 0.9019552902817273,
+   "s_mod_1MHz": 1.1148267964786176,
+   "s_ref_1MHz": 0.9816636777275437,
+   "decaps_S0": 4,
+   "decaps_S1": 4
+  },
+  {
+   "k": 23,
+   "port_S0": "Port23_SITE0",
+   "port_S1": "Port69_SITE1",
+   "rail_S0": "ADC_VDD_120_VDDA_LSIO/0",
+   "rail_S1": "ADC_VDD_120_VDDA_LSIO/1",
+   "rail_net_S0": "ADC_VDD_120_VDDA_LSIO/0",
+   "rail_net_S1": "ADC_VDD_120_VDDA_LSIO/1",
+   "counts_S0": {
+    "n_rail_nodes": 591,
+    "n_rail_vias": 452,
+    "n_rail_traces": 378,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 3
+   },
+   "counts_S1": {
+    "n_rail_nodes": 709,
+    "n_rail_vias": 542,
+    "n_rail_traces": 468,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 3
+   },
+   "layers_S0": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L39(OTHER_POWER7)"
+   ],
+   "layers_S1": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L39(OTHER_POWER7)"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_nodes",
+    "n_rail_vias",
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 30.852180258157947,
+   "R_mod_S1_mOhm": 29.54470616398666,
+   "R_ref_S0_mOhm": 44.52800180289249,
+   "R_ref_S1_mOhm": 40.40692089393433,
+   "dRe_100k_S0_mOhm": -13.675821544734546,
+   "dRe_100k_S1_mOhm": -10.862214729947667,
+   "s_mod": 0.9576213388087682,
+   "s_ref": 0.907449677908285,
+   "s_mod_1MHz": 0.9771707412803231,
+   "s_ref_1MHz": 0.9193168626969629,
+   "decaps_S0": 4,
+   "decaps_S1": 4
+  },
+  {
+   "k": 24,
+   "port_S0": "Port24_SITE0",
+   "port_S1": "Port70_SITE1",
+   "rail_S0": "ADC_VDD_120_VDDA_P_CL1_M/0",
+   "rail_S1": "ADC_VDD_120_VDDA_P_CL1_M/1",
+   "rail_net_S0": "ADC_VDD_120_VDDA_P_CL1_M/0",
+   "rail_net_S1": "ADC_VDD_120_VDDA_P_CL1_M/1",
+   "counts_S0": {
+    "n_rail_nodes": 550,
+    "n_rail_vias": 424,
+    "n_rail_traces": 353,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 2
+   },
+   "counts_S1": {
+    "n_rail_nodes": 548,
+    "n_rail_vias": 424,
+    "n_rail_traces": 351,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 2
+   },
+   "layers_S0": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L37(OTHER_POWER6)"
+   ],
+   "layers_S1": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L37(OTHER_POWER6)"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_nodes",
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 29.217999569505835,
+   "R_mod_S1_mOhm": 38.68464458764664,
+   "R_ref_S0_mOhm": 40.95654094943853,
+   "R_ref_S1_mOhm": 42.61661112049648,
+   "dRe_100k_S0_mOhm": -11.738541379932698,
+   "dRe_100k_S1_mOhm": -3.9319665328498425,
+   "s_mod": 1.3240004503258642,
+   "s_ref": 1.0405324798573035,
+   "s_mod_1MHz": 1.3016349685739663,
+   "s_ref_1MHz": 1.0419373062661181,
+   "decaps_S0": 4,
+   "decaps_S1": 4
+  },
+  {
+   "k": 25,
+   "port_S0": "Port25_SITE0",
+   "port_S1": "Port71_SITE1",
+   "rail_S0": "ADC_VDD_120_VDDA_P_CL1_P/0",
+   "rail_S1": "ADC_VDD_120_VDDA_P_CL1_P/1",
+   "rail_net_S0": "ADC_VDD_120_VDDA_P_CL1_P/0",
+   "rail_net_S1": "ADC_VDD_120_VDDA_P_CL1_P/1",
+   "counts_S0": {
+    "n_rail_nodes": 546,
+    "n_rail_vias": 420,
+    "n_rail_traces": 351,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 2
+   },
+   "counts_S1": {
+    "n_rail_nodes": 544,
+    "n_rail_vias": 420,
+    "n_rail_traces": 349,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 2
+   },
+   "layers_S0": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L36(OTHER_POWER5)"
+   ],
+   "layers_S1": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L36(OTHER_POWER5)"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_nodes",
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 28.026314459904828,
+   "R_mod_S1_mOhm": 28.87368828607575,
+   "R_ref_S0_mOhm": 38.99157568817977,
+   "R_ref_S1_mOhm": 41.54411878382028,
+   "dRe_100k_S0_mOhm": -10.96526122827494,
+   "dRe_100k_S1_mOhm": -12.670430497744526,
+   "s_mod": 1.0302349360770642,
+   "s_ref": 1.0654639637047114,
+   "s_mod_1MHz": 1.029351251505656,
+   "s_ref_1MHz": 1.0691815242919656,
+   "decaps_S0": 4,
+   "decaps_S1": 4
+  },
+  {
+   "k": 26,
+   "port_S0": "Port26_SITE0",
+   "port_S1": "Port72_SITE1",
+   "rail_S0": "ADC_VDD_120_VDDA_P_CL2_M/0",
+   "rail_S1": "ADC_VDD_120_VDDA_P_CL2_M/1",
+   "rail_net_S0": "ADC_VDD_120_VDDA_P_CL2_M/0",
+   "rail_net_S1": "ADC_VDD_120_VDDA_P_CL2_M/1",
+   "counts_S0": {
+    "n_rail_nodes": 1568,
+    "n_rail_vias": 1214,
+    "n_rail_traces": 892,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 18
+   },
+   "counts_S1": {
+    "n_rail_nodes": 1434,
+    "n_rail_vias": 1112,
+    "n_rail_traces": 792,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 18
+   },
+   "layers_S0": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L42(OTHER_POWER9)"
+   ],
+   "layers_S1": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L42(OTHER_POWER9)"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_nodes",
+    "n_rail_vias",
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 15.169782381009389,
+   "R_mod_S1_mOhm": 15.178490257287871,
+   "R_ref_S0_mOhm": 20.598699365523167,
+   "R_ref_S1_mOhm": 27.01093302111234,
+   "dRe_100k_S0_mOhm": -5.428916984513776,
+   "dRe_100k_S1_mOhm": -11.832442763824467,
+   "s_mod": 1.000574027765183,
+   "s_ref": 1.311293132726699,
+   "s_mod_1MHz": 0.9786152506497772,
+   "s_ref_1MHz": 1.1673198097234254,
+   "decaps_S0": 4,
+   "decaps_S1": 4
+  },
+  {
+   "k": 27,
+   "port_S0": "Port27_SITE0",
+   "port_S1": "Port73_SITE1",
+   "rail_S0": "ADC_VDD_120_VDDA_P_CL2_P/0",
+   "rail_S1": "ADC_VDD_120_VDDA_P_CL2_P/1",
+   "rail_net_S0": "ADC_VDD_120_VDDA_P_CL2_P/0",
+   "rail_net_S1": "ADC_VDD_120_VDDA_P_CL2_P/1",
+   "counts_S0": {
+    "n_rail_nodes": 1227,
+    "n_rail_vias": 930,
+    "n_rail_traces": 734,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 12
+   },
+   "counts_S1": {
+    "n_rail_nodes": 1223,
+    "n_rail_vias": 930,
+    "n_rail_traces": 730,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 12
+   },
+   "layers_S0": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L40(OTHER_POWER8)"
+   ],
+   "layers_S1": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L40(OTHER_POWER8)"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_nodes",
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 14.244191082546688,
+   "R_mod_S1_mOhm": 31.87536143237258,
+   "R_ref_S0_mOhm": 21.616764603309342,
+   "R_ref_S1_mOhm": 23.18338368515773,
+   "dRe_100k_S0_mOhm": -7.372573520762655,
+   "dRe_100k_S1_mOhm": 8.691977747214853,
+   "s_mod": 2.237779684901114,
+   "s_ref": 1.0724724125278464,
+   "s_mod_1MHz": 5.46179091531178,
+   "s_ref_1MHz": 1.0592530496589827,
+   "decaps_S0": 4,
+   "decaps_S1": 4
+  },
+  {
+   "k": 28,
+   "port_S0": "Port28_SITE0",
+   "port_S1": "Port74_SITE1",
+   "rail_S0": "ADC_VDD_120_VDDA_P_CL3_M/0",
+   "rail_S1": "ADC_VDD_120_VDDA_P_CL3_M/1",
+   "rail_net_S0": "ADC_VDD_120_VDDA_P_CL3_M/0",
+   "rail_net_S1": "ADC_VDD_120_VDDA_P_CL3_M/1",
+   "counts_S0": {
+    "n_rail_nodes": 1277,
+    "n_rail_vias": 989,
+    "n_rail_traces": 752,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 12
+   },
+   "counts_S1": {
+    "n_rail_nodes": 1411,
+    "n_rail_vias": 1095,
+    "n_rail_traces": 852,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 12
+   },
+   "layers_S0": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L43(OTHER_POWER10)"
+   ],
+   "layers_S1": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L43(OTHER_POWER10)"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_nodes",
+    "n_rail_vias",
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 19.544027387187626,
+   "R_mod_S1_mOhm": 19.55947638113458,
+   "R_ref_S0_mOhm": 27.525901537866087,
+   "R_ref_S1_mOhm": 23.85685062369333,
+   "dRe_100k_S0_mOhm": -7.981874150678463,
+   "dRe_100k_S1_mOhm": -4.297374242558747,
+   "s_mod": 1.0007904713619613,
+   "s_ref": 0.8667055133825347,
+   "s_mod_1MHz": 1.0627324267812288,
+   "s_ref_1MHz": 0.9285356571558495,
+   "decaps_S0": 4,
+   "decaps_S1": 4
+  },
+  {
+   "k": 29,
+   "port_S0": "Port29_SITE0",
+   "port_S1": "Port75_SITE1",
+   "rail_S0": "ADC_VDD_120_VDDA_P_CL3_P/0",
+   "rail_S1": "ADC_VDD_120_VDDA_P_CL3_P/1",
+   "rail_net_S0": "ADC_VDD_120_VDDA_P_CL3_P/0",
+   "rail_net_S1": "ADC_VDD_120_VDDA_P_CL3_P/1",
+   "counts_S0": {
+    "n_rail_nodes": 1422,
+    "n_rail_vias": 1094,
+    "n_rail_traces": 869,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 12
+   },
+   "counts_S1": {
+    "n_rail_nodes": 1292,
+    "n_rail_vias": 992,
+    "n_rail_traces": 773,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 12
+   },
+   "layers_S0": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L42(OTHER_POWER9)"
+   ],
+   "layers_S1": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L42(OTHER_POWER9)"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_nodes",
+    "n_rail_vias",
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 15.637338039796271,
+   "R_mod_S1_mOhm": 26.641141983148117,
+   "R_ref_S0_mOhm": 25.49189817989516,
+   "R_ref_S1_mOhm": 27.078516792769044,
+   "dRe_100k_S0_mOhm": -9.85456014009889,
+   "dRe_100k_S1_mOhm": -0.4373748096209301,
+   "s_mod": 1.703687796180379,
+   "s_ref": 1.0622401125909569,
+   "s_mod_1MHz": 1.3459832507563585,
+   "s_ref_1MHz": 1.021523306741464,
+   "decaps_S0": 4,
+   "decaps_S1": 4
+  },
+  {
+   "k": 30,
+   "port_S0": "Port30_SITE0",
+   "port_S1": "Port76_SITE1",
+   "rail_S0": "ADC_VDD_120_VDDA_P_CL4_M/0",
+   "rail_S1": "ADC_VDD_120_VDDA_P_CL4_M/1",
+   "rail_net_S0": "ADC_VDD_120_VDDA_P_CL4_M/0",
+   "rail_net_S1": "ADC_VDD_120_VDDA_P_CL4_M/1",
+   "counts_S0": {
+    "n_rail_nodes": 2014,
+    "n_rail_vias": 1560,
+    "n_rail_traces": 1171,
+    "n_decaps": 6,
+    "n_port_pos_nodes": 23
+   },
+   "counts_S1": {
+    "n_rail_nodes": 1788,
+    "n_rail_vias": 1389,
+    "n_rail_traces": 1001,
+    "n_decaps": 6,
+    "n_port_pos_nodes": 23
+   },
+   "layers_S0": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L45(OTHER_POWER11)"
+   ],
+   "layers_S1": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L45(OTHER_POWER11)"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_nodes",
+    "n_rail_vias",
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 13.723819750665493,
+   "R_mod_S1_mOhm": 14.15710258031855,
+   "R_ref_S0_mOhm": 19.571118423947695,
+   "R_ref_S1_mOhm": 23.510929030478643,
+   "dRe_100k_S0_mOhm": -5.847298673282202,
+   "dRe_100k_S1_mOhm": -9.353826450160092,
+   "s_mod": 1.0315715914027541,
+   "s_ref": 1.2013073816829039,
+   "s_mod_1MHz": 1.009177189848707,
+   "s_ref_1MHz": 1.0708277246826226,
+   "decaps_S0": 6,
+   "decaps_S1": 6
+  },
+  {
+   "k": 31,
+   "port_S0": "Port31_SITE0",
+   "port_S1": "Port77_SITE1",
+   "rail_S0": "ADC_VDD_120_VDDA_P_CL4_P/0",
+   "rail_S1": "ADC_VDD_120_VDDA_P_CL4_P/1",
+   "rail_net_S0": "ADC_VDD_120_VDDA_P_CL4_P/0",
+   "rail_net_S1": "ADC_VDD_120_VDDA_P_CL4_P/1",
+   "counts_S0": {
+    "n_rail_nodes": 1083,
+    "n_rail_vias": 840,
+    "n_rail_traces": 681,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 7
+   },
+   "counts_S1": {
+    "n_rail_nodes": 941,
+    "n_rail_vias": 734,
+    "n_rail_traces": 571,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 7
+   },
+   "layers_S0": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L43(OTHER_POWER10)"
+   ],
+   "layers_S1": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L43(OTHER_POWER10)"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_nodes",
+    "n_rail_vias",
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 22.8043637631967,
+   "R_mod_S1_mOhm": 19.503042409545042,
+   "R_ref_S0_mOhm": 25.255273522212555,
+   "R_ref_S1_mOhm": 31.97919893402991,
+   "dRe_100k_S0_mOhm": -2.450909759015855,
+   "dRe_100k_S1_mOhm": -12.476156524484868,
+   "s_mod": 0.8552329112123898,
+   "s_ref": 1.2662384711812176,
+   "s_mod_1MHz": 0.8480151057506562,
+   "s_ref_1MHz": 1.1643594491574971,
+   "decaps_S0": 4,
+   "decaps_S1": 4
+  },
+  {
+   "k": 32,
+   "port_S0": "Port32_SITE0",
+   "port_S1": "Port78_SITE1",
+   "rail_S0": "ADC_VDD_120_VDDA_P_CL5_M/0",
+   "rail_S1": "ADC_VDD_120_VDDA_P_CL5_M/1",
+   "rail_net_S0": "ADC_VDD_120_VDDA_P_CL5_M/0",
+   "rail_net_S1": "ADC_VDD_120_VDDA_P_CL5_M/1",
+   "counts_S0": {
+    "n_rail_nodes": 1251,
+    "n_rail_vias": 966,
+    "n_rail_traces": 728,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 14
+   },
+   "counts_S1": {
+    "n_rail_nodes": 1247,
+    "n_rail_vias": 966,
+    "n_rail_traces": 724,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 14
+   },
+   "layers_S0": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L46(OTHER_POWER12)"
+   ],
+   "layers_S1": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L46(OTHER_POWER12)"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_nodes",
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 15.273892014171137,
+   "R_mod_S1_mOhm": 18.9155364146234,
+   "R_ref_S0_mOhm": 26.23220055489716,
+   "R_ref_S1_mOhm": 27.316554178195336,
+   "dRe_100k_S0_mOhm": -10.958308540726023,
+   "dRe_100k_S1_mOhm": -8.40101776357194,
+   "s_mod": 1.2384228196109766,
+   "s_ref": 1.041336738830923,
+   "s_mod_1MHz": 1.1696776814843508,
+   "s_ref_1MHz": 1.0199034077087241,
+   "decaps_S0": 4,
+   "decaps_S1": 4
+  },
+  {
+   "k": 33,
+   "port_S0": "Port33_SITE0",
+   "port_S1": "Port79_SITE1",
+   "rail_S0": "ADC_VDD_120_VDDA_P_CL5_P/0",
+   "rail_S1": "ADC_VDD_120_VDDA_P_CL5_P/1",
+   "rail_net_S0": "ADC_VDD_120_VDDA_P_CL5_P/0",
+   "rail_net_S1": "ADC_VDD_120_VDDA_P_CL5_P/1",
+   "counts_S0": {
+    "n_rail_nodes": 691,
+    "n_rail_vias": 530,
+    "n_rail_traces": 466,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 2
+   },
+   "counts_S1": {
+    "n_rail_nodes": 691,
+    "n_rail_vias": 530,
+    "n_rail_traces": 466,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 2
+   },
+   "layers_S0": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L40(OTHER_POWER8)"
+   ],
+   "layers_S1": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L40(OTHER_POWER8)"
+   ],
+   "iso": true,
+   "diffs": [],
+   "R_mod_S0_mOhm": 31.26926639795384,
+   "R_mod_S1_mOhm": 33.84483911779246,
+   "R_ref_S0_mOhm": 45.36900680544417,
+   "R_ref_S1_mOhm": 44.25293026870731,
+   "dRe_100k_S0_mOhm": -14.099740407490332,
+   "dRe_100k_S1_mOhm": -10.408091150914851,
+   "s_mod": 1.082367545405771,
+   "s_ref": 0.9754000227176466,
+   "s_mod_1MHz": 1.065444192363022,
+   "s_ref_1MHz": 0.9733618550549837,
+   "decaps_S0": 4,
+   "decaps_S1": 4
+  },
+  {
+   "k": 34,
+   "port_S0": "Port34_SITE0",
+   "port_S1": "Port80_SITE1",
+   "rail_S0": "ADC_VDD_120_VPH_AON/0",
+   "rail_S1": "ADC_VDD_120_VPH_AON/1",
+   "rail_net_S0": "ADC_VDD_120_VPH_AON/0",
+   "rail_net_S1": "ADC_VDD_120_VPH_AON/1",
+   "counts_S0": {
+    "n_rail_nodes": 792,
+    "n_rail_vias": 604,
+    "n_rail_traces": 483,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 6
+   },
+   "counts_S1": {
+    "n_rail_nodes": 792,
+    "n_rail_vias": 604,
+    "n_rail_traces": 483,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 6
+   },
+   "layers_S0": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L37(OTHER_POWER6)"
+   ],
+   "layers_S1": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L37(OTHER_POWER6)"
+   ],
+   "iso": true,
+   "diffs": [],
+   "R_mod_S0_mOhm": 20.371854375391898,
+   "R_mod_S1_mOhm": 22.113890807839436,
+   "R_ref_S0_mOhm": 31.06490422678248,
+   "R_ref_S1_mOhm": 28.839863568254437,
+   "dRe_100k_S0_mOhm": -10.693049851390587,
+   "dRe_100k_S1_mOhm": -6.725972760415002,
+   "s_mod": 1.0855119224959622,
+   "s_ref": 0.9283744561938891,
+   "s_mod_1MHz": 1.056268717017472,
+   "s_ref_1MHz": 0.9344295579444186,
+   "decaps_S0": 4,
+   "decaps_S1": 4
+  },
+  {
+   "k": 35,
+   "port_S0": "Port35_SITE0",
+   "port_S1": "Port81_SITE1",
+   "rail_S0": "ADC_VDD_120_VPH_CAM/0",
+   "rail_S1": "ADC_VDD_120_VPH_CAM/1",
+   "rail_net_S0": "ADC_VDD_120_VPH_CAM/0",
+   "rail_net_S1": "ADC_VDD_120_VPH_CAM/1",
+   "counts_S0": {
+    "n_rail_nodes": 829,
+    "n_rail_vias": 629,
+    "n_rail_traces": 515,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 6
+   },
+   "counts_S1": {
+    "n_rail_nodes": 823,
+    "n_rail_vias": 629,
+    "n_rail_traces": 507,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 6
+   },
+   "layers_S0": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L36(OTHER_POWER5)"
+   ],
+   "layers_S1": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L36(OTHER_POWER5)"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_nodes",
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 33.233266860562395,
+   "R_mod_S1_mOhm": 16.599792186475824,
+   "R_ref_S0_mOhm": 25.30306631717671,
+   "R_ref_S1_mOhm": 25.912147307226338,
+   "dRe_100k_S0_mOhm": 7.930200543385686,
+   "dRe_100k_S1_mOhm": -9.312355120750516,
+   "s_mod": 0.4994932413994677,
+   "s_ref": 1.0240714300162175,
+   "s_mod_1MHz": 0.1910568743285698,
+   "s_ref_1MHz": 1.0162155240952269,
+   "decaps_S0": 4,
+   "decaps_S1": 4
+  },
+  {
+   "k": 36,
+   "port_S0": "Port36_SITE0",
+   "port_S1": "Port82_SITE1",
+   "rail_S0": "ADC_VDD_120_VPH_HSIO/0",
+   "rail_S1": "ADC_VDD_120_VPH_HSIO/1",
+   "rail_net_S0": "ADC_VDD_120_VPH_HSIO/0",
+   "rail_net_S1": "ADC_VDD_120_VPH_HSIO/1",
+   "counts_S0": {
+    "n_rail_nodes": 735,
+    "n_rail_vias": 562,
+    "n_rail_traces": 466,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 4
+   },
+   "counts_S1": {
+    "n_rail_nodes": 613,
+    "n_rail_vias": 472,
+    "n_rail_traces": 372,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 4
+   },
+   "layers_S0": [
+    "Signal$L10(DGND)",
+    "Signal$L20(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L39(OTHER_POWER7)"
+   ],
+   "layers_S1": [
+    "Signal$L10(DGND)",
+    "Signal$L20(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L39(OTHER_POWER7)"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_nodes",
+    "n_rail_vias",
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 26.7770633349495,
+   "R_mod_S1_mOhm": 29.698942129195558,
+   "R_ref_S0_mOhm": 37.91574375666065,
+   "R_ref_S1_mOhm": 41.13425032429461,
+   "dRe_100k_S0_mOhm": -11.138680421711154,
+   "dRe_100k_S1_mOhm": -11.435308195099049,
+   "s_mod": 1.1091187169293661,
+   "s_ref": 1.0848857558561953,
+   "s_mod_1MHz": 1.087450510518127,
+   "s_ref_1MHz": 1.0718725520703432,
+   "decaps_S0": 4,
+   "decaps_S1": 4
+  },
+  {
+   "k": 37,
+   "port_S0": "Port37_SITE0",
+   "port_S1": "Port83_SITE1",
+   "rail_S0": "ADC_VDD_120_VPH_PCI/0",
+   "rail_S1": "ADC_VDD_120_VPH_PCI/1",
+   "rail_net_S0": "ADC_VDD_120_VPH_PCI/0",
+   "rail_net_S1": "ADC_VDD_120_VPH_PCI/1",
+   "counts_S0": {
+    "n_rail_nodes": 8723,
+    "n_rail_vias": 2133,
+    "n_rail_traces": 7449,
+    "n_decaps": 54,
+    "n_port_pos_nodes": 36
+   },
+   "counts_S1": {
+    "n_rail_nodes": 8723,
+    "n_rail_vias": 2133,
+    "n_rail_traces": 7450,
+    "n_decaps": 54,
+    "n_port_pos_nodes": 36
+   },
+   "layers_S0": [
+    "Signal$L15(MAIN_POWER5)",
+    "Signal$L20(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L26(MAIN_POWER5)",
+    "Signal$TOP"
+   ],
+   "layers_S1": [
+    "Signal$L15(MAIN_POWER5)",
+    "Signal$L20(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L26(MAIN_POWER5)",
+    "Signal$TOP"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 3.492052971132636,
+   "R_mod_S1_mOhm": 3.541522542744688,
+   "R_ref_S0_mOhm": 4.10181533439568,
+   "R_ref_S1_mOhm": 4.004230668092883,
+   "dRe_100k_S0_mOhm": -0.6097623632630444,
+   "dRe_100k_S1_mOhm": -0.4627081253481954,
+   "s_mod": 1.014166329096665,
+   "s_ref": 0.9762093955121521,
+   "s_mod_1MHz": 1.0009664371413813,
+   "s_ref_1MHz": 0.9820650129747216,
+   "decaps_S0": 54,
+   "decaps_S1": 54
+  },
+  {
+   "k": 38,
+   "port_S0": "Port38_SITE0",
+   "port_S1": "Port84_SITE1",
+   "rail_S0": "ADC_VDD_120_VPH_UFS/0",
+   "rail_S1": "ADC_VDD_120_VPH_UFS/1",
+   "rail_net_S0": "ADC_VDD_120_VPH_UFS/0",
+   "rail_net_S1": "ADC_VDD_120_VPH_UFS/1",
+   "counts_S0": {
+    "n_rail_nodes": 702,
+    "n_rail_vias": 535,
+    "n_rail_traces": 446,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 4
+   },
+   "counts_S1": {
+    "n_rail_nodes": 702,
+    "n_rail_vias": 535,
+    "n_rail_traces": 446,
+    "n_decaps": 4,
+    "n_port_pos_nodes": 4
+   },
+   "layers_S0": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L34(OTHER_POWER4)"
+   ],
+   "layers_S1": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L34(OTHER_POWER4)"
+   ],
+   "iso": true,
+   "diffs": [],
+   "R_mod_S0_mOhm": 42.8000918165366,
+   "R_mod_S1_mOhm": 23.17792455051824,
+   "R_ref_S0_mOhm": 29.82082206832794,
+   "R_ref_S1_mOhm": 29.0391445900845,
+   "dRe_100k_S0_mOhm": 12.979269748208663,
+   "dRe_100k_S1_mOhm": -5.86122003956626,
+   "s_mod": 0.5415391315016531,
+   "s_ref": 0.9737875275050302,
+   "s_mod_1MHz": 0.2435911752589582,
+   "s_ref_1MHz": 0.9845569752956389,
+   "decaps_S0": 4,
+   "decaps_S1": 4
+  },
+  {
+   "k": 39,
+   "port_S0": "Port39_SITE0",
+   "port_S1": "Port85_SITE1",
+   "rail_S0": "ADC_VDD_120_VP_OD_PCI/0",
+   "rail_S1": "ADC_VDD_120_VP_OD_PCI/1",
+   "rail_net_S0": "ADC_VDD_120_VP_OD_PCI/0",
+   "rail_net_S1": "ADC_VDD_120_VP_OD_PCI/1",
+   "counts_S0": {
+    "n_rail_nodes": 4759,
+    "n_rail_vias": 3164,
+    "n_rail_traces": 2185,
+    "n_decaps": 47,
+    "n_port_pos_nodes": 117
+   },
+   "counts_S1": {
+    "n_rail_nodes": 4759,
+    "n_rail_vias": 3164,
+    "n_rail_traces": 2185,
+    "n_decaps": 47,
+    "n_port_pos_nodes": 117
+   },
+   "layers_S0": [
+    "Signal$L11(MAIN_POWER2)",
+    "Signal$L20(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L22(MAIN_POWER2)",
+    "Signal$TOP"
+   ],
+   "layers_S1": [
+    "Signal$L11(MAIN_POWER2)",
+    "Signal$L20(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L22(MAIN_POWER2)",
+    "Signal$TOP"
+   ],
+   "iso": true,
+   "diffs": [],
+   "R_mod_S0_mOhm": 4.2354097959287325,
+   "R_mod_S1_mOhm": 4.156841591111045,
+   "R_ref_S0_mOhm": 4.735691918269154,
+   "R_ref_S1_mOhm": 4.483647693603984,
+   "dRe_100k_S0_mOhm": -0.500282122340422,
+   "dRe_100k_S1_mOhm": -0.3268061024929402,
+   "s_mod": 0.9814496805260233,
+   "s_ref": 0.946777740398854,
+   "s_mod_1MHz": 0.9863970102598929,
+   "s_ref_1MHz": 0.9688432361457444,
+   "decaps_S0": 47,
+   "decaps_S1": 47
+  },
+  {
+   "k": 40,
+   "port_S0": "Port40_SITE0",
+   "port_S1": "Port86_SITE1",
+   "rail_S0": "ADC_VDD_180_VIO_AON/0",
+   "rail_S1": "ADC_VDD_180_VIO_AON/1",
+   "rail_net_S0": "ADC_VDD_180_VIO_AON/0",
+   "rail_net_S1": "ADC_VDD_180_VIO_AON/1",
+   "counts_S0": {
+    "n_rail_nodes": 2054,
+    "n_rail_vias": 1566,
+    "n_rail_traces": 1163,
+    "n_decaps": 11,
+    "n_port_pos_nodes": 23
+   },
+   "counts_S1": {
+    "n_rail_nodes": 2054,
+    "n_rail_vias": 1566,
+    "n_rail_traces": 1175,
+    "n_decaps": 11,
+    "n_port_pos_nodes": 23
+   },
+   "layers_S0": [
+    "Signal$L10(DGND)",
+    "Signal$L20(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L39(OTHER_POWER7)"
+   ],
+   "layers_S1": [
+    "Signal$L10(DGND)",
+    "Signal$L20(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L39(OTHER_POWER7)"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 9.59476388527659,
+   "R_mod_S1_mOhm": 9.189193373425903,
+   "R_ref_S0_mOhm": 15.212776129753387,
+   "R_ref_S1_mOhm": 16.057916543325483,
+   "dRe_100k_S0_mOhm": -5.6180122444767955,
+   "dRe_100k_S1_mOhm": -6.868723169899581,
+   "s_mod": 0.9577300164235364,
+   "s_ref": 1.0555546473808393,
+   "s_mod_1MHz": 0.975606044618472,
+   "s_ref_1MHz": 1.05286069078306,
+   "decaps_S0": 11,
+   "decaps_S1": 11
+  },
+  {
+   "k": 41,
+   "port_S0": "Port41_SITE0",
+   "port_S1": "Port87_SITE1",
+   "rail_S0": "ADC_VDD_180_VIO_LSIO/0",
+   "rail_S1": "ADC_VDD_180_VIO_LSIO/1",
+   "rail_net_S0": "ADC_VDD_180_VIO_LSIO/0",
+   "rail_net_S1": "ADC_VDD_180_VIO_LSIO/1",
+   "counts_S0": {
+    "n_rail_nodes": 1451,
+    "n_rail_vias": 1130,
+    "n_rail_traces": 835,
+    "n_decaps": 9,
+    "n_port_pos_nodes": 14
+   },
+   "counts_S1": {
+    "n_rail_nodes": 1453,
+    "n_rail_vias": 1130,
+    "n_rail_traces": 841,
+    "n_decaps": 9,
+    "n_port_pos_nodes": 14
+   },
+   "layers_S0": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L46(OTHER_POWER12)"
+   ],
+   "layers_S1": [
+    "Signal$L10(DGND)",
+    "Signal$L21(DGND)",
+    "Signal$L46(OTHER_POWER12)"
+   ],
+   "iso": false,
+   "diffs": [
+    "n_rail_nodes",
+    "n_rail_traces"
+   ],
+   "R_mod_S0_mOhm": 14.690112111502932,
+   "R_mod_S1_mOhm": 12.824333663514139,
+   "R_ref_S0_mOhm": 26.294896212141758,
+   "R_ref_S1_mOhm": 25.73070924007195,
+   "dRe_100k_S0_mOhm": -11.604784100638826,
+   "dRe_100k_S1_mOhm": -12.90637557655781,
+   "s_mod": 0.8729908639344002,
+   "s_ref": 0.978543860089119,
+   "s_mod_1MHz": 0.9433815313506866,
+   "s_ref_1MHz": 0.9833395434003702,
+   "decaps_S0": 9,
+   "decaps_S1": 9
+  },
+  {
+   "k": 42,
+   "port_S0": "Port42_SITE0",
+   "port_S1": "Port88_SITE1",
+   "rail_S0": "ADC_VDD_180_VQPS_OTP_TOP_AON/0",
+   "rail_S1": "ADC_VDD_180_VQPS_OTP_TOP_AON/1",
+   "rail_net_S0": "ADC_VDD_180_VQPS_OTP_TOP_AON/0",
+   "rail_net_S1": "ADC_VDD_180_VQPS_OTP_TOP_AON/1",
+   "counts_S0": {
+    "n_rail_nodes": 182,
+    "n_rail_vias": 137,
+    "n_rail_traces": 82,
+    "n_decaps": 0,
+    "n_port_pos_nodes": 3
+   },
+   "counts_S1": {
+    "n_rail_nodes": 182,
+    "n_rail_vias": 137,
+    "n_rail_traces": 82,
+    "n_decaps": 0,
+    "n_port_pos_nodes": 3
+   },
+   "layers_S0": [
+    "Signal$L21(DGND)",
+    "Signal$L42(OTHER_POWER9)"
+   ],
+   "layers_S1": [
+    "Signal$L21(DGND)",
+    "Signal$L42(OTHER_POWER9)"
+   ],
+   "iso": true,
+   "diffs": [],
+   "R_mod_S0_mOhm": 9807.386564862925,
+   "R_mod_S1_mOhm": 5707.60246224145,
+   "R_ref_S0_mOhm": 9759.358018868536,
+   "R_ref_S1_mOhm": 5615.63691905001,
+   "dRe_100k_S0_mOhm": 48.02854599438966,
+   "dRe_100k_S1_mOhm": 91.96554319144035,
+   "s_mod": 0.5819697657977677,
+   "s_ref": 0.5754104837831399,
+   "s_mod_1MHz": 0.5812533188328921,
+   "s_ref_1MHz": 0.5749853280786658,
+   "decaps_S0": 0,
+   "decaps_S1": 0
+  },
+  {
+   "k": 43,
+   "port_S0": "Port43_SITE0",
+   "port_S1": "Port89_SITE1",
+   "rail_S0": "ADC_VDD_180_VQPS_SYS_0_AON/0",
+   "rail_S1": "ADC_VDD_180_VQPS_SYS_0_AON/1",
+   "rail_net_S0": "ADC_VDD_180_VQPS_SYS_0_AON/0",
+   "rail_net_S1": "ADC_VDD_180_VQPS_SYS_0_AON/1",
+   "counts_S0": {
+    "n_rail_nodes": 176,
+    "n_rail_vias": 131,
+    "n_rail_traces": 80,
+    "n_decaps": 0,
+    "n_port_pos_nodes": 3
+   },
+   "counts_S1": {
+    "n_rail_nodes": 176,
+    "n_rail_vias": 131,
+    "n_rail_traces": 80,
+    "n_decaps": 0,
+    "n_port_pos_nodes": 3
+   },
+   "layers_S0": [
+    "Signal$L21(DGND)",
+    "Signal$L43(OTHER_POWER10)"
+   ],
+   "layers_S1": [
+    "Signal$L21(DGND)",
+    "Signal$L43(OTHER_POWER10)"
+   ],
+   "iso": true,
+   "diffs": [],
+   "R_mod_S0_mOhm": 9614.143274698827,
+   "R_mod_S1_mOhm": 6330.884325649047,
+   "R_ref_S0_mOhm": 9456.015363201815,
+   "R_ref_S1_mOhm": 6206.415475056861,
+   "dRe_100k_S0_mOhm": 158.1279114970098,
+   "dRe_100k_S1_mOhm": 124.46885059218627,
+   "s_mod": 0.6584969814533339,
+   "s_ref": 0.6563457478304437,
+   "s_mod_1MHz": 0.6580840646399012,
+   "s_ref_1MHz": 0.6556296926851568,
+   "decaps_S0": 0,
+   "decaps_S1": 0
+  },
+  {
+   "k": 44,
+   "port_S0": "Port44_SITE0",
+   "port_S1": "Port90_SITE1",
+   "rail_S0": "ADC_VDD_180_VQPS_SYS_1_AON/0",
+   "rail_S1": "ADC_VDD_180_VQPS_SYS_1_AON/1",
+   "rail_net_S0": "ADC_VDD_180_VQPS_SYS_1_AON/0",
+   "rail_net_S1": "ADC_VDD_180_VQPS_SYS_1_AON/1",
+   "counts_S0": {
+    "n_rail_nodes": 266,
+    "n_rail_vias": 209,
+    "n_rail_traces": 144,
+    "n_decaps": 0,
+    "n_port_pos_nodes": 3
+   },
+   "counts_S1": {
+    "n_rail_nodes": 266,
+    "n_rail_vias": 209,
+    "n_rail_traces": 144,
+    "n_decaps": 0,
+    "n_port_pos_nodes": 3
+   },
+   "layers_S0": [
+    "Signal$L21(DGND)",
+    "Signal$L30(OTHER_POWER1)"
+   ],
+   "layers_S1": [
+    "Signal$L21(DGND)",
+    "Signal$L30(OTHER_POWER1)"
+   ],
+   "iso": true,
+   "diffs": [],
+   "R_mod_S0_mOhm": 9744.496222543943,
+   "R_mod_S1_mOhm": 6404.36095295502,
+   "R_ref_S0_mOhm": 9584.46326200966,
+   "R_ref_S1_mOhm": 6257.907067846746,
+   "dRe_100k_S0_mOhm": 160.0329605342825,
+   "dRe_100k_S1_mOhm": 146.45388510827394,
+   "s_mod": 0.6572285325677995,
+   "s_ref": 0.6529220152213923,
+   "s_mod_1MHz": 0.6569713406808539,
+   "s_ref_1MHz": 0.6527083608108214,
+   "decaps_S0": 0,
+   "decaps_S1": 0
+  },
+  {
+   "k": 45,
+   "port_S0": "Port45_SITE0",
+   "port_S1": "Port91_SITE1",
+   "rail_S0": "ADC_VDD_180_VQPS_SYS_2_AON/0",
+   "rail_S1": "ADC_VDD_180_VQPS_SYS_2_AON/1",
+   "rail_net_S0": "ADC_VDD_180_VQPS_SYS_2_AON/0",
+   "rail_net_S1": "ADC_VDD_180_VQPS_SYS_2_AON/1",
+   "counts_S0": {
+    "n_rail_nodes": 263,
+    "n_rail_vias": 203,
+    "n_rail_traces": 144,
+    "n_decaps": 0,
+    "n_port_pos_nodes": 3
+   },
+   "counts_S1": {
+    "n_rail_nodes": 263,
+    "n_rail_vias": 203,
+    "n_rail_traces": 144,
+    "n_decaps": 0,
+    "n_port_pos_nodes": 3
+   },
+   "layers_S0": [
+    "Signal$L21(DGND)",
+    "Signal$L31(OTHER_POWER2)"
+   ],
+   "layers_S1": [
+    "Signal$L21(DGND)",
+    "Signal$L31(OTHER_POWER2)"
+   ],
+   "iso": true,
+   "diffs": [],
+   "R_mod_S0_mOhm": 10169.80753859129,
+   "R_mod_S1_mOhm": 6139.587532463159,
+   "R_ref_S0_mOhm": 10074.348682439559,
+   "R_ref_S1_mOhm": 6059.767133151302,
+   "dRe_100k_S0_mOhm": 95.45885615173333,
+   "dRe_100k_S1_mOhm": 79.82039931185625,
+   "s_mod": 0.6037073473775499,
+   "s_ref": 0.6015046058227058,
+   "s_mod_1MHz": 0.6032616565348311,
+   "s_ref_1MHz": 0.6019653649220157,
+   "decaps_S0": 0,
+   "decaps_S1": 0
+  },
+  {
+   "k": 46,
+   "port_S0": "Port46_SITE0",
+   "port_S1": "Port92_SITE1",
+   "rail_S0": "ADC_VDD_180_VQPS_SYS_3_AON/0",
+   "rail_S1": "ADC_VDD_180_VQPS_SYS_3_AON/1",
+   "rail_net_S0": "ADC_VDD_180_VQPS_SYS_3_AON/0",
+   "rail_net_S1": "ADC_VDD_180_VQPS_SYS_3_AON/1",
+   "counts_S0": {
+    "n_rail_nodes": 157,
+    "n_rail_vias": 119,
+    "n_rail_traces": 58,
+    "n_decaps": 0,
+    "n_port_pos_nodes": 3
+   },
+   "counts_S1": {
+    "n_rail_nodes": 157,
+    "n_rail_vias": 119,
+    "n_rail_traces": 58,
+    "n_decaps": 0,
+    "n_port_pos_nodes": 3
+   },
+   "layers_S0": [
+    "Signal$L21(DGND)",
+    "Signal$L45(OTHER_POWER11)"
+   ],
+   "layers_S1": [
+    "Signal$L21(DGND)",
+    "Signal$L45(OTHER_POWER11)"
+   ],
+   "iso": true,
+   "diffs": [],
+   "R_mod_S0_mOhm": 10236.950756769027,
+   "R_mod_S1_mOhm": 5695.430121165235,
+   "R_ref_S0_mOhm": 8167.876831709945,
+   "R_ref_S1_mOhm": 4505.421140915128,
+   "dRe_100k_S0_mOhm": 2069.0739250590814,
+   "dRe_100k_S1_mOhm": 1190.0089802501066,
+   "s_mod": 0.5563600193543198,
+   "s_ref": 0.5516024829639746,
+   "s_mod_1MHz": 0.555649932897157,
+   "s_ref_1MHz": 0.5499308038022804,
+   "decaps_S0": 0,
+   "decaps_S1": 0
+  }
+ ],
+ "n_iso": 12,
+ "hypotheses": {
+  "H_sym_mod": {
+   "n": 12,
+   "fraction_within_tol": 0.3333333333333333,
+   "verdict": "indeterminate"
+  },
+  "H_asym_ref": {
+   "n": 12,
+   "fraction_asymmetric": 0.4166666666666667,
+   "verdict": "adopt"
+  },
+  "H_asym_src": {
+   "n_top": 10,
+   "n_small_decap": 8,
+   "classification": "feed-path-dominated small rails",
+   "top_pairs_k": [
+    46,
+    42,
+    45,
+    44,
+    43,
+    1,
+    34,
+    39,
+    17,
+    38
+   ]
+  }
+ }
+}

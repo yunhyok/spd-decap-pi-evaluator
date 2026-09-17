@@ -23,7 +23,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 for p in ("../exp4", "../exp3", "../exp1"):
     sys.path.insert(0, os.path.join(HERE, p))
 sys.path.insert(0, os.path.join(HERE, "..", "common"))
-from paths import peak_rss_mb, ref_npz, spd_path, work_dir, work_file  # noqa: E402
+from paths import DESIGNS, peak_rss_mb, ref_npz, spd_path, work_dir, work_file  # noqa: E402
 import extract as EX  # noqa: E402
 import run4 as R4  # noqa: E402
 from exp1b import TwoSided, load_layer_shapes  # noqa: E402
@@ -31,7 +31,7 @@ from run3 import ladder_gates  # noqa: E402
 from run_exp1 import gates, pick_freqs, plot, resonance  # noqa: E402
 
 OUT = work_dir("exp5")
-SPD = {k: str(spd_path(k)) for k in ("260729", "260804")}
+SPD = {k: str(spd_path(k)) for k in DESIGNS}
 REF = {k: str(ref_npz(k)) for k in SPD}
 LADDER = [3.0e4, 1.0e5, 3.0e5, 1.0e6, 2.5e6, 1.0e7, 1.0e8]
 

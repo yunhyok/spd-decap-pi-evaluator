@@ -144,3 +144,73 @@ cd tools\research-claude\exp8; python analyze8.py; cd ..\exp9; python table9.py
 규칙: 참조에 맞춘 파라미터 튜닝 금지, 모든 실행은 JSON 영수증 + 보고서, 기존 결과 덮어쓰기 금지,
 docs/handoff 스냅샷·accuracy_parse.py 수정 금지, 커밋은 내가 요청할 때만.
 ```
+
+## 9. 2026-09-16 로컬 세션 진행 상황 (추가)
+- G0 재현: `smoke_port18.py` PASS(상대차 5.83e-12, 239 s, 1262 MB). 환경변수는 세션 안에서만 설정(setx 미사용), venv 없이 전역 Python 3.12.
+- §6-1 완료: EXP-10/10b(`results/exp10/`). 참조 ≤1 kHz는 켤레 비대칭 항(B≠0, G<0, Z(0) 불일치)이 있는 생성값(Adaptive sweep 보간). 1–100 kHz는 INDETERMINATE. G1·G2 해석 불변. 소유자 확인: `_S` 파일은 DCFitted 미적용, BBSFitted 비활성.
+- §6-4 완료(i 제외): EXP-11~14(`results/exp11..14/`, 러너 `tools/research-claude/exp11/run11.py --variant ...`, 비교 `table11.py`). 평면 C 단위 오류(1e6배, `exp1b.py`) 발견 → 플래그 `c_unit_fix`. **기준선은 소유자 승인으로 exp13/j(EXP-8 + c_unit_fix)**; 코드 기본값·EXP-8 영수증·smoke는 그대로다. 다른 변형은 전부 기본값 유지.
+- 남은 과제 우선순위: §6-2(PowerSI MaxEdgeLength, 소유자 실행), §6-3(port19 R 결손 — (g) via 배럴은 원인 아님, (d) 벽 R은 P16/P19만 개선), §6-5(92포트 일반화, exp13/j 기준선), §6-6(10–100 MHz — (h) via L 2배가 G5 개선하는 단서), §6-4(i)(decap 실장 기하 필요).
+- 참조 재해석 요청(급하지 않음): 저주파 0.1 Hz–1 MHz Log/Linear 이산 스윕, 전 포트, 대상 `E:\Work\20260724 S4LB002_DC MLO PI\S4LB002-2Para_260729_1_injected.spd`.
+- §6-5 완료(EXP-15, `results/exp15/`): 92포트 G3 PASS 30/92, G1 8/92. **채택 모델은 일반화되지 않는다.** 영수증 92개는 `WORK_DIR/exp15/`(저장소에는 summary만). 러너 `tools/research-claude/exp15/runall15.py`(재개 가능), 집계 `summary15.py`.
+- §6-3·§6-6 착수(EXP-16/17, 보유 자료만): R 결손은 핀필드·포트 국소 경로 R 관례가 유력(SITE 쌍 부호 반전, via+trace R 비중과 ρ 0.79). 10–100 MHz는 90/92포트에서 모델 R 부족(중앙값 25 %). 다음 사전 등록 후보: 고주파 전용 벽 표피 R, GND-only 92포트, ΔL 지표 재정의. 소유자 확인 실험은 Port19_SITE0/Port65_SITE1 PowerDC 요소별 전류 한 쌍.
+- §6-6 첫 정식화(EXP-18b, `results/exp18/`): 벽 표피 R(실수부, 자유 계수 없음)은 게이트를 해치지 않으나 92포트 고주파 R 부족을 0.254 → 0.234밖에 못 줄여 채택 문턱 미달. 남은 부족은 via·trace 급전 경로 쪽. 92포트 k2 영수증은 `WORK_DIR/exp18/`.
+- 오늘 기준 소유자 결정 대기: 없음(기준선 exp13/j 유지). 소유자 실행 요청: (1) Port19_SITE0/Port65_SITE1 PowerDC 요소별 전류, (2) 저주파 Log/Linear 이산 스윕 전 포트 재해석(급하지 않음), (3) §6-4(i)용 대표 decap 실장 기하.
+- EXP-19(`results/exp19/`): §6-3과 §6-6은 같은 급전 경로 R 관례 문제(ρ 0.75). 고주파 L 부족은 없고 오히려 모델 L이 f에 따라 줄지 않는 것이 차이. EXP-20(via R 표피효과 m/mk, `WORK_DIR/exp20/`) 진행 중.
+- EXP-20(`results/exp20/`): via 표피 R + 벽 표피 R(mk, 자유 계수 없음)으로 92포트 고주파 R 부족 0.254 → 0.203. 문턱(0.15) 미달이라 기록만. 남은 부족은 주파수 무관한 급전 경로 R 관례 → 소유자 PowerDC 자료(Port19_SITE0/Port65_SITE1) 필요. EXP-21(GND-only 92포트, `WORK_DIR/exp21/`) 진행.
+- 2026-09-17 EXP-21~27: cavity 규칙·기본폭 trace·via 배럴은 R 결손 원인 아님. **모델 연결성 결함 발견**: 기준면을 제외한 소자 그래프에서 포트와 끊긴 decap이 92포트 중 44포트(56개, 전부 TOP 층 패드 노드), R 오차와 강한 상관(p 1e-6). P65 10 µF 고립이 사이트 부호 반전의 원인. 결함 기구 추적과 수정 플래그(EXP-28)가 다음 과제.
+- **2026-09-17 결론**: 균질화 경계조건 결함(EXP-27)을 `homog_face_fix`(EXP-28, 변형 p)로 수정. 고립 decap 0, 파국 오차 제거, P18 0.81 %. 게이트 PASS는 줄었지만(30 → 22) 이는 결함이 가리던 균일 R 결손(참조/모델 1.46배)이 드러난 것. **소유자 결정: exp28/p를 새 기준선으로 채택할지**(권고: 채택; 코드 기본값·smoke는 그대로 두고 후속 변형은 `homog_face_fix=True` 포함, `table11.py --baseline exp28:p`).
+- 균일 R 결손의 원인 후보는 PowerSI decap별 직렬 항(실장 R), 도전율·두께 관례, 경로 R 산정. 보유 자료로는 더 못 가림(EXP-29). 소유자 확인: (1) PowerSI decap 부품 모델의 실장 기생 자동 추가 여부, (2) PowerDC 요소별 전류·전압(Port19_SITE0/Port65_SITE1), (3) MetalModel 도전율·두께, (4) MaxEdgeLength 재해석(§6-2).
+- 92포트 영수증 세트: `WORK_DIR/exp15`(j), `exp18`(k2), `exp20`(mk), `exp21`(j_gnd), `exp28`(p). 감사 `exp27/exp27.json`(j), `exp27_p.json`(p).
+- 2026-09-17 후반: 소유자 지시로 실장 기생 옵션 없음 가정, PowerDC 후순위. **s5m6585(PCB) 160포트에서 모델이 맞음**(err 중앙값 0.58 %, G3 80 %, R 비 1.03) → 260729의 R 결손은 패키지 급전 구조(충전 microvia 스택·패키지 trace) 관례 차이. EXP-31: 평면 ×1, 경로 ×2–2.5. EXP-32(via 길이 표면 간 ×1.4, 변형 q) 실행 중(`WORK_DIR/exp32/`). 소유자 GUI 확인 항목: PowerSI microvia 모델(도금 두께 기본값·충전 여부·길이 정의·원추형). s5m6585 실행에는 `run11.py --tag s5m6585`, `runall15.py --tag s5m6585` 사용.
+- 2026-09-17 마감 상태: 기준선 exp28/p(소유자 명시 승인은 아직 없음; 결함 수정이라 후속 실험은 p 위에서 진행). EXP-32(q)는 방향 맞고 문턱 근소 미달(기록). 보유 자료로 가능한 판별은 사실상 소진. **다음 진행 조건**: (1) PowerSI microvia 모델 정의(도금 두께 기본값·충전 여부·길이 정의·원추형)의 GUI 확인 → 폐형식으로 옮겨 사전 등록, (2) f_res 지표 대체(Im Z 영교차 f0 또는 위상 기준)로 G4 재정의 여부 결정(소유자), (3) PCB L 분해 재정의(f_res_ref < 10 MHz, 30 MHz 평가)로 §6-4(i) 실장 L 판정. 92포트 영수증 세트 추가: `WORK_DIR/exp32`(q), PCB: `exp30`(p).
+- **결정 확정(2026-09-17, 소유자 위임)**: D7 기준선 = exp28/p(코드 기본값·smoke 불변, 변형은 p 플래그 포함, `--baseline exp28:p`). D8 G4 유지. q(via 길이)는 플래그 보존. 진행 중: EXP-35(p + via·벽 표피 R, 변형 pmk, `WORK_DIR/exp35/`).
+- **소유자 확인용 파일**: PowerSI microvia 모델 정의는 `E:\Work\20260724 S4LB002_DC MLO PI\S4LB002-2Para_260729_1_injected.spd`(및 `E:\Work\20260804 S4LB002_DC MLO\S4LB002-2Para_260804_1_injected.spd`)에서 padstack `DR-0102_60 … DR-2930_60`(드릴 40 µm, 패드 60 µm, COPPER, 2층; 레일 via의 약 95 %)와 core PTH `DR-2128_350`(드릴 150 µm, 8층)을 대상으로: 도금 두께 기본값·충전(filled) 여부·via 길이 정의·원추형 옵션.
+- 2026-09-17: FICT MLO 설계 규칙(2024-01) 대조 → SPD 기하는 규칙과 일치(LVH 40/60, ABF 30 µm, Cu 20 µm, IVH 150/350). 문서는 LVH 충전·원추 여부를 명시하지 않으나 스택 via 규칙상 충전 via가 전제. 남는 물음은 PowerSI의 microvia 모델링(도금 두께 기본값·충전 해석·길이 정의). 메모 `reviews/mlo_design_rules_2024_note.md`.
+
+## 10. 2026-09-17 세션 마감 — 새 세션 인계 (context 한계로 종료)
+
+### 상태 요약
+- 기준선: **exp28/p**(D7). 코드 기본값·`smoke_port18.py`·EXP-8 영수증 불변. 모든 후속 변형은 p 플래그(`c_unit_fix, homog_face_fix`) 포함, 비교는 `table11.py --exp expNN --baseline exp28:p`.
+- 모델은 PCB(s5m6585)에서 맞고(EXP-30, err 중앙값 0.58 %), 패키지(260729)의 남은 오차는 급전 경로(microvia 스택·trace) R 관례(참조/모델 1.46, 평면 ×1, 경로 ×2–2.5; EXP-31). via 길이 표면 간(q, EXP-32)은 1/3 설명(기록만, 플래그 보존).
+- 소유자 제공 자료 반영: FICT MLO 설계 규칙(기하 일치, `reviews/mlo_design_rules_2024_note.md`), Allegro padstack pxml(DR-1011-60 40/60 plating Y), PowerSI 옵션 화면(`reviews/powersi_options_2026-09-17.md`). 도금 두께 0의 의미와 Mesh 설정은 미확인.
+- 소유자 지시: 실장 기생 옵션 없음 가정, PowerDC 경로 R은 후순위(선형 보증 없음), 결정은 정확도·효율 유리 방향(D7·D8).
+
+### 실행 중(마감 시점, 결과는 WORK_DIR에 쌓임)
+- EXP-35 변형 pmk(p + via 표피 R + 벽 표피 R): 7케이스 재실행(`exp35/logs/*_pmk.log`) + 92포트 드라이버(`exp35/logs/runall35_pmk_driver2.log`). 첫 실행은 `VARIANTS["pmk"]` 키 누락(KeyError eps_table)으로 풀이 후 영수증 저장에 실패 → 정의 수정 후 재실행. 판정 기준 `exp35/EXP35_PLAN.md` §3.
+- EXP-36 변형 pv(p + PowerSI Special Void 1500 µm 채움): 7케이스 실행 중(`exp36/logs/*_pv.log`), 92포트는 미실행. 판정 `exp36/EXP36_PLAN.md` §3(관례 일치 플래그로 기록, 기준선 변경 없음).
+
+### 새 세션 첫 프롬프트
+```text
+이 저장소는 SPD→Z(f) 경량 PDN 모델 연구를 이어가는 중이다. docs/research-claude/2026-09-15/NEXT_SESSION_HANDOFF.md 전체(특히 §9–§10)와 CLAUDE.md, DECISIONS.md D7·D8을 읽어라.
+환경: 전역 Python 3.12(venv 없음), 세션 환경변수 SPD_PI_DATA_DIR=D:\Downloads\examples, SPD_PI_WORK_DIR=D:\Downloads\examples\analysis\claude-2026-09-15\work, PYTHONUTF8=1. python tools\research-claude\common\paths.py에 MISSING이 없고 smoke_port18.py가 PASS(2.69 %, 상대차 ≤1e-6)인지 확인하라.
+그다음 (1) WORK_DIR\exp35(pmk)·exp36(pv)의 완료된 영수증을 table11.py로 판정해 EXP35/36 보고서를 쓰고 results/에 복사하라(미완료 포트가 있으면 runall15.py로 재개, 기존 영수증 덮어쓰기 금지). (2) 남은 후보는 PowerSI microvia 모델 정의(도금 두께 0의 의미, Mesh 설정) 확인 후 정식화이며, 그 전까지는 보유 자료 분석만 한다.
+규칙: 참조에 맞춘 튜닝 금지, 실행 전 사전 등록(WORK_DIR\expNN\EXPNN_PLAN.md), 모든 실행은 JSON 영수증 + 보고서, 기존 결과·docs/handoff 스냅샷·accuracy_parse.py 수정 금지, 커밋은 소유자 요청 시에만. 코드 작성은 Opus/Sonnet 서브에이전트에 위임하고 Fable은 계획·검토만 한다.
+```
+- **추가(마감 직후)**: EXP-36 pv 7케이스 완료 — 1500 µm 미만 void를 채우면 전 케이스 악화(G3 중앙값 6.6 → 15.9 %, P18 0.81 → 15.9 %, G1·G3 PASS→FAIL 다수). PowerSI "Special Void 제외" 설정은 참조 평면이 void 없이 계산됐음을 뜻하지 않거나 다른 처리와 상쇄된다. **pv 기각, 92포트 불필요**(`table11.py --exp exp36 --baseline exp28:p --variant pv`). 모델의 void 포함 평면이 맞다는 반증이기도 하다. EXP-35 pmk 92포트는 마감 시점 73/92 진행 중.
+- **추가(마감 직후 2)**: EXP-35 pmk 7케이스 완료 — (a) 게이트 PASS 집합 불변·≤1 MHz 변화 없음, (b) 10–100 MHz ΔR/Re Z_ref 중앙값 −0.161 → −0.056(65 % 감소) → 7케이스 기준 모두 성립. 92포트(83/92 진행 중)에서 H3 문턱(ΔR<0 비율 ≤ 0.70 또는 중앙값 |ΔR|/Re Z_ref ≤ 0.15) 판정이 남았다: `python tools\research-claude\exp17\dl17.py --dir exp35 --variant pmk` 와 `compare92` 계산(EXP-20 §2 표 형식)으로 EXP35_REPORT.md를 쓸 것.
+- **추가(마감 직후 3)**: EXP-35 pmk 92포트 완료·판정 완료 — 게이트 불변, 10–100 MHz 중앙값 |ΔR|/Re Z_ref 0.379 → 0.339, ΔR<0 비율 1.00 → 0.95 → 채택 문턱 미달, **기록만**(EXP-20과 같은 결론). 보고서 `results/exp35/EXP35_REPORT.md`. 이제 실행 중인 작업은 없다. 새 세션은 §10 첫 프롬프트의 (1)에서 EXP-35/36 판정을 건너뛰고(완료), 남은 후보(PowerSI microvia 모델 정의·Mesh 설정 확인 후 정식화)로 바로 간다.
+
+
+## 11. 2026-09-17 후반 세션 — EXP-35/36 판정, A2000 GPU 경로 도입
+
+### 결과
+- G0: `smoke_port18.py` PASS(상대차 5.83e-12, 부하 중 846 s, 1439 MB).
+- **EXP-35(pmk = p + via 표피 R + 벽 표피 R 실수부)**: 7케이스 (a) 성립(PASS→FAIL 0, ≤ 1 MHz max |ΔZ|/|Z| ≤ 6.5e-4; P1·P7·P18의 10–100 MHz R 부족 소멸). 92포트 (b) 불성립(포트별 중앙값 |ΔR|/Re Z_ref 0.379 → 0.339, ΔR<0 비율 1.00 → 0.946; 문턱 0.15 / 0.70). **기록만, 기준선 exp28/p 유지.** `results/exp35/`.
+- **EXP-36(pv = p + Special Void 1500 µm 채움)**: 7케이스 PASS→FAIL 5건(G1 2, G3 5; P18 0.81 → 15.9 %). 채움은 평면 R을 12–19 % 낮춰 R 결손을 키운다 → **기록만**, 관례 일치 플래그로도 채택하지 않음. 92포트는 계획대로 GPU 경로로 실행(§ 아래). `results/exp36/`(§4는 92포트 완료 후 추가).
+- PowerSI Mesh 설정 확인(소유자 스크린샷): MaxEdgeLength 4970 µm 기본값, Simplify geometry ON, Coarse mesh OFF → `reviews/powersi_options_2026-09-17.md`에 추가. §6-2(H1 참조 미수렴) 가설은 여전히 열려 있다.
+- 재사용 스크립트 `tools/research-claude/exp35/compare92.py --exp expNN --variant V --baseline exp28:p`(92포트 비교 JSON 생성; `--selftest`가 exp32 JSON을 바이트 단위로 재현). rb/rq 필드는 100 kHz 한 점의 Re Z_ref/Re Z_model이다(보고서의 "중앙값"은 포트 간 중앙값).
+
+### A2000 GPU 경로 (`SPD_PI_SOLVER=cudss`, 옵트인)
+- 연구 코드는 원래 CPU 전용(scipy splu, 프로세스당 단일 스레드)이었고 어떤 GPU도 쓰지 않았다. 작업 관리자의 Xe 활동은 화면 표시 부하다.
+- 전역 Python에 `nvmath-python 1.0.0`, `nvidia-cudss-cu12 0.8.0.10`, `cuda-bindings 12.9.8`(+CUDA 12.9 런타임 휠, 약 1.1 GB) 설치. numpy 2.4.4 / scipy 1.18.0 불변. CuPy 불필요. 드라이버 528.79(CUDA 12.0)에서 minor-version 호환으로 동작 확인. `cuda-bindings`는 반드시 `12.*`로 고정(13.x는 580+ 드라이버 필요).
+- 코드: `common/cudss_solver.py`(CudssLU: 모델당 1회 plan, 주파수마다 값만 갱신·refactorize), `exp3/model3.py Model3.solve()`(환경변수 있을 때만 분기, 실패 시 splu로 폴백, stats에 `solver` 키), `exp15/runall15.py`(cudss일 때 `--jobs` ≤ 4로 클램프, PYTHONUNBUFFERED=1). 기본 경로 불변(smoke 5.83e-12, `--variant p --smoke` 0.0).
+- 정확도: P18 smoke 2.66e-10, P14 전 주파수 max |ΔZ|/|Z| 4.7e-10, pv 소형 포트 ≤ 5.1e-9(CPU 동일 변형 대비). 속도: 인수분해 P18 38.7 s(부하 중) → 0.10–0.13 s, nnz(LU) 1/3(nested dissection). **단, 주파수당 assemble 3 s와 모델 build가 남아 포트 전체로는 1.3–4배.** 다음 가속 대상은 assemble/build.
+- 결함과 회피: cuDSS 0.8.0.10에서 `DirectSolver.free()`가 소형 N(< 약 7만)에서 0xC0000005로 죽는다 → 해제하지 않고 프로세스 종료에 맡김(포트당 1 프로세스라 무해). `SYMMETRIC` 행렬 타입도 크래시 → GENERAL 사용. `CUDA_VISIBLE_DEVICES`를 비우면 예외가 아니라 하드 크래시. `--variant none --smoke`의 문턱 1e-9에 cudss는 2.7e-10으로 여유가 작으니 smoke는 기본 경로로 돌린다.
+- 자원: VRAM은 프로세스당 수백 MB(4개 동시 약 360 MB), 호스트 RSS +1.1 GB/프로세스. 클램프 4는 보수적이며 8–10도 가능할 것으로 보이나 검증 전.
+- 스크래치: `WORK_DIR/exp37gpu/`(검증용 영수증, 실험 아님). 세션 scratch의 gpuvenv/leanvenv는 삭제해도 된다.
+
+### 진행 중 / 다음
+- EXP-36 pv 92포트 완료(GPU 경로, 86포트 약 45 분, 실패 0): err 중앙값 31.7 → 32.8 %, G3 22 → 5, R 비 1.464 → 1.491 → 결손 확대 확인, 기록만. `results/exp36/` 갱신 완료. 실측 GPU 시간: N 1.33M 포트 951 s(인수분해 합 104 s, 나머지는 build·assemble), 소형 포트 중앙값 34 s.
+- 남은 과제는 §10과 같다(PowerSI microvia 모델 정의 확인 후 정식화; 급전 경로 R 관례). GPU로 92포트 회전이 빨라졌으므로 §6-7(1회 인수분해 + Schur) 대신 assemble 가속이 다음 효율 과제다.
+- 소유자 지시(2026-09-17): 사용 가능하면 A2000을 적극 사용한다 → CLAUDE.md "GPU 정책" 절에 반영. 다음 과제로 EXP-37(assemble/build 가속, 물리 변경 없음, `WORK_DIR/exp37/EXP37_PLAN.md`) 진행 중.
+- **EXP-37 완료(효율, 물리 불변)**: `results/exp37/`. 프로파일: build가 84–87 %(`homog.batched_gx`, 참조 탐색 `rasterize`/`points_in_path`), assemble의 80 %는 off-plane trace별 `copper_surface_impedance` 파이썬 루프. 가속 경로 `SPD_PI_FAST=1`(`common/fast_assemble.py`: 패턴 캐시·(σ,t)쌍별 Zs·weff 캐시, Y 비트 동일)로 assemble/f P18 2.15 → 0.13 s, 7케이스 벽시계 2.9–3.4배. 기본 경로 불변(smoke 5.83e-12, p-smoke 0.0). GPU 오차가 P7(N 5.9e5)에서 3.3e-8로 1e-8을 넘어 cuDSS 반복 정제 1단계를 기본으로 켬(+10 % solve 시간) → P7 1.8e-9, 804-P18 3.0e-10. **표준 실행 플래그: `SPD_PI_SOLVER=cudss SPD_PI_FAST=1`.** build 가속(batched_gx의 GPU 이식, 레이어 단위 래스터 캐시)은 §5 제안으로 기록만.

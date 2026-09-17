@@ -70,7 +70,8 @@ class Stack:
 
     @staticmethod
     def is_gnd(name):
-        return "(DGND)" in name
+        # 260729/260804 artwork: 'Signal$L02(DGND)'.  s5m6585: 'Plane$IN43_DGND'.
+        return "(DGND)" in name or name.endswith("_DGND") or name.split("$")[-1] == "DGND"
 
     def neighbours(self, name):
         """[(side, conductor_name, dielectric_row, gap_um)] for adjacent conductors."""

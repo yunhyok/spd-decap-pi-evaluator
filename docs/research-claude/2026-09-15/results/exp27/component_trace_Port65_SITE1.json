@@ -1,0 +1,1066 @@
+{
+ "port": "Port65_SITE1",
+ "tag": "260729",
+ "variant": "j",
+ "unknowns": 66099,
+ "port_index": 66098,
+ "port_component": 0,
+ "n_components": 2,
+ "n_pad_links_total": 16,
+ "components": [
+  {
+   "decap": {
+    "refdes": "C10105_1",
+    "part": "CAP_1608_10UF",
+    "model_id": "CAP_1608_10UF",
+    "rail_node": "Node755",
+    "layer": "Signal$TOP",
+    "x_um": 36061.9,
+    "y_um": -33480.0,
+    "padstack": "700X800SQ",
+    "snapped_to_sheet": false,
+    "matrix_index": 66093,
+    "component": 1
+   },
+   "n_nodes": 33,
+   "element_counts": {
+    "sheet:Signal$L10(DGND)": 17,
+    "traces_in_component": 12,
+    "vias_in_component": 18,
+    "pad_links_in_component": 2
+   },
+   "rail_node_pad_links": [
+    {
+     "other": "Node1991979",
+     "other_layer": "Signal$TOP",
+     "other_padstack": null
+    },
+    {
+     "other": "Node1991978",
+     "other_layer": "Signal$TOP",
+     "other_padstack": null
+    }
+   ],
+   "rail_node_in_pad_link_list": true,
+   "nodes_truncated": false,
+   "nodes": [
+    {
+     "raw": 5,
+     "sheet_layer": "Signal$L10(DGND)",
+     "rail_nodes": [],
+     "kind": "sheet_cell"
+    },
+    {
+     "raw": 6,
+     "sheet_layer": "Signal$L10(DGND)",
+     "rail_nodes": [
+      {
+       "node": "Node1991976",
+       "layer": "Signal$L10(DGND)",
+       "x_um": 35961.9,
+       "y_um": -33430.0,
+       "padstack": null,
+       "snapped_to_sheet": true
+      },
+      {
+       "node": "Node1991977",
+       "layer": "Signal$L10(DGND)",
+       "x_um": 35961.9,
+       "y_um": -33530.0,
+       "padstack": null,
+       "snapped_to_sheet": true
+      }
+     ],
+     "kind": "rail_node_on_sheet_cell"
+    },
+    {
+     "raw": 7,
+     "sheet_layer": "Signal$L10(DGND)",
+     "rail_nodes": [],
+     "kind": "sheet_cell"
+    },
+    {
+     "raw": 8,
+     "sheet_layer": "Signal$L10(DGND)",
+     "rail_nodes": [],
+     "kind": "sheet_cell"
+    },
+    {
+     "raw": 10,
+     "sheet_layer": "Signal$L10(DGND)",
+     "rail_nodes": [],
+     "kind": "sheet_cell"
+    },
+    {
+     "raw": 11,
+     "sheet_layer": "Signal$L10(DGND)",
+     "rail_nodes": [],
+     "kind": "sheet_cell"
+    },
+    {
+     "raw": 12,
+     "sheet_layer": "Signal$L10(DGND)",
+     "rail_nodes": [],
+     "kind": "sheet_cell"
+    },
+    {
+     "raw": 13,
+     "sheet_layer": "Signal$L10(DGND)",
+     "rail_nodes": [],
+     "kind": "sheet_cell"
+    },
+    {
+     "raw": 15,
+     "sheet_layer": "Signal$L10(DGND)",
+     "rail_nodes": [],
+     "kind": "sheet_cell"
+    },
+    {
+     "raw": 16,
+     "sheet_layer": "Signal$L10(DGND)",
+     "rail_nodes": [],
+     "kind": "sheet_cell"
+    },
+    {
+     "raw": 17,
+     "sheet_layer": "Signal$L10(DGND)",
+     "rail_nodes": [],
+     "kind": "sheet_cell"
+    },
+    {
+     "raw": 18,
+     "sheet_layer": "Signal$L10(DGND)",
+     "rail_nodes": [],
+     "kind": "sheet_cell"
+    },
+    {
+     "raw": 68014,
+     "sheet_layer": null,
+     "rail_nodes": [
+      {
+       "node": "Node103368",
+       "layer": "Signal$L02(DGND)",
+       "x_um": 36061.9,
+       "y_um": -33430.0,
+       "padstack": null,
+       "snapped_to_sheet": false
+      }
+     ],
+     "kind": "rail_node"
+    },
+    {
+     "raw": 68015,
+     "sheet_layer": null,
+     "rail_nodes": [
+      {
+       "node": "Node103369",
+       "layer": "Signal$L02(DGND)",
+       "x_um": 36061.9,
+       "y_um": -33530.0,
+       "padstack": null,
+       "snapped_to_sheet": false
+      }
+     ],
+     "kind": "rail_node"
+    },
+    {
+     "raw": 68016,
+     "sheet_layer": null,
+     "rail_nodes": [
+      {
+       "node": "Node103370",
+       "layer": "Signal$L06(DGND)",
+       "x_um": 36061.9,
+       "y_um": -33430.0,
+       "padstack": null,
+       "snapped_to_sheet": false
+      }
+     ],
+     "kind": "rail_node"
+    },
+    {
+     "raw": 68017,
+     "sheet_layer": null,
+     "rail_nodes": [
+      {
+       "node": "Node103371",
+       "layer": "Signal$L06(DGND)",
+       "x_um": 35961.9,
+       "y_um": -33430.0,
+       "padstack": null,
+       "snapped_to_sheet": false
+      }
+     ],
+     "kind": "rail_node"
+    },
+    {
+     "raw": 68018,
+     "sheet_layer": null,
+     "rail_nodes": [
+      {
+       "node": "Node103372",
+       "layer": "Signal$L04(DGND)",
+       "x_um": 36061.9,
+       "y_um": -33430.0,
+       "padstack": null,
+       "snapped_to_sheet": false
+      }
+     ],
+     "kind": "rail_node"
+    },
+    {
+     "raw": 68019,
+     "sheet_layer": null,
+     "rail_nodes": [
+      {
+       "node": "Node103373",
+       "layer": "Signal$L04(DGND)",
+       "x_um": 36061.9,
+       "y_um": -33530.0,
+       "padstack": null,
+       "snapped_to_sheet": false
+      }
+     ],
+     "kind": "rail_node"
+    },
+    {
+     "raw": 68020,
+     "sheet_layer": null,
+     "rail_nodes": [
+      {
+       "node": "Node103374",
+       "layer": "Signal$L05(SIG2)",
+       "x_um": 36061.9,
+       "y_um": -33530.0,
+       "padstack": null,
+       "snapped_to_sheet": false
+      }
+     ],
+     "kind": "rail_node"
+    },
+    {
+     "raw": 68021,
+     "sheet_layer": null,
+     "rail_nodes": [
+      {
+       "node": "Node103375",
+       "layer": "Signal$L05(SIG2)",
+       "x_um": 36061.9,
+       "y_um": -33430.0,
+       "padstack": null,
+       "snapped_to_sheet": false
+      }
+     ],
+     "kind": "rail_node"
+    },
+    {
+     "raw": 68022,
+     "sheet_layer": null,
+     "rail_nodes": [
+      {
+       "node": "Node103376",
+       "layer": "Signal$L06(DGND)",
+       "x_um": 36061.9,
+       "y_um": -33530.0,
+       "padstack": null,
+       "snapped_to_sheet": false
+      }
+     ],
+     "kind": "rail_node"
+    },
+    {
+     "raw": 68023,
+     "sheet_layer": null,
+     "rail_nodes": [
+      {
+       "node": "Node103377",
+       "layer": "Signal$L06(DGND)",
+       "x_um": 35961.9,
+       "y_um": -33530.0,
+       "padstack": null,
+       "snapped_to_sheet": false
+      }
+     ],
+     "kind": "rail_node"
+    },
+    {
+     "raw": 68024,
+     "sheet_layer": null,
+     "rail_nodes": [
+      {
+       "node": "Node103378",
+       "layer": "Signal$L07(SIG3)",
+       "x_um": 35961.9,
+       "y_um": -33530.0,
+       "padstack": null,
+       "snapped_to_sheet": false
+      }
+     ],
+     "kind": "rail_node"
+    },
+    {
+     "raw": 68025,
+     "sheet_layer": null,
+     "rail_nodes": [
+      {
+       "node": "Node103379",
+       "layer": "Signal$L07(SIG3)",
+       "x_um": 35961.9,
+       "y_um": -33430.0,
+       "padstack": null,
+       "snapped_to_sheet": false
+      }
+     ],
+     "kind": "rail_node"
+    },
+    {
+     "raw": 68026,
+     "sheet_layer": null,
+     "rail_nodes": [
+      {
+       "node": "Node103380",
+       "layer": "Signal$L08(DGND)",
+       "x_um": 35961.9,
+       "y_um": -33530.0,
+       "padstack": null,
+       "snapped_to_sheet": false
+      }
+     ],
+     "kind": "rail_node"
+    },
+    {
+     "raw": 68027,
+     "sheet_layer": null,
+     "rail_nodes": [
+      {
+       "node": "Node103381",
+       "layer": "Signal$L08(DGND)",
+       "x_um": 35961.9,
+       "y_um": -33430.0,
+       "padstack": null,
+       "snapped_to_sheet": false
+      }
+     ],
+     "kind": "rail_node"
+    },
+    {
+     "raw": 68028,
+     "sheet_layer": null,
+     "rail_nodes": [
+      {
+       "node": "Node103382",
+       "layer": "Signal$L09(MAIN_POWER1)",
+       "x_um": 35961.9,
+       "y_um": -33530.0,
+       "padstack": null,
+       "snapped_to_sheet": false
+      }
+     ],
+     "kind": "rail_node"
+    },
+    {
+     "raw": 68029,
+     "sheet_layer": null,
+     "rail_nodes": [
+      {
+       "node": "Node103383",
+       "layer": "Signal$L09(MAIN_POWER1)",
+       "x_um": 35961.9,
+       "y_um": -33430.0,
+       "padstack": null,
+       "snapped_to_sheet": false
+      }
+     ],
+     "kind": "rail_node"
+    },
+    {
+     "raw": 68030,
+     "sheet_layer": null,
+     "rail_nodes": [
+      {
+       "node": "Node103384",
+       "layer": "Signal$L03(SIG1)",
+       "x_um": 36061.9,
+       "y_um": -33530.0,
+       "padstack": null,
+       "snapped_to_sheet": false
+      }
+     ],
+     "kind": "rail_node"
+    },
+    {
+     "raw": 68031,
+     "sheet_layer": null,
+     "rail_nodes": [
+      {
+       "node": "Node103385",
+       "layer": "Signal$L03(SIG1)",
+       "x_um": 36061.9,
+       "y_um": -33430.0,
+       "padstack": null,
+       "snapped_to_sheet": false
+      }
+     ],
+     "kind": "rail_node"
+    },
+    {
+     "raw": 68295,
+     "sheet_layer": null,
+     "rail_nodes": [
+      {
+       "node": "Node1991978",
+       "layer": "Signal$TOP",
+       "x_um": 36061.9,
+       "y_um": -33430.0,
+       "padstack": null,
+       "snapped_to_sheet": false
+      }
+     ],
+     "kind": "rail_node"
+    },
+    {
+     "raw": 68296,
+     "sheet_layer": null,
+     "rail_nodes": [
+      {
+       "node": "Node1991979",
+       "layer": "Signal$TOP",
+       "x_um": 36061.9,
+       "y_um": -33530.0,
+       "padstack": null,
+       "snapped_to_sheet": false
+      }
+     ],
+     "kind": "rail_node"
+    },
+    {
+     "raw": 68314,
+     "sheet_layer": null,
+     "rail_nodes": [
+      {
+       "node": "Node755",
+       "layer": "Signal$TOP",
+       "x_um": 36061.9,
+       "y_um": -33480.0,
+       "padstack": "700X800SQ",
+       "snapped_to_sheet": false
+      }
+     ],
+     "kind": "rail_node"
+    }
+   ],
+   "vias": [
+    {
+     "padstack": "DR-0607",
+     "upper": "Node103371",
+     "lower": "Node103379",
+     "both_endpoints_in_component": true,
+     "upper_info": {
+      "node": "Node103371",
+      "layer": "Signal$L06(DGND)",
+      "x_um": 35961.9,
+      "y_um": -33430.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68017,
+      "matrix_index": 65808,
+      "in_component": true
+     },
+     "lower_info": {
+      "node": "Node103379",
+      "layer": "Signal$L07(SIG3)",
+      "x_um": 35961.9,
+      "y_um": -33430.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68025,
+      "matrix_index": 65816,
+      "in_component": true
+     }
+    },
+    {
+     "padstack": "DR-0708",
+     "upper": "Node103379",
+     "lower": "Node103381",
+     "both_endpoints_in_component": true,
+     "upper_info": {
+      "node": "Node103379",
+      "layer": "Signal$L07(SIG3)",
+      "x_um": 35961.9,
+      "y_um": -33430.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68025,
+      "matrix_index": 65816,
+      "in_component": true
+     },
+     "lower_info": {
+      "node": "Node103381",
+      "layer": "Signal$L08(DGND)",
+      "x_um": 35961.9,
+      "y_um": -33430.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68027,
+      "matrix_index": 65818,
+      "in_component": true
+     }
+    },
+    {
+     "padstack": "DR-0809",
+     "upper": "Node103381",
+     "lower": "Node103383",
+     "both_endpoints_in_component": true,
+     "upper_info": {
+      "node": "Node103381",
+      "layer": "Signal$L08(DGND)",
+      "x_um": 35961.9,
+      "y_um": -33430.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68027,
+      "matrix_index": 65818,
+      "in_component": true
+     },
+     "lower_info": {
+      "node": "Node103383",
+      "layer": "Signal$L09(MAIN_POWER1)",
+      "x_um": 35961.9,
+      "y_um": -33430.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68029,
+      "matrix_index": 65820,
+      "in_component": true
+     }
+    },
+    {
+     "padstack": "DR-0910",
+     "upper": "Node103383",
+     "lower": "Node1991976",
+     "both_endpoints_in_component": true,
+     "upper_info": {
+      "node": "Node103383",
+      "layer": "Signal$L09(MAIN_POWER1)",
+      "x_um": 35961.9,
+      "y_um": -33430.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68029,
+      "matrix_index": 65820,
+      "in_component": true
+     },
+     "lower_info": {
+      "node": "Node1991976",
+      "layer": "Signal$L10(DGND)",
+      "x_um": 35961.9,
+      "y_um": -33430.0,
+      "padstack": null,
+      "on_rail_sheet_layer": true,
+      "raw": 6,
+      "matrix_index": 6,
+      "in_component": true,
+      "snapped": true,
+      "snap_cell": 6,
+      "snap_h_um": 200.0,
+      "fill_at_xy": 1.0,
+      "in_block": "coarse",
+      "nearest_cell": 6,
+      "nearest_cell_um": 93.44308428128954,
+      "nearest_cell_fill": 1.0,
+      "nearest_cell_h_um": 200.0
+     }
+    },
+    {
+     "padstack": "DR-0607",
+     "upper": "Node103377",
+     "lower": "Node103378",
+     "both_endpoints_in_component": true,
+     "upper_info": {
+      "node": "Node103377",
+      "layer": "Signal$L06(DGND)",
+      "x_um": 35961.9,
+      "y_um": -33530.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68023,
+      "matrix_index": 65814,
+      "in_component": true
+     },
+     "lower_info": {
+      "node": "Node103378",
+      "layer": "Signal$L07(SIG3)",
+      "x_um": 35961.9,
+      "y_um": -33530.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68024,
+      "matrix_index": 65815,
+      "in_component": true
+     }
+    },
+    {
+     "padstack": "DR-0708",
+     "upper": "Node103378",
+     "lower": "Node103380",
+     "both_endpoints_in_component": true,
+     "upper_info": {
+      "node": "Node103378",
+      "layer": "Signal$L07(SIG3)",
+      "x_um": 35961.9,
+      "y_um": -33530.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68024,
+      "matrix_index": 65815,
+      "in_component": true
+     },
+     "lower_info": {
+      "node": "Node103380",
+      "layer": "Signal$L08(DGND)",
+      "x_um": 35961.9,
+      "y_um": -33530.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68026,
+      "matrix_index": 65817,
+      "in_component": true
+     }
+    },
+    {
+     "padstack": "DR-0809",
+     "upper": "Node103380",
+     "lower": "Node103382",
+     "both_endpoints_in_component": true,
+     "upper_info": {
+      "node": "Node103380",
+      "layer": "Signal$L08(DGND)",
+      "x_um": 35961.9,
+      "y_um": -33530.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68026,
+      "matrix_index": 65817,
+      "in_component": true
+     },
+     "lower_info": {
+      "node": "Node103382",
+      "layer": "Signal$L09(MAIN_POWER1)",
+      "x_um": 35961.9,
+      "y_um": -33530.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68028,
+      "matrix_index": 65819,
+      "in_component": true
+     }
+    },
+    {
+     "padstack": "DR-0910",
+     "upper": "Node103382",
+     "lower": "Node1991977",
+     "both_endpoints_in_component": true,
+     "upper_info": {
+      "node": "Node103382",
+      "layer": "Signal$L09(MAIN_POWER1)",
+      "x_um": 35961.9,
+      "y_um": -33530.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68028,
+      "matrix_index": 65819,
+      "in_component": true
+     },
+     "lower_info": {
+      "node": "Node1991977",
+      "layer": "Signal$L10(DGND)",
+      "x_um": 35961.9,
+      "y_um": -33530.0,
+      "padstack": null,
+      "on_rail_sheet_layer": true,
+      "raw": 6,
+      "matrix_index": 6,
+      "in_component": true,
+      "snapped": true,
+      "snap_cell": 6,
+      "snap_h_um": 200.0,
+      "fill_at_xy": 1.0,
+      "in_block": "coarse",
+      "nearest_cell": 6,
+      "nearest_cell_um": 68.78669929572273,
+      "nearest_cell_fill": 1.0,
+      "nearest_cell_h_um": 200.0
+     }
+    },
+    {
+     "padstack": "DR-0506",
+     "upper": "Node103375",
+     "lower": "Node103370",
+     "both_endpoints_in_component": true,
+     "upper_info": {
+      "node": "Node103375",
+      "layer": "Signal$L05(SIG2)",
+      "x_um": 36061.9,
+      "y_um": -33430.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68021,
+      "matrix_index": 65812,
+      "in_component": true
+     },
+     "lower_info": {
+      "node": "Node103370",
+      "layer": "Signal$L06(DGND)",
+      "x_um": 36061.9,
+      "y_um": -33430.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68016,
+      "matrix_index": 65807,
+      "in_component": true
+     }
+    },
+    {
+     "padstack": "DR-0405",
+     "upper": "Node103372",
+     "lower": "Node103375",
+     "both_endpoints_in_component": true,
+     "upper_info": {
+      "node": "Node103372",
+      "layer": "Signal$L04(DGND)",
+      "x_um": 36061.9,
+      "y_um": -33430.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68018,
+      "matrix_index": 65809,
+      "in_component": true
+     },
+     "lower_info": {
+      "node": "Node103375",
+      "layer": "Signal$L05(SIG2)",
+      "x_um": 36061.9,
+      "y_um": -33430.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68021,
+      "matrix_index": 65812,
+      "in_component": true
+     }
+    },
+    {
+     "padstack": "DR-0304",
+     "upper": "Node103385",
+     "lower": "Node103372",
+     "both_endpoints_in_component": true,
+     "upper_info": {
+      "node": "Node103385",
+      "layer": "Signal$L03(SIG1)",
+      "x_um": 36061.9,
+      "y_um": -33430.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68031,
+      "matrix_index": 65822,
+      "in_component": true
+     },
+     "lower_info": {
+      "node": "Node103372",
+      "layer": "Signal$L04(DGND)",
+      "x_um": 36061.9,
+      "y_um": -33430.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68018,
+      "matrix_index": 65809,
+      "in_component": true
+     }
+    },
+    {
+     "padstack": "DR-0506",
+     "upper": "Node103374",
+     "lower": "Node103376",
+     "both_endpoints_in_component": true,
+     "upper_info": {
+      "node": "Node103374",
+      "layer": "Signal$L05(SIG2)",
+      "x_um": 36061.9,
+      "y_um": -33530.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68020,
+      "matrix_index": 65811,
+      "in_component": true
+     },
+     "lower_info": {
+      "node": "Node103376",
+      "layer": "Signal$L06(DGND)",
+      "x_um": 36061.9,
+      "y_um": -33530.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68022,
+      "matrix_index": 65813,
+      "in_component": true
+     }
+    },
+    {
+     "padstack": "DR-0405",
+     "upper": "Node103373",
+     "lower": "Node103374",
+     "both_endpoints_in_component": true,
+     "upper_info": {
+      "node": "Node103373",
+      "layer": "Signal$L04(DGND)",
+      "x_um": 36061.9,
+      "y_um": -33530.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68019,
+      "matrix_index": 65810,
+      "in_component": true
+     },
+     "lower_info": {
+      "node": "Node103374",
+      "layer": "Signal$L05(SIG2)",
+      "x_um": 36061.9,
+      "y_um": -33530.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68020,
+      "matrix_index": 65811,
+      "in_component": true
+     }
+    },
+    {
+     "padstack": "DR-0304",
+     "upper": "Node103384",
+     "lower": "Node103373",
+     "both_endpoints_in_component": true,
+     "upper_info": {
+      "node": "Node103384",
+      "layer": "Signal$L03(SIG1)",
+      "x_um": 36061.9,
+      "y_um": -33530.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68030,
+      "matrix_index": 65821,
+      "in_component": true
+     },
+     "lower_info": {
+      "node": "Node103373",
+      "layer": "Signal$L04(DGND)",
+      "x_um": 36061.9,
+      "y_um": -33530.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68019,
+      "matrix_index": 65810,
+      "in_component": true
+     }
+    },
+    {
+     "padstack": "DR-0203",
+     "upper": "Node103368",
+     "lower": "Node103385",
+     "both_endpoints_in_component": true,
+     "upper_info": {
+      "node": "Node103368",
+      "layer": "Signal$L02(DGND)",
+      "x_um": 36061.9,
+      "y_um": -33430.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68014,
+      "matrix_index": 65805,
+      "in_component": true
+     },
+     "lower_info": {
+      "node": "Node103385",
+      "layer": "Signal$L03(SIG1)",
+      "x_um": 36061.9,
+      "y_um": -33430.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68031,
+      "matrix_index": 65822,
+      "in_component": true
+     }
+    },
+    {
+     "padstack": "DR-0102",
+     "upper": "Node1991978",
+     "lower": "Node103368",
+     "both_endpoints_in_component": true,
+     "upper_info": {
+      "node": "Node1991978",
+      "layer": "Signal$TOP",
+      "x_um": 36061.9,
+      "y_um": -33430.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68295,
+      "matrix_index": 66086,
+      "in_component": true
+     },
+     "lower_info": {
+      "node": "Node103368",
+      "layer": "Signal$L02(DGND)",
+      "x_um": 36061.9,
+      "y_um": -33430.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68014,
+      "matrix_index": 65805,
+      "in_component": true
+     }
+    },
+    {
+     "padstack": "DR-0203",
+     "upper": "Node103369",
+     "lower": "Node103384",
+     "both_endpoints_in_component": true,
+     "upper_info": {
+      "node": "Node103369",
+      "layer": "Signal$L02(DGND)",
+      "x_um": 36061.9,
+      "y_um": -33530.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68015,
+      "matrix_index": 65806,
+      "in_component": true
+     },
+     "lower_info": {
+      "node": "Node103384",
+      "layer": "Signal$L03(SIG1)",
+      "x_um": 36061.9,
+      "y_um": -33530.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68030,
+      "matrix_index": 65821,
+      "in_component": true
+     }
+    },
+    {
+     "padstack": "DR-0102",
+     "upper": "Node1991979",
+     "lower": "Node103369",
+     "both_endpoints_in_component": true,
+     "upper_info": {
+      "node": "Node1991979",
+      "layer": "Signal$TOP",
+      "x_um": 36061.9,
+      "y_um": -33530.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68296,
+      "matrix_index": 66087,
+      "in_component": true
+     },
+     "lower_info": {
+      "node": "Node103369",
+      "layer": "Signal$L02(DGND)",
+      "x_um": 36061.9,
+      "y_um": -33530.0,
+      "padstack": null,
+      "on_rail_sheet_layer": false,
+      "raw": 68015,
+      "matrix_index": 65806,
+      "in_component": true
+     }
+    }
+   ],
+   "traces": [
+    {
+     "a": "Node103368",
+     "b": "Node103369",
+     "a_layer": "Signal$L02(DGND)",
+     "b_layer": "Signal$L02(DGND)"
+    },
+    {
+     "a": "Node103370",
+     "b": "Node103371",
+     "a_layer": "Signal$L06(DGND)",
+     "b_layer": "Signal$L06(DGND)"
+    },
+    {
+     "a": "Node103372",
+     "b": "Node103373",
+     "a_layer": "Signal$L04(DGND)",
+     "b_layer": "Signal$L04(DGND)"
+    },
+    {
+     "a": "Node103374",
+     "b": "Node103375",
+     "a_layer": "Signal$L05(SIG2)",
+     "b_layer": "Signal$L05(SIG2)"
+    },
+    {
+     "a": "Node103376",
+     "b": "Node103370",
+     "a_layer": "Signal$L06(DGND)",
+     "b_layer": "Signal$L06(DGND)"
+    },
+    {
+     "a": "Node103376",
+     "b": "Node103377",
+     "a_layer": "Signal$L06(DGND)",
+     "b_layer": "Signal$L06(DGND)"
+    },
+    {
+     "a": "Node103377",
+     "b": "Node103371",
+     "a_layer": "Signal$L06(DGND)",
+     "b_layer": "Signal$L06(DGND)"
+    },
+    {
+     "a": "Node103378",
+     "b": "Node103379",
+     "a_layer": "Signal$L07(SIG3)",
+     "b_layer": "Signal$L07(SIG3)"
+    },
+    {
+     "a": "Node103380",
+     "b": "Node103381",
+     "a_layer": "Signal$L08(DGND)",
+     "b_layer": "Signal$L08(DGND)"
+    },
+    {
+     "a": "Node103382",
+     "b": "Node103383",
+     "a_layer": "Signal$L09(MAIN_POWER1)",
+     "b_layer": "Signal$L09(MAIN_POWER1)"
+    },
+    {
+     "a": "Node103377",
+     "b": "Node103370",
+     "a_layer": "Signal$L06(DGND)",
+     "b_layer": "Signal$L06(DGND)"
+    },
+    {
+     "a": "Node103384",
+     "b": "Node103385",
+     "a_layer": "Signal$L03(SIG1)",
+     "b_layer": "Signal$L03(SIG1)"
+    }
+   ],
+   "pad_links": [
+    {
+     "a": "Node755",
+     "b": "Node1991979",
+     "layer": "Signal$TOP"
+    },
+    {
+     "a": "Node755",
+     "b": "Node1991978",
+     "layer": "Signal$TOP"
+    }
+   ]
+  }
+ ],
+ "wall_seconds": 94.84901022911072,
+ "peak_rss_MB": 1335.3125
+}

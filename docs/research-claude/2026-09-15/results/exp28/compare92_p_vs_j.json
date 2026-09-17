@@ -1,0 +1,1842 @@
+[
+ {
+  "port": "Port10_SITE0",
+  "eb": 0.27635421257352455,
+  "ep": 0.2835393280643438,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -8.933437775491909,
+  "dp": -9.251055247768008,
+  "zr": null
+ },
+ {
+  "port": "Port11_SITE0",
+  "eb": 3.2249048657230786,
+  "ep": 0.3343587692362922,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": 9.255255955426735,
+  "dp": -8.238413709822263,
+  "zr": null
+ },
+ {
+  "port": "Port12_SITE0",
+  "eb": 3.18684256731258,
+  "ep": 0.44571972566914797,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": 3.224414283266336,
+  "dp": -12.57164239409132,
+  "zr": null
+ },
+ {
+  "port": "Port13_SITE0",
+  "eb": 0.10903449631264936,
+  "ep": 0.12113396301915319,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -0.5907693189304047,
+  "dp": -0.6575346744276664,
+  "zr": null
+ },
+ {
+  "port": "Port14_SITE0",
+  "eb": 0.06790016119766507,
+  "ep": 0.08171702897066306,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "db": -0.4809297766109879,
+  "dp": -0.5793393368778728,
+  "zr": null
+ },
+ {
+  "port": "Port15_SITE0",
+  "eb": 0.03394005246802339,
+  "ep": 0.04739197040324266,
+  "pb": {
+   "G1": true,
+   "G2": true,
+   "G3": true,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": true,
+   "G3": true,
+   "G4": false
+  },
+  "db": -0.0472633972596441,
+  "dp": -0.062293351299416364,
+  "zr": null
+ },
+ {
+  "port": "Port16_SITE0",
+  "eb": 0.14017815424206773,
+  "ep": 0.1446509013273014,
+  "pb": {
+   "G1": false,
+   "G2": true,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": true,
+   "G3": false,
+   "G4": false
+  },
+  "db": -0.288696419889628,
+  "dp": -0.2981663272897314,
+  "zr": null
+ },
+ {
+  "port": "Port17_SITE0",
+  "eb": 0.080044156506061,
+  "ep": 0.29797126633268584,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -2.452932116989888,
+  "dp": -9.101798008280717,
+  "zr": null
+ },
+ {
+  "port": "Port18_SITE0",
+  "eb": 0.026867011300832074,
+  "ep": 0.008121786924081373,
+  "pb": {
+   "G1": true,
+   "G2": true,
+   "G3": true,
+   "G4": false
+  },
+  "pp": {
+   "G1": true,
+   "G2": true,
+   "G3": true,
+   "G4": false
+  },
+  "db": 0.008302428333899669,
+  "dp": -0.006362315001733564,
+  "zr": null
+ },
+ {
+  "port": "Port19_SITE0",
+  "eb": 0.2990486267340381,
+  "ep": 0.3089300884815194,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -5.990799201943304,
+  "dp": -6.310321969004204,
+  "zr": null
+ },
+ {
+  "port": "Port1_SITE0",
+  "eb": 0.03397684299769807,
+  "ep": 0.03154037191550879,
+  "pb": {
+   "G1": true,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "db": 0.012885638854412754,
+  "dp": -0.08139088043525311,
+  "zr": null
+ },
+ {
+  "port": "Port20_SITE0",
+  "eb": 0.28446535088563946,
+  "ep": 0.33287795818751353,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -6.218359717621552,
+  "dp": -7.242642937916417,
+  "zr": null
+ },
+ {
+  "port": "Port21_SITE0",
+  "eb": 0.37448929291335464,
+  "ep": 0.3912700589615388,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -5.584493713378106,
+  "dp": -8.339087722629174,
+  "zr": null
+ },
+ {
+  "port": "Port22_SITE0",
+  "eb": 0.2909637192279225,
+  "ep": 0.3478450285001425,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -5.995355132931885,
+  "dp": -7.269638254659682,
+  "zr": null
+ },
+ {
+  "port": "Port23_SITE0",
+  "eb": 0.3797068491210695,
+  "ep": 0.40448962879719147,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -13.675821544734546,
+  "dp": -16.58351774790564,
+  "zr": null
+ },
+ {
+  "port": "Port24_SITE0",
+  "eb": 0.3101979122892746,
+  "ep": 0.3179432087235925,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -11.738541379932698,
+  "dp": -12.028859123131543,
+  "zr": null
+ },
+ {
+  "port": "Port25_SITE0",
+  "eb": 0.3069914770943809,
+  "ep": 0.31628749780142623,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -10.96526122827494,
+  "dp": -11.403115405266368,
+  "zr": null
+ },
+ {
+  "port": "Port26_SITE0",
+  "eb": 0.24138856783074697,
+  "ep": 0.35970349907271026,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -5.428916984513776,
+  "dp": -7.839337850522429,
+  "zr": null
+ },
+ {
+  "port": "Port27_SITE0",
+  "eb": 0.3311591422094618,
+  "ep": 0.340047359836126,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -7.372573520762655,
+  "dp": -7.662444374656838,
+  "zr": null
+ },
+ {
+  "port": "Port28_SITE0",
+  "eb": 0.3072013836842164,
+  "ep": 0.3742911140694786,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -7.981874150678463,
+  "dp": -9.850062289552087,
+  "zr": null
+ },
+ {
+  "port": "Port29_SITE0",
+  "eb": 0.39397685644702385,
+  "ep": 0.40591552402360315,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -9.85456014009889,
+  "dp": -10.266445588838236,
+  "zr": null
+ },
+ {
+  "port": "Port2_SITE0",
+  "eb": 0.09780896441307926,
+  "ep": 0.10797306048031415,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -0.6949677993303436,
+  "dp": -0.7702429804561693,
+  "zr": null
+ },
+ {
+  "port": "Port30_SITE0",
+  "eb": 0.2665159610075866,
+  "ep": 0.37626892152086655,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -5.847298673282202,
+  "dp": -8.027978430540726,
+  "zr": null
+ },
+ {
+  "port": "Port31_SITE0",
+  "eb": 0.1007454132727145,
+  "ep": 0.3647249804436666,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -2.450909759015855,
+  "dp": -9.246018212374748,
+  "zr": null
+ },
+ {
+  "port": "Port32_SITE0",
+  "eb": 0.4185235467470951,
+  "ep": 0.4285748949057511,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -10.958308540726023,
+  "dp": -11.311709788091726,
+  "zr": null
+ },
+ {
+  "port": "Port33_SITE0",
+  "eb": 0.33560391517441995,
+  "ep": 0.344590778614311,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -14.099740407490332,
+  "dp": -14.574605686575596,
+  "zr": null
+ },
+ {
+  "port": "Port34_SITE0",
+  "eb": 0.37002520662392796,
+  "ep": 0.3808184702390982,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -10.693049851390587,
+  "dp": -11.108587475501603,
+  "zr": null
+ },
+ {
+  "port": "Port35_SITE0",
+  "eb": 3.2382864971113787,
+  "ep": 0.37630975999724037,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": 7.930200543385686,
+  "dp": -9.289766542863102,
+  "zr": null
+ },
+ {
+  "port": "Port36_SITE0",
+  "eb": 0.3098973359740382,
+  "ep": 0.3937790160995815,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -11.138680421711154,
+  "dp": -13.869688480540674,
+  "zr": null
+ },
+ {
+  "port": "Port37_SITE0",
+  "eb": 0.10822617346988612,
+  "ep": 0.11974058607734593,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -0.6097623632630444,
+  "dp": -0.6743332500968782,
+  "zr": null
+ },
+ {
+  "port": "Port38_SITE0",
+  "eb": 2.782522958430585,
+  "ep": 0.3421073466650897,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": 12.979269748208663,
+  "dp": -9.567899656968173,
+  "zr": null
+ },
+ {
+  "port": "Port39_SITE0",
+  "eb": 0.0816912132913575,
+  "ep": 0.09492617998211754,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "db": -0.500282122340422,
+  "dp": -0.5823606117400411,
+  "zr": null
+ },
+ {
+  "port": "Port3_SITE0",
+  "eb": 0.0879373669841315,
+  "ep": 0.10264513958206492,
+  "pb": {
+   "G1": true,
+   "G2": true,
+   "G3": true,
+   "G4": false
+  },
+  "pp": {
+   "G1": true,
+   "G2": true,
+   "G3": false,
+   "G4": false
+  },
+  "db": -0.015851645883946417,
+  "dp": -0.018090611907412082,
+  "zr": null
+ },
+ {
+  "port": "Port40_SITE0",
+  "eb": 0.3325522887910692,
+  "ep": 0.3425749600512381,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -5.6180122444767955,
+  "dp": -5.815209177724253,
+  "zr": null
+ },
+ {
+  "port": "Port41_SITE0",
+  "eb": 0.4685062463270451,
+  "ep": 0.5411911491309944,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -11.604784100638826,
+  "dp": -13.481220593939614,
+  "zr": null
+ },
+ {
+  "port": "Port42_SITE0",
+  "eb": 0.04529546731743852,
+  "ep": 0.047719043288880686,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "db": 48.02854599438966,
+  "dp": 24.286936508234547,
+  "zr": null
+ },
+ {
+  "port": "Port43_SITE0",
+  "eb": 0.0354141346356829,
+  "ep": 0.03780574556621634,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "db": 158.1279114970098,
+  "dp": 132.9201795749384,
+  "zr": null
+ },
+ {
+  "port": "Port44_SITE0",
+  "eb": 0.04121651510776172,
+  "ep": 0.04362780261150791,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "db": 160.0329605342825,
+  "dp": 135.73637633975545,
+  "zr": null
+ },
+ {
+  "port": "Port45_SITE0",
+  "eb": 0.04791891596825536,
+  "ep": 0.050327660333084015,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "db": 95.45885615173333,
+  "dp": 69.60902472918917,
+  "zr": null
+ },
+ {
+  "port": "Port46_SITE0",
+  "eb": 0.21272073628008073,
+  "ep": 0.20900943479530157,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": 2069.0739250590814,
+  "dp": 2041.2213952374182,
+  "zr": null
+ },
+ {
+  "port": "Port47_SITE1",
+  "eb": 0.10171325724510819,
+  "ep": 0.11025802848035632,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -0.703683602892591,
+  "dp": -0.7668018962518623,
+  "zr": null
+ },
+ {
+  "port": "Port48_SITE1",
+  "eb": 0.06739495702998889,
+  "ep": 0.07850057900204062,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "db": -0.46707177619696466,
+  "dp": -0.5564670553020292,
+  "zr": null
+ },
+ {
+  "port": "Port49_SITE1",
+  "eb": 0.08321064867236615,
+  "ep": 0.09697915737397453,
+  "pb": {
+   "G1": true,
+   "G2": true,
+   "G3": true,
+   "G4": false
+  },
+  "pp": {
+   "G1": true,
+   "G2": true,
+   "G3": true,
+   "G4": false
+  },
+  "db": -0.015095667449526845,
+  "dp": -0.017314874354485466,
+  "zr": null
+ },
+ {
+  "port": "Port4_SITE0",
+  "eb": 0.09968304080250677,
+  "ep": 0.11223841468025644,
+  "pb": {
+   "G1": false,
+   "G2": true,
+   "G3": true,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": true,
+   "G3": false,
+   "G4": false
+  },
+  "db": -0.23394114242611289,
+  "dp": -0.26254125072870194,
+  "zr": null
+ },
+ {
+  "port": "Port50_SITE1",
+  "eb": 0.09063917577114501,
+  "ep": 0.11098014354109033,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -0.22604882556162814,
+  "dp": -0.2745291973429761,
+  "zr": null
+ },
+ {
+  "port": "Port51_SITE1_1721",
+  "eb": 0.16116697192984603,
+  "ep": 0.17324772486016723,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -6.888958239620366,
+  "dp": -7.561723775512508,
+  "zr": null
+ },
+ {
+  "port": "Port52_SITE1_19216",
+  "eb": 0.1997208183754403,
+  "ep": 0.2066248795695991,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -9.18254838311798,
+  "dp": -9.495809218987974,
+  "zr": null
+ },
+ {
+  "port": "Port53_SITE1",
+  "eb": 0.05711591553100888,
+  "ep": 0.030760788780242066,
+  "pb": {
+   "G1": true,
+   "G2": true,
+   "G3": true,
+   "G4": false
+  },
+  "pp": {
+   "G1": true,
+   "G2": true,
+   "G3": true,
+   "G4": false
+  },
+  "db": 0.027481788224629003,
+  "dp": 0.011988806726764379,
+  "zr": null
+ },
+ {
+  "port": "Port54_SITE1",
+  "eb": 0.3489551630323323,
+  "ep": 0.36165114316585306,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -8.072137892710419,
+  "dp": -8.437648677445447,
+  "zr": null
+ },
+ {
+  "port": "Port55_SITE1",
+  "eb": 0.34118071565527125,
+  "ep": 0.3986238902391525,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -9.775187110782676,
+  "dp": -13.503711854297729,
+  "zr": null
+ },
+ {
+  "port": "Port56_SITE1",
+  "eb": 0.27214954653513623,
+  "ep": 0.2852501796842914,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -9.128160567467507,
+  "dp": -9.695339095116415,
+  "zr": null
+ },
+ {
+  "port": "Port57_SITE1",
+  "eb": 0.3788024380854359,
+  "ep": 0.39621269334723797,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -8.065721936789672,
+  "dp": -10.792174712699977,
+  "zr": null
+ },
+ {
+  "port": "Port58_SITE1",
+  "eb": 0.4510761486363286,
+  "ep": 0.46001122045163234,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -12.479010348697773,
+  "dp": -12.81999581302445,
+  "zr": null
+ },
+ {
+  "port": "Port59_SITE1",
+  "eb": 0.09710254501128567,
+  "ep": 0.1040873529509162,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -0.5177646849219716,
+  "dp": -0.5548330888391237,
+  "zr": null
+ },
+ {
+  "port": "Port5_SITE0_1721",
+  "eb": 0.14882913394880787,
+  "ep": 0.18241818788201353,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -6.192172437506617,
+  "dp": -7.729550867048844,
+  "zr": null
+ },
+ {
+  "port": "Port60_SITE1",
+  "eb": 0.08507894048659162,
+  "ep": 0.09686940816950651,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": true,
+   "G3": true,
+   "G4": false
+  },
+  "db": -0.6541894250162517,
+  "dp": -0.734810178810285,
+  "zr": null
+ },
+ {
+  "port": "Port61_SITE1",
+  "eb": 0.06860980643320315,
+  "ep": 0.07991110166243977,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": true,
+   "G3": true,
+   "G4": false
+  },
+  "db": -0.08349926227595215,
+  "dp": -0.09765758781269014,
+  "zr": null
+ },
+ {
+  "port": "Port62_SITE1",
+  "eb": 0.14525927436973435,
+  "ep": 0.14918067615784944,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -0.29917780658902654,
+  "dp": -0.30776767693935897,
+  "zr": null
+ },
+ {
+  "port": "Port63_SITE1",
+  "eb": 0.32383707862162137,
+  "ep": 0.32985117772185213,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -9.645303807057914,
+  "dp": -9.832616413178886,
+  "zr": null
+ },
+ {
+  "port": "Port64_SITE1",
+  "eb": 0.0248401793863457,
+  "ep": 0.012581804355482167,
+  "pb": {
+   "G1": true,
+   "G2": true,
+   "G3": true,
+   "G4": false
+  },
+  "pp": {
+   "G1": true,
+   "G2": true,
+   "G3": true,
+   "G4": false
+  },
+  "db": 0.0023908811772154056,
+  "dp": -0.011303962434388855,
+  "zr": null
+ },
+ {
+  "port": "Port65_SITE1",
+  "eb": 3.8242560689134115,
+  "ep": 0.2994050338129747,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": 10.109160018199194,
+  "dp": -6.105125964015193,
+  "zr": null
+ },
+ {
+  "port": "Port66_SITE1",
+  "eb": 0.19493313576438043,
+  "ep": 0.30711105421345847,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -1.855981244672452,
+  "dp": -6.3842718241950855,
+  "zr": null
+ },
+ {
+  "port": "Port67_SITE1",
+  "eb": 0.0666854204212856,
+  "ep": 0.31948272686185153,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -1.2198838394878695,
+  "dp": -6.497241525455812,
+  "zr": null
+ },
+ {
+  "port": "Port68_SITE1",
+  "eb": 0.07118249402873982,
+  "ep": 0.3051481717834706,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -1.0411131027937455,
+  "dp": -6.206164261137467,
+  "zr": null
+ },
+ {
+  "port": "Port69_SITE1",
+  "eb": 0.2830240159272772,
+  "ep": 0.3549401834199056,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -10.862214729947667,
+  "dp": -13.312057144429284,
+  "zr": null
+ },
+ {
+  "port": "Port6_SITE0_19216",
+  "eb": 0.20889360250595673,
+  "ep": 0.21354577368181107,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -9.43794711981464,
+  "dp": -9.652001095855054,
+  "zr": null
+ },
+ {
+  "port": "Port70_SITE1",
+  "eb": 0.13111127767808928,
+  "ep": 0.356841191278052,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -3.9319665328498425,
+  "dp": -14.026909795745123,
+  "zr": null
+ },
+ {
+  "port": "Port71_SITE1",
+  "eb": 0.3336852308274988,
+  "ep": 0.3415204575575124,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -12.670430497744526,
+  "dp": -13.079582652826257,
+  "zr": null
+ },
+ {
+  "port": "Port72_SITE1",
+  "eb": 0.4541652075820161,
+  "ep": 0.4608239185888654,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -11.832442763824467,
+  "dp": -12.006064174548563,
+  "zr": null
+ },
+ {
+  "port": "Port73_SITE1",
+  "eb": 3.352545693486879,
+  "ep": 0.38000188437686166,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": 8.691977747214853,
+  "dp": -8.961562008497555,
+  "zr": null
+ },
+ {
+  "port": "Port74_SITE1",
+  "eb": 0.2558955606619313,
+  "ep": 0.384388683184967,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -4.297374242558747,
+  "dp": -9.309724285705682,
+  "zr": null
+ },
+ {
+  "port": "Port75_SITE1",
+  "eb": 0.11914446784575984,
+  "ep": 0.43244177826588487,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -0.4373748096209301,
+  "dp": -11.368745368198475,
+  "zr": null
+ },
+ {
+  "port": "Port76_SITE1",
+  "eb": 0.431913599162722,
+  "ep": 0.4505614240164885,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -9.353826450160092,
+  "dp": -10.371247815096716,
+  "zr": null
+ },
+ {
+  "port": "Port77_SITE1",
+  "eb": 0.4133661134363305,
+  "ep": 0.45963746482441337,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -12.476156524484868,
+  "dp": -13.827561109276573,
+  "zr": null
+ },
+ {
+  "port": "Port78_SITE1",
+  "eb": 0.3826921214484195,
+  "ep": 0.4593773947422634,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -8.40101776357194,
+  "dp": -12.359833015781614,
+  "zr": null
+ },
+ {
+  "port": "Port79_SITE1",
+  "eb": 0.2947029304122814,
+  "ep": 0.34816725173349444,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -10.408091150914851,
+  "dp": -14.369050214849713,
+  "zr": null
+ },
+ {
+  "port": "Port7_SITE0",
+  "eb": 0.06322534495355597,
+  "ep": 0.0291011157671924,
+  "pb": {
+   "G1": true,
+   "G2": true,
+   "G3": true,
+   "G4": false
+  },
+  "pp": {
+   "G1": true,
+   "G2": true,
+   "G3": true,
+   "G4": false
+  },
+  "db": 0.024336787468085496,
+  "dp": 0.009178985428558129,
+  "zr": null
+ },
+ {
+  "port": "Port80_SITE1",
+  "eb": 0.24431125806400703,
+  "ep": 0.34458167360885344,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -6.725972760415002,
+  "dp": -9.52923013477058,
+  "zr": null
+ },
+ {
+  "port": "Port81_SITE1",
+  "eb": 0.38010771525364667,
+  "ep": 0.3950481635420216,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -9.312355120750516,
+  "dp": -9.878784166454942,
+  "zr": null
+ },
+ {
+  "port": "Port82_SITE1",
+  "eb": 0.35327578820706107,
+  "ep": 0.3930792230105795,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -11.435308195099049,
+  "dp": -14.908114035562553,
+  "zr": null
+ },
+ {
+  "port": "Port83_SITE1",
+  "eb": 0.08504200260046071,
+  "ep": 0.09417287281978498,
+  "pb": {
+   "G1": false,
+   "G2": true,
+   "G3": true,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": true,
+   "G3": true,
+   "G4": false
+  },
+  "db": -0.4627081253481954,
+  "dp": -0.5121398842742706,
+  "zr": null
+ },
+ {
+  "port": "Port84_SITE1",
+  "eb": 0.29619910074676026,
+  "ep": 0.36360170029841155,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -5.86122003956626,
+  "dp": -9.975237612937578,
+  "zr": null
+ },
+ {
+  "port": "Port85_SITE1",
+  "eb": 0.056056406762664185,
+  "ep": 0.0716711742621278,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "db": -0.3268061024929402,
+  "dp": -0.41393878678623336,
+  "zr": null
+ },
+ {
+  "port": "Port86_SITE1",
+  "eb": 0.39294513642384693,
+  "ep": 0.39968571345150944,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -6.868723169899581,
+  "dp": -7.009632556068255,
+  "zr": null
+ },
+ {
+  "port": "Port87_SITE1",
+  "eb": 0.5273425646181916,
+  "ep": 0.5365563401711243,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -12.90637557655781,
+  "dp": -13.190494216286496,
+  "zr": null
+ },
+ {
+  "port": "Port88_SITE1",
+  "eb": 0.03488809726733102,
+  "ep": 0.03991771580626147,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "db": 91.96554319144035,
+  "dp": 63.12366739326958,
+  "zr": null
+ },
+ {
+  "port": "Port89_SITE1",
+  "eb": 0.03180314207573927,
+  "ep": 0.03389191462949827,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "db": 124.46885059218627,
+  "dp": 111.76040803871689,
+  "zr": null
+ },
+ {
+  "port": "Port8_SITE0",
+  "eb": 1.9738200134221942,
+  "ep": 0.37965936725792704,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": -0.3532444487619295,
+  "dp": -9.282527360647661,
+  "zr": null
+ },
+ {
+  "port": "Port90_SITE1",
+  "eb": 0.03495456246924782,
+  "ep": 0.03668374895177489,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "db": 146.45388510827394,
+  "dp": 136.342756292823,
+  "zr": null
+ },
+ {
+  "port": "Port91_SITE1",
+  "eb": 0.04586868989358582,
+  "ep": 0.047553113105783786,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": true,
+   "G4": false
+  },
+  "db": 79.82039931185625,
+  "dp": 69.99803641234692,
+  "zr": null
+ },
+ {
+  "port": "Port92_SITE1",
+  "eb": 0.22533268997960101,
+  "ep": 0.22139622613260684,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": 1190.0089802501066,
+  "dp": 1172.7866724505268,
+  "zr": null
+ },
+ {
+  "port": "Port9_SITE0",
+  "eb": 2.17014514708734,
+  "ep": 0.40512153879944324,
+  "pb": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "pp": {
+   "G1": false,
+   "G2": false,
+   "G3": false,
+   "G4": false
+  },
+  "db": 0.011639088928511176,
+  "dp": -15.601493222466289,
+  "zr": null
+ }
+]

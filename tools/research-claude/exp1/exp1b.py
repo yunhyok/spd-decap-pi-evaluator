@@ -36,6 +36,10 @@ from spd_decap_pi._core.io import spd as P  # noqa: E402
 EPS0 = M.EPS0
 
 
+def diel_rows(between):
+    return [r for r in between if r["conductivity"] is None]
+
+
 def load_layer_shapes(spd_path, layers):
     """All-net ordered shape primitives for the given conductor layers (section-limited
     call of spd._parse_shapes, src/spd_decap_pi/_core/io/spd.py:2962)."""
@@ -63,7 +67,13 @@ def load_layer_shapes(spd_path, layers):
 
 
 class TwoSided:
-    def __init__(self, ex, shapes, max_layers=3, gnd_net="DGND"):
+    # EXP-11 flags, class-level so subclasses with a frozen __init__ signature (run8.TwoSidedAny)
+    # inherit the default and callers can set them on the instance after construction.
+    eps_table = False   # per-frequency eps_r/tand from the material table instead of the fixed dk / 1 MHz tand
+    c_all_refs = False  # also give C to cells whose reference is a non-adjacent candidate layer (k > 0)
+    c_unit_fix = False  # EXP-13: multiply cell C by 1e6 (missing gap um->m in the frozen path); default False = frozen (bugged) behaviour
+
+    def __init__(self, ex, shapes, max_layers=3, gnd_net="DGND", eps_table=False, c_all_refs=False, c_unit_fix=False):
         self.ex = ex
         self.st = M.Stack(ex["stackup"])
         self.rows = ex["stackup"]
@@ -73,6 +83,9 @@ class TwoSided:
         self.gnd = gnd_net
         self.report = {}
         self.cache = {}
+        self.eps_table = eps_table
+        self.c_all_refs = c_all_refs
+        self.c_unit_fix = c_unit_fix
 
     def candidates(self, L):
         i = self.names.index(L)
@@ -105,11 +118,13 @@ class TwoSided:
         rail = blk["mask"]
         cand = self.candidates(L)
         d_side = {}; c_side = {}; td_side = {}; who = {}
+        cents = {}  # eps_table: [(cells, dielectric rows)] per side, one entry per C assignment
         rep = self.report.setdefault(L, {"blocks": []})
         brep = {"h": blk["h"], "cells": int(rail.sum()), "sides": {}}
         for side in ("up", "down"):
             d = np.full(shape, np.nan); c = np.zeros(shape); td = np.zeros(shape); assigned = np.zeros(shape, bool)
-            layer_rep = []
+            who_side = np.full(shape, -1, np.int64)  # stackup row index of the assigned conductor, -1 = fallback
+            layer_rep = []; ents = []
             for k, (cl, between) in enumerate(cand[side]):
                 gm = self.mask(cl, self.gnd, blk) & rail & ~assigned
                 cov_total = float((self.mask(cl, self.gnd, blk) & rail).sum() / max(rail.sum(), 1))
@@ -127,14 +142,22 @@ class TwoSided:
                 layer_rep.append(dict(layer=cl, gap_um=gap, gnd_cover_of_rail=round(cov_total, 3),
                                       newly_assigned=round(float(gm.sum() / max(rail.sum(), 1)), 3), other_nets_cover=others[:4]))
                 d[gm] = gap
-                if k == 0:  # adjacent conductor: dielectric-only gap -> capacitance
-                    diel = [r for r in between if r["conductivity"] is None]
+                who_side[gm] = self.names.index(cl)
+                diel = diel_rows(between)
+                if (k == 0 or self.c_all_refs) and diel:  # adjacent conductor (k == 0): dielectric-only gap -> capacitance
                     inv = sum(r["thickness_um"] / float(r["dk"] or M.eps_tand(r, 1e6)[0]) for r in diel)
                     er_dummy, tdv = M.eps_tand(diel[0], 1e6)
-                    c[gm] = EPS0 * 1e-12 / inv
+                    if self.c_unit_fix:
+                        c[gm] = EPS0 * 1e-12 / inv * 1e6
+                    else:
+                        c[gm] = EPS0 * 1e-12 / inv
                     td[gm] = tdv
+                    if self.eps_table:
+                        ents.append((gm, diel))  # gm is never mutated after this point
                 assigned |= gm
             d_side[side], c_side[side], td_side[side] = d, c, td
+            who[side] = who_side
+            cents[side] = ents
             brep["sides"][side] = layer_rep
         du, dd = d_side["up"], d_side["down"]
         both = ~np.isnan(du) & ~np.isnan(dd)
@@ -153,7 +176,30 @@ class TwoSided:
                     d_eff_um_median=float(np.median(d_eff[rc])), d_eff_um_mean=float(np.mean(d_eff[rc])),
                     d_B_um=self.fallback(L))
         rep["blocks"].append(brep)
-        return dict(d_eff=d_eff, c_um2=c_um2, tand=tand)
+        # per-cell reference info (EXP-12): which conductor row is the wall on each side, and two-sidedness
+        out = dict(d_eff=d_eff, c_um2=c_um2, tand=tand, two_sided=both, wall_up=who["up"], wall_dn=who["down"])
+        if self.eps_table:
+            out["c_tand_at"] = self._c_tand_fn(shape, cents, self.c_unit_fix)
+        return out
+
+    @staticmethod
+    def _c_tand_fn(shape, cents, c_unit_fix=False):
+        """eps_table: f -> (c_um2, tand) with eps_r and tand read from the material table at f."""
+        def at(f):
+            cs = {}; tds = {}
+            for side in ("up", "down"):
+                c = np.zeros(shape); td = np.zeros(shape)
+                for gm, diel in cents.get(side, []):
+                    inv = sum(r["thickness_um"] / M.eps_tand(r, f)[0] for r in diel)
+                    if c_unit_fix:
+                        c[gm] = EPS0 * 1e-12 / inv * 1e6
+                    else:
+                        c[gm] = EPS0 * 1e-12 / inv
+                    td[gm] = M.eps_tand(diel[0], f)[1]
+                cs[side], tds[side] = c, td
+            cu = cs["up"] + cs["down"]
+            return cu, np.where(cu > 0, (cs["up"] * tds["up"] + cs["down"] * tds["down"]) / np.where(cu > 0, cu, 1), 0)
+        return at
 
     def fallback(self, L):
         # variant-B rule (model.build_model): adjacent DGND-named layers, else nearest by name

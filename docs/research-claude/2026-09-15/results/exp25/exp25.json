@@ -1,0 +1,1297 @@
+{
+ "params": {
+  "N_DISCORDANT": 8,
+  "CONTROL_TOL": 0.105,
+  "CONTROL_DECAP_MAX": 10,
+  "N_CONTROL": 4,
+  "H_TR_CONTRIB_MIN": 0.5,
+  "H_TR_MAJORITY": 5,
+  "H_W_RATIO_HI": 2.0,
+  "H_W_RATIO_LO": 0.5,
+  "H_W_MAJORITY": 5
+ },
+ "n_pairs_total": 46,
+ "n_discordant": 8,
+ "n_control": 4,
+ "control_note": null,
+ "pairs": [
+  {
+   "k": 19,
+   "group": "discordant",
+   "port_S0": "Port19_SITE0",
+   "port_S1": "Port65_SITE1",
+   "decaps_S0": 4,
+   "s_mod": 2.2722286699792154,
+   "s_ref": 1.0238796607858325,
+   "abs_ln_ratio": 0.7971621418446201,
+   "S0": {
+    "port": "Port19_SITE0",
+    "R": {
+     "planes_mOhm": 2.2487030838090494,
+     "vias_mOhm": 3.298649502546373,
+     "traces_mOhm": 1.2176932085248593,
+     "total_mOhm": 6.765045794880282,
+     "per_layer_mOhm": {
+      "Signal$L10(DGND)": 0.6797449805795182,
+      "Signal$L21(DGND)": 0.21055720319919288,
+      "Signal$L30(OTHER_POWER1)": 1.3584009000303385
+     }
+    },
+    "extract": {
+     "n_traces": 543,
+     "n_traces_nowidth": 150,
+     "len_nowidth_total_um": 21824.96911809576,
+     "len_all_total_um": 65816.51974067767,
+     "n_vias": 705,
+     "n_port_pos_nodes": 12,
+     "n_rail_nodes": 963,
+     "port_layer_dist": {
+      "Signal$TOP": 12
+     },
+     "two_sided_layers": [
+      "Signal$L10(DGND)",
+      "Signal$L30(OTHER_POWER1)"
+     ]
+    }
+   },
+   "S1": {
+    "port": "Port65_SITE1",
+    "R": {
+     "planes_mOhm": 2.8232150724200813,
+     "vias_mOhm": 4.427407238542766,
+     "traces_mOhm": 1.976978684012763,
+     "total_mOhm": 9.22760099497561,
+     "per_layer_mOhm": {
+      "Signal$L10(DGND)": 0.4206901688558676,
+      "Signal$L21(DGND)": 0.4103611249242713,
+      "Signal$L30(OTHER_POWER1)": 1.9921637786399424
+     }
+    },
+    "extract": {
+     "n_traces": 547,
+     "n_traces_nowidth": 150,
+     "len_nowidth_total_um": 21824.96911809576,
+     "len_all_total_um": 66673.75803490187,
+     "n_vias": 705,
+     "n_port_pos_nodes": 12,
+     "n_rail_nodes": 963,
+     "port_layer_dist": {
+      "Signal$TOP": 12
+     },
+     "two_sided_layers": [
+      "Signal$L10(DGND)",
+      "Signal$L30(OTHER_POWER1)"
+     ]
+    }
+   },
+   "delta": {
+    "dR_mOhm": {
+     "planes": 0.5745119886110319,
+     "vias": 1.1287577359963925,
+     "traces": 0.7592854754879037
+    },
+    "dR_abs_mOhm": {
+     "planes": 0.5745119886110319,
+     "vias": 1.1287577359963925,
+     "traces": 0.7592854754879037
+    },
+    "sum_dR_mOhm": 2.462555200095328,
+    "contribution": {
+     "planes": 0.2332991311580719,
+     "vias": 0.45836850112139504,
+     "traces": 0.30833236772053313
+    },
+    "dominant": "vias"
+   },
+   "geo": {
+    "centre_xy": [
+     13650.0,
+     3706.5
+    ],
+    "median_dist_by_axis": {
+     "x": 35435.8328057287,
+     "y": 4627.228121156701,
+     "xy": 16315.460074410079
+    },
+    "best_axis": "y",
+    "best_median_dist_um": 4627.228121156701,
+    "s0_median_spacing_um": 2464.033867462054,
+    "symmetric": false
+   },
+   "nowidth_len_ratio_S1_over_S0": 1.0
+  },
+  {
+   "k": 27,
+   "group": "discordant",
+   "port_S0": "Port27_SITE0",
+   "port_S1": "Port73_SITE1",
+   "decaps_S0": 4,
+   "s_mod": 2.237779684901114,
+   "s_ref": 1.0724724125278464,
+   "abs_ln_ratio": 0.7355175132892112,
+   "S0": {
+    "port": "Port27_SITE0",
+    "R": {
+     "planes_mOhm": 2.199967909628405,
+     "vias_mOhm": 3.7941366579449443,
+     "traces_mOhm": 1.8947789092745937,
+     "total_mOhm": 7.888883476847943,
+     "per_layer_mOhm": {
+      "Signal$L10(DGND)": 0.6981346272852361,
+      "Signal$L21(DGND)": 0.20172311651508038,
+      "Signal$L40(OTHER_POWER8)": 1.3001101658280885
+     }
+    },
+    "extract": {
+     "n_traces": 734,
+     "n_traces_nowidth": 240,
+     "len_nowidth_total_um": 30270.55954665718,
+     "len_all_total_um": 87135.31098549887,
+     "n_vias": 930,
+     "n_port_pos_nodes": 12,
+     "n_rail_nodes": 1227,
+     "port_layer_dist": {
+      "Signal$TOP": 12
+     },
+     "two_sided_layers": [
+      "Signal$L10(DGND)",
+      "Signal$L40(OTHER_POWER8)"
+     ]
+    }
+   },
+   "S1": {
+    "port": "Port73_SITE1",
+    "R": {
+     "planes_mOhm": 3.238550548161367,
+     "vias_mOhm": 5.3877889274823225,
+     "traces_mOhm": 2.9282657978857096,
+     "total_mOhm": 11.554605273529399,
+     "per_layer_mOhm": {
+      "Signal$L10(DGND)": 1.3241360320147078,
+      "Signal$L21(DGND)": 0.37949845901304347,
+      "Signal$L40(OTHER_POWER8)": 1.5349160571336158
+     }
+    },
+    "extract": {
+     "n_traces": 730,
+     "n_traces_nowidth": 240,
+     "len_nowidth_total_um": 30270.55954665718,
+     "len_all_total_um": 87031.1125497558,
+     "n_vias": 930,
+     "n_port_pos_nodes": 12,
+     "n_rail_nodes": 1223,
+     "port_layer_dist": {
+      "Signal$TOP": 12
+     },
+     "two_sided_layers": [
+      "Signal$L10(DGND)",
+      "Signal$L40(OTHER_POWER8)"
+     ]
+    }
+   },
+   "delta": {
+    "dR_mOhm": {
+     "planes": 1.038582638532962,
+     "vias": 1.5936522695373783,
+     "traces": 1.033486888611116
+    },
+    "dR_abs_mOhm": {
+     "planes": 1.038582638532962,
+     "vias": 1.5936522695373783,
+     "traces": 1.033486888611116
+    },
+    "sum_dR_mOhm": 3.6657217966814564,
+    "contribution": {
+     "planes": 0.2833228204805889,
+     "vias": 0.43474446723701093,
+     "traces": 0.28193271228240013
+    },
+    "dominant": "vias"
+   },
+   "geo": {
+    "centre_xy": [
+     15073.05,
+     -1510.0
+    ],
+    "median_dist_by_axis": {
+     "x": 37295.22645113232,
+     "y": 15427.68063212373,
+     "xy": 24031.065618309705
+    },
+    "best_axis": "y",
+    "best_median_dist_um": 15427.68063212373,
+    "s0_median_spacing_um": 1716.210622272221,
+    "symmetric": false
+   },
+   "nowidth_len_ratio_S1_over_S0": 1.0
+  },
+  {
+   "k": 35,
+   "group": "discordant",
+   "port_S0": "Port35_SITE0",
+   "port_S1": "Port81_SITE1",
+   "decaps_S0": 4,
+   "s_mod": 0.4994932413994677,
+   "s_ref": 1.0240714300162175,
+   "abs_ln_ratio": 0.7179474917765669,
+   "S0": {
+    "port": "Port35_SITE0",
+    "R": {
+     "planes_mOhm": 2.526403349670886,
+     "vias_mOhm": 6.551673442602514,
+     "traces_mOhm": 3.820108964252641,
+     "total_mOhm": 12.898185756526042,
+     "per_layer_mOhm": {
+      "Signal$L10(DGND)": 0.6073794885132354,
+      "Signal$L21(DGND)": 0.48925357945670206,
+      "Signal$L36(OTHER_POWER5)": 1.4297702817009486
+     }
+    },
+    "extract": {
+     "n_traces": 515,
+     "n_traces_nowidth": 158,
+     "len_nowidth_total_um": 20111.009688326812,
+     "len_all_total_um": 58069.93249697199,
+     "n_vias": 629,
+     "n_port_pos_nodes": 6,
+     "n_rail_nodes": 829,
+     "port_layer_dist": {
+      "Signal$TOP": 6
+     },
+     "two_sided_layers": [
+      "Signal$L10(DGND)",
+      "Signal$L36(OTHER_POWER5)"
+     ]
+    }
+   },
+   "S1": {
+    "port": "Port81_SITE1",
+    "R": {
+     "planes_mOhm": 2.5508112059402226,
+     "vias_mOhm": 5.2232176704897855,
+     "traces_mOhm": 2.469458273722711,
+     "total_mOhm": 10.243487150152719,
+     "per_layer_mOhm": {
+      "Signal$L10(DGND)": 0.5986171463377267,
+      "Signal$L21(DGND)": 0.27275014509774476,
+      "Signal$L36(OTHER_POWER5)": 1.679443914504751
+     }
+    },
+    "extract": {
+     "n_traces": 507,
+     "n_traces_nowidth": 158,
+     "len_nowidth_total_um": 20111.009688326812,
+     "len_all_total_um": 58115.7223147287,
+     "n_vias": 629,
+     "n_port_pos_nodes": 6,
+     "n_rail_nodes": 823,
+     "port_layer_dist": {
+      "Signal$TOP": 6
+     },
+     "two_sided_layers": [
+      "Signal$L10(DGND)",
+      "Signal$L36(OTHER_POWER5)"
+     ]
+    }
+   },
+   "delta": {
+    "dR_mOhm": {
+     "planes": 0.024407856269336392,
+     "vias": -1.3284557721127284,
+     "traces": -1.35065069052993
+    },
+    "dR_abs_mOhm": {
+     "planes": 0.024407856269336392,
+     "vias": 1.3284557721127284,
+     "traces": 1.35065069052993
+    },
+    "sum_dR_mOhm": -2.654698606373322,
+    "contribution": {
+     "planes": -0.009194209923016772,
+     "vias": 0.5004167964391177,
+     "traces": 0.5087774134838989
+    },
+    "dominant": "traces"
+   },
+   "geo": {
+    "centre_xy": [
+     23725.0,
+     152.5
+    ],
+    "median_dist_by_axis": {
+     "x": 40595.76030188994,
+     "y": 14104.191351767804,
+     "xy": 27393.395495034027
+    },
+    "best_axis": "y",
+    "best_median_dist_um": 14104.191351767804,
+    "s0_median_spacing_um": 389.9999999999982,
+    "symmetric": false
+   },
+   "nowidth_len_ratio_S1_over_S0": 1.0
+  },
+  {
+   "k": 12,
+   "group": "discordant",
+   "port_S0": "Port12_SITE0",
+   "port_S1": "Port58_SITE1",
+   "decaps_S0": 4,
+   "s_mod": 0.5025192159467476,
+   "s_ref": 0.9711347951081695,
+   "abs_ln_ratio": 0.6588313996791697,
+   "S0": {
+    "port": "Port12_SITE0",
+    "R": {
+     "planes_mOhm": 3.308138666861184,
+     "vias_mOhm": 5.21711113783515,
+     "traces_mOhm": 2.772587464745348,
+     "total_mOhm": 11.29783726944168,
+     "per_layer_mOhm": {
+      "Signal$L10(DGND)": 1.1846069375796453,
+      "Signal$L20(DGND)": 0.08358632978558175,
+      "Signal$L21(DGND)": 0.4079172783313462,
+      "Signal$L37(OTHER_POWER6)": 1.6320281211646106
+     }
+    },
+    "extract": {
+     "n_traces": 396,
+     "n_traces_nowidth": 105,
+     "len_nowidth_total_um": 13243.369801662398,
+     "len_all_total_um": 43095.575887829546,
+     "n_vias": 602,
+     "n_port_pos_nodes": 10,
+     "n_rail_nodes": 771,
+     "port_layer_dist": {
+      "Signal$TOP": 10
+     },
+     "two_sided_layers": [
+      "Signal$L10(DGND)",
+      "Signal$L20(DGND)",
+      "Signal$L37(OTHER_POWER6)"
+     ]
+    }
+   },
+   "S1": {
+    "port": "Port58_SITE1",
+    "R": {
+     "planes_mOhm": 2.7373446154084915,
+     "vias_mOhm": 5.035774807662876,
+     "traces_mOhm": 2.6099287569455254,
+     "total_mOhm": 10.383048180016893,
+     "per_layer_mOhm": {
+      "Signal$L10(DGND)": 0.4555807119008395,
+      "Signal$L20(DGND)": 0.08563182948106403,
+      "Signal$L21(DGND)": 0.3591804139212782,
+      "Signal$L37(OTHER_POWER6)": 1.8369516601053097
+     }
+    },
+    "extract": {
+     "n_traces": 478,
+     "n_traces_nowidth": 135,
+     "len_nowidth_total_um": 17027.189744994663,
+     "len_all_total_um": 53388.17714816182,
+     "n_vias": 684,
+     "n_port_pos_nodes": 10,
+     "n_rail_nodes": 879,
+     "port_layer_dist": {
+      "Signal$TOP": 10
+     },
+     "two_sided_layers": [
+      "Signal$L10(DGND)",
+      "Signal$L37(OTHER_POWER6)"
+     ]
+    }
+   },
+   "delta": {
+    "dR_mOhm": {
+     "planes": -0.5707940514526926,
+     "vias": -0.18133633017227346,
+     "traces": -0.16265870779982272
+    },
+    "dR_abs_mOhm": {
+     "planes": 0.5707940514526926,
+     "vias": 0.18133633017227346,
+     "traces": 0.16265870779982272
+    },
+    "sum_dR_mOhm": -0.9147890894247888,
+    "contribution": {
+     "planes": 0.6239624609117308,
+     "vias": 0.19822747370795177,
+     "traces": 0.1778100653803174
+    },
+    "dominant": "planes"
+   },
+   "geo": {
+    "centre_xy": [
+     24274.7,
+     937.5
+    ],
+    "median_dist_by_axis": {
+     "x": 39800.66196707821,
+     "y": 8954.178336416986,
+     "xy": 25100.657537127765
+    },
+    "best_axis": "y",
+    "best_median_dist_um": 8954.178336416986,
+    "s0_median_spacing_um": 225.20000000000073,
+    "symmetric": false
+   },
+   "nowidth_len_ratio_S1_over_S0": 1.2857142857142971
+  },
+  {
+   "k": 11,
+   "group": "discordant",
+   "port_S0": "Port11_SITE0",
+   "port_S1": "Port57_SITE1",
+   "decaps_S0": 4,
+   "s_mod": 0.6133906637015293,
+   "s_ref": 1.1461545518374738,
+   "abs_ln_ratio": 0.6251657191759894,
+   "S0": {
+    "port": "Port11_SITE0",
+    "R": {
+     "planes_mOhm": 2.991964275241309,
+     "vias_mOhm": 7.639993275436074,
+     "traces_mOhm": 4.083563670752535,
+     "total_mOhm": 14.71552122142992,
+     "per_layer_mOhm": {
+      "Signal$L10(DGND)": 1.1032709812544788,
+      "Signal$L21(DGND)": 0.4259630843240383,
+      "Signal$L34(OTHER_POWER4)": 1.4627302096627923
+     }
+    },
+    "extract": {
+     "n_traces": 471,
+     "n_traces_nowidth": 132,
+     "len_nowidth_total_um": 17119.099716660738,
+     "len_all_total_um": 52776.42087896103,
+     "n_vias": 548,
+     "n_port_pos_nodes": 4,
+     "n_rail_nodes": 728,
+     "port_layer_dist": {
+      "Signal$TOP": 4
+     },
+     "two_sided_layers": [
+      "Signal$L10(DGND)",
+      "Signal$L34(OTHER_POWER4)"
+     ]
+    }
+   },
+   "S1": {
+    "port": "Port57_SITE1",
+    "R": {
+     "planes_mOhm": 3.186726617215833,
+     "vias_mOhm": 7.051389658289496,
+     "traces_mOhm": 2.996849962723525,
+     "total_mOhm": 13.234966238228854,
+     "per_layer_mOhm": {
+      "Signal$L10(DGND)": 0.7571863343405628,
+      "Signal$L21(DGND)": 0.3549598054383186,
+      "Signal$L34(OTHER_POWER4)": 2.0745804774369514
+     }
+    },
+    "extract": {
+     "n_traces": 387,
+     "n_traces_nowidth": 108,
+     "len_nowidth_total_um": 13935.27977332859,
+     "len_all_total_um": 43929.466657298966,
+     "n_vias": 478,
+     "n_port_pos_nodes": 4,
+     "n_rail_nodes": 626,
+     "port_layer_dist": {
+      "Signal$TOP": 4
+     },
+     "two_sided_layers": [
+      "Signal$L10(DGND)",
+      "Signal$L34(OTHER_POWER4)"
+     ]
+    }
+   },
+   "delta": {
+    "dR_mOhm": {
+     "planes": 0.1947623419745237,
+     "vias": -0.5886036171465783,
+     "traces": -1.0867137080290101
+    },
+    "dR_abs_mOhm": {
+     "planes": 0.1947623419745237,
+     "vias": 0.5886036171465783,
+     "traces": 1.0867137080290101
+    },
+    "sum_dR_mOhm": -1.4805549832010647,
+    "contribution": {
+     "planes": -0.13154684843479011,
+     "vias": 0.3975560677077832,
+     "traces": 0.733990780727007
+    },
+    "dominant": "traces"
+   },
+   "geo": {
+    "centre_xy": [
+     23400.0,
+     8846.75
+    ],
+    "median_dist_by_axis": {
+     "x": 40441.41528301872,
+     "y": 2962.0,
+     "xy": 24106.27833337753
+    },
+    "best_axis": "y",
+    "best_median_dist_um": 2962.0,
+    "s0_median_spacing_um": 389.9999999999991,
+    "symmetric": false
+   },
+   "nowidth_len_ratio_S1_over_S0": 0.8140194288234928
+  },
+  {
+   "k": 38,
+   "group": "discordant",
+   "port_S0": "Port38_SITE0",
+   "port_S1": "Port84_SITE1",
+   "decaps_S0": 4,
+   "s_mod": 0.5415391315016531,
+   "s_ref": 0.9737875275050302,
+   "abs_ln_ratio": 0.5867778067625444,
+   "S0": {
+    "port": "Port38_SITE0",
+    "R": {
+     "planes_mOhm": 5.70659314867679,
+     "vias_mOhm": 10.824558933417872,
+     "traces_mOhm": 5.906173639008094,
+     "total_mOhm": 22.43732572110276,
+     "per_layer_mOhm": {
+      "Signal$L10(DGND)": 1.1325574063698312,
+      "Signal$L21(DGND)": 1.0311167253460722,
+      "Signal$L34(OTHER_POWER4)": 3.5429190169608864
+     }
+    },
+    "extract": {
+     "n_traces": 446,
+     "n_traces_nowidth": 120,
+     "len_nowidth_total_um": 15527.189744994663,
+     "len_all_total_um": 50458.554940955444,
+     "n_vias": 535,
+     "n_port_pos_nodes": 4,
+     "n_rail_nodes": 702,
+     "port_layer_dist": {
+      "Signal$TOP": 4
+     },
+     "two_sided_layers": [
+      "Signal$L10(DGND)",
+      "Signal$L34(OTHER_POWER4)"
+     ]
+    }
+   },
+   "S1": {
+    "port": "Port84_SITE1",
+    "R": {
+     "planes_mOhm": 3.533830381971587,
+     "vias_mOhm": 7.589298045593627,
+     "traces_mOhm": 3.60711445483141,
+     "total_mOhm": 14.730242882396624,
+     "per_layer_mOhm": {
+      "Signal$L10(DGND)": 0.7861191491992005,
+      "Signal$L21(DGND)": 0.4135931418749588,
+      "Signal$L34(OTHER_POWER4)": 2.3341180908974275
+     }
+    },
+    "extract": {
+     "n_traces": 446,
+     "n_traces_nowidth": 120,
+     "len_nowidth_total_um": 15527.189744994663,
+     "len_all_total_um": 50793.655381748016,
+     "n_vias": 535,
+     "n_port_pos_nodes": 4,
+     "n_rail_nodes": 702,
+     "port_layer_dist": {
+      "Signal$TOP": 4
+     },
+     "two_sided_layers": [
+      "Signal$L10(DGND)",
+      "Signal$L34(OTHER_POWER4)"
+     ]
+    }
+   },
+   "delta": {
+    "dR_mOhm": {
+     "planes": -2.172762766705203,
+     "vias": -3.2352608878242455,
+     "traces": -2.2990591841766843
+    },
+    "dR_abs_mOhm": {
+     "planes": 2.172762766705203,
+     "vias": 3.2352608878242455,
+     "traces": 2.2990591841766843
+    },
+    "sum_dR_mOhm": -7.707082838706133,
+    "contribution": {
+     "planes": 0.2819176609589896,
+     "vias": 0.4197776195652494,
+     "traces": 0.2983047194757609
+    },
+    "dominant": "vias"
+   },
+   "geo": {
+    "centre_xy": [
+     -23506.15,
+     1740.0
+    ],
+    "median_dist_by_axis": {
+     "x": 44714.11229856809,
+     "y": 17658.99650084215,
+     "xy": 35668.62659734758
+    },
+    "best_axis": "y",
+    "best_median_dist_um": 17658.99650084215,
+    "s0_median_spacing_um": 283.29923263137766,
+    "symmetric": false
+   },
+   "nowidth_len_ratio_S1_over_S0": 1.0
+  },
+  {
+   "k": 29,
+   "group": "discordant",
+   "port_S0": "Port29_SITE0",
+   "port_S1": "Port75_SITE1",
+   "decaps_S0": 4,
+   "s_mod": 1.703687796180379,
+   "s_ref": 1.0622401125909569,
+   "abs_ln_ratio": 0.4724152014340121,
+   "S0": {
+    "port": "Port29_SITE0",
+    "R": {
+     "planes_mOhm": 3.784585661551185,
+     "vias_mOhm": 3.698642159888804,
+     "traces_mOhm": 1.7982023449283477,
+     "total_mOhm": 9.281430166368336,
+     "per_layer_mOhm": {
+      "Signal$L10(DGND)": 0.5360241850459752,
+      "Signal$L21(DGND)": 0.17819451739206096,
+      "Signal$L42(OTHER_POWER9)": 3.070366959113149
+     }
+    },
+    "extract": {
+     "n_traces": 869,
+     "n_traces_nowidth": 300,
+     "len_nowidth_total_um": 37838.19943332146,
+     "len_all_total_um": 103103.17424596816,
+     "n_vias": 1094,
+     "n_port_pos_nodes": 12,
+     "n_rail_nodes": 1422,
+     "port_layer_dist": {
+      "Signal$TOP": 12
+     },
+     "two_sided_layers": [
+      "Signal$L10(DGND)",
+      "Signal$L42(OTHER_POWER9)"
+     ]
+    }
+   },
+   "S1": {
+    "port": "Port75_SITE1",
+    "R": {
+     "planes_mOhm": 5.713383498872741,
+     "vias_mOhm": 9.574607416053663,
+     "traces_mOhm": 5.1049766720389185,
+     "total_mOhm": 20.392967586965323,
+     "per_layer_mOhm": {
+      "Signal$L10(DGND)": 2.6211351067732873,
+      "Signal$L21(DGND)": 0.546732039436666,
+      "Signal$L42(OTHER_POWER9)": 2.5455163526627875
+     }
+    },
+    "extract": {
+     "n_traces": 773,
+     "n_traces_nowidth": 270,
+     "len_nowidth_total_um": 34054.379489989326,
+     "len_all_total_um": 92525.61067390865,
+     "n_vias": 992,
+     "n_port_pos_nodes": 12,
+     "n_rail_nodes": 1292,
+     "port_layer_dist": {
+      "Signal$TOP": 12
+     },
+     "two_sided_layers": [
+      "Signal$L10(DGND)",
+      "Signal$L42(OTHER_POWER9)"
+     ]
+    }
+   },
+   "delta": {
+    "dR_mOhm": {
+     "planes": 1.928797837321556,
+     "vias": 5.875965256164859,
+     "traces": 3.3067743271105705
+    },
+    "dR_abs_mOhm": {
+     "planes": 1.928797837321556,
+     "vias": 5.875965256164859,
+     "traces": 3.3067743271105705
+    },
+    "sum_dR_mOhm": 11.111537420596985,
+    "contribution": {
+     "planes": 0.17358514526947688,
+     "vias": 0.5288165834975124,
+     "traces": 0.2975982712330108
+    },
+    "dominant": "vias"
+   },
+   "geo": {
+    "centre_xy": [
+     -8066.5,
+     764.9999999999982
+    ],
+    "median_dist_by_axis": {
+     "x": 34248.022500366875,
+     "y": 13468.549999999997,
+     "xy": 18452.903313925373
+    },
+    "best_axis": "y",
+    "best_median_dist_um": 13468.549999999997,
+    "s0_median_spacing_um": 1535.2999999999993,
+    "symmetric": false
+   },
+   "nowidth_len_ratio_S1_over_S0": 0.9000000000000002
+  },
+  {
+   "k": 8,
+   "group": "discordant",
+   "port_S0": "Port8_SITE0",
+   "port_S1": "Port54_SITE1",
+   "decaps_S0": 6,
+   "s_mod": 0.64083542940596,
+   "s_ref": 0.9609632585864349,
+   "abs_ln_ratio": 0.40516349219822173,
+   "S0": {
+    "port": "Port8_SITE0",
+    "R": {
+     "planes_mOhm": 3.718683136081049,
+     "vias_mOhm": 4.622538487530964,
+     "traces_mOhm": 2.5706733459369135,
+     "total_mOhm": 10.911894969548927,
+     "per_layer_mOhm": {
+      "Signal$L10(DGND)": 0.37072959828040336,
+      "Signal$L13(DGND)": 0.695575755683725,
+      "Signal$L21(DGND)": 0.34645256617540127,
+      "Signal$L40(OTHER_POWER8)": 2.3059252159415196
+     }
+    },
+    "extract": {
+     "n_traces": 800,
+     "n_traces_nowidth": 195,
+     "len_nowidth_total_um": 24594.829631658966,
+     "len_all_total_um": 86162.87690579763,
+     "n_vias": 1047,
+     "n_port_pos_nodes": 24,
+     "n_rail_nodes": 1474,
+     "port_layer_dist": {
+      "Signal$TOP": 24
+     },
+     "two_sided_layers": [
+      "Signal$L10(DGND)",
+      "Signal$L13(DGND)",
+      "Signal$L40(OTHER_POWER8)"
+     ]
+    }
+   },
+   "S1": {
+    "port": "Port54_SITE1",
+    "R": {
+     "planes_mOhm": 3.7679750135745236,
+     "vias_mOhm": 4.050212485250403,
+     "traces_mOhm": 2.108294941268246,
+     "total_mOhm": 9.926482440093173,
+     "per_layer_mOhm": {
+      "Signal$L10(DGND)": 0.4491746787625943,
+      "Signal$L13(DGND)": 0.28598763834062335,
+      "Signal$L21(DGND)": 0.2646443839492266,
+      "Signal$L40(OTHER_POWER8)": 2.768168312522079
+     }
+    },
+    "extract": {
+     "n_traces": 786,
+     "n_traces_nowidth": 195,
+     "len_nowidth_total_um": 24594.82963165896,
+     "len_all_total_um": 85675.73860304439,
+     "n_vias": 1047,
+     "n_port_pos_nodes": 24,
+     "n_rail_nodes": 1454,
+     "port_layer_dist": {
+      "Signal$TOP": 24
+     },
+     "two_sided_layers": [
+      "Signal$L10(DGND)",
+      "Signal$L13(DGND)",
+      "Signal$L40(OTHER_POWER8)"
+     ]
+    }
+   },
+   "delta": {
+    "dR_mOhm": {
+     "planes": 0.04929187749347452,
+     "vias": -0.572326002280561,
+     "traces": -0.46237840466866764
+    },
+    "dR_abs_mOhm": {
+     "planes": 0.04929187749347452,
+     "vias": 0.572326002280561,
+     "traces": 0.46237840466866764
+    },
+    "sum_dR_mOhm": -0.9854125294557541,
+    "contribution": {
+     "planes": -0.05002156560836359,
+     "vias": 0.5807983815637682,
+     "traces": 0.46922318404459545
+    },
+    "dominant": "vias"
+   },
+   "geo": {
+    "centre_xy": [
+     -24375.0,
+     10488.5
+    ],
+    "median_dist_by_axis": {
+     "x": 40361.006524353,
+     "y": 20337.2,
+     "xy": 32654.3860632039
+    },
+    "best_axis": "y",
+    "best_median_dist_um": 20337.2,
+    "s0_median_spacing_um": 289.5,
+    "symmetric": false
+   },
+   "nowidth_len_ratio_S1_over_S0": 0.9999999999999997
+  },
+  {
+   "k": 43,
+   "group": "control",
+   "port_S0": "Port43_SITE0",
+   "port_S1": "Port89_SITE1",
+   "decaps_S0": 0,
+   "s_mod": 0.6584969814533339,
+   "s_ref": 0.6563457478304437,
+   "abs_ln_ratio": 0.003272232479987094,
+   "S0": {
+    "port": "Port43_SITE0",
+    "R": {
+     "planes_mOhm": 2.484115212603223,
+     "vias_mOhm": 8.554284491416462,
+     "traces_mOhm": 5.389553250225712,
+     "total_mOhm": 16.4279529542454,
+     "per_layer_mOhm": {
+      "Signal$L21(DGND)": 0.5064454600216068,
+      "Signal$L43(OTHER_POWER10)": 1.977669752581616
+     }
+    },
+    "extract": {
+     "n_traces": 80,
+     "n_traces_nowidth": 15,
+     "len_nowidth_total_um": 1891.9099716660737,
+     "len_all_total_um": 8589.853708202547,
+     "n_vias": 131,
+     "n_port_pos_nodes": 3,
+     "n_rail_nodes": 176,
+     "port_layer_dist": {
+      "Signal$TOP": 3
+     },
+     "two_sided_layers": [
+      "Signal$L43(OTHER_POWER10)"
+     ]
+    }
+   },
+   "S1": {
+    "port": "Port89_SITE1",
+    "R": {
+     "planes_mOhm": 2.252821503420429,
+     "vias_mOhm": 8.557211789198028,
+     "traces_mOhm": 5.387992244030634,
+     "total_mOhm": 16.19802553664909,
+     "per_layer_mOhm": {
+      "Signal$L21(DGND)": 0.4620930789845142,
+      "Signal$L43(OTHER_POWER10)": 1.7907284244359145
+     }
+    },
+    "extract": {
+     "n_traces": 80,
+     "n_traces_nowidth": 15,
+     "len_nowidth_total_um": 1891.9099716660737,
+     "len_all_total_um": 8589.853708202545,
+     "n_vias": 131,
+     "n_port_pos_nodes": 3,
+     "n_rail_nodes": 176,
+     "port_layer_dist": {
+      "Signal$TOP": 3
+     },
+     "two_sided_layers": [
+      "Signal$L43(OTHER_POWER10)"
+     ]
+    }
+   },
+   "delta": {
+    "dR_mOhm": {
+     "planes": -0.23129370918279424,
+     "vias": 0.002927297781566196,
+     "traces": -0.0015610061950788179
+    },
+    "dR_abs_mOhm": {
+     "planes": 0.23129370918279424,
+     "vias": 0.002927297781566196,
+     "traces": 0.0015610061950788179
+    },
+    "sum_dR_mOhm": -0.22992741759630686,
+    "contribution": {
+     "planes": 1.0059422734390304,
+     "vias": -0.012731399378849957,
+     "traces": 0.0067891259398195885
+    },
+    "dominant": "planes"
+   },
+   "geo": {
+    "centre_xy": [
+     -24640.95,
+     -3275.0
+    ],
+    "median_dist_by_axis": {
+     "x": 41596.09914907887,
+     "y": 390.09999999999854,
+     "xy": 25831.045809645413
+    },
+    "best_axis": "y",
+    "best_median_dist_um": 390.09999999999854,
+    "s0_median_spacing_um": 130.0,
+    "symmetric": false
+   },
+   "nowidth_len_ratio_S1_over_S0": 1.0
+  },
+  {
+   "k": 45,
+   "group": "control",
+   "port_S0": "Port45_SITE0",
+   "port_S1": "Port91_SITE1",
+   "decaps_S0": 0,
+   "s_mod": 0.6037073473775499,
+   "s_ref": 0.6015046058227058,
+   "abs_ln_ratio": 0.003655363692152526,
+   "S0": {
+    "port": "Port45_SITE0",
+    "R": {
+     "planes_mOhm": 2.240274995847362,
+     "vias_mOhm": 6.562288939809877,
+     "traces_mOhm": 4.4652291190865085,
+     "total_mOhm": 13.267793054743747,
+     "per_layer_mOhm": {
+      "Signal$L21(DGND)": 0.4371976335387314,
+      "Signal$L31(OTHER_POWER2)": 1.8030773623086302
+     }
+    },
+    "extract": {
+     "n_traces": 144,
+     "n_traces_nowidth": 42,
+     "len_nowidth_total_um": 4716.174040378002,
+     "len_all_total_um": 15419.464341718161,
+     "n_vias": 203,
+     "n_port_pos_nodes": 3,
+     "n_rail_nodes": 263,
+     "port_layer_dist": {
+      "Signal$TOP": 3
+     },
+     "two_sided_layers": [
+      "Signal$L31(OTHER_POWER2)"
+     ]
+    }
+   },
+   "S1": {
+    "port": "Port91_SITE1",
+    "R": {
+     "planes_mOhm": 2.450687359237341,
+     "vias_mOhm": 6.564027539468149,
+     "traces_mOhm": 4.464502884939506,
+     "total_mOhm": 13.479217783644996,
+     "per_layer_mOhm": {
+      "Signal$L21(DGND)": 0.44019888788868283,
+      "Signal$L31(OTHER_POWER2)": 2.0104884713486584
+     }
+    },
+    "extract": {
+     "n_traces": 144,
+     "n_traces_nowidth": 42,
+     "len_nowidth_total_um": 4716.174040378002,
+     "len_all_total_um": 15419.464341718129,
+     "n_vias": 203,
+     "n_port_pos_nodes": 3,
+     "n_rail_nodes": 263,
+     "port_layer_dist": {
+      "Signal$TOP": 3
+     },
+     "two_sided_layers": [
+      "Signal$L31(OTHER_POWER2)"
+     ]
+    }
+   },
+   "delta": {
+    "dR_mOhm": {
+     "planes": 0.21041236338997926,
+     "vias": 0.0017385996582719443,
+     "traces": -0.000726234147002458
+    },
+    "dR_abs_mOhm": {
+     "planes": 0.21041236338997926,
+     "vias": 0.0017385996582719443,
+     "traces": 0.000726234147002458
+    },
+    "sum_dR_mOhm": 0.21142472890124875,
+    "contribution": {
+     "planes": 0.995211697720836,
+     "vias": 0.008223255942231816,
+     "traces": -0.003434953663067786
+    },
+    "dominant": "planes"
+   },
+   "geo": {
+    "centre_xy": [
+     -23633.45,
+     -4484.199999999999
+    ],
+    "median_dist_by_axis": {
+     "x": 40452.64827449496,
+     "y": 1.499999999996362,
+     "xy": 23943.100046986394
+    },
+    "best_axis": "y",
+    "best_median_dist_um": 1.499999999996362,
+    "s0_median_spacing_um": 129.99999999999818,
+    "symmetric": true
+   },
+   "nowidth_len_ratio_S1_over_S0": 1.0
+  },
+  {
+   "k": 44,
+   "group": "control",
+   "port_S0": "Port44_SITE0",
+   "port_S1": "Port90_SITE1",
+   "decaps_S0": 0,
+   "s_mod": 0.6572285325677995,
+   "s_ref": 0.6529220152213923,
+   "abs_ln_ratio": 0.006574103814080029,
+   "S0": {
+    "port": "Port44_SITE0",
+    "R": {
+     "planes_mOhm": 2.1625623245184697,
+     "vias_mOhm": 6.386218603830392,
+     "traces_mOhm": 3.312210853414542,
+     "total_mOhm": 11.860991781763403,
+     "per_layer_mOhm": {
+      "Signal$L21(DGND)": 0.37651660299293865,
+      "Signal$L30(OTHER_POWER1)": 1.7860457215255312
+     }
+    },
+    "extract": {
+     "n_traces": 144,
+     "n_traces_nowidth": 42,
+     "len_nowidth_total_um": 4716.174040378002,
+     "len_all_total_um": 15532.479686213825,
+     "n_vias": 209,
+     "n_port_pos_nodes": 3,
+     "n_rail_nodes": 266,
+     "port_layer_dist": {
+      "Signal$TOP": 3
+     },
+     "two_sided_layers": [
+      "Signal$L30(OTHER_POWER1)"
+     ]
+    }
+   },
+   "S1": {
+    "port": "Port90_SITE1",
+    "R": {
+     "planes_mOhm": 2.357795655805268,
+     "vias_mOhm": 6.38893623131089,
+     "traces_mOhm": 3.310020088009107,
+     "total_mOhm": 12.056751975125266,
+     "per_layer_mOhm": {
+      "Signal$L21(DGND)": 0.3634302497887615,
+      "Signal$L30(OTHER_POWER1)": 1.9943654060165066
+     }
+    },
+    "extract": {
+     "n_traces": 144,
+     "n_traces_nowidth": 42,
+     "len_nowidth_total_um": 4716.174040378002,
+     "len_all_total_um": 15532.479686213797,
+     "n_vias": 209,
+     "n_port_pos_nodes": 3,
+     "n_rail_nodes": 266,
+     "port_layer_dist": {
+      "Signal$TOP": 3
+     },
+     "two_sided_layers": [
+      "Signal$L30(OTHER_POWER1)"
+     ]
+    }
+   },
+   "delta": {
+    "dR_mOhm": {
+     "planes": 0.19523333128679843,
+     "vias": 0.00271762748049742,
+     "traces": -0.002190765405435169
+    },
+    "dR_abs_mOhm": {
+     "planes": 0.19523333128679843,
+     "vias": 0.00271762748049742,
+     "traces": 0.002190765405435169
+    },
+    "sum_dR_mOhm": 0.19576019336186068,
+    "contribution": {
+     "planes": 0.9973086352949787,
+     "vias": 0.013882431529243096,
+     "traces": -0.011191066824221826
+    },
+    "dominant": "planes"
+   },
+   "geo": {
+    "centre_xy": [
+     -23618.2,
+     -3799.3999999999996
+    ],
+    "median_dist_by_axis": {
+     "x": 40434.60341798841,
+     "y": 16.900000000001455,
+     "xy": 23912.605971955458
+    },
+    "best_axis": "y",
+    "best_median_dist_um": 16.900000000001455,
+    "s0_median_spacing_um": 129.99999999999818,
+    "symmetric": true
+   },
+   "nowidth_len_ratio_S1_over_S0": 1.0
+  },
+  {
+   "k": 10,
+   "group": "control",
+   "port_S0": "Port10_SITE0",
+   "port_S1": "Port56_SITE1",
+   "decaps_S0": 4,
+   "s_mod": 1.0508460488525067,
+   "s_ref": 1.0435857762409413,
+   "abs_ln_ratio": 0.006932955855142876,
+   "S0": {
+    "port": "Port10_SITE0",
+    "R": {
+     "planes_mOhm": 3.6718090869148763,
+     "vias_mOhm": 11.139743012630655,
+     "traces_mOhm": 5.642043430889945,
+     "total_mOhm": 20.45359553043548,
+     "per_layer_mOhm": {
+      "Signal$L10(DGND)": 1.2266982032224516,
+      "Signal$L21(DGND)": 0.60833753696718,
+      "Signal$L33(OTHER_POWER3)": 1.8367733467252447
+     }
+    },
+    "extract": {
+     "n_traces": 421,
+     "n_traces_nowidth": 104,
+     "len_nowidth_total_um": 13535.27977332859,
+     "len_all_total_um": 47383.22423878576,
+     "n_vias": 474,
+     "n_port_pos_nodes": 2,
+     "n_rail_nodes": 628,
+     "port_layer_dist": {
+      "Signal$TOP": 2
+     },
+     "two_sided_layers": [
+      "Signal$L10(DGND)",
+      "Signal$L33(OTHER_POWER3)"
+     ]
+    }
+   },
+   "S1": {
+    "port": "Port56_SITE1",
+    "R": {
+     "planes_mOhm": 4.207725920741953,
+     "vias_mOhm": 11.664564595615117,
+     "traces_mOhm": 5.944541893118145,
+     "total_mOhm": 21.816832409475214,
+     "per_layer_mOhm": {
+      "Signal$L10(DGND)": 1.3683169676912181,
+      "Signal$L21(DGND)": 0.5544600696925671,
+      "Signal$L33(OTHER_POWER3)": 2.284948883358168
+     }
+    },
+    "extract": {
+     "n_traces": 343,
+     "n_traces_nowidth": 82,
+     "len_nowidth_total_um": 10551.459829996442,
+     "len_all_total_um": 38020.79642175044,
+     "n_vias": 408,
+     "n_port_pos_nodes": 2,
+     "n_rail_nodes": 532,
+     "port_layer_dist": {
+      "Signal$TOP": 2
+     },
+     "two_sided_layers": [
+      "Signal$L10(DGND)",
+      "Signal$L33(OTHER_POWER3)"
+     ]
+    }
+   },
+   "delta": {
+    "dR_mOhm": {
+     "planes": 0.5359168338270766,
+     "vias": 0.5248215829844618,
+     "traces": 0.30249846222819965
+    },
+    "dR_abs_mOhm": {
+     "planes": 0.5359168338270766,
+     "vias": 0.5248215829844618,
+     "traces": 0.30249846222819965
+    },
+    "sum_dR_mOhm": 1.363236879039738,
+    "contribution": {
+     "planes": 0.39312084500279626,
+     "vias": 0.3849819433832698,
+     "traces": 0.22189721161393397
+    },
+    "dominant": "planes"
+   },
+   "geo": {
+    "centre_xy": [
+     24242.95,
+     8240.0
+    ],
+    "median_dist_by_axis": {
+     "x": 40386.69855922423,
+     "y": 2413.399999999998,
+     "xy": 23952.751347946258
+    },
+    "best_axis": "y",
+    "best_median_dist_um": 2413.399999999998,
+    "s0_median_spacing_um": 389.89999999999964,
+    "symmetric": false
+   },
+   "nowidth_len_ratio_S1_over_S0": 0.7795523998542094
+  }
+ ],
+ "verdicts": {
+  "H_tr": {
+   "n": 8,
+   "dominant_counts": {
+    "planes": 1,
+    "vias": 5,
+    "traces": 2
+   },
+   "n_traces_strong": 2,
+   "verdict": "vias"
+  },
+  "H_w": {
+   "n": 8,
+   "n_ratio_ge2_or_le0p5": 0,
+   "verdict": "reject"
+  },
+  "H_geo": {
+   "n": 8,
+   "n_symmetric": 0,
+   "n_asymmetric": 8,
+   "verdict": "asymmetric_or_mixed"
+  }
+ }
+}

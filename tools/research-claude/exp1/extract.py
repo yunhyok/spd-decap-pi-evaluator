@@ -26,6 +26,7 @@ from pathlib import Path
 import numpy as np
 
 from spd_decap_pi._core.io import spd as P
+from spd_decap_pi._core.models.spice import SpiceModelError, parse_passive_subcircuit
 
 import sys  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "common"))
@@ -34,6 +35,60 @@ from paths import spd_path as design_spd, work_file  # noqa: E402
 
 def _mm_um(tok: bytes) -> float:
     return P._length_um(tok)
+
+
+# ---------------------------------------------------------------- subckt fallback
+# spd._parse_partial_circuits wraps a .PartialCkt body in ".SUBCKT name n1 n2 ... .ENDS"
+# and hands it to parse_passive_subcircuit.  That rejects the s5m6585 flavour, where the
+# body is "xcall 1 2 sub_X" plus a nested ".SUBCKT sub_X port1 port2 ... .ENDS" holding the
+# same flat Murata R/L/C ladder ("nested .SUBCKT is unsupported").  Below we lift that inner
+# subcircuit out and feed it to the very same parser, so the model object, its MNA solver and
+# its validation are the product's -- no second evaluator.
+_RX_PARTIAL = re.compile(
+    rb"^\.PartialCkt\s+(\S+)\s+ExtNode\s*=([^\n]*(?:\n\+[^\n]*)*)\n(.*?)^\.EndPartialCkt",
+    re.IGNORECASE | re.MULTILINE | re.DOTALL,
+)
+_RX_XCALL = re.compile(r"^\s*xcall\s+(\S+)\s+(\S+)\s+(\S+)\s*$", re.IGNORECASE | re.MULTILINE)
+_RX_SUBCKT = re.compile(
+    r"^\s*\.SUBCKT\s+(\S+)\s+(\S+)\s+(\S+)\s*$(.*?)^\s*\.ENDS\b[^\n]*$",
+    re.IGNORECASE | re.MULTILINE | re.DOTALL,
+)
+
+
+def subckt_fallback_models(data, start, end, canonical, empty, freqs=(1e3, 1e6)) -> dict:
+    """Two-port PartialCkts the product parser skipped, recovered via their inner .SUBCKT.
+
+    Returns {model_id: PassiveSubcircuitModel} for names not already in ``canonical``/``empty``.
+    """
+    found = {}
+    for m in _RX_PARTIAL.finditer(bytes(data[start:end])):
+        name = m.group(1).decode()
+        key = name.casefold()
+        if key in canonical or key in empty:
+            continue
+        ext = m.group(2).replace(b"\n+", b" ").split()
+        if len(ext) != 2:
+            continue
+        body = m.group(3).decode("utf-8", errors="replace")
+        call = _RX_XCALL.search(body)
+        sub = _RX_SUBCKT.search(body)
+        if not (call and sub and sub.group(1).casefold() == call.group(3).casefold()):
+            continue
+        # xcall arg i wires ExtNode name -> inner port i; keep the PartialCkt ExtNode order
+        port_of = {call.group(1): sub.group(2), call.group(2): sub.group(3)}
+        try:
+            terminals = [port_of[e.decode()] for e in ext]
+        except KeyError:
+            continue
+        text = ".SUBCKT %s %s %s\n%s\n.ENDS\n" % (name, terminals[0], terminals[1], sub.group(4))
+        try:
+            model = parse_passive_subcircuit(text, source_name="subckt_fallback:" + name)
+            model.impedance(freqs)
+        except (SpiceModelError, ValueError) as exc:
+            print("[extract] fallback rejected %s: %s" % (name, exc), flush=True)
+            continue
+        found[model.model_id] = model
+    return found
 
 
 def extract(spd_path: str, port_name: str, gnd_net: str = "DGND") -> dict:
@@ -183,6 +238,17 @@ def extract(spd_path: str, port_name: str, gnd_net: str = "DGND") -> dict:
         models, _assets, canonical, empty, _n = P._parse_partial_circuits(
             d, c0, conn0, (1e3, 1e6), Path(spd_path).name, rep, diags
         )
+        fallback = subckt_fallback_models(d, c0, conn0, canonical, empty)
+        for name, mdl in fallback.items():
+            models[mdl.model_id] = mdl
+            canonical[name.casefold()] = mdl.model_id
+        # standard = flat multi-element ladder, ideal = one R/L/C between the ext nodes
+        model_source = {
+            mid: "subckt" if mid in fallback else ("ideal" if len(m.elements) == 1 else "standard")
+            for mid, m in models.items()
+        }
+        if fallback:
+            print(f"[extract] subckt fallback models: {sorted(fallback)}", flush=True)
         cend = P._find_line(d, b".EndCompCollection", conn0)
         cend = len(d) if cend < 0 else P._line_end(d, cend, len(d))
         parts, comps, conns = P._parse_metadata(d, conn0, cend, diags)
@@ -200,6 +266,7 @@ def extract(spd_path: str, port_name: str, gnd_net: str = "DGND") -> dict:
             rp = [p for p in c.ports if p.net == rail]
             gp = [p for p in c.ports if p.net != rail]
             decaps.append(dict(refdes=c.refdes, part=c.part_name, model_id=canonical[key],
+                               model_source=model_source[canonical[key]],
                                rail_node=rp[0].node_id, gnd_node=gp[0].node_id if gp else None,
                                gnd_net=gp[0].net if gp else None, usage=c.usage))
         out["decaps"] = decaps
