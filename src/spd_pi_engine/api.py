@@ -23,6 +23,16 @@ W8 (`model.py`) adds the decap configuration on top of a built model -- no rebui
     res2 = mdl.solve(res.freq)     # same YPattern, same cuDSS plan: refactorize only
 
 `Result.receipt()` then carries `decap_config`, `decap_config_sha256` and `prune_basis`.
+
+W9 (`decaps.py`) adds stage 2 for sweeps over many configurations: one multi-port basis, then a
+Schur closure per configuration in milliseconds.
+
+    basis = mdl.decap_basis(freqs)        # 1 + Nd right-hand sides, one factorization per f
+    basis.Z({"C1234": None}).Z            # partial config, read as in set_decaps
+    basis.Z_many([cfg1, cfg2, ...]); basis.receipt(); basis.save(path)
+
+On the GPU a model is either a basis model or a sweep model, not both in one process
+(`Model._gpu_solver`: cuDSS 0.8 allows one DirectSolver, and its RHS width is fixed at plan time).
 """
 from __future__ import annotations
 

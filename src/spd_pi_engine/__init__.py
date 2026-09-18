@@ -20,10 +20,11 @@ from __future__ import annotations
 
 __version__ = "0.1.0.dev0"
 
-from . import api, cache, geometry, homogenise, model, receipt, reference, solver, spd_source
+from . import api, cache, decaps, geometry, homogenise, model, receipt, reference, solver, spd_source
 from .api import DecapSite, Design, Rail
 from .backend import DEFAULT, Backend
 from .cache import CacheDir
+from .decaps import DecapBasis
 from .model import FLAGS, FLAGS_LEGACY, FLAGS_P, FLAGS_PMK, FLAGS_Q, Model, ModelOptions, Sheet
 from .receipt import (RECEIPT_VERSION, VALIDITY_NOTES, Result, attach_reference,
                       decap_config_sha256, ladder_gates, numerics_id)
@@ -31,10 +32,11 @@ from .reference import DesignConventions, ReferenceSearch
 from .spd_source import (SPD_PARSER_SYMBOLS, check_parser_api, extract, list_ports,
                          load_layer_shapes, prepare, sha256_of)
 
-__all__ = ["Backend", "CacheDir", "DEFAULT", "DecapSite", "Design", "DesignConventions", "FLAGS",
+__all__ = ["Backend", "CacheDir", "DEFAULT", "DecapBasis", "DecapSite", "Design",
+           "DesignConventions", "FLAGS",
            "FLAGS_LEGACY", "FLAGS_P", "FLAGS_PMK", "FLAGS_Q", "Model", "ModelOptions",
            "RECEIPT_VERSION", "Rail", "ReferenceSearch", "Result", "SPD_PARSER_SYMBOLS", "Sheet",
-           "VALIDITY_NOTES", "api", "attach_reference", "cache", "check_parser_api",
+           "VALIDITY_NOTES", "api", "attach_reference", "cache", "check_parser_api", "decaps",
            "decap_config_sha256", "extract", "geometry", "homogenise", "ladder_gates", "list_ports",
            "load_layer_shapes", "model", "numerics_id", "prepare", "receipt", "reference",
            "sha256_of", "solver", "spd_source", "__version__"]

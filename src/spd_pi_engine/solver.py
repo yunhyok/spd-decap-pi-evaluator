@@ -127,9 +127,15 @@ class CudssLU:
 
     `solve(Y)` returns (V, stats) for the single RHS e_P, matching what splu(Y).solve(e_P)
     returns in Model3.solve().
+
+    W9: `nrhs > 1` plans for a dense (N, nrhs) RHS instead and `solve(Y, B)` returns the (N, nrhs)
+    solution -- the multi-port basis of `decaps.py` needs 1 + Nd right-hand sides.  The width is
+    fixed at plan time: `reset_operands` rejects a shape change and cuDSS 0.8 faults on a second
+    DirectSolver in one process, so one model cannot have both widths (`Model._gpu_solver` raises).
+    A short last chunk is zero-padded by the caller; a zero column just gives zeros.
     """
 
-    def __init__(self, Y_csc, P, log=print, device_id=0, backend=DEFAULT):
+    def __init__(self, Y_csc, P, log=print, device_id=0, backend=DEFAULT, nrhs=1):
         import nvmath.sparse.advanced as A  # lazy: pulls in CUDA
 
         self._A = A
@@ -137,15 +143,19 @@ class CudssLU:
         self.P = int(P)
         self.device = _device_name(device_id)
         self._replanned = False
+        self.nrhs = int(nrhs)
 
         self._a = Y_csc.tocsr()
         self._pattern = (self._a.indptr.tobytes(), self._a.indices.tobytes())
-        rhs = np.zeros(self._a.shape[0], complex)
-        rhs[self.P] = 1.0
+        if self.nrhs == 1:
+            self._b = np.zeros(self._a.shape[0], complex)
+            self._b[self.P] = 1.0                       # constant: never reset below
+        else:  # cuDSS wants the dense RHS in column-major layout
+            self._b = np.zeros((self._a.shape[0], self.nrhs), complex, order="F")
 
         mt = _mtlayer()
         self._solver = A.DirectSolver(
-            self._a, rhs,
+            self._a, self._b,
             options=dict(sparse_system_type=A.DirectSolverMatrixType.GENERAL,
                          sparse_system_view=A.DirectSolverMatrixViewType.FULL,
                          multithreading_lib=mt),
@@ -159,7 +169,7 @@ class CudssLU:
         self._solver.solution_config.ir_num_steps = backend.ir_steps
         self._solver.plan()
 
-    def solve(self, Y_csc):
+    def solve(self, Y_csc, B=None):
         a = Y_csc.tocsr()
         pattern = (a.indptr.tobytes(), a.indices.tobytes())
         same = pattern == self._pattern
@@ -173,7 +183,13 @@ class CudssLU:
                 self.log("[solver] cudss: sparsity pattern changed, re-planning")
                 self._replanned = True
             self._a, self._pattern = a, pattern
-        self._solver.reset_operands(a=self._a)
+        if B is None:
+            self._solver.reset_operands(a=self._a)
+        else:
+            if B.shape != self._b.shape:
+                raise ValueError(f"this solver is planned for nrhs={self.nrhs}, got B{B.shape}")
+            self._b[...] = B                      # same buffer => the plan survives
+            self._solver.reset_operands(a=self._a, b=self._b)
         if not same:
             self._solver.plan()
         info = self._solver.factorize()
@@ -239,6 +255,17 @@ def demo_cudss():
         assert rel < 1e-8, rel
         assert st["solver"] == "cudss"
     gpu.free()
+
+    # W9: 3 right-hand sides in one solve, the shape `decaps.DecapBasis` uses.  `vals` (not the
+    # 0/1 `pat`, which is numerically hopeless) is the same well-conditioned system as above.
+    Y = vals.tocsc()
+    B = np.zeros((n, 3), complex, order="F")
+    B[P, 0] = 1.0; B[11, 1] = 1.0; B[11, 2] = -1.0
+    ref = splu(Y, permc_spec="COLAMD").solve(B)
+    V, _ = CudssLU(Y, P, backend=Backend(solver="cudss"), nrhs=3).solve(Y, B)
+    rel = np.max(np.abs(V - ref)) / np.max(np.abs(ref))
+    print(f"  nrhs=3: rel {rel:.2e}")
+    assert V.shape == (n, 3) and rel < 1e-8, rel
     print(f"DEMO PASS on {gpu.device}")
 
 

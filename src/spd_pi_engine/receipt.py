@@ -67,6 +67,25 @@ def numerics_id(reference_mode: str, flags: dict, mesh: dict, conventions: dict)
     return hashlib.sha256(json.dumps(payload, sort_keys=True, default=str).encode()).hexdigest()
 
 
+def mesh_dict(opt) -> dict:
+    """The `mesh` block of a receipt, from `ModelOptions`."""
+    return dict(h=opt.h, fh=opt.fh, top_h=opt.top_h, sub=list(opt.sub), fringe=opt.fringe,
+                fringe_wd=opt.fringe_wd, max_layers=opt.max_layers,
+                fine_box=list(opt.fine_box) if opt.fine_box else None)
+
+
+def numerics_id_of(model) -> str:
+    """`numerics_id` of a built model -- the same value `Result.receipt()` writes.
+
+    W9: the decap basis records it, and `DecapBasis.load` refuses a basis from other numerics.
+    """
+    from .model import FLAGS
+
+    opt = model.options
+    return numerics_id(opt.reference, {k: model.info[k] for k in FLAGS}, mesh_dict(opt),
+                       conventions_dict(opt.conventions))
+
+
 def decap_config_sha256(config: dict) -> str:
     """sha256 of `{refdes: model_id | None}`.
 
@@ -212,9 +231,7 @@ class Result:
         ex = m.ex
         rail = getattr(m, "rail", None)
         flags = {k: m.info[k] for k in FLAGS}
-        mesh = dict(h=opt.h, fh=opt.fh, top_h=opt.top_h, sub=list(opt.sub), fringe=opt.fringe,
-                    fringe_wd=opt.fringe_wd, max_layers=opt.max_layers,
-                    fine_box=list(opt.fine_box) if opt.fine_box else None)
+        mesh = mesh_dict(opt)
         conv = conventions_dict(opt.conventions)
         # W8: the model's *current* configuration (set_decaps); falls back to the SPD's own.
         config = getattr(m, "decap_config", None) or {d["refdes"]: d["model_id"] for d in ex["decaps"]}

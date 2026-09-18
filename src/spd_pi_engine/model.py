@@ -897,24 +897,50 @@ class Model:
         ok = (R_ >= 0) & (C_ >= 0) & (R_ < N) & (C_ < N)
         return sparse.coo_matrix((V_[ok], (R_[ok], C_[ok])), shape=(N, N)).tocsc()
 
+    def _gpu_solver(self, Y, nrhs=1):
+        """This model's one cuDSS solver, or None when the backend is splu / the GPU is unusable.
+
+        One solver per model: cuDSS 0.8 faults on a second DirectSolver and on an early `free()`.
+        Its RHS width is fixed at plan time (`reset_operands` rejects a shape change), so a model
+        that built a decap basis (nrhs = chunk) cannot also run the single-RHS sweep on the GPU --
+        that is a separate process, exactly as the W8/W9 gates run it.
+        """
+        if self.backend.solver not in ("cudss", "auto") or self._cudss is False:
+            return None
+        if self._cudss is not None:
+            if self._cudss.nrhs != nrhs:
+                raise RuntimeError(
+                    f"this model's cuDSS solver is planned for nrhs={self._cudss.nrhs}, not {nrhs}; "
+                    f"cuDSS 0.8 allows one DirectSolver per process -- use a separate process, or "
+                    f"Backend(solver='splu') for this call")
+            return self._cudss
+        try:
+            self._cudss = SOL.CudssLU(Y, self.P, self.log, backend=self.backend, nrhs=nrhs)
+            self.log(f"[solver] cudss on {self._cudss.device}")
+        except Exception as e:  # unattended 92-port drivers must not die on the GPU
+            self._cudss = False
+            self.log(f"[solver] cudss unavailable ({type(e).__name__}: {e}) -- using splu")
+        return self._cudss or None
+
+    def decap_basis(self, freqs, chunk=24):
+        """The (1 + Nd)-port basis of this rail with every decap removed (W9, `decaps.py`).
+
+        `mdl.decap_basis(freqs).Z(config)` then closes it per configuration in milliseconds.
+        """
+        from .decaps import DecapBasis
+
+        return DecapBasis.build(self, freqs, chunk)
+
     def solve(self, freqs, verbose=True, want_v=False):
         """The sweep, as a `Result` (W4).  A `Result` unpacks as the research `(Z, stats)` /
         `(Z, stats, Vs)` tuple, so every existing caller keeps working."""
         t_solve = time.time()
         Z, stats, Vs = [], [], []
-        gpu = None  # backend.solver in (cudss, auto): a CudssLU once it is up, False once known unusable
+        gpu = None  # backend.solver in (cudss, auto): a CudssLU once it is up, None on splu
         for f in freqs:
             t0 = time.time(); Y = self.assemble(f); t1 = time.time()
-            if gpu is None and self.backend.solver in ("cudss", "auto"):
-                gpu = self._cudss                    # one solver per model, reused by every
-                if gpu is None:                      # solve() call: cuDSS 0.8 faults on a
-                    try:                             # second solver and on an early free()
-                        gpu = SOL.CudssLU(Y, self.P, self.log, backend=self.backend)
-                        self.log(f"[solver] cudss on {gpu.device}")
-                    except Exception as e:  # unattended 92-port drivers must not die on the GPU
-                        gpu = False
-                        self.log(f"[solver] cudss unavailable ({type(e).__name__}: {e}) -- using splu")
-                    self._cudss = gpu
+            if gpu is None:
+                gpu = self._gpu_solver(Y)
             if gpu:
                 V, st = gpu.solve(Y); t2 = time.time()
                 Z.append(V[self.P])
