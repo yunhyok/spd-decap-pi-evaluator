@@ -171,6 +171,7 @@ Port14의 decap 35개 전부를 `ex["models"]`의 다른 id `CAP_0402_100NF`로 
 | 테스트 | 프로필 | 시간 | 결과 |
 |---|---|---|---|
 | `tests\engine -q -k datafree`(기존 10 + 신규 2) | 기본 | 1.4 s | 12 passed, 1 skipped(`--gpu`) |
+| `tests\engine -q`(기본 프로필 전체) | 기본 | 27분 21초 | **16 passed, 18 skipped** — Port14/Port18 CPU 재현, PCB Port1_U1_0 포함 전부 통과(회귀 없음) |
 | `test_datafree.py::test_set_decaps_bookkeeping` | 기본 | < 0.1 s | PASS — 부분 dict, 미실장 항목 보존, 모르는 refdes/model_id `KeyError`, 거부된 호출의 무변경, `reset_decaps` 왕복 |
 | `test_datafree.py::test_ypattern_keeps_explicit_zero` | 기본 | < 0.1 s | PASS — 값 0을 넣어도 `nnz`/`indptr`/`indices` 불변 |
 | `test_reproduction.py::test_set_decaps_vs_rebuild_port14` | `--gpu` | 18.6 s | PASS — Port14 1개 unmount, Y 패턴 불변, `N` 동일, max \|ΔZ\|/\|Z\| ≤ 1e−9 |
