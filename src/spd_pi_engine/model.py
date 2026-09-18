@@ -539,11 +539,14 @@ class Model:
             n = self._build_gnd(n, gidx)
         # ---------------- decaps --------------------------------------
         self.dec = []
+        self._dec_refdes = []                                                 # W8: self.dec[k]'s refdes
+        self._dec_cfg = {dc["refdes"]: dc["model_id"] for dc in ex["decaps"]}  # W8: current config
         for dc in ex["decaps"]:
             if dc["rail_node"] not in idx:
                 continue
             gnode = gidx.get(dc["gnd_node"], -1) if self.gnd is not None else -1
             self.dec.append((Rm(idx[dc["rail_node"]]), gnode, dc["model_id"]))
+            self._dec_refdes.append(dc["refdes"])
         self.info["decaps_gnd_to_reference_directly"] = sum(1 for d in self.dec if d[1] < 0)
         # ---------------- prune ---------------------------------------
         self.n_raw = n; self.port = port; self.remap = remap
@@ -565,8 +568,11 @@ class Model:
         new = -np.ones(n + 1, np.int64); new[keep] = np.arange(int(keep.sum()))
         self.map = lambda x: new[mp[fix(x)]]  # noqa: E731
         self.N = int(keep.sum()); self.P = int(self.map([port])[0])
+        # W8: the pruning graph above holds every decap edge, mounted or not, and N never moves
+        # again -- `set_decaps` only restamps values (plan §2-4).  The receipt records the basis.
+        self.prune_basis = "all_mounted"
         self.info.update(unknowns=self.N, nodes_before_prune=n, decaps_connected=int(sum(1 for d in self.dec if keep[mp[d[0]]])),
-                         build_seconds=time.time() - t0)
+                         prune_basis=self.prune_basis, build_seconds=time.time() - t0)
         self.log("[model3] " + str({k: v for k, v in self.info.items() if k != "reference_search"}))
         self._two_sided_majority()
 
@@ -585,6 +591,46 @@ class Model:
         self.two_sided_layers = ts
         self.info["two_sided_fraction_coarse"] = frac
         self.info["two_sided_layers"] = sorted(ts)
+
+    # ------------------------------------------------------------------ W8: decap configuration
+    @property
+    def decap_config(self) -> dict:
+        """`{refdes: model_id | None}` for every decap of the rail (None = unmounted)."""
+        return dict(self._dec_cfg)
+
+    def set_decaps(self, config: dict):
+        """Mount/unmount decaps or change their model, without rebuilding (plan §2-4).
+
+        `config` is partial: only the listed refdes change.  `None` unmounts -- the entry stays in
+        `self.dec` and is stamped as y = 0, so the Y sparsity pattern (and with it the cached
+        `YPattern` and the cuDSS plan) is untouched and only the values are rebuilt.  Pruning is
+        NOT redone: N stays on the all-mounted basis (`prune_basis`).
+        """
+        for refdes, mid in config.items():  # validate first: a rejected call changes nothing
+            if refdes not in self._dec_cfg:
+                raise KeyError(f"unknown decap refdes {refdes!r}")
+            if mid is not None and mid not in self.ex["models"]:
+                raise KeyError(f"unknown decap model_id {mid!r} (have {sorted(self.ex['models'])})")
+        self._dec_cfg.update(config)
+        self.dec = [(a, b, self._dec_cfg[r]) for (a, b, _), r in zip(self.dec, self._dec_refdes)]
+        return self
+
+    def reset_decaps(self):
+        """Back to the SPD's own configuration (every decap mounted with its own model)."""
+        return self.set_decaps({d["refdes"]: d["model_id"] for d in self.ex["decaps"]})
+
+    def add_decap_model(self, model_id: str, subckt_text: str):
+        """Register a `.SUBCKT` two-port as `model_id`, so `set_decaps` can select it.
+
+        Same parser as the extraction (`spd_source`), so the impedance is computed identically.
+        """
+        from spd_decap_pi._core.models.spice import parse_passive_subcircuit
+
+        mdl = parse_passive_subcircuit(subckt_text, source_name="add_decap_model:" + model_id)
+        mdl.impedance([1e6])  # fail here, not in the middle of a sweep
+        self.ex["models"][model_id] = mdl
+        self.ex.setdefault("model_texts", {})[model_id] = subckt_text
+        return self
 
     def _pad_links(self, nodes):
         by = collections.defaultdict(list)
@@ -834,8 +880,10 @@ class Model:
         a, b, Rg = self.gnd_r
         if len(a):
             st_(a, b, (1.0 / Rg).astype(complex))
-        ys = {mid: 1.0 / self.ex["models"][mid].impedance([f])[0] for mid in {d[2] for d in self.dec}}
-        st_(np.array([d[0] for d in self.dec]), np.array([d[1] for d in self.dec]), np.array([ys[d[2]] for d in self.dec]))
+        ys = {mid: (0.0 if mid is None else 1.0 / self.ex["models"][mid].impedance([f])[0])  # W8: None = unmounted
+              for mid in {d[2] for d in self.dec}}
+        st_(np.array([d[0] for d in self.dec]), np.array([d[1] for d in self.dec]),
+            np.array([ys[d[2]] for d in self.dec], complex))
         if fast:  # EXP-37: values only; the COO -> CSC map is frequency-independent
             V_ = np.concatenate([np.ravel(x) for x in vals] + [np.ravel(x) for x in diag_vals])
             if pat is None:
@@ -912,7 +960,8 @@ class Model:
             isref = b < 0
             out["gnd_network_R(vias/traces/pads)"] = np.sum(np.abs(i[~isref]) ** 2 * Rg[~isref])
             out["gnd_port_pin_entry_R"] = np.sum(np.abs(i[isref]) ** 2 * Rg[isref])
-        ys = {mid: 1.0 / self.ex["models"][mid].impedance([f])[0] for mid in {d[2] for d in self.dec}}
+        ys = {mid: (0.0 if mid is None else 1.0 / self.ex["models"][mid].impedance([f])[0])  # W8
+              for mid in {d[2] for d in self.dec}}
         s = 0
         for ra, ga, mid in self.dec:
             dv = gv(np.array([ra]))[0] - gv(np.array([ga]))[0]; s += abs(dv) ** 2 * np.conj(ys[mid])

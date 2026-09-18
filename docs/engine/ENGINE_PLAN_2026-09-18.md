@@ -134,7 +134,7 @@ mdl.set_decaps({"C1234": None, "C1235": "GRM155R61A106M"}); res2 = mdl.solve(res
 동결 사슬은 이미 플래그로 매개변수화돼 있어 엔진화가 가능하다. 실제 일은 몽키패치 2개(C1·C2), 환경 플래그 2개(C8·C9), 설계 하드코딩 4개(C5·C6·C13·C19), 캐시 안 src 객체(C15), 참조 격자 결합(C17)을 명시 인자로 올리는 것이고, 정당성은 이미 있는 영수증 3종(exp8 / exp28-p 7케이스 / exp30 PCB)이 증명한다. 별도 저장소는 지금 이득이 없다.
 
 ## 진행 상태 (2026-09-18 마감)
-- W1–W5, W7 완료(보고서 `W1..W5_REPORT.md`, `W7_REPORT.md`, `IR_REPORT.md`). W6는 `src/spd_pi_engine/README.md` + CLAUDE.md "계산 엔진" 절. v0.1 = 패키지 3,400여 줄 + CLI + `tests/engine`(31건: 데이터 없음 11, 영수증 재현 20).
+- W1–W5, W7, W8 완료(보고서 `W1..W5_REPORT.md`, `W7_REPORT.md`, `W8_REPORT.md`, `IR_REPORT.md`). W8: `set_decaps` 구성당 2.1 s(P18 GPU), 프루닝 불변 확인, `numerics_id`는 소스 변경으로 `f3808b55…`로 갱신(Z 비트 동일). W6는 `src/spd_pi_engine/README.md` + CLAUDE.md "계산 엔진" 절. v0.1 = 패키지 3,400여 줄 + CLI + `tests/engine`(31건: 데이터 없음 11, 영수증 재현 20).
 - 게이트 실측: exp8 P18 legacy 5.829e-12; exp28/p 7케이스 CPU ≤ 1e-9(연구 코드 오늘 실행 대비 비트 동일), GPU ≤ 5.6e-9; PCB Port1 CPU 9.4e-11. strict xfail 2건: PCB Port50 CPU 30 kHz 1.016e-9(한도 1e-9), GPU 1 MHz 1.69e-8(한도 1e-8) — 조건수 기인, 반복 정제로 불변(IR_REPORT).
 - 소유자 결정 대기: (1) PCB 저주파 재현 허용치(CPU 2e-9 / GPU 레일별)로 사전 등록해 xfail을 해소할지, (2) 연구 브랜치의 main 병합 여부.
-- 다음: W8 `set_decaps`(프루닝 규칙 `prune_basis="all_mounted"` 검증 포함) → W9 decap 스윕(Schur) → W10 다중 포트. W11 제품 통합은 패키지 급전 경로 R 관례 해결 후.
+- 다음: W9 decap 스윕(Schur, exp9 이식) → W10 다중 포트. W11 제품 통합은 패키지 급전 경로 R 관례 해결 후.

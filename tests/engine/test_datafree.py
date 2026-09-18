@@ -98,3 +98,54 @@ def test_backend_defaults():
 def test_solver_demo_cudss(capsys):
     """cuDSS against scipy.splu on two systems sharing a sparsity pattern (needs the A2000)."""
     solver.demo_cudss()
+
+
+# --------------------------------------------------------------------------------- W8: set_decaps
+def test_set_decaps_bookkeeping():
+    """`set_decaps` / `decap_config` / `reset_decaps` on a stand-in for a built model.
+
+    Those three touch only `dec`, `_dec_refdes`, `_dec_cfg` and `ex`, so the real methods run here
+    without an SPD.  What is gated: a partial dict changes only what it lists, an unmounted decap
+    keeps its `self.dec` entry (that is what keeps the Y pattern -- and the cuDSS plan -- valid),
+    and an unknown refdes or model_id raises `KeyError` instead of silently doing nothing.
+    """
+    from types import SimpleNamespace
+
+    from spd_pi_engine.model import Model
+
+    m = SimpleNamespace(dec=[(1, -1, "M1"), (2, -1, "M2")], _dec_refdes=["C1", "C2"],
+                        _dec_cfg={"C1": "M1", "C2": "M2"},
+                        ex=dict(models={"M1": None, "M2": None},
+                                decaps=[dict(refdes="C1", model_id="M1"),
+                                        dict(refdes="C2", model_id="M2")]))
+    m.set_decaps = lambda cfg: Model.set_decaps(m, cfg)   # what `reset_decaps` calls back into
+    assert Model.decap_config.fget(m) == {"C1": "M1", "C2": "M2"}
+
+    Model.set_decaps(m, {"C1": None})
+    assert Model.decap_config.fget(m) == {"C1": None, "C2": "M2"}
+    assert [d[2] for d in m.dec] == [None, "M2"] and len(m.dec) == 2
+    assert m.dec[0][:2] == (1, -1), "the node pair must not move"
+
+    Model.set_decaps(m, {"C1": "M2"})
+    assert m.dec[0] == (1, -1, "M2")
+    with pytest.raises(KeyError):
+        Model.set_decaps(m, {"NO_SUCH_REFDES": None})
+    with pytest.raises(KeyError):
+        Model.set_decaps(m, {"C1": "NO_SUCH_MODEL"})
+    with pytest.raises(KeyError):
+        Model.set_decaps(m, {"C1": "M1", "NO_SUCH_REFDES": None})
+    assert Model.decap_config.fget(m) == {"C1": "M2", "C2": "M2"}, "a rejected call must change nothing"
+
+    Model.reset_decaps(m)
+    assert Model.decap_config.fget(m) == {"C1": "M1", "C2": "M2"}
+
+
+def test_ypattern_keeps_explicit_zero():
+    """W8's premise: stamping 0 does not drop the slot, so the CSC structure is unchanged."""
+    rows = np.array([0, 1, 2, 2]); cols = np.array([0, 1, 2, 0])
+    p = solver.YPattern(rows, cols, 3)
+    full = p.csc(np.array([1 + 0j, 2 + 0j, 3 + 0j, 4 + 0j]))
+    zeroed = p.csc(np.array([1 + 0j, 0j, 3 + 0j, 4 + 0j]))
+    assert zeroed.nnz == full.nnz
+    assert np.array_equal(zeroed.indptr, full.indptr) and np.array_equal(zeroed.indices, full.indices)
+    assert zeroed[1, 1] == 0

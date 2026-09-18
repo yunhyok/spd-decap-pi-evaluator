@@ -14,8 +14,15 @@ Everything here is a thin shell over W1-W3: `Design.rail` is `spd_source.prepare
 `Model.build` and `Model.solve` already returns the `Result` that writes the receipt.  No numerics
 live in this module.
 
-`Model.set_decaps` is W8; `Result.receipt()["decap_config_sha256"]` already hashes the rail's
-current `{refdes: model_id}` so W8 reuses it unchanged.
+W8 (`model.py`) adds the decap configuration on top of a built model -- no rebuild, no re-prune:
+
+    mdl.set_decaps({"C1234": None, "C1235": "CAP_0402_100NF"})   # None = unmounted
+    mdl.decap_config                                             # {refdes: model_id | None}
+    mdl.reset_decaps()                                           # back to the SPD's own
+    mdl.add_decap_model("MY_CAP", subckt_text)                   # register a .SUBCKT two-port
+    res2 = mdl.solve(res.freq)     # same YPattern, same cuDSS plan: refactorize only
+
+`Result.receipt()` then carries `decap_config`, `decap_config_sha256` and `prune_basis`.
 """
 from __future__ import annotations
 

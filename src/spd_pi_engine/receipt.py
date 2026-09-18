@@ -216,7 +216,8 @@ class Result:
                     fringe_wd=opt.fringe_wd, max_layers=opt.max_layers,
                     fine_box=list(opt.fine_box) if opt.fine_box else None)
         conv = conventions_dict(opt.conventions)
-        config = {d["refdes"]: d["model_id"] for d in ex["decaps"]}
+        # W8: the model's *current* configuration (set_decaps); falls back to the SPD's own.
+        config = getattr(m, "decap_config", None) or {d["refdes"]: d["model_id"] for d in ex["decaps"]}
         prepare_s = getattr(rail, "prepare_seconds", 0.0)
         build_s = float(m.info.get("build_seconds", 0.0))
 
@@ -235,6 +236,8 @@ class Result:
                          device=getattr(m._cudss, "device", None) or None),
             conventions=conv,
             decap_config_sha256=decap_config_sha256(config),
+            decap_config=config,
+            prune_basis=getattr(m, "prune_basis", "all_mounted"),
             unknowns=int(m.N),
             nodes_before_prune=int(m.info["nodes_before_prune"]),
             decaps_connected=int(m.info["decaps_connected"]),

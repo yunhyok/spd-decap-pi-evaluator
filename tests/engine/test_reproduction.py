@@ -17,7 +17,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from ladder import ladder_freqs, ref_of
+from ladder import LADDER, ladder_freqs, ref_of
 
 from spd_pi_engine import Backend, Design, FLAGS_LEGACY, FLAGS_P, ModelOptions, attach_reference
 
@@ -212,3 +212,46 @@ def test_attach_reference_port14(spd_path, ref_npz, cache_dir):
     attach_reference(rec, fref, zref)
     assert rec["ladder_gates"]["PASS"] == fixture["ladder_gates"]["PASS"]
     assert abs(rec["err_1MHz"] - fixture["err_1MHz"]) <= 1e-9
+
+
+# ------------------------------------------------------------------------- (W8) set_decaps
+@pytest.mark.gpu
+def test_set_decaps_vs_rebuild_port14(spd_path, ref_npz, cache_dir):
+    """W8: unmounting one decap with `set_decaps` must equal a build that never saw it.
+
+    260729 Port14 (35 decaps, 34 k unknowns) on the 7 LADDER points.  Gated: the Y sparsity
+    pattern (and with it the cached `YPattern` and the cuDSS plan) survives the unmount, pruning
+    does not move (N stays on the all-mounted basis), and Z matches the rebuild to 1e-9.
+
+    `gpu`, for the build only: the homogenisation of this rail is 5 s on the A2000 against 38 s on
+    the CPU and the test builds twice.  Both models are then *solved* through splu -- two live
+    cuDSS `DirectSolver`s in one process fault on 0.8.0.10, and the GPU path's own accuracy budget
+    (1e-8) is wider than this gate.  `WORK_DIR/engine_w8` runs the cuDSS variant, one per process.
+    """
+    from spd_pi_engine.model import Model
+
+    build_be = Backend(solver="cudss", fast=True)      # GPU homogenisation
+    solve_be = Backend(solver="splu", fast=True)       # deterministic solve, no cuDSS plan
+    rail = Design.open(spd_path("260729")).rail("Port14_SITE0", Path(cache_dir))
+    fref, _ = ref_of(ref_npz("260729"), "Port14_SITE0")
+    freqs = fref[sorted({int(np.argmin(abs(fref - x))) for x in LADDER})]
+    victim = rail.decaps[0].refdes
+
+    mdl = rail.build(OPT, build_be)
+    mdl.backend = solve_be
+    Y0 = mdl.assemble(float(freqs[0]))
+    mdl.set_decaps({victim: None})
+    assert mdl.decap_config[victim] is None and len(mdl.dec) == len(rail.decaps)
+    Y1 = mdl.assemble(float(freqs[0]))
+    assert Y1.nnz == Y0.nnz and np.array_equal(Y1.indices, Y0.indices), "the Y pattern moved"
+    z_set = mdl.solve(freqs, verbose=False).Z
+
+    ex = dict(rail.ex)
+    ex["decaps"] = [d for d in rail.ex["decaps"] if d["refdes"] != victim]
+    mdl2 = Model.build(ex, rail.shapes, dataclasses.replace(OPT, fine_box=rail.fine_box), build_be)
+    mdl2.backend = solve_be
+    z_reb = mdl2.solve(freqs, verbose=False).Z
+
+    assert mdl2.N == mdl.N, f"pruning moved: {mdl2.N} vs {mdl.N}"
+    rel = np.abs(z_set - z_reb) / np.abs(z_reb)
+    assert rel.max() <= 1e-9, f"max rel {rel.max():.3e} at {freqs[rel.argmax()]:.4g} Hz"
