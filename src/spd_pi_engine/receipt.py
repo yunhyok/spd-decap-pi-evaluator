@@ -43,9 +43,13 @@ VALIDITY_NOTES = [
 # ---------------------------------------------------------------- numerics_id
 @functools.lru_cache(maxsize=1)
 def source_hashes() -> tuple:
-    """sha256/16 of each numeric module's bytes (lazy: nothing is read at import time)."""
+    """sha256/16 of each numeric module's bytes, line endings normalised to LF so the id is the same
+    on CRLF and LF checkouts (lazy: nothing is read at import time)."""
     here = Path(__file__).parent
-    return tuple((n, hashlib.sha256((here / n).read_bytes()).hexdigest()[:16]) for n in NUMERIC_MODULES)
+    return tuple((n, hashlib.sha256((here / n).read_bytes().replace(b"
+", b"
+")).hexdigest()[:16])
+                 for n in NUMERIC_MODULES)
 
 
 def conventions_dict(conv) -> dict:

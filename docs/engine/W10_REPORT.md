@@ -99,6 +99,9 @@ G-A 상반성 ≤ 1e−12, G-B 폐합 ≤ 1e−6, G-C k=1 항등 ≤ 1e−8.
 | max \|ΔZ\|/\|Z\| (7점) | **6.97e−11** (한도 1e−8) → **PASS** |
 | 주파수별 | 6.97e−11, 3.95e−11, 9.56e−12, 4.21e−11, 2.09e−12, 2.32e−12, 1.72e−12 |
 
+`Design.multiport(["Port14_SITE0"], ...)`(편의 메서드 경로)도 같이 확인했다: 미지수 34 424 =
+영수증, max |ΔZ|/|Z| = **2.41e−11**.
+
 `short_ports`의 재번호가 k=1에서 항등임을, 그리고 W8이 측정한 GPU 편차(1.21e−10)와 같은 급임을
 보인다. 다중 포트 경로는 k=1에서 단일 포트 경로 그 자체다.
 
@@ -270,3 +273,6 @@ res.receipt()               # method="multiport", ports, port_groups, numerics_i
 | `MultiRail.from_rail(rail, groups)` | 이미 추출한 레일 위의 노드 그룹. 그룹 0이 모델의 포트가 된다 |
 | `MultiModel(...)` | `Model`을 **소유**한다(`map`/`N`/`P`가 k 포트용으로 바뀐다). 그룹이 겹치거나 프루닝으로 사라진 노드를 담으면 `ValueError` |
 | `MultiResult.Z` | `Z[f, i, j]` = 포트 j에 1 A를 넣었을 때 포트 i의 전압 |
+
+## 보충 (2026-09-18, 병합 후)
+- `numerics_id`가 체크아웃의 줄바꿈(CRLF/LF)에 따라 달라지는 문제를 `receipt.source_hashes`에서 LF로 정규화해 고쳤다(수치 모듈 바이트가 아니라 해시 함수의 변경이므로 Z는 불변). 이후 영수증의 id는 LF 기준 값이다.
