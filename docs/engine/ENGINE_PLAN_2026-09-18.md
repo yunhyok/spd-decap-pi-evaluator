@@ -145,3 +145,10 @@ mdl.set_decaps({"C1234": None, "C1235": "GRM155R61A106M"}); res2 = mdl.solve(res
 - E1. 저장소는 PUBLIC으로 유지한다.
 - E2. 연구·엔진 브랜치 `claude/lightweight-hybrid-20260915`를 main에 fast-forward 병합한다(수행: `5f790a6` 기준).
 - E3. **PCB 저주파 재현 허용치 사전 등록**: 저주파 행렬 조건수 때문에 PCB 레일의 재현 오차가 패키지보다 크다(IR_REPORT, W5 §5). 결과를 본 뒤의 조정이 아니라 레일 유형별 계약으로 고정한다 — PCB 픽스처(`tests/engine/fixtures/exp30`)에 대해 CPU max|ΔZ|/|Z| ≤ 2e-9, GPU f ≥ 1 MHz ≤ 1e-7·전 대역 ≤ 1e-6. 패키지 레일 계약(CPU 1e-9, GPU 1e-8)은 불변. strict xfail 2건은 이 계약으로 해소한다. 이후 새 PCB 포트를 픽스처에 넣을 때도 같은 계약을 적용하며, 이 값을 넘는 결과는 조정 대상이 아니라 조사 대상이다.
+
+## W12. 앱이 드러낸 엔진 요구사항 (2026-09-18 사전 등록, 수치 불변)
+근거: `APP_decap_search_REPORT.md` §6, `APP_site_decision_REPORT.md` §7.
+- W12-a **기저 경로 GPU 계약 조사**: (1) 같은 입력을 같은 프로세스·별도 프로세스에서 반복해 cuDSS 기저의 실행 간 변동을 측정(비결정성 여부), (2) 다른 GPU 프로세스와 동시 실행 시 변동, (3) 주파수 집합에 따른 100 kHz 오차 차이(W9 5.8e-7 vs A1 2.0e-6). 판정: 변동이 실행 간 재현되지 않으면 계약을 "GPU 기저 ≤ 1e-5, 비결정적"으로 문서화하고 정확 경로로 CPU 기저(`decap_basis(..., backend=Backend("splu", fast=True))`)를 제공하며 P18 CPU 기저 비용을 잰다. 어느 경우든 마스크 판정 일치가 앱의 기능 기준이다(E4).
+- W12-b **한 프로세스에서 기저와 직접 풀이 공존**: cuDSS `DirectSolver`를 두 번 만들 때의 실제 조건을 실험으로 확정(W5는 9모델 순차 생성 성공, W9는 "두 번째 생성 시 크래시"라고 기록 — 모순). 가능하면 `Model.release_solver()`(참조 해제, `free()` 호출 없음)와 `decap_basis(backend=…)`로 2단계 프로세스 구조를 없앤다.
+- W12-c **API 인체공학(수치 무관)**: `DecapSite`에 `xy, layer, capacitance(1 kHz 기준), impedance(freqs)`; `api.find_site_pair(spd, port)`; `ladder_freqs`·`unique_path`를 공개 API로; `receipt.attach_mask(receipt, mask)`; `Model.set_decaps(cfg, replace=True)`; `DecapBasis.save(..., with_impedances=True)`/`load(path)`가 모델 없이 동작; `Result.receipt(light=True)`(decap_config·reference_search 생략); 기존 동작·영수증 기본 형식은 불변.
+- 게이트: `tests/engine` 기본 + `-m gpu` 프로파일 통과, W4/W8/W9 게이트 스크립트 재실행 값 불변(CPU 비트 동일), 두 앱이 새 API로 같은 데모 결과를 재현.
