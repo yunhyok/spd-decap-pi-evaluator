@@ -8,7 +8,7 @@
 
 | 파일 | 변경 | 내용 |
 |---|---|---|
-| `src/spd_pi_engine/multiport.py` | **신규 432줄** | `group_ports_by_rail`/`port_rails`/`rail_groups`, `rail_node_indices`, `short_ports`, `MultiRail`, `MultiModel`, `MultiResult`, `demo()` |
+| `src/spd_pi_engine/multiport.py` | **신규 436줄** | `group_ports_by_rail`/`port_rails`/`rail_groups`, `rail_node_indices`, `short_ports`, `MultiRail`, `MultiModel`, `MultiResult`, `demo()` |
 | `tests/engine/test_multiport.py` | **신규 120줄** | 데이터 없는 2건 + 데이터 2건(`gpu` 1건) |
 | `docs/engine/W10_REPORT.md` | **신규** | 이 문서 |
 | `src/spd_pi_engine/api.py` | +15 (82–96줄), 173줄 | `Design.multiport(...)` 한 메서드만 `Design` 클래스 끝에 추가 |
@@ -69,7 +69,8 @@ W10 브리핑은 `Port18_SITE0`와 그 SITE1 짝이 같은 레일이라고 가�
 
 `spd_source.extract`는 net 이름으로 추출하므로 두 레일은 미지수를 하나도 공유하지 않고, 동결 모델의
 이상 GND(변종 B)에서는 **Z₁₂ ≡ 0**이다. 0으로 채운 행렬을 결과처럼 돌려주지 않도록
-`MultiRail.open`이 거부한다(문구는 `groups.json`의 `site_pair_refused`).
+`MultiRail.open`이 거부한다 — 포트 헤더만 읽고 0.9 s 만에, 추출을 시작하기 전에
+(문구는 `groups.json`의 `site_pair_refused`).
 
 그래서 k > 1 실측 케이스는 **한 SPD 포트의 핀을 두 그룹으로 나눈 것**으로 잡았다. 이것이 현재
 데이터가 표현할 수 있는 유일한 동일 레일 다중 포트이고, 동시에 **가장 강한 검증**이다: 두 그룹을
@@ -181,7 +182,7 @@ RSS 2.05 GB. **RHS 하나 추가 비용은 인수분해의 10 %에 불과하다*
 
 ```
 python -m pytest tests\engine -q -k multiport          3 passed, 1 skipped (4.4 s)
-python -m pytest tests\engine -q -k multiport --gpu    4 passed (28.6 s)
+python -m pytest tests\engine -q -k multiport --gpu    4 passed (32.5 s)
 python -m pytest tests\engine -q -k datafree           14 passed, 1 skipped (1.4 s; 기존 12 + W10 2)
 ```
 

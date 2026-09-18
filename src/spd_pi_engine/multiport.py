@@ -213,6 +213,7 @@ class MultiRail:
         """Extract every port and keep the first one's rail.  Refuses ports on different rails."""
         conv = conventions or DEFAULT_CONVENTIONS
         names = [str(p) for p in ports]
+        cls._one_rail(port_rails(design.path, names))    # before paying for k extractions
         t0 = time.time()
         first, rails, groups, boxes = None, {}, {}, []
         for p in names:
@@ -223,18 +224,21 @@ class MultiRail:
             boxes.append(box)
             if first is None:
                 first = (ex, shapes)
-        if len(set(rails.values())) != 1:
+        cls._one_rail(rails)                             # the header said so; the extraction agrees
+        return cls(first[0], first[1], groups, _union(boxes), design.path,
+                   getattr(design, "sha256", "") or sha256_of(design.path), time.time() - t0)
+
+    @staticmethod
+    def _one_rail(rails: dict) -> None:
+        if len(set(rails.values())) > 1:
             raise ValueError(
                 "multiport needs one rail: " + ", ".join(f"{p} on {r}" for p, r in rails.items()) +
                 ". The extraction is by net name and with the frozen ideal-GND reference two nets "
                 "share no unknown, so their mutual Z would be identically zero "
                 "(docs/engine/W10_REPORT.md §3)")
-        self = cls(first[0], first[1], groups, _union(boxes), design.path,
-                   getattr(design, "sha256", "") or sha256_of(design.path), time.time() - t0)
-        return self
 
     @classmethod
-    def from_rail(cls, rail, groups, log=None) -> "MultiRail":
+    def from_rail(cls, rail, groups) -> "MultiRail":
         """k ports defined as node-id groups on one already-extracted `api.Rail`.
 
         This is the general form: an SPD port is just a group (`ex["port_pos_nodes"]`), and any
