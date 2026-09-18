@@ -276,3 +276,88 @@ res.receipt()               # method="multiport", ports, port_groups, numerics_i
 
 ## 보충 (2026-09-18, 병합 후)
 - `numerics_id`가 체크아웃의 줄바꿈(CRLF/LF)에 따라 달라지는 문제를 `receipt.source_hashes`에서 LF로 정규화해 고쳤다(수치 모듈 바이트가 아니라 해시 함수의 변경이므로 Z는 불변). 이후 영수증의 id는 LF 기준 값이다.
+
+## §7 후속 (다중 RHS 교체, 2026-09-18)
+
+§6/ENGINE_PLAN "진행 상태"가 예고한 후속: `MultiModel.solve`의 cuDSS 블록이 하던 "1회 `gpu.solve(Y)` +
+나머지 k-1개는 `gpu._solver.reset_operands(b=...)`로 개별 삼각 풀이"를 W9가 추가한 진짜 다중 RHS
+경로(`Model._gpu_solver(Y, nrhs=k)` / `CudssLU.solve(Y, B)`)로 교체했다. `model.py`/`solver.py`는
+손대지 않았다 — 둘 다 W9가 이미 만들어 둔 것을 부르기만 한다. `multiport.py` 외 파일은 수정하지 않았다.
+
+### 변경 (`src/spd_pi_engine/multiport.py`, 28줄 → 4줄 순감)
+
+```diff
+-from . import solver as SOL
+ from .backend import DEFAULT
+@@ MultiModel.solve
+-        rhs = np.zeros((int(mdl.N), k), complex)
++        rhs = np.zeros((int(mdl.N), k), complex, order="F")   # W9: cuDSS wants the dense RHS column-major
+         rhs[self.P, np.arange(k)] = 1.0
+         Z = np.zeros((len(freqs), k, k), complex)
+         stats = []
+-        gpu = None
+         t_all = time.time()
+         for fi, f in enumerate(freqs):
+             t0 = time.time()
+             Y = mdl.assemble(f)
+             t1 = time.time()
+-            if gpu is None and mdl.backend.solver in ("cudss", "auto"):
+-                gpu = mdl._cudss
+-                if gpu is None:
+-                    try:
+-                        gpu = SOL.CudssLU(Y, self.P[0], log, backend=mdl.backend)
+-                        log(f"[solver] cudss on {gpu.device}")
+-                    except Exception as e:
+-                        gpu = False
+-                        log(f"[solver] cudss unavailable ({type(e).__name__}: {e}) -- using splu")
+-                    mdl._cudss = gpu
++            gpu = mdl._gpu_solver(Y, nrhs=k)     # W9: one factorization, k right-hand sides
+             if gpu:
+-                V, st = gpu.solve(Y)             # refactorize + solve for e_P0
+-                Vs = [V]
+-                # ponytail: the extra RHS go through CudssLU's own DirectSolver, one triangular
+-                # solve each on the SAME factorization -- cuDSS rejects a 2-D b once it was planned
+-                # with a 1-D one, and W9 is adding a real multi-RHS path to solver.py.  Leave b at
+-                # e_P0 afterwards: CudssLU.solve() does not reset it.
+-                for j in range(1, k):
+-                    gpu._solver.reset_operands(b=rhs[:, j].copy())
+-                    Vs.append(np.asarray(gpu._solver.solve()).copy())
+-                if k > 1:
+-                    gpu._solver.reset_operands(b=rhs[:, 0].copy())
++                V, st = gpu.solve(Y, rhs)
++                Vs = list(V.T)
+                 t2 = time.time()
+                 stats.append(dict(f=float(f), assemble_s=t1 - t0, rss_MB=peak_rss_mb(), n_rhs=k, **st))
+             else:
+```
+
+`# ponytail:` 표시가 있던 우회로(`reset_operands`로 RHS를 하나씩 다시 꽂는 것)와 그 앞의 임시
+`gpu = None` / `mdl._cudss` 캐시 관리 코드가 통째로 사라지고, `decaps.py`가 이미 쓰는 것과 같은 패턴
+(`model._gpu_solver(Y, nrhs=chunk)` → `gpu.solve(Y, B)[0]`)으로 정리됐다. splu 분기(else)는 그대로다.
+
+### 검증
+
+1. `pytest tests\engine -q -k "multiport or datafree" --gpu` — **17 passed** (기존 스위트 그대로, 새 실패 없음).
+2. Port18_SITE0 핀 분할(k=2, cuDSS, `--gpu`)을 새 코드로 재현 — `w10_gate.py`가 가리키는 워크트리
+   (`...\worktrees\spd-engine-w10`)는 이미 없으므로, 같은 `OPT`/`GPU`/`LADDER`/짝수-홀수 분할 규칙으로
+   현재 저장소를 가리키는 동등 스크립트를 새로 돌렸다(`split_260729_Port18_SITE0_cudss.json`이 구
+   결과, `split_260729_Port18_SITE0_cudss_w9rhs.json`이 신 결과):
+
+   | 지표 | 구 (k회 삼각 풀이, W10 리포트) | 신 (다중 RHS) | 차이 |
+   |---|---|---|---|
+   | reciprocity `max|Z_ij-Z_ji|/|Z_ij|` | 8.207150525903876e-11 | 5.062260486661473e-11 | 3.14e-11 |
+   | closure `|shorted - exp28/p|/|exp28/p|` (max over 7 f) | 2.7773932486488007e-09 | 2.769342341289102e-09 | 7.99e-12 |
+
+   둘 다 사전 등록 게이트(G-A reciprocity <= 1e-8, G-B closure <= 1e-6, `test_multiport.py`)를 3
+   자릿수 이상 여유 있게 통과하지만, 이 절 앞머리에서 목표로 잡았던 "1e-12 이내 일치"는 아니다 —
+   `test_multiport_port18_pin_split`의 docstring이 이미 적어 둔 대로 cuDSS + 1회 반복정제는 **같은
+   코드를 두 번 돌려도** reciprocity가 2e-11~8e-11 사이에서 흔들린다(GPU 비결정성, CLAUDE.md "GPU
+   정책"). k회 개별 `reset_operands`+삼각 풀이에서 진짜 배치 다중 RHS 1회 factorize+solve로 수치
+   경로 자체가 바뀌었으니, 이 흔들림 폭 안에서 구/신이 다른 것은 회귀가 아니라 예상된 결과다.
+   `Z`가 아니라 `Y`(어셈블) 쪽은 전혀 손대지 않았으므로 재현 오차의 근원은 오직 이 GPU 솔버 잡음.
+3. 주파수당 처리 시간(k=2, 같은 웜 `engine_cache_w10`, 7주파수): `solve_seconds` 합계가 7.87 s(구,
+   1.12 s/f) → 4.74 s(신, 0.68 s/f) — **회귀 없음, 오히려 ~40 % 단축**(RHS 2개를 한 번의
+   factorize로 같이 풀기 때문에 당연한 방향).
+
+원시 수치: `WORK_DIR\engine_w10\split_260729_Port18_SITE0_cudss.json`(구, 기존 파일 그대로 보존)와
+`WORK_DIR\engine_w10\split_260729_Port18_SITE0_cudss_w9rhs.json`(신, 이번에 추가).

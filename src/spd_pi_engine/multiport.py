@@ -42,7 +42,6 @@ from dataclasses import dataclass
 import numpy as np
 from scipy.sparse.linalg import splu
 
-from . import solver as SOL
 from .backend import DEFAULT
 from .model import Model, ModelOptions, peak_rss_mb
 from .receipt import Result
@@ -295,38 +294,19 @@ class MultiModel:
         log = mdl.log
         k = len(self.P)
         freqs = np.asarray(freqs, float)
-        rhs = np.zeros((int(mdl.N), k), complex)
+        rhs = np.zeros((int(mdl.N), k), complex, order="F")   # W9: cuDSS wants the dense RHS column-major
         rhs[self.P, np.arange(k)] = 1.0
         Z = np.zeros((len(freqs), k, k), complex)
         stats = []
-        gpu = None
         t_all = time.time()
         for fi, f in enumerate(freqs):
             t0 = time.time()
             Y = mdl.assemble(f)
             t1 = time.time()
-            if gpu is None and mdl.backend.solver in ("cudss", "auto"):
-                gpu = mdl._cudss                 # one cuDSS solver per model (cuDSS 0.8 faults on a second)
-                if gpu is None:
-                    try:
-                        gpu = SOL.CudssLU(Y, self.P[0], log, backend=mdl.backend)
-                        log(f"[solver] cudss on {gpu.device}")
-                    except Exception as e:
-                        gpu = False
-                        log(f"[solver] cudss unavailable ({type(e).__name__}: {e}) -- using splu")
-                    mdl._cudss = gpu
+            gpu = mdl._gpu_solver(Y, nrhs=k)     # W9: one factorization, k right-hand sides
             if gpu:
-                V, st = gpu.solve(Y)             # refactorize + solve for e_P0
-                Vs = [V]
-                # ponytail: the extra RHS go through CudssLU's own DirectSolver, one triangular
-                # solve each on the SAME factorization -- cuDSS rejects a 2-D b once it was planned
-                # with a 1-D one, and W9 is adding a real multi-RHS path to solver.py.  Leave b at
-                # e_P0 afterwards: CudssLU.solve() does not reset it.
-                for j in range(1, k):
-                    gpu._solver.reset_operands(b=rhs[:, j].copy())
-                    Vs.append(np.asarray(gpu._solver.solve()).copy())
-                if k > 1:
-                    gpu._solver.reset_operands(b=rhs[:, 0].copy())
+                V, st = gpu.solve(Y, rhs)
+                Vs = list(V.T)
                 t2 = time.time()
                 stats.append(dict(f=float(f), assemble_s=t1 - t0, rss_MB=peak_rss_mb(), n_rhs=k, **st))
             else:
