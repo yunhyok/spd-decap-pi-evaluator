@@ -164,3 +164,6 @@ mdl.set_decaps({"C1234": None, "C1235": "GRM155R61A106M"}); res2 = mdl.solve(res
 - 소유자 지시 반영: D9 microvia 구리 충전 가정(수치 변경 없음, `validity` 문구 추가), 앱 v2(W12 API로 단순화: decap_search 439→386줄·1프로세스, 결과 동일 — Port18 305/421 sha 동일, PCB 5/7 동일; site_decision 판정 10/10 동일·Z 3.8e-12), W13 하드웨어 프로파일(`hardware.py`: 감지 + 순수 산정 `plan_sweep/plan_basis/plan_threads/plan_chunk_tiles`; 노트북 jobs 4/6, 워크스테이션 32C/64T·512 GB·A6000 프로파일에서 sweep 10(cudss)/15(splu), CPU 기저 워커 15, 92포트 sweep 예상 9–10분; 주파수 병렬 CPU 기저는 비트 동일, P18 147→56 s). `sweep --jobs auto` 기본, `chunk_tiles="auto"`는 옵트인(수치 비중립).
 - 드러난 격차: (1) 기저·직접 풀이 백엔드가 다를 때의 계약 문구(README §7에 추가), (2) OpenBLAS 기본 스레드 수에서 CPU 인수분해가 2배 느리고 불안정(워커 env로 고정), (3) A1 CPU-기저+GPU-직접 조합 1.2–1.9e-8은 GPU 직접 계약(1e-8) 경계 — 조사 대상으로 기록.
 - 남은 항목: W11 제품 통합. 워크스테이션 실측은 장비 접속 시 `tests/engine/test_hardware.py`의 프로파일 테스트와 92포트 sweep으로 검증.
+
+## W11 착수 (2026-09-19)
+- 소유자 지시("다음 단계 진행")로 W11 시작. 계획 `W11_PLAN_2026-09-19.md`(사전 등록): 프로파일 2개 옵트인·기본값 불변, 진입점 3곳 분기, 항상 서브프로세스, CPU 전용 프리즈 빌드, 재현 테스트 ≤1e-9, 제품 테스트 FAILED/ERROR 집합 불변. 미해결 패키지 R 관례는 게이트가 아니라 validity 문구로 처리(소유자 확인 사항).
