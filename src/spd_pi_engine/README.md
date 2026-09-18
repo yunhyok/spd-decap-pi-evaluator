@@ -78,6 +78,8 @@ sweep  --spd PATH --ports all|a,b --cache DIR --outdir DIR --jobs N [solve 옵�
 
 연구 코드 쪽 재현 게이트는 그대로 `python tools\research-claude\common\smoke_port18.py`(5.83e-12)다.
 
+**스레드 수와 비트 동일성**(W12-a §5): CPU splu 경로는 `OPENBLAS_NUM_THREADS`에 따라 결과가 2.7e-13 수준으로 달라진다(각 설정 자체는 결정적). 허용치 게이트(1e-9)에는 영향이 없지만, "비트 동일" 비교(W4/W8 CPU 영수증 대조)는 같은 스레드 수에서만 성립한다. 기저 닫힘 속도를 위한 `OPENBLAS_NUM_THREADS=4` 권장(W9)은 유지하되, 비트 비교를 할 때는 영수증을 만든 설정과 맞춘다.
+
 ## 6. 캐시
 `cache_dir` 아래 `extract_{port}_{key}.pkl`, `shapes_{layer}_{key}.pkl`. 키 = sha256(SPD sha256, 포트/층, max_layers, cache_format=2, parser_version). 제품 객체는 피클하지 않는다(스택업은 dict, decap 모델은 `.SUBCKT` 원문 → 로드 시 재파싱). 손상·버전 불일치는 조용히 재생성. 여러 프로세스가 같은 디렉터리를 써도 안전(원자적 쓰기, 8×8 스트레스 PASS). P18 추출 캐시 33 MB, 층 shapes 각 약 11 MB.
 
