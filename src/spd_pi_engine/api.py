@@ -40,7 +40,10 @@ import dataclasses
 import functools
 import time
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
+
+import numpy as np
 
 from .backend import DEFAULT
 from .model import Model, ModelOptions
@@ -49,9 +52,33 @@ from .reference import DEFAULT_CONVENTIONS
 from .spd_source import list_ports, prepare, sha256_of
 
 
+def _capacitance_F(model, f: float = 1e3) -> float | None:
+    """C = -1/(2*pi*f*Im Z(f)) at f=1 kHz -- `apps.site_decision.decide.capacitance`'s assumption,
+    ported here (W12-c, APP_site_decision_REPORT §7-2): the decap models are series R-L-C ladders,
+    so at 1 kHz Im Z is normally the capacitive branch.  `None` when there is no model, or Im Z is
+    not negative there (not capacitive at 1 kHz) -- callers should not divide a resistive/inductive
+    reading into a fake farad value.
+    """
+    if model is None:
+        return None
+    z = complex(model.impedance([f])[0])
+    return None if z.imag >= 0 else float(-1.0 / (2 * np.pi * f * z.imag))
+
+
 @dataclass(frozen=True)
 class DecapSite:
-    """One decap on the rail (`ex["decaps"]`), as W8's `set_decaps` will address it."""
+    """One decap on the rail (`ex["decaps"]`), as W8's `set_decaps` will address it.
+
+    W12-c: `xy`/`layer`/`capacitance_F`/`impedance()` so an app can rank or place sites without
+    reaching into `rail.ex` (APP_decap_search_REPORT §6-5, APP_site_decision_REPORT §7-1/2).
+    Least-invasive design: `DecapSite` stays a plain frozen dataclass, with no back-reference to
+    `Rail` -- the new fields are plain data (defaults `None`, so a `DecapSite` built any other way,
+    e.g. a test fake, is unchanged) and `_model` is the one exception, a private field (excluded
+    from `repr`/`==`, so equality and hashing of the original 8 fields is unchanged) that stashes
+    the decap's own model object so `impedance()` has something to delegate to.  `Rail.decaps`
+    fills all of this in eagerly, from `ex["rail_nodes"]`/`ex["models"]` it already holds; the new
+    `Rail.site(refdes)` is the one-site lookup an app that already knows its refdes wants.
+    """
 
     refdes: str
     part: str
@@ -61,6 +88,19 @@ class DecapSite:
     gnd_node: str | None
     gnd_net: str | None
     usage: str | None
+    xy: tuple[float, float] | None = None      # (x, y) um -- ex["rail_nodes"][node][:2]
+    layer: str | None = None                   # ex["rail_nodes"][node][2]
+    capacitance_F: float | None = None         # _capacitance_F(model); None if not capacitive
+    _model: object = dataclasses.field(default=None, repr=False, compare=False)
+
+    def impedance(self, freqs):
+        """This site's decap model impedance (Ohms, complex) -- `ex["models"][model_id].impedance`.
+
+        Raises if this `DecapSite` was not built by `Rail.decaps`/`Rail.site` (no model bound).
+        """
+        if self._model is None:
+            raise ValueError(f"{self.refdes}: no bound model (DecapSite built outside Rail.decaps)")
+        return self._model.impedance(freqs)
 
 
 class Design:
@@ -141,10 +181,29 @@ class Rail:
 
     @functools.cached_property
     def decaps(self) -> list[DecapSite]:
-        return [DecapSite(refdes=d["refdes"], part=d["part"], model_id=d["model_id"],
-                          model_source=d.get("model_source", ""), node=d["rail_node"],
-                          gnd_node=d["gnd_node"], gnd_net=d["gnd_net"], usage=d["usage"])
-                for d in self.ex["decaps"]]
+        rn = self.ex["rail_nodes"]
+        models = self.ex.get("models", {})
+        out = []
+        for d in self.ex["decaps"]:
+            rec = rn.get(d["rail_node"])
+            xy = (float(rec[0]), float(rec[1])) if rec is not None else None
+            layer = rec[2] if rec is not None else None
+            model = models.get(d["model_id"])
+            out.append(DecapSite(refdes=d["refdes"], part=d["part"], model_id=d["model_id"],
+                                 model_source=d.get("model_source", ""), node=d["rail_node"],
+                                 gnd_node=d["gnd_node"], gnd_net=d["gnd_net"], usage=d["usage"],
+                                 xy=xy, layer=layer, capacitance_F=_capacitance_F(model),
+                                 _model=model))
+        return out
+
+    @functools.cached_property
+    def _decaps_by_refdes(self) -> dict:
+        return {d.refdes: d for d in self.decaps}
+
+    def site(self, refdes) -> DecapSite:
+        """The one `DecapSite` named `refdes` (W12-c) -- `self.decaps` already built the whole
+        list, so this is just the lookup an app that knows its refdes wants."""
+        return self._decaps_by_refdes[str(refdes)]
 
     @property
     def n_nodes(self) -> int:
@@ -180,4 +239,87 @@ class Rail:
         return mdl
 
 
-__all__ = ["DecapSite", "Design", "Rail", "Result"]
+# ---------------------------------------------------------------- util (W12-c, public now)
+#: LADDER + 21 log points 3e5..3e7 (`exp5/pipeline.LADDER`).  Was `cli.LADDER` only; `cli` now
+#: imports this same tuple so `spd_pi_engine.cli.LADDER` still works (APP_decap_search_REPORT §6-6).
+LADDER = (3.0e4, 1.0e5, 3.0e5, 1.0e6, 2.5e6, 1.0e7, 1.0e8)
+
+
+def ladder_freqs(ref_freq=None) -> np.ndarray:
+    """LADDER + 21 log points 3e5..3e7; snapped to `ref_freq` when given, else raw and sorted.
+
+    Moved here from `cli.py` (W12-c): both apps already used this as their standard frequency set
+    and had to import the CLI module just to get it (APP_decap_search_REPORT §6-6).  `cli.py`
+    keeps working -- it imports this same function.
+    """
+    dense = np.logspace(np.log10(3e5), np.log10(3e7), 21)
+    pts = list(LADDER) + list(dense)
+    if ref_freq is None:
+        return np.array(sorted(set(pts)), dtype=float)
+    fref = np.asarray(ref_freq, dtype=float)
+    idx = sorted({int(np.argmin(abs(fref - x))) for x in pts})
+    return fref[idx]
+
+
+def unique_path(path) -> Path:
+    """Never overwrite (CLAUDE.md rule 2): `_HHMMSS` before the suffix if `path` already exists.
+
+    Moved here from `cli.py` (W12-c), same behaviour, public now.
+    """
+    path = Path(path)
+    if not path.exists():
+        return path
+    return path.with_name(f"{path.stem}_{datetime.now().strftime('%H%M%S')}{path.suffix}")
+
+
+def find_site_pair(spd_path, port) -> str | None:
+    """The partner port whose rail net differs from `port`'s only in the trailing `/0` <-> `/1`
+    (ported from `apps.site_decision.decide.find_site_pair`, W12-c, APP_site_decision_REPORT §7-3).
+
+    Reads the `.Port` headers only (`multiport.port_rails`), not the extraction -- ~1 s even on a
+    92-port design.  Returns `None` instead of raising when `port`'s net has no `/0`-`/1` suffix,
+    or when the partner net does not have exactly one port on it (decide.py raised in both cases;
+    an app that does not know in advance whether a SITE pair exists can just check the result).
+    """
+    from .multiport import port_rails
+
+    rails = port_rails(spd_path)
+    net = rails[str(port)]
+    base, sep, site = net.rpartition("/")
+    if not sep or site not in ("0", "1"):
+        return None
+    want = f"{base}/{'1' if site == '0' else '0'}"
+    hits = [p for p, r in rails.items() if r == want]
+    return hits[0] if len(hits) == 1 else None
+
+
+def match_sites(rail0, rail1, rule: str = "refdes-suffix") -> dict:
+    """`{"mapping": {refdes on rail0: refdes on rail1}, "unmatched": [refdes on rail0 with no pair]}`
+    for one physical-site-pair rule between two `Rail`s (ported from
+    `apps.site_decision.decide.match_sites`'s adopted rule, W12-c, APP_site_decision_REPORT §7-3).
+
+    `rule="refdes-suffix"` (the only rule ported -- `decide.py`'s `"geometry"` fallback is app-side
+    policy, not an engine rule, and was measured *wrong* on the one design tried, see `decide.py`):
+    each SITE net's own trailing `/0`/`/1` is also the refdes suffix (`C2001_0` on `.../0` pairs
+    with `C2001_1` on `.../1`); strip the suffix and match the stem.  `unmatched` is a list, not a
+    `KeyError`, so an app checks it once instead of once per site.
+    """
+    if rule != "refdes-suffix":
+        raise ValueError(f"rule must be 'refdes-suffix', not {rule!r}")
+
+    def _site(rail_net: str) -> str:
+        return rail_net.rpartition("/")[2]
+
+    def _stem(refdes: str, site: str) -> str:
+        tail = "_" + site
+        return refdes[: -len(tail)] if refdes.endswith(tail) else refdes
+
+    s0, s1 = _site(rail0.rail_net), _site(rail1.rail_net)
+    k1 = {_stem(d.refdes, s1): d.refdes for d in rail1.decaps}
+    mapping = {d.refdes: k1[_stem(d.refdes, s0)] for d in rail0.decaps if _stem(d.refdes, s0) in k1}
+    unmatched = [d.refdes for d in rail0.decaps if d.refdes not in mapping]
+    return dict(mapping=mapping, unmatched=unmatched)
+
+
+__all__ = ["DecapSite", "Design", "LADDER", "Rail", "Result", "find_site_pair", "ladder_freqs",
+          "match_sites", "unique_path"]

@@ -158,6 +158,46 @@ def ladder_gates(freq, Z, zr, fres_m, fres_r):
     return d
 
 
+def _mask_target(mask, freqs) -> np.ndarray:
+    """Z_target(f) for a piecewise-constant `mask` = `[(f_start_Hz, Zmax_ohm), ...]`, each value
+    holding from its own frequency up to the next one (below the first breakpoint: unconstrained,
+    `inf`) -- the same convention as `apps.decap_search.search.Mask`."""
+    pts = sorted((float(f), float(z)) for f, z in mask)
+    if not pts:
+        raise ValueError("empty mask")
+    fs = np.array([p[0] for p in pts])
+    zs = np.array([p[1] for p in pts])
+    freqs = np.asarray(freqs, float)
+    i = np.searchsorted(fs, freqs, side="right") - 1
+    return np.where(i < 0, np.inf, zs[np.clip(i, 0, None)])
+
+
+def _mask_ratio(freq, Z, mask) -> np.ndarray:
+    target = _mask_target(mask, freq)
+    a = np.abs(np.asarray(Z, complex))
+    return np.where(np.isinf(target) | (a <= 0), np.inf, target / np.where(a > 0, a, 1.0))
+
+
+def mask_margin(freq, Z, mask) -> float:
+    """min over f of Zmax(f)/|Z(f)| for a piecewise-constant `mask` (plan W12-c,
+    APP_decap_search_REPORT §6-7).  >= 1 means the mask holds everywhere.  Pure -- the same rule as
+    `apps.decap_search.search.Mask.margin`, kept here so `attach_mask` needs no app import."""
+    return float(np.min(_mask_ratio(freq, Z, mask)))
+
+
+def attach_mask(receipt: dict, mask) -> dict:
+    """Add `mask`, `mask_ratio` (Zmax/|Z| per frequency), `mask_margin` (`min(mask_ratio)`) and
+    `mask_pass` (`mask_margin >= 1`) to a receipt, in place (plan W12-c) -- one engine copy instead
+    of every app inventing its own mask/margin receipt fields."""
+    freq = np.asarray(receipt["freq"], float)
+    Z = np.asarray(receipt["Z_re"], float) + 1j * np.asarray(receipt["Z_im"], float)
+    ratio = _mask_ratio(freq, Z, mask)
+    margin = float(np.min(ratio))
+    receipt.update(mask=[[float(f), float(z)] for f, z in sorted((float(f), float(z)) for f, z in mask)],
+                  mask_ratio=[float(x) for x in ratio], mask_margin=margin, mask_pass=bool(margin >= 1.0))
+    return receipt
+
+
 def attach_reference(receipt: dict, ref_freq, ref_Z) -> dict:
     """Add `Zref_re/Zref_im`, `ladder_gates` and the `run11` error scalars to a receipt, in place.
 
@@ -224,8 +264,15 @@ class Result:
         V = self._voltages(f)
         return self.model.split_breakdown(f, V) if split else self.model.breakdown(f, V)
 
-    def receipt(self, breakdown_100k=None) -> dict:
-        """Receipt v1.  `breakdown_100k`: None = only when 100 kHz is in `freq`, True = force."""
+    def receipt(self, breakdown_100k=None, light=False) -> dict:
+        """Receipt v1.  `breakdown_100k`: None = only when 100 kHz is in `freq`, True = force.
+
+        `light=True` (plan W12-c, APP_site_decision_REPORT §7-6): drop `decap_config`,
+        `reference_search`, `build_info` and `stats` -- the per-solve detail a sweep of many
+        configurations does not want a copy of at every step -- and keep their summary fields
+        (`decap_config_sha256`, `unknowns`, `wall_seconds`), which are already there either way.
+        Default `False`: identical to the receipt before this option existed.
+        """
         from .model import FLAGS, peak_rss_mb  # local: model imports this module
 
         m = self.model
@@ -278,6 +325,9 @@ class Result:
         if want:
             rec["breakdown_100k"] = self.breakdown(1e5)
         rec.update(self._extra)
+        if light:
+            for k in ("decap_config", "reference_search", "build_info", "stats"):
+                rec.pop(k, None)
         return rec
 
 

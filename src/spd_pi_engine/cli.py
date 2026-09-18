@@ -14,6 +14,10 @@ No numerics live here: `solve` is `Design.open -> .rail -> .build -> .solve -> .
 The frequency ladder (`LADDER` + 21 log points 3e5..3e7) is `exp5/pipeline.LADDER` /
 `tests/engine/ladder.py`. Without `--ref-npz` it is used unsnapped; with `--ref-npz` each point is
 snapped to the nearest frequency of the reference grid, matching the reproduction receipts.
+
+`LADDER`, `ladder_freqs` and `unique_path` moved to `api.py` in W12-c (they are public API now,
+`from spd_pi_engine import ladder_freqs, unique_path`); this module still has and uses them, just
+by importing them from there.
 """
 from __future__ import annotations
 
@@ -23,33 +27,20 @@ import subprocess
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime
 from pathlib import Path
 
 import numpy as np
 
-from .api import Design
+from .api import LADDER, Design, ladder_freqs, unique_path
 from .backend import Backend
 from .model import FLAGS_LEGACY, FLAGS_P, FLAGS_PMK, FLAGS_Q, ModelOptions
 from .receipt import attach_reference
 
 VARIANTS = {"legacy": FLAGS_LEGACY, "p": FLAGS_P, "q": FLAGS_Q, "pmk": FLAGS_PMK}
-LADDER = [3.0e4, 1.0e5, 3.0e5, 1.0e6, 2.5e6, 1.0e7, 1.0e8]  # exp5/pipeline.LADDER
 
 
 def _json_default(o):
     return o.item() if hasattr(o, "item") else str(o)
-
-
-def ladder_freqs(ref_freq=None) -> np.ndarray:
-    """LADDER + 21 log points 3e5..3e7; snapped to `ref_freq` when given, else raw and sorted."""
-    dense = np.logspace(np.log10(3e5), np.log10(3e7), 21)
-    pts = list(LADDER) + list(dense)
-    if ref_freq is None:
-        return np.array(sorted(set(pts)), dtype=float)
-    fref = np.asarray(ref_freq, dtype=float)
-    idx = sorted({int(np.argmin(abs(fref - x))) for x in pts})
-    return fref[idx]
 
 
 def read_npz_ref(path, port):
@@ -58,14 +49,6 @@ def read_npz_ref(path, port):
     names = [str(x) for x in ref["port_names"]]
     col = [i for i, n in enumerate(names) if n.split("::")[0] == port][0]
     return ref["freq"], ref["Zdiag"][:, col]
-
-
-def unique_path(path) -> Path:
-    """Never overwrite (CLAUDE.md rule 2): `_HHMMSS` before the suffix if `path` already exists."""
-    path = Path(path)
-    if not path.exists():
-        return path
-    return path.with_name(f"{path.stem}_{datetime.now().strftime('%H%M%S')}{path.suffix}")
 
 
 def resolve_freqs(args, ref_freq=None) -> np.ndarray:

@@ -94,3 +94,21 @@ sweep  --spd PATH --ports all|a,b --cache DIR --outdir DIR --jobs N [solve 옵�
 1. `docs/engine/ENGINE_PLAN_2026-09-18.md` §4의 W 항목 순서대로. 각 항목은 §5의 재현 테스트가 게이트다.
 2. 연구 문서: `docs/research-claude/2026-09-15/NEXT_SESSION_HANDOFF.md`(§11), `PROGRESS_SUMMARY_2026-09-18.md`.
 3. 규칙: 수치 모듈 변경은 사전 등록 + 영수증(연구 규칙과 동일). 연구 트리는 읽기 전용.
+
+## 9. 앱용 유틸 (W12-c)
+`apps/decap_search`, `apps/site_decision`가 엔진을 쓰며 직접 짜야 했던 것들(수치 무관, 순수 인체공학) — `docs/engine/APP_decap_search_REPORT.md` §6, `docs/engine/APP_site_decision_REPORT.md` §7 근거. 전부 `from spd_pi_engine import ...`로 바로 쓴다.
+
+| 이름 | 시그니처 | 뭘 대신하나 |
+|---|---|---|
+| `DecapSite.xy` / `.layer` / `.capacitance_F` | 필드, `rail.decaps`/`rail.site(refdes)`가 채움 | `rail.ex["rail_nodes"][site.node]`를 직접 여는 것(`decide._xy`) |
+| `DecapSite.impedance(freqs)` | 메서드 | `rail.ex["models"][site.model_id].impedance(freqs)`를 직접 여는 것(`decide.capacitance`) |
+| `Rail.site(refdes)` | `Rail.site(refdes) -> DecapSite` | `next(d for d in rail.decaps if d.refdes == refdes)` |
+| `find_site_pair(spd_path, port)` | `-> str \| None` | `apps.site_decision.decide.find_site_pair`(SITE 쌍 없으면 예외 대신 `None`) |
+| `match_sites(rail0, rail1, rule="refdes-suffix")` | `-> {"mapping": {...}, "unmatched": [...]}` | `apps.site_decision.decide.match_sites`(A2가 채택한 규칙 하나만; `unmatched`가 리스트라 `KeyError` 대신 한 번에 확인) |
+| `ladder_freqs(ref_freq=None)` | `-> np.ndarray` | 예전엔 `spd_pi_engine.cli`를 import해야 했다(`__all__`에 없었음). 지금은 `cli.py`도 여기서 가져다 쓴다 |
+| `unique_path(path)` | `-> Path` | 위와 동일(덮어쓰기 금지 규칙) |
+| `receipt.attach_mask(receipt, mask)` | in place, `mask`/`mask_ratio`/`mask_margin`/`mask_pass` 추가 | 앱마다 마스크·마진을 자기 형식으로 넣던 것(`apps.decap_search.search.Mask`) |
+| `receipt.mask_margin(freq, Z, mask)` | 순수 함수 | `Mask.margin`과 같은 규칙, 영수증 없이도 씀 |
+| `Result.receipt(light=True)` | `decap_config`/`reference_search`/`build_info`/`stats` 생략(sha·summary는 유지) | 구성 스윕 앱이 매 solve마다 421개 `decap_config`를 받던 것(기본값 `light=False`는 이전과 동일) |
+
+`apps/decap_search/main.py`는 `from spd_pi_engine.cli import ladder_freqs, unique_path`를 쓰는데, 이제 `from spd_pi_engine import ladder_freqs, unique_path`로 한 줄만 바꾸면 된다(동작은 동일 — `cli.py`가 같은 함수를 가져다 쓰므로). `apps/site_decision/decide.py`의 `find_site_pair`/`match_sites`/`_xy`/`capacitance`는 반환 형태가 달라(이쪽은 예외를 던지고, `match_sites`는 평평한 dict를 돌려준다) 한 줄 교체가 아니다 — 바꾸려면 `evaluate()`/`match_report()`도 같이 고쳐야 하므로 이번 작업(W12-c, 엔진 파일만 수정)에서는 앱을 건드리지 않았다.
