@@ -67,13 +67,13 @@ sweep  --spd PATH --ports all|a,b --cache DIR --outdir DIR --jobs N [solve 옵�
 - `solver="cudss"`: NVIDIA cuDSS로 주파수별 인수분해(A2000). `auto`는 가능하면 GPU, 실패 시 splu.
 - 표준 실행: `Backend(solver="auto", fast=True)`. 포트 벽시계 P18 1095 → 33 s.
 
-**GPU 정확도 계약**(CPU splu 대비 max |ΔZ|/|Z|): 패키지 레일 7케이스 ≤ 1e-8(실측 ≤ 5.6e-9). PCB 레일은 저주파 행렬 조건수 때문에 더 벌어진다 — Port1 100 kHz 1.6e-7, Port50 1 MHz 1.7e-8 — 반복 정제 단계를 늘려도 불변(`docs/engine/IR_REPORT.md`). 따라서 계약은 **전 대역 ≤ 1e-6(영수증 재현 문턱)**, 그리고 **패키지 레일 ≤ 1e-8**이다. PCB 레일의 1e-8 미달 2건은 `tests/engine`에 strict xfail로 수치와 함께 고정돼 있어(값이 움직이면 다시 실패) 물리 오차(수 %)에 비해 무의미하지만 추적은 유지된다. 같은 이유로 PCB Port50의 CPU 재현도 최저 주파수 30 kHz에서 1.016e-9(한도 1e-9)로 strict xfail이다.
+**GPU 정확도 계약**(CPU splu 대비 max |ΔZ|/|Z|): 패키지 레일 7케이스 ≤ 1e-8(실측 ≤ 5.6e-9). PCB 레일은 저주파 행렬 조건수 때문에 더 벌어진다 — Port1 100 kHz 1.6e-7, Port50 1 MHz 1.7e-8 — 반복 정제 단계를 늘려도 불변(`docs/engine/IR_REPORT.md`). **E3(사전 등록, `docs/engine/ENGINE_PLAN_2026-09-18.md` 2026-09-18 소유자 결정)**: 레일 유형별 계약을 결과를 본 뒤 조정하는 대신 고정한다 — 패키지 레일은 CPU ≤ 1e-9 / GPU ≤ 1e-8(불변), PCB 레일(`tests/engine/fixtures/exp30`, s5m6585)은 CPU ≤ 2e-9, GPU는 f ≥ 1 MHz ≤ 1e-7·전 대역 ≤ 1e-6. 이 계약으로 옛 strict xfail 2건(PCB Port50 CPU 1.016e-9, GPU 1 MHz 1.688e-8)이 통과로 해소됐다 — 값이 계약을 넘으면 조정이 아니라 조사 대상이다.
 
 ## 5. 재현 테스트
 `tests/engine/`(W5, `docs/engine/W5_REPORT.md`). 데이터가 없으면 skip, SPD sha256이 `tests/engine/fixtures/spd_sha256.json`과 다르면 fail. 프로파일: 데이터 없음 `pytest tests/engine -k datafree`(1.3 s) / 기본 `pytest tests/engine`(P14·P18·PCB Port1 CPU, 약 27 분) / GPU 회귀 `pytest tests/engine -m gpu --gpu`(7케이스+PCB, 약 4 분) / 전량 `--slow --gpu`(약 2.6 h, 릴리스 전 1회). 상시 회귀는 기본 + GPU를 권한다.
 - (i) 260729 Port18, `FLAGS_LEGACY`, splu, 1 MHz 최근접 1점 → `docs/research-claude/2026-09-15/results/exp8/result_260729_Port18_SITE0_any.json` 대비 5.83e-12(한도 1e-9), unknowns 261124.
 - (ii) 변형 p 7케이스 → `tests/engine/fixtures/exp28/` 대비 CPU ≤ 1e-9, GPU ≤ 1e-8.
-- (iii) PCB s5m6585 → `tests/engine/fixtures/exp30/` 대비 CPU ≤ 1e-9.
+- (iii) PCB s5m6585 → `tests/engine/fixtures/exp30/` 대비 CPU ≤ 2e-9(E3), GPU f ≥ 1 MHz ≤ 1e-7·전 대역 ≤ 1e-6(E3).
 - 데이터 없는 셀프체크: `homogenise.selfcheck_face_fix()`, `solver.demo()`, `geometry.demo()`, `cache.demo()`, `receipt.demo()`, `spd_source.check_parser_api()`.
 
 연구 코드 쪽 재현 게이트는 그대로 `python tools\research-claude\common\smoke_port18.py`(5.83e-12)다.

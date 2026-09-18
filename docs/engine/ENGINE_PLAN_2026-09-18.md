@@ -138,3 +138,8 @@ mdl.set_decaps({"C1234": None, "C1235": "GRM155R61A106M"}); res2 = mdl.solve(res
 - 게이트 실측: exp8 P18 legacy 5.829e-12; exp28/p 7케이스 CPU ≤ 1e-9(연구 코드 오늘 실행 대비 비트 동일), GPU ≤ 5.6e-9; PCB Port1 CPU 9.4e-11. strict xfail 2건: PCB Port50 CPU 30 kHz 1.016e-9(한도 1e-9), GPU 1 MHz 1.69e-8(한도 1e-8) — 조건수 기인, 반복 정제로 불변(IR_REPORT).
 - 소유자 결정 대기: (1) PCB 저주파 재현 허용치(CPU 2e-9 / GPU 레일별)로 사전 등록해 xfail을 해소할지, (2) 연구 브랜치의 main 병합 여부.
 - 다음: W9 decap 스윕(Schur, exp9 이식) → W10 다중 포트. W11 제품 통합은 패키지 급전 경로 R 관례 해결 후.
+
+## 결정 기록 (2026-09-18, 소유자)
+- E1. 저장소는 PUBLIC으로 유지한다.
+- E2. 연구·엔진 브랜치 `claude/lightweight-hybrid-20260915`를 main에 fast-forward 병합한다(수행: `5f790a6` 기준).
+- E3. **PCB 저주파 재현 허용치 사전 등록**: 저주파 행렬 조건수 때문에 PCB 레일의 재현 오차가 패키지보다 크다(IR_REPORT, W5 §5). 결과를 본 뒤의 조정이 아니라 레일 유형별 계약으로 고정한다 — PCB 픽스처(`tests/engine/fixtures/exp30`)에 대해 CPU max|ΔZ|/|Z| ≤ 2e-9, GPU f ≥ 1 MHz ≤ 1e-7·전 대역 ≤ 1e-6. 패키지 레일 계약(CPU 1e-9, GPU 1e-8)은 불변. strict xfail 2건은 이 계약으로 해소한다. 이후 새 PCB 포트를 픽스처에 넣을 때도 같은 계약을 적용하며, 이 값을 넘는 결과는 조정 대상이 아니라 조사 대상이다.

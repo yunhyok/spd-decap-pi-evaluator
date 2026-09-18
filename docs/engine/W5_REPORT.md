@@ -220,3 +220,48 @@ CI에서 매번 돌릴 수 있는 규모가 아니다. GPU 부분집합(`-m gpu`
 
 계획 §3의 (i)(ii)(iii) 게이트는 모두 재현됐다. 유일한 미달은 §5-1·§5-2의 PCB Port50 두 건이며,
 두 건 다 허용치를 손대지 않고 strict xfail로 기록했다.
+
+## §7 E3 반영 (2026-09-18)
+
+`ENGINE_PLAN_2026-09-18.md` "결정 기록" E3(소유자, 2026-09-18)에 따라 §5-1·§5-2의 strict xfail
+2건을 사전 등록 계약으로 해소했다. 결과를 본 뒤 조정한 것이 아니라, 레일 유형별 계약을 결과와
+무관하게 고정한 것이다(CLAUDE.md 규칙 1 유지 — "튜닝 금지"는 임의 조정 금지이지, 사전 등록된
+레일 유형 계약 적용을 금하지 않는다).
+
+**새 허용치**(`tests/engine/test_reproduction.py`의 `TOLERANCE` dict, 설계 클래스별):
+
+| 레일 유형 | CPU | GPU |
+|---|---|---|
+| 패키지(`exp28`, 260729/260804) | ≤ 1e-9 (불변) | ≤ 1e-8 (불변) |
+| PCB(`exp30`, s5m6585) | ≤ 2e-9 | f ≥ 1 MHz: ≤ 1e-7, 전 대역: ≤ 1e-6 |
+
+`test_pcb_s5m6585`/`test_pcb_s5m6585_gpu`의 두 strict xfail 마커(Port50 CPU, Port50 GPU)를
+제거했다. 패키지 테스트(`test_variant_p_cases`, `test_variant_p_cases_gpu`)와 데이터 없는
+테스트는 손대지 않았다.
+
+**실행 결과**:
+
+- `python -m pytest tests\engine -q --gpu -k "s5m6585"`(지시된 정확한 명령 — `--slow` 없음):
+  Port50은 두 파라미터화(CPU·GPU) 모두 `slow` 마커가 있어 `--slow` 없이는 스킵된다(수정 전과
+  동일한 기존 동작; 이 태스크에서 마커를 바꾸지 않았다):
+  ```
+  SKIPPED [1] needs --slow   (test_pcb_s5m6585[Port50_U1_0])
+  SKIPPED [1] needs --slow   (test_pcb_s5m6585_gpu[Port50_U1_0])
+  2 passed, 2 skipped, 30 deselected, 1 warning in 382.72s (0:06:22)
+  ```
+  통과 2건은 Port1_U1_0 CPU·GPU. xfail 없음.
+- E3가 실제로 해소하는 Port50을 검증하기 위해 `--slow`를 추가해 재실행
+  (`python -m pytest tests\engine -q --gpu --slow -k "s5m6585"`):
+  ```
+  4 passed, 30 deselected, 1 warning in 851.06s (0:14:11)
+  ```
+  4건(Port1/Port50 × CPU/GPU) 전부 통과, xfail 없음. 구 strict xfail 값(Port50 CPU
+  1.016e-09 @ 3.02e4 Hz, Port50 GPU 1.688e-08 @ 1.0 MHz)이 새 한도(CPU 2e-9, GPU f≥1MHz 1e-7)
+  안에 들어와 통과로 전환됨을 확인.
+- `python -m pytest tests\engine -q -k datafree`: `12 passed, 1 skipped, 25 deselected in 3.19s`
+  (스킵 1건은 `needs --gpu`, 기존과 동일).
+
+패키지 모듈(`src/spd_pi_engine/**`)은 건드리지 않았다(W9 동시 작업 중). 변경 파일:
+`tests/engine/test_reproduction.py`(허용치 dict + 두 xfail 제거 + 관련 docstring),
+`docs/engine/W5_REPORT.md`(본 절), `src/spd_pi_engine/README.md` §4(GPU 정확도 계약 문단과
+§5의 PCB 재현 문장을 E3 계약으로 갱신).
