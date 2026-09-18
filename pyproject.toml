@@ -21,6 +21,8 @@ dependencies = [
   "XlsxWriter>=3.2",
   "openpyxl>=3.1",
   "threadpoolctl>=3.5",
+  "matplotlib>=3.10,<3.11",
+  "Pillow",
 ]
 
 [project.optional-dependencies]
@@ -28,6 +30,12 @@ dev = [
   "pytest>=8.3",
   "pytest-cov>=6.0",
   "pyinstaller>=6.12",
+]
+gpu = [
+  "nvmath-python",
+  "nvidia-cudss-cu12",
+  "cuda-bindings==12.*",
+  "cupy-cuda12x",
 ]
 
 [project.scripts]
@@ -43,3 +51,7 @@ where = ["src"]
 addopts = "-ra"
 testpaths = ["tests"]
 pythonpath = ["src"]
+markers = [
+  "slow: engine reproduction that builds a large model (minutes); run with --slow",
+  "gpu: engine variant that needs the cuDSS/RTX A2000 path; run with --gpu",
+]

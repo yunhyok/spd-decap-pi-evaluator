@@ -52,3 +52,9 @@ python tools\research-claude\common\run_chain.py --list   # .sh 체인의 크로
 - 알려진 제약: cuDSS 0.8.0.10에서 `DirectSolver.free()`와 `SYMMETRIC` 타입은 크래시(0xC0000005)한다 → `common/cudss_solver.py`는 GENERAL 타입, 해제 생략. `cuda-bindings`는 `12.*` 고정(드라이버 528.79 = CUDA 12.0). `CUDA_VISIBLE_DEVICES`를 비우지 않는다.
 - 새 계산 코드를 쓸 때도 같은 원칙이다: 병목이 선형대수라면 먼저 A2000(cuDSS/cuBLAS) 경로를 옵트인 플래그로 붙이고, CPU 경로를 기준으로 정확도를 검증한 뒤 GPU를 기본 실행 수단으로 쓴다.
 - 자세한 사용법·수치는 `docs/research-claude/2026-09-15/NEXT_SESSION_HANDOFF.md` §11.
+
+## 계산 엔진 `src/spd_pi_engine/` (2026-09-18 착수)
+- 연구 동결 모델(기준선 exp28/p)을 앱이 호출하는 패키지로 옮긴 것. 진입 문서 `src/spd_pi_engine/README.md`, 계획 `docs/engine/ENGINE_PLAN_2026-09-18.md`(결합 C1–C20, 작업 W1–W11), 단계 보고 `docs/engine/W*_REPORT.md`.
+- 규칙: 엔진의 수치 모듈(`geometry, homogenise, reference, model, solver`)은 연구 코드와 동일해야 하며, 변경은 사전 등록 + `tests/engine` 재현 테스트(exp8 P18 5.83e-12, exp28/p 7케이스, exp30 PCB)로 증명한다. `numerics_id`가 바뀌면 영수증 비교 기준도 갱신한다. `tools/research-claude/`는 읽기 전용이다.
+- 표준 실행: `Backend(solver="auto", fast=True)`. GPU 계약은 CPU 대비 ≤ 1e-6 전 대역, ≤ 1e-8은 f ≥ 1 MHz(PCB 저주파는 조건수 때문에 1.6e-7까지, `docs/engine/IR_REPORT.md`).
+- 제품 통합(W11)은 패키지 급전 경로 R 관례가 해결되기 전에는 시작하지 않는다. 그때까지 엔진 영수증의 `validity`가 정확도 범위를 명시한다.

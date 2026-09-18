@@ -1,0 +1,273 @@
+"""`python -m spd_pi_engine` (plan W7): a thin argparse shell over the W4 public API.
+
+    ports  --spd PATH
+    info   --spd PATH --port NAME --cache DIR
+    solve  --spd PATH --port NAME --cache DIR --out receipt.json [options]
+    verify --receipt A.json --against B.json [--tol 1e-8]
+    sweep  --spd PATH --ports all|a,b,c --cache DIR --outdir DIR --jobs N [options]
+
+No numerics live here: `solve` is `Design.open -> .rail -> .build -> .solve -> .receipt()`
+(api.py, receipt.py) exactly as `docs/engine/W4_REPORT.md` §2 shows it, and `sweep` is
+`tools/research-claude/exp15/runall15.py`'s subprocess-per-port pattern re-pointed at
+`python -m spd_pi_engine solve` (stdlib only, no import of the research tree).
+
+The frequency ladder (`LADDER` + 21 log points 3e5..3e7) is `exp5/pipeline.LADDER` /
+`tests/engine/ladder.py`. Without `--ref-npz` it is used unsnapped; with `--ref-npz` each point is
+snapped to the nearest frequency of the reference grid, matching the reproduction receipts.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import subprocess
+import sys
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
+from pathlib import Path
+
+import numpy as np
+
+from .api import Design
+from .backend import Backend
+from .model import FLAGS_LEGACY, FLAGS_P, FLAGS_PMK, FLAGS_Q, ModelOptions
+from .receipt import attach_reference
+
+VARIANTS = {"legacy": FLAGS_LEGACY, "p": FLAGS_P, "q": FLAGS_Q, "pmk": FLAGS_PMK}
+LADDER = [3.0e4, 1.0e5, 3.0e5, 1.0e6, 2.5e6, 1.0e7, 1.0e8]  # exp5/pipeline.LADDER
+
+
+def _json_default(o):
+    return o.item() if hasattr(o, "item") else str(o)
+
+
+def ladder_freqs(ref_freq=None) -> np.ndarray:
+    """LADDER + 21 log points 3e5..3e7; snapped to `ref_freq` when given, else raw and sorted."""
+    dense = np.logspace(np.log10(3e5), np.log10(3e7), 21)
+    pts = list(LADDER) + list(dense)
+    if ref_freq is None:
+        return np.array(sorted(set(pts)), dtype=float)
+    fref = np.asarray(ref_freq, dtype=float)
+    idx = sorted({int(np.argmin(abs(fref - x))) for x in pts})
+    return fref[idx]
+
+
+def read_npz_ref(path, port):
+    """(full PowerSI freq grid, this port's Zdiag column) -- `w4_gate.ref_of` / `tests/engine/ladder.ref_of`."""
+    ref = np.load(path, allow_pickle=True)
+    names = [str(x) for x in ref["port_names"]]
+    col = [i for i, n in enumerate(names) if n.split("::")[0] == port][0]
+    return ref["freq"], ref["Zdiag"][:, col]
+
+
+def unique_path(path) -> Path:
+    """Never overwrite (CLAUDE.md rule 2): `_HHMMSS` before the suffix if `path` already exists."""
+    path = Path(path)
+    if not path.exists():
+        return path
+    return path.with_name(f"{path.stem}_{datetime.now().strftime('%H%M%S')}{path.suffix}")
+
+
+def resolve_freqs(args, ref_freq=None) -> np.ndarray:
+    if args.freqs:
+        return np.array([float(x) for x in args.freqs.split(",")], dtype=float)
+    return ladder_freqs(ref_freq)
+
+
+def _add_solve_options(sp):
+    sp.add_argument("--variant", choices=sorted(VARIANTS), default="p",
+                     help="flag preset (default p = exp28/p baseline)")
+    sp.add_argument("--reference", choices=["powersi-compatible", "physical-gnd"],
+                     default="powersi-compatible")
+    freqs = sp.add_mutually_exclusive_group()
+    freqs.add_argument("--freqs", default=None, help="comma-separated Hz, e.g. 1e3,1e4,1e5")
+    freqs.add_argument("--ladder", action="store_true",
+                        help="LADDER(7)+21 log points 3e5-3e7 (default when neither is given); "
+                             "snapped to --ref-npz's grid when it is given")
+    sp.add_argument("--solver", choices=["splu", "cudss", "auto"], default="splu")
+    sp.add_argument("--fast", action=argparse.BooleanOptionalAction, default=False)
+    sp.add_argument("--ref-npz", default=None, help="PowerSI Zdiag npz (freq, port_names, Zdiag)")
+    sp.add_argument("--breakdown-100k", action="store_true",
+                     help="force breakdown_100k in the receipt even if 1e5 Hz is not in freq")
+
+
+def _build_model(args):
+    d = Design.open(args.spd)
+    rail = d.rail(args.port, args.cache)
+    opt = ModelOptions(reference=args.reference, flags=dict(VARIANTS[args.variant]), fringe=True)
+    backend = Backend(solver=args.solver, fast=args.fast)
+    return rail, rail.build(opt, backend)
+
+
+def cmd_ports(args) -> int:
+    for p in Design.open(args.spd).ports():
+        print(p)
+    return 0
+
+
+def cmd_info(args) -> int:
+    rail = Design.open(args.spd).rail(args.port, args.cache)
+    print(f"rail_net={rail.rail_net}")
+    print(f"decaps={len(rail.decaps)}")
+    print(f"n_nodes={rail.n_nodes} n_vias={rail.n_vias} n_traces={rail.n_traces}")
+    print(json.dumps(rail.estimate_cost(), indent=2, default=_json_default))
+    return 0
+
+
+def cmd_solve(args) -> int:
+    t0 = time.time()
+    ref_freq = ref_Z = None
+    if args.ref_npz:
+        ref_freq, ref_Z = read_npz_ref(args.ref_npz, args.port)
+    freqs = resolve_freqs(args, ref_freq)
+
+    rail, mdl = _build_model(args)
+    res = mdl.solve(freqs)
+    receipt = res.receipt(breakdown_100k=True if args.breakdown_100k else None)
+
+    err = None
+    if ref_freq is not None:
+        attach_reference(receipt, ref_freq, ref_Z)
+        err = receipt["err_1MHz"]
+
+    out_path = unique_path(args.out)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(receipt, indent=1, default=_json_default), encoding="utf-8")
+
+    wall = time.time() - t0
+    summary = f"unknowns={receipt['unknowns']} wall={wall:.1f}s"
+    if err is not None:
+        summary += f" err_1MHz={err:.4f} ({err * 100:.2f}%)"
+    print(summary)
+    print(f"wrote {out_path}")
+    return 0
+
+
+def cmd_verify(args) -> int:
+    a = json.loads(Path(args.receipt).read_text(encoding="utf-8"))
+    b = json.loads(Path(args.against).read_text(encoding="utf-8"))
+    fa = np.asarray(a["freq"], dtype=float)
+    fb = np.asarray(b["freq"], dtype=float)
+    if fa.shape != fb.shape or not np.array_equal(fa, fb):
+        print(f"FAIL: frequency grids differ ({fa.shape} vs {fb.shape})")
+        return 1
+    za = np.asarray(a["Z_re"], dtype=float) + 1j * np.asarray(a["Z_im"], dtype=float)
+    zb = np.asarray(b["Z_re"], dtype=float) + 1j * np.asarray(b["Z_im"], dtype=float)
+    rel = float(np.max(np.abs(za - zb) / np.abs(zb)))
+    print(rel)
+    return 0 if rel <= args.tol else 1
+
+
+def cmd_sweep(args) -> int:
+    ports = Design.open(args.spd).ports() if args.ports == "all" else args.ports.split(",")
+    jobs = args.jobs
+    if args.solver in ("cudss", "auto") and jobs > 4:
+        print(f"[warn] solver={args.solver}: each worker pins CUDA context on the A2000 -- "
+              f"clamping --jobs {jobs} -> 4 (plan 5-5)")
+        jobs = 4
+
+    outdir = Path(args.outdir)
+    log_dir = outdir / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+
+    def receipt_path(port):
+        return outdir / f"receipt_{port}.json"
+
+    def solve_argv(port):
+        argv = [sys.executable, "-m", "spd_pi_engine", "solve", "--spd", str(args.spd),
+                "--port", port, "--cache", str(args.cache), "--out", str(receipt_path(port)),
+                "--variant", args.variant, "--reference", args.reference,
+                "--solver", args.solver, "--fast" if args.fast else "--no-fast"]
+        argv += ["--ladder"] if not args.freqs else ["--freqs", args.freqs]
+        if args.ref_npz:
+            argv += ["--ref-npz", str(args.ref_npz)]
+        if args.breakdown_100k:
+            argv.append("--breakdown-100k")
+        return argv
+
+    def run_one(port):
+        t0 = time.time()
+        log_fn = log_dir / f"{port}.log"
+        with open(log_fn, "w", encoding="utf-8") as logf:
+            p = subprocess.run(solve_argv(port), stdout=logf, stderr=subprocess.STDOUT)
+        ok = p.returncode == 0 and receipt_path(port).exists()
+        return port, ok, p.returncode, time.time() - t0, log_fn
+
+    todo = [p for p in ports if not receipt_path(p).exists()]
+    skipped = [p for p in ports if p not in todo]
+    if skipped:
+        print(f"skipping {len(skipped)} ports with existing receipts")
+    if not todo:
+        print("nothing to do")
+        return 0
+
+    failures = []
+    fail_fn = outdir / "failures.json"
+    n_ok = n_fail = 0
+    with ThreadPoolExecutor(max_workers=jobs) as pool:
+        futs = {pool.submit(run_one, p): p for p in todo}
+        for fut in as_completed(futs):
+            port, ok, rc, wall, log_fn = fut.result()
+            if ok:
+                n_ok += 1
+                print(f"[{n_ok + n_fail}/{len(todo)}] OK   {port}  wall {wall:.0f}s", flush=True)
+            else:
+                n_fail += 1
+                tail = log_fn.read_text(encoding="utf-8", errors="replace").splitlines()[-30:]
+                failures.append(dict(port=port, returncode=rc, log_tail=tail))
+                fail_fn.write_text(json.dumps(failures, indent=1), encoding="utf-8")
+                print(f"[{n_ok + n_fail}/{len(todo)}] FAIL {port}  wall {wall:.0f}s  rc={rc}  see {log_fn}",
+                      flush=True)
+
+    print(f"done: {n_ok} ok, {n_fail} failed" + (f" (see {fail_fn})" if n_fail else ""))
+    return 1 if n_fail else 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+    ap = argparse.ArgumentParser(prog="python -m spd_pi_engine", description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = ap.add_subparsers(dest="command", required=True)
+
+    sp = sub.add_parser("ports", help="print an SPD's port names, one per line")
+    sp.add_argument("--spd", required=True)
+    sp.set_defaults(func=cmd_ports)
+
+    sp = sub.add_parser("info", help="print one rail's size and estimate_cost()")
+    sp.add_argument("--spd", required=True)
+    sp.add_argument("--port", required=True)
+    sp.add_argument("--cache", required=True)
+    sp.set_defaults(func=cmd_info)
+
+    sp = sub.add_parser("solve", help="build + solve one rail, write receipt v1")
+    sp.add_argument("--spd", required=True)
+    sp.add_argument("--port", required=True)
+    sp.add_argument("--cache", required=True)
+    sp.add_argument("--out", required=True)
+    _add_solve_options(sp)
+    sp.set_defaults(func=cmd_solve)
+
+    sp = sub.add_parser("verify", help="compare two receipts' freq/Z (the engine's own smoke test)")
+    sp.add_argument("--receipt", required=True)
+    sp.add_argument("--against", required=True)
+    sp.add_argument("--tol", type=float, default=1e-8)
+    sp.set_defaults(func=cmd_verify)
+
+    sp = sub.add_parser("sweep", help="solve every port (or a subset) in subprocesses, resume-safe")
+    sp.add_argument("--spd", required=True)
+    sp.add_argument("--ports", required=True, help="'all' or a comma-separated list of port names")
+    sp.add_argument("--cache", required=True)
+    sp.add_argument("--outdir", required=True)
+    sp.add_argument("--jobs", type=int, default=4)
+    _add_solve_options(sp)
+    sp.set_defaults(func=cmd_sweep)
+
+    return ap
+
+
+def main(argv=None) -> int:
+    args = build_parser().parse_args(argv)
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

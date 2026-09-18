@@ -1,0 +1,18 @@
+{
+ "_comment": "sha256 of the SPD files the fixture receipts were computed from. Plan section 3: SPD present but hash differs -> FAIL, SPD missing -> skip. Computed 2026-09-18 under SPD_PI_DATA_DIR = D:/Downloads/examples.",
+ "260729": {
+  "file": "S4LB002-2Para_260729_1_injected.spd",
+  "bytes": 1116717287,
+  "sha256": "40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2"
+ },
+ "260804": {
+  "file": "S4LB002-2Para_260804_1_injected.spd",
+  "bytes": 1120159188,
+  "sha256": "45253f438fc7c328c50364fe610a7ecfbf72ca842a032921fbbb8d645e2a4f35"
+ },
+ "s5m6585": {
+  "file": "s5m6585_32p_260414_length3_1.spd",
+  "bytes": 139414807,
+  "sha256": "f774dc06cdce4a1e0a632eb4a126d06af1fd57b9f400287e510f233ede1c0ad9"
+ }
+}
