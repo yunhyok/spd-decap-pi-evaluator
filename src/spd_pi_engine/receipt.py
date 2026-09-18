@@ -46,9 +46,7 @@ def source_hashes() -> tuple:
     """sha256/16 of each numeric module's bytes, line endings normalised to LF so the id is the same
     on CRLF and LF checkouts (lazy: nothing is read at import time)."""
     here = Path(__file__).parent
-    return tuple((n, hashlib.sha256((here / n).read_bytes().replace(b"
-", b"
-")).hexdigest()[:16])
+    return tuple((n, hashlib.sha256((here / n).read_bytes().replace(b"\r\n", b"\n")).hexdigest()[:16])
                  for n in NUMERIC_MODULES)
 
 
