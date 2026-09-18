@@ -79,6 +79,21 @@ class Design:
         """Extract one port's rail (through the engine cache) -- `spd_source.prepare`."""
         return Rail(self, port, cache_dir, max_layers, conventions, log)
 
+    def multiport(self, ports, cache_dir, options=None, backend=DEFAULT, max_layers=3,
+                  conventions=None, log=None):
+        """W10: the built k-port model of several ports that share ONE rail.
+
+        `multiport.MultiRail.open(...).build(...)`.  Raises when the ports are not on the same
+        rail_net -- `multiport.rail_groups(spd)` says which ports could share a model.  The fine
+        mesh box is the union of the ports' pin boxes, so the diagonal is not a single-port
+        build's Z unless `options.fine_box` forces it (docs/engine/W10_REPORT.md).
+        """
+        from .multiport import MultiRail
+
+        mr = MultiRail.open(self, ports, cache_dir, max_layers=max_layers,
+                            conventions=conventions, log=log)
+        return mr.build(options, backend, log)
+
 
 class Rail:
     """One extracted rail: the model input (`ex`, `shapes`, `fine_box`) plus what an app asks

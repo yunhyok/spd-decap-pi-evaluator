@@ -38,3 +38,12 @@ __all__ = ["Backend", "CacheDir", "DEFAULT", "DecapSite", "Design", "DesignConve
            "decap_config_sha256", "extract", "geometry", "homogenise", "ladder_gates", "list_ports",
            "load_layer_shapes", "model", "numerics_id", "prepare", "receipt", "reference",
            "sha256_of", "solver", "spd_source", "__version__"]
+
+# W10 = multiport (the k-port Z(f) matrix of several ports on one rail).  Appended so the W9
+# branch, which touches model/solver/receipt/decaps, merges without a conflict here.
+from . import multiport
+from .multiport import (MultiModel, MultiRail, MultiResult, group_ports_by_rail, port_rails,
+                        rail_groups, short_ports)
+
+__all__ += ["MultiModel", "MultiRail", "MultiResult", "group_ports_by_rail", "multiport",
+            "port_rails", "rail_groups", "short_ports"]
