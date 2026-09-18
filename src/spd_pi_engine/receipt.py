@@ -35,8 +35,10 @@ VALIDITY_NOTES = [
     "PCB (s5m6585, held-out, 160 ports): 1 MHz err median 0.58 % (IQR 0.34-1.29), G3 PASS 128/160.",
     "Package large-plane rails: err <= 3 % (260729/260804 representative rails 0.8-3 %).",
     "Package overall: 1 MHz err median 31.7 %, Re Z_ref/Re Z_model @100 kHz median 1.46 "
-    "(feed-path R convention unresolved -- PowerSI microvia model definition needed).",
+    "(feed-path R convention difference vs PowerSI, not resolved by via barrel fill or length).",
     "G4 f_res bias +5-14 % on every case (design-independent, cause not established).",
+    "Microvias are modelled as copper-filled cylinders of drill diameter (owner decision D9, "
+    "2026-09-19); core PTH (150 um) as plated barrels. Via length = layer-centre to layer-centre.",
 ]
 
 
