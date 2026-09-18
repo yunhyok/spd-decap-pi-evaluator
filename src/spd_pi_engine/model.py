@@ -370,7 +370,7 @@ class Model:
         # C10: the hidden per-model caches, now explicit
         self._fa_pat = None    # EXP-37 COO -> CSC pattern (assemble)
         self._fa_tr = None     # EXP-37 distinct (sigma, t) of the off-plane traces (solver.trace_zs)
-        self._cudss = None     # one cuDSS solver per model (cuDSS 0.8 faults on a second one)
+        self._cudss = None     # this model's cuDSS solver: one RHS width, fixed at plan time
         self._build()
 
     @classmethod
@@ -598,14 +598,20 @@ class Model:
         """`{refdes: model_id | None}` for every decap of the rail (None = unmounted)."""
         return dict(self._dec_cfg)
 
-    def set_decaps(self, config: dict):
+    def set_decaps(self, config: dict, replace: bool = False):
         """Mount/unmount decaps or change their model, without rebuilding (plan §2-4).
 
         `config` is partial: only the listed refdes change.  `None` unmounts -- the entry stays in
         `self.dec` and is stamped as y = 0, so the Y sparsity pattern (and with it the cached
         `YPattern` and the cuDSS plan) is untouched and only the values are rebuilt.  Pruning is
         NOT redone: N stays on the all-mounted basis (`prune_basis`).
+
+        `replace=True` resets to the SPD's own configuration first, so `config` is the whole
+        configuration and not a patch -- `reset_decaps()` + `set_decaps(config)` in one call that
+        still validates before it changes anything (W12-c).
         """
+        if replace:
+            config = {**{d["refdes"]: d["model_id"] for d in self.ex["decaps"]}, **config}
         for refdes, mid in config.items():  # validate first: a rejected call changes nothing
             if refdes not in self._dec_cfg:
                 raise KeyError(f"unknown decap refdes {refdes!r}")
@@ -900,10 +906,10 @@ class Model:
     def _gpu_solver(self, Y, nrhs=1):
         """This model's one cuDSS solver, or None when the backend is splu / the GPU is unusable.
 
-        One solver per model: cuDSS 0.8 faults on a second DirectSolver and on an early `free()`.
-        Its RHS width is fixed at plan time (`reset_operands` rejects a shape change), so a model
-        that built a decap basis (nrhs = chunk) cannot also run the single-RHS sweep on the GPU --
-        that is a separate process, exactly as the W8/W9 gates run it.
+        One solver per model, because its RHS width is fixed at plan time (`reset_operands` rejects
+        a shape change): a model that built a decap basis (nrhs = chunk) cannot also run the
+        single-RHS sweep on that solver.  `release_solver()` parks it so the next call can plan the
+        other width in the SAME process (W12-b measured that a second DirectSolver is fine).
         """
         if self.backend.solver not in ("cudss", "auto") or self._cudss is False:
             return None
@@ -911,8 +917,8 @@ class Model:
             if self._cudss.nrhs != nrhs:
                 raise RuntimeError(
                     f"this model's cuDSS solver is planned for nrhs={self._cudss.nrhs}, not {nrhs}; "
-                    f"cuDSS 0.8 allows one DirectSolver per process -- use a separate process, or "
-                    f"Backend(solver='splu') for this call")
+                    f"call release_solver() first (it parks this one and the next solve plans the "
+                    f"new width), or Backend(solver='splu') for this call")
             return self._cudss
         try:
             self._cudss = SOL.CudssLU(Y, self.P, self.log, backend=self.backend, nrhs=nrhs)
@@ -922,14 +928,50 @@ class Model:
             self.log(f"[solver] cudss unavailable ({type(e).__name__}: {e}) -- using splu")
         return self._cudss or None
 
-    def decap_basis(self, freqs, chunk=24):
+    def release_solver(self):
+        """Drop this model's cuDSS solver so the next solve plans a new one -- another RHS width,
+        or a re-plan (W12-b).  Returns what was in the slot.
+
+        Nothing is torn down: `nvmath.DirectSolver.free()` faults (0xC0000005) unpredictably --
+        measured on 260729 Port14 (N = 34k) while the same call on Port18 (N = 275k) returned
+        cleanly and gave 245 MB back -- so the released solver keeps its factorization on the card
+        until the process exits (measured on top of the ~250 MB CUDA context: 40 MB for Port14
+        nrhs=1, 73 MB for Port14 nrhs=24, 245 MB for Port18 nrhs=1).
+        nvmath 1.0.0's `DirectSolver` has no finalizer, so dropping the reference frees nothing and
+        cannot fault either (W12-b cases 1-2, both clean).
+
+        Two `DirectSolver`s in one process are fine (W12-b case 3: a held nrhs=1 direct solver and
+        an nrhs=24 basis solver answered interleaved, 1e-11 vs splu), so this is only about the
+        plan-time RHS width, not about a cuDSS limit.  The False "cuDSS is unusable here" latch is
+        left in place: a failed GPU stays failed for this model.
+        """
+        old = self._cudss
+        if old:
+            self._cudss = None
+        return old
+
+    def decap_basis(self, freqs, chunk=24, backend=None):
         """The (1 + Nd)-port basis of this rail with every decap removed (W9, `decaps.py`).
 
         `mdl.decap_basis(freqs).Z(config)` then closes it per configuration in milliseconds.
+
+        `backend` overrides this model's backend for the basis build only (W12-b): a model that
+        keeps cuDSS for direct solves can build its basis on `Backend("splu", fast=True)` -- the
+        exact path, see `DecapBasis` -- and a model on splu can build its basis on the GPU.  Either
+        way the model's own solver is parked for the build and restored afterwards, so building a
+        basis and validating configurations with `set_decaps` + `solve` now live in one process
+        (they cost one parked factorization each, see `release_solver`).
         """
         from .decaps import DecapBasis
 
-        return DecapBasis.build(self, freqs, chunk)
+        keep_backend, keep_solver = self.backend, self._cudss
+        if keep_solver:
+            self._cudss = None              # `release_solver()`, inline: the basis plans its own
+        try:
+            self.backend = backend or keep_backend
+            return DecapBasis.build(self, freqs, chunk)
+        finally:                            # and the basis' solver is released the same way
+            self.backend, self._cudss = keep_backend, keep_solver
 
     def solve(self, freqs, verbose=True, want_v=False):
         """The sweep, as a `Result` (W4).  A `Result` unpacks as the research `(Z, stats)` /

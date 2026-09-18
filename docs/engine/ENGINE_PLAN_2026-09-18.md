@@ -152,3 +152,9 @@ mdl.set_decaps({"C1234": None, "C1235": "GRM155R61A106M"}); res2 = mdl.solve(res
 - W12-b **한 프로세스에서 기저와 직접 풀이 공존**: cuDSS `DirectSolver`를 두 번 만들 때의 실제 조건을 실험으로 확정(W5는 9모델 순차 생성 성공, W9는 "두 번째 생성 시 크래시"라고 기록 — 모순). 가능하면 `Model.release_solver()`(참조 해제, `free()` 호출 없음)와 `decap_basis(backend=…)`로 2단계 프로세스 구조를 없앤다.
 - W12-c **API 인체공학(수치 무관)**: `DecapSite`에 `xy, layer, capacitance(1 kHz 기준), impedance(freqs)`; `api.find_site_pair(spd, port)`; `ladder_freqs`·`unique_path`를 공개 API로; `receipt.attach_mask(receipt, mask)`; `Model.set_decaps(cfg, replace=True)`; `DecapBasis.save(..., with_impedances=True)`/`load(path)`가 모델 없이 동작; `Result.receipt(light=True)`(decap_config·reference_search 생략); 기존 동작·영수증 기본 형식은 불변.
 - 게이트: `tests/engine` 기본 + `-m gpu` 프로파일 통과, W4/W8/W9 게이트 스크립트 재실행 값 불변(CPU 비트 동일), 두 앱이 새 API로 같은 데모 결과를 재현.
+
+### W12 결과 (2026-09-18)
+- W12-a(`W12A_REPORT.md`): cuDSS 기저는 **비결정적**(같은 솔버·플랜으로 두 번 만들어도 2.1e-6, 실행 간 5.7e-7~1.03e-5; 경합 가설 기각). **E4 판정: GPU 기저 ≤ 1e-5·비결정, 정확 경로 = CPU 기저**(P18 27점 552 s, 주파수당 20.5 s; GPU 276–354 s). W9의 "GPU 기저 ≤ 1e-6" 문구는 이 계약으로 대체.
+- W12-b: 두 번째 `DirectSolver` 생성은 안전(nrhs 다른 두 솔버 공존·번갈아 풀이 OK), 크래시는 `nvmath.DirectSolver.free()`뿐(크기 무관 예측 불가). 참조 해제는 VRAM을 돌려주지 않음(nvmath 1.0 finalizer 없음; 추가 솔버 비용 P14 40–73 MB, P18 245 MB). `Model.release_solver()`, `decap_basis(freqs, chunk, backend=)`, `set_decaps(cfg, replace=)`, `DecapBasis.save(with_impedances)/load(path)` 추가. 한 프로세스에서 기저+직접 검증 가능(P18 85 s: 빌드 15 + 기저 73 + 직접 4구성).
+- W12-c(`W12C_REPORT.md`): `DecapSite.xy/layer/capacitance_F/impedance()`, `Rail.site()`, `find_site_pair`, `match_sites`, 공개 `LADDER/ladder_freqs/unique_path`, `mask_margin/attach_mask`, `Result.receipt(light=True)`.
+- 앱 후속(선택): `apps/decap_search`의 2단계 프로세스 구조를 W12-b로 단순화하고 마스크 영수증을 `attach_mask`로 통일; `apps/site_decision`이 `find_site_pair/match_sites/DecapSite.capacitance_F`를 쓰도록 교체.
