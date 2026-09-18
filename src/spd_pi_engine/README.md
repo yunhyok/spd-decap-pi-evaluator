@@ -1,6 +1,6 @@
 # spd_pi_engine — SPD → Z(f) PI 계산 엔진 (v0.1)
 
-`tools/research-claude/`의 동결 연구 모델(기준선 exp28/p, D7)을 애플리케이션이 호출할 수 있는 패키지로 옮긴 것이다. 수치는 연구 코드와 **동일**하며(영수증 재현으로 증명, 아래 §5), 연구 코드는 손대지 않았다. 설계 근거와 결합 목록은 `docs/engine/ENGINE_PLAN_2026-09-18.md`, 단계별 결과는 `docs/engine/W1..W8_REPORT.md`.
+`tools/research-claude/`의 동결 연구 모델(기준선 exp28/p, D7)을 애플리케이션이 호출할 수 있는 패키지로 옮긴 것이다. 수치는 연구 코드와 **동일**하며(영수증 재현으로 증명, 아래 §5), 연구 코드는 손대지 않았다. 설계 근거와 결합 목록은 `docs/engine/ENGINE_PLAN_2026-09-18.md`, 단계별 결과는 `docs/engine/W1..W10_REPORT.md`.
 
 ## 1. 무엇을 계산하나
 PowerSI SPD 파일 하나와 포트 이름 하나를 받아, 그 레일의 PDN 임피던스 Z(f)(1 kHz–100 MHz)를 2-D plane-pair + 회로 하이브리드 모델로 계산한다. 참조면은 PowerSI 관례(cavity-wall, "powersi-compatible")가 기본이고, 물리적 GND 전용 탐색("physical-gnd")도 옵션이다.
@@ -86,7 +86,9 @@ sweep  --spd PATH --ports all|a,b --cache DIR --outdir DIR --jobs N [solve 옵�
 - cuDSS 0.8.0.10: `DirectSolver.free()`와 `SYMMETRIC`이 크래시 → 해제 생략, GENERAL 사용. 오래 사는 프로세스에서 모델을 많이 만들면 핸들이 누적되므로 GPU 계산은 작업자 프로세스에서 돌린다(`sweep`이 그 구조). 8 GB 카드에서 동시 4 프로세스.
 - 미지수 130만 포트: 호스트 RSS 약 4 GB, GPU 벽시계 155 s. GUI 스레드에서 직접 부르지 말 것(`Rail.estimate_cost()`로 먼저 판단).
 - decap 구성 변경: `mdl.set_decaps({refdes: model_id | None})` → 재빌드 없이 `solve()`(P18 GPU 구성당 약 2 s, 재빌드 약 18 s). 프루닝은 전(全)실장 기준으로 1회 고정(`prune_basis="all_mounted"`; 두 설계에서 재빌드와 N 동일, ΔZ ≤ 1.2e-10). `add_decap_model(id, subckt_text)`로 새 모델 등록. **주의**: decap을 전부(또는 거의 전부) 떼는 극단 구성은 저주파 조건수가 나빠져 GPU 오차가 1e-6급이 되므로 그 경우 저주파는 CPU 경로로 본다(`docs/engine/W8_REPORT.md` §4-2).
-- 아직 없는 것(계획 W9+): decap 스윕(Schur, 구성 수십 개 이상일 때), 다중 포트, 제품 통합.
+- decap 스윕(W9): `basis = mdl.decap_basis(freqs)` → `basis.Z(config)` / `basis.Z_many(configs)`. 맨 보드(decap 전부 제거)를 포트+decap 단자 다중 RHS로 한 번 풀어 두고(P18: 422 RHS × 7점 98 s, 20 MB), 구성은 dense Schur 닫힘으로 0.12 s(`OPENBLAS_NUM_THREADS=4` 권장). 손익분기 P18 42구성, P14 12구성; 그 미만이면 `set_decaps`가 낫다. 계약: 직접 풀이 대비 CPU ≤ 1e-9, GPU ≤ 1e-6(맨 보드 조건수 때문). `save/load`로 npz 보관. GPU에서는 한 모델이 기저용 또는 스윕용 중 하나다(cuDSS 플랜의 RHS 폭 고정).
+- 다중 포트(W10): `Design.multiport(ports, cache_dir, …)`/`multiport.MultiRail` — 같은 레일의 포트 k개를 한 모델로 풀어 (nf, k, k) Z 행렬. **현재 세 설계에는 같은 레일을 공유하는 SPD 포트가 없다**(SITE0/SITE1은 별개 net 사본이라 이상 GND에서 Z12 ≡ 0, `open()`이 거부). 검증은 한 포트의 핀을 두 그룹으로 나눈 경우로 했다(상반성 1e-11/1e-15, 재단락 시 단일 포트 영수증 2.8e-9 재현). 한 레일 안의 임의 노드 그룹(예: decap 사이트 묶음, 핀 필드 부분) 간 전달 임피던스에 쓸 수 있다.
+- 아직 없는 것(계획 W11): 제품 통합.
 
 ## 8. 다음 세션 진입점
 1. `docs/engine/ENGINE_PLAN_2026-09-18.md` §4의 W 항목 순서대로. 각 항목은 §5의 재현 테스트가 게이트다.

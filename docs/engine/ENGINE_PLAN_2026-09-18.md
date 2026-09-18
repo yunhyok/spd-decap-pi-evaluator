@@ -137,7 +137,9 @@ mdl.set_decaps({"C1234": None, "C1235": "GRM155R61A106M"}); res2 = mdl.solve(res
 - W1–W5, W7, W8 완료(보고서 `W1..W5_REPORT.md`, `W7_REPORT.md`, `W8_REPORT.md`, `IR_REPORT.md`). W8: `set_decaps` 구성당 2.1 s(P18 GPU), 프루닝 불변 확인, `numerics_id`는 소스 변경으로 `f3808b55…`로 갱신(Z 비트 동일). W6는 `src/spd_pi_engine/README.md` + CLAUDE.md "계산 엔진" 절. v0.1 = 패키지 3,400여 줄 + CLI + `tests/engine`(31건: 데이터 없음 11, 영수증 재현 20).
 - 게이트 실측: exp8 P18 legacy 5.829e-12; exp28/p 7케이스 CPU ≤ 1e-9(연구 코드 오늘 실행 대비 비트 동일), GPU ≤ 5.6e-9; PCB Port1 CPU 9.4e-11. strict xfail 2건: PCB Port50 CPU 30 kHz 1.016e-9(한도 1e-9), GPU 1 MHz 1.69e-8(한도 1e-8) — 조건수 기인, 반복 정제로 불변(IR_REPORT).
 - 소유자 결정 대기: (1) PCB 저주파 재현 허용치(CPU 2e-9 / GPU 레일별)로 사전 등록해 xfail을 해소할지, (2) 연구 브랜치의 main 병합 여부.
-- 다음: W9 decap 스윕(Schur, exp9 이식) → W10 다중 포트. W11 제품 통합은 패키지 급전 경로 R 관례 해결 후.
+- W9 완료(`W9_REPORT.md`): `DecapBasis` 닫힘 vs 직접 풀이 15/15 ≤ 1.05e-5(문턱 0.5 %), CPU 2.5e-10; P18 기저 98 s, 구성당 0.12 s, 손익분기 42. 기저 경로 GPU 계약 ≤ 1e-6(맨 보드 조건수).
+- W10 완료(`W10_REPORT.md`, worktree `engine-w10` 병합 34355ac): 다중 포트 기계장치는 검증됐으나 **세 설계 모두 같은 레일을 공유하는 SPD 포트가 0개**(SITE 짝은 별개 net) — 핀 분할 검증으로 대체(상반성 1e-11, 재단락 2.8e-9). 후속: `MultiModel.solve`의 k회 삼각 풀이를 W9의 다중 RHS 경로로 교체(6줄, `# ponytail:` 표시).
+- 남은 항목: W11 제품 통합(패키지 급전 경로 R 관례 해결 후). 그 전에 할 수 있는 것: 앱 시제품(decap 배치 탐색은 `decap_basis` + `Z_many`, SITE 간 실장 판단은 `set_decaps`)을 `src/` 밖 별도 스크립트로 만들어 엔진 API를 검증. W11 제품 통합은 패키지 급전 경로 R 관례 해결 후.
 
 ## 결정 기록 (2026-09-18, 소유자)
 - E1. 저장소는 PUBLIC으로 유지한다.

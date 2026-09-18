@@ -222,3 +222,4 @@ docs/handoff 스냅샷·accuracy_parse.py 수정 금지, 커밋은 내가 요청
 - 커밋 대기(소유자 요청 시): EXP-38~41 변경(`exp3/homog.py`, `exp1/model.py`, `exp1/exp1b.py`, 신규 `common/scanline.py`, results/exp38..41, CLAUDE.md·인계 문서 갱신).
 - 진행 정리 문서 `PROGRESS_SUMMARY_2026-09-18.md`(정량 비교·그래프) 추가. `pipeline.prepare`의 공유 pkl 쓰기는 원자적(os.replace + 재시도)으로 수정, 8×8 프로세스 스트레스 PASS.
 - **2026-09-18 마감 — 연구 잠정 종료, 엔진 착수**: 소유자 결정으로 연구를 정리하고 계산 엔진 `src/spd_pi_engine/`(v0.1: W1–W5·W7 완료, 계획 `docs/engine/ENGINE_PLAN_2026-09-18.md`, 진입 문서 `src/spd_pi_engine/README.md`)을 만들었다. 수치는 연구 코드와 동일(영수증 게이트로 증명), 연구 트리는 무수정. 저장소 분리는 하지 않음(필요 시 `git subtree split`). 연구 브랜치는 GitHub에 push됨(main 병합은 소유자 판단).
+- 2026-09-18 후반: 소유자 결정 E1(공개 유지)·E2(main 병합)·E3(PCB 저주파 재현 계약). 엔진 W8(`set_decaps`)·W9(Schur decap 스윕)·W10(다중 포트) 완료 → v0.1 전 항목 완료, W11(제품 통합)만 남음. 데이터 발견: SPD SITE0/SITE1 포트는 같은 레일이 아니라 별개 net 사본(다중 포트 쌍 없음). 진입 문서 `src/spd_pi_engine/README.md`.
