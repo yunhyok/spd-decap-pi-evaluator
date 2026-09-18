@@ -21,11 +21,17 @@ class Backend:
 
     fast: the EXP-37..40 accelerations (bit-identical, verified per experiment).
     host_nthreads / ir_steps: cuDSS knobs, previously hardcoded in `common/cudss_solver.py`.
+
+    W13: `host_nthreads=None` means "size it for this box" -- `OMP_NUM_THREADS` when the worker's
+    parent set one (`cli.sweep` does, from `hardware.plan_threads`), else `plan_threads` on the
+    detected profile.  The default stays **4**, the value every receipt so far was produced with:
+    the cuDSS host-side reordering thread count can move the factorization, and this engine does
+    not change numerics to tidy an API up.
     """
 
     solver: str = "splu"
     fast: bool = False
-    host_nthreads: int = 4
+    host_nthreads: "int | None" = 4
     ir_steps: int = 1
     _gpu: object = field(default=None, init=False, repr=False, compare=False)
 

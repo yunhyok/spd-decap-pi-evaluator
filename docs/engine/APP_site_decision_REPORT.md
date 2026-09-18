@@ -167,3 +167,76 @@ A1과 같은 형식). 규칙 변경은 소유자 결정 사항이라 하지 않�
 
 `Model.set_decaps` / `reset_decaps` / `Rail.build` / `Design.rail` / `multiport.port_rails`는
 있는 그대로 충분했다. 엔진은 한 줄도 바꾸지 않았다.
+
+---
+
+## 8. v2 (W12 API) — 2026-09-19
+
+과제: `docs/engine/W12A_REPORT.md`(§3 한 프로세스 기저+직접, §7)·`W12C_REPORT.md`(API 표) 위에서
+`apps/site_decision`을 §6-1/-2/-3/-6이 요청한 엔진 API(`find_site_pair`, `match_sites`,
+`DecapSite.xy`/`.capacitance_F`, `Result.receipt(light=True)`)로 옮기고, 판정이 바뀌지 않았음을
+증명한다. `apps/`·`docs/engine/APP_*_REPORT.md` 밖은 건드리지 않았다(`src/spd_pi_engine`은 다른
+세션이 하드웨어 사이징으로 동시에 고치는 중이라 있는 그대로 import만 했다).
+
+### 8-1. 무엇을 옮겼나 (diff 요약)
+
+| 대체한 앱 코드 | 엔진 API | 비고 |
+|---|---|---|
+| `decide.find_site_pair`(예외를 던짐) | `spd_pi_engine.find_site_pair`(짝이 없으면 `None`) | `evaluate()`가 `None`을 다시 `ValueError`로 감싼다 — 호출부 계약(예외)은 그대로, 내부만 바뀌었다 |
+| `decide.match_sites(rule="refdes")`(평평한 dict) | `spd_pi_engine.match_sites(rule="refdes-suffix")`(`{"mapping","unmatched"}`) | `evaluate()`/`match_report()`가 `["mapping"]`을 읽도록 수정(W12C_REPORT §4가 예고한 그대로, "한 줄 교체 아님") |
+| `decide.match_sites(rule="geometry")`, `_xy(rail)`, `_site`/`_stem` 헬퍼 | `_geometry_match(rail0, rail1)`(app-local, `DecapSite.xy` 사용) | 엔진은 `"geometry"` 규칙을 이식하지 않았다(W12C_REPORT §3, 이 설계에서 421 중 35만 맞고 단사가 아님을 이미 실측) — `match_report`의 교차검증 전용으로만 남았고, 이제 `rail.ex["rail_nodes"]`가 아니라 `DecapSite.xy`를 읽는다 |
+| `decide.capacitance(rail, f=1e3)`(`rail.ex["models"][mid].impedance([f])` 직접 호출) | `DecapSite.capacitance_F` | 반환이 `dict` 컴프리헨션 한 줄로 줄었다; `None`(비용량성)을 `rank_sites`가 `-(c[r] or 0.0)`로 안전하게 처리 |
+| `site_curves`의 `res.receipt(breakdown_100k=False)` | `res.receipt(breakdown_100k=False, light=True)` | §7-5가 지적한 "조용히 비싼 영수증"의 크기 쪽 — `decap_config`(421개 키)·`reference_search`·`build_info`·`stats`를 뺀다 |
+
+`Rail.site(refdes)`는 이 앱에 자연스러운 호출 지점이 없었다(모든 곳이 `rail.decaps` 전체를
+순회하지, 단일 refdes를 찾지 않는다) — 억지로 쓰지 않았다.
+
+라인 수 (`git diff --numstat`): `decide.py` 326 → 295줄(순감 −31, +64/−95 — 매칭 로직을
+다시 쓴 부분이 많아 순감보다 churn이 크다), `README.md` +11/−6. `main.py`는 변경 없음
+(`evaluate()`의 반환 모양이 그대로라 `summary_md`/CLI는 손대지 않았다).
+
+### 8-2. 재현: 260729 Port18_SITE0 / Port64_SITE1, top10, δ=5%
+
+```powershell
+python -m apps.site_decision.main --spd "$env:SPD_PI_DATA_DIR\S4LB002-2Para_260729_1_injected.spd" `
+  --port Port18_SITE0 --partner auto --cache "$env:SPD_PI_WORK_DIR\engine_cache" `
+  --outdir "$env:SPD_PI_WORK_DIR\apps\site_decision_v2" `
+  --targets top10 --delta 0.05 --freqs ladder `
+  --ref-npz "$env:SPD_PI_DATA_DIR\analysis\S4LB002_260729_Zdiag.npz" --solver cudss --fast
+```
+
+옛 산출물(`WORK_DIR\apps\site_decision\decision_receipt.json`, §4의 표)과 새 산출물
+(`WORK_DIR\apps\site_decision_v2\decision_receipt.json`)을 코드로 비교했다:
+
+| 항목 | 이전(v1) | v2 | 판정 |
+|---|---|---|---|
+| 전(全)실장 SITE 편차 \|Z\| | 0.310505497 % | 0.310505497 % | 일치(9자리) |
+| 전(全)실장 SITE 편차 복소 | 0.345179865 % | 0.345179865 % | 일치(9자리) |
+| 전(全)실장 \|Z\|(SITE0, 7점) | — | — | max rel diff **3.83e−12** (< 1e−9 요구) |
+| 사이트 10개의 `dev_pct`/`verdict` | §4 표 | 동일 | **10/10 일치, 차이 0**(diff 스크립트가 하나도 못 찾음) |
+| 판정 | 10/10 `unmount_ok` | 10/10 `unmount_ok` | 일치 |
+| `engine_receipts[i]` 키 | 25개(decap_config·reference_search·build_info·stats 포함) | 21개(그 4개 없음) | light=True 확인, `validity`는 유지 |
+| 소요 | 122.2 s (빌드 2 + solve 22) | 73.4 s (빌드 2 + solve 22, 동일 구조) | 더 빠름 — 캐시/시스템 변동으로 보인다(이 앱은 W12-b의 "한 프로세스" 최적화 대상이 아니다, §8-3) |
+
+Z 값(`absZ_site0`, 7점)과 `dev_pct`를 1e-9 절대 오차로 비교하는 스크립트 결과: 모든 사이트,
+모든 주파수에서 **차이 0에 가깝다(최대 상대오차 3.8e-12)** — cuDSS 비결정성(W12A_REPORT §4-1)의
+스케일(1e-6~1e-5)보다 3~4자리 작다. 두 실행이 캐시 웜 상태에서 같은 하드웨어로 돌았고 기저를
+쓰지 않는 직접 풀이라 W12-a의 비결정성 계약이 애초에 적용되지 않는다(§8-3).
+
+### 8-3. 남은 엔진 격차 / 왜 이 앱은 "한 프로세스"가 안 되는가
+
+- **W12-b는 이 앱에 적용되지 않는다.** `apps/decap_search`가 없앤 2프로세스 구조는 "한 모델이
+  기저 빌드와 직접 풀이를 둘 다 하고 싶다"는 제약이었다. `site_decision`은 애초에 기저를 쓰지
+  않고(구성이 11개뿐이라 손익분기 미만, README §5), SITE0/SITE1이 **서로 다른 두 레일의 두
+  모델**이라 프로세스 분리 이유가 다르다(cuDSS 0.8: 프로세스당 `DirectSolver` 1개, W8 §4). 엔진이
+  "한 프로세스에서 여러 cuDSS 모델"을 지원하게 되면(W5 §4-2의 관찰이 이미 맞다고 W12A_REPORT §2가
+  확인했다) 이 앱도 프로세스 분리를 없앨 수 있지만, 그 안전성 조사(자유화하지 않은 핸들이 두
+  레일 분만큼 쌓인다, VRAM)는 이번 범위 밖이다 — §7-4에 이미 적혀 있던 요구사항이고 아직
+  해결되지 않았다.
+- **`match_sites`의 `"geometry"` 규칙은 여전히 앱 소유다**(§8-1). 엔진에 올리자는 요청은 없다 —
+  이 설계에서 틀린 규칙임을 실측했기 때문에(§3) 다른 설계를 만났을 때만 다시 켜는 진단용이고,
+  엔진 규칙으로 승격할 근거가 아직 없다.
+- **`Rail.site(refdes)`를 쓸 데가 없었다**(§8-1). 이 앱의 모든 순회가 `rail.decaps` 전체 위에서
+  일어난다 — 필요하면 다음에 단일-refdes 조회가 생길 때 쓴다.
+- §7의 나머지(4. 프로세스 격리 헬퍼, 6. 스윕용 경량 영수증)는 4는 여전히 미해결(위 항목과 같은
+  이유), 6은 `light=True`로 이번에 해결됐다.

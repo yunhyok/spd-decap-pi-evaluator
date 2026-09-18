@@ -29,19 +29,28 @@ python -m apps.site_decision.main `
 
 ```python
 from apps.site_decision import decide
-decide.find_site_pair(spd, "Port18_SITE0")      # -> "Port64_SITE1"
-decide.match_sites(rail0, rail1)                # {refdes SITE0: refdes SITE1}
+decide.find_site_pair(spd, "Port18_SITE0")      # -> "Port64_SITE1" (spd_pi_engine.find_site_pair, W12-c)
+decide.match_sites(rail0, rail1)                # {"mapping": {refdes SITE0: refdes SITE1}, "unmatched": [...]}
 decide.match_report(rail0, rail1)               # 두 대응 규칙을 실측 비교
 decide.evaluate(spd, p0, p1, targets=10, cache_dir=CACHE)["sites"]
 ```
 
-## 알아둘 것
+## 알아둘 것 (v2, W12 API)
 
+- **엔진 API로 옮긴 것**(2026-09-19, `docs/engine/APP_site_decision_REPORT.md` §8): SITE 짝 찾기와
+  대응 규칙은 `spd_pi_engine.find_site_pair`/`match_sites`(refdes 접미사 규칙), 좌표/용량은
+  `DecapSite.xy`/`.capacitance_F` — 이 앱이 `rail.ex["rail_nodes"]`/`rail.ex["models"]`를 직접
+  여는 코드는 없다. `find_site_pair`는 짝이 없으면 예외 대신 `None`을 돌려준다(`evaluate()`가
+  `ValueError`로 다시 감싼다). `site_curves`의 엔진 영수증은 `light=True`(구성 스윕 요약만).
+  기하 기반 대응 규칙(`"geometry"`, `match_report`의 교차검증용)은 엔진에 없어 앱에 남아 있다 —
+  이 설계에서는 틀린 규칙임을 이미 실측했다(아래).
 - **대응 규칙**: refdes에서 레일 net과 같은 SITE 접미사(`_0`/`_1`)를 떼고 어간을 맞춘다.
   260729에서 421/421 매칭, model_id 불일치 0. 좌표 기반 규칙(같은 model_id + 최근접)은 SITE1
   배치가 SITE0의 강체 사본이 아니라서 421 중 35만 맞고 단사도 아니다 — 새 설계에서는
   `match_report`로 먼저 확인한다.
-- SITE마다 **별도 프로세스**로 돈다(cuDSS 0.8은 프로세스당 `DirectSolver` 1개, W8 §4).
+- SITE마다 **별도 프로세스**로 돈다(cuDSS 0.8은 프로세스당 `DirectSolver` 1개, W8 §4) — 이건
+  `apps/decap_search`가 W12-b로 없앤 것과 다른 제약이다: 여기는 SITE0/SITE1이 **서로 다른 두
+  GPU 모델**이라 여전히 프로세스를 나눠야 한다.
 - 판정 규칙은 APPS_PLAN 그대로다. 마스크가 없으면 per-SITE |Z| 증가율은 **보고만** 하고
   판정에는 쓰지 않는다(`docs/engine/APP_site_decision_REPORT.md` §5).
 - 데이터 없는 자체 검사: `python apps/site_decision/decide.py`.

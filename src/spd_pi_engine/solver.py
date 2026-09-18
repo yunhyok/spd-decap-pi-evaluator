@@ -112,6 +112,14 @@ def _mtlayer():
     return None
 
 
+def _host_nthreads(backend):
+    """`backend.host_nthreads`, or (None) this box's share: the worker env first, then the plan."""
+    if backend.host_nthreads is not None:
+        return backend.host_nthreads
+    from .hardware import HardwareProfile, plan_threads
+    return int(os.environ.get("OMP_NUM_THREADS") or plan_threads(HardwareProfile.detect(), 1).threads)
+
+
 def _device_name(device_id=0):
     try:
         from cuda.bindings import runtime as cudart
@@ -161,7 +169,7 @@ class CudssLU:
                          multithreading_lib=mt),
             execution=A.ExecutionCUDA(device_id=device_id))
         if mt:
-            self._solver.plan_config.host_nthreads = backend.host_nthreads
+            self._solver.plan_config.host_nthreads = _host_nthreads(backend)
         # cuDSS does no iterative refinement by default.  One step costs ~10 % of a factor+solve and
         # takes the largest ports from ~3e-8 to ~1e-9 relative on Z, i.e. back inside the 1e-8 GPU
         # accuracy budget (EXP-37: 260729 Port7, N 586k, 3.02e4 Hz -- 3.34e-8 -> 1.05e-9; a second

@@ -225,3 +225,4 @@ docs/handoff 스냅샷·accuracy_parse.py 수정 금지, 커밋은 내가 요청
 - 2026-09-18 후반: 소유자 결정 E1(공개 유지)·E2(main 병합)·E3(PCB 저주파 재현 계약). 엔진 W8(`set_decaps`)·W9(Schur decap 스윕)·W10(다중 포트) 완료 → v0.1 전 항목 완료, W11(제품 통합)만 남음. 데이터 발견: SPD SITE0/SITE1 포트는 같은 레일이 아니라 별개 net 사본(다중 포트 쌍 없음). 진입 문서 `src/spd_pi_engine/README.md`.
 - 2026-09-18 마지막: 앱 시제품 2종(`apps/decap_search` 421사이트 8.4분·305/421 실장, `apps/site_decision` SITE 매칭 421/421·10/10 미실장 가능)과 엔진 W12(cuDSS 비결정성 확정 → E4 계약, 한 프로세스 기저+직접 검증, 앱용 API). 남은 것: W11 제품 통합(패키지 R 관례 해결 후), 앱을 새 API로 단순화(선택).
 - 2026-09-19 소유자 지시: (1) microvia 구리 충전 가정(D9, 수치 변경 없음 — 모델은 이미 40 µm via를 충전 원기둥으로 계산), (2) 앱을 W12 API로 단순화해 검증, (3) 워크스테이션(Threadripper 32C/64T, 512 GB, RTX A6000) 대응 — 엔진 W13(하드웨어 프로파일·자동 병렬/청크 산정) 진행.
+- 2026-09-19 완료: D9 반영, 앱 v2(결과 동일), W13 하드웨어 프로파일(워크스테이션 대응, 실측은 장비에서). 표준 실행은 `python -m spd_pi_engine sweep --jobs auto`.

@@ -126,7 +126,17 @@ def _gx(W, tol, maxit, face_fix, xp):
 
 
 def window_conductance(windows, chunk_tiles=6_000_000, face_fix=False, backend=DEFAULT):
-    """windows bool (N, ny, nx) -> relative x conductance; exact 1/0 for full/empty."""
+    """windows bool (N, ny, nx) -> relative x conductance; exact 1/0 for full/empty.
+
+    `chunk_tiles="auto"` sizes the batch for this box (`hardware.plan_chunk_tiles`: 6e6 per 8 GB
+    of card, i.e. exactly the default on the A2000 and 6x that on a 48 GB A6000).  It is **opt-in
+    and not numerics-neutral**: `batched_gx` iterates until every window in the batch has
+    converged, so a bigger batch changes the iteration count and with it the last bits of G.
+    The default is the 6e6 every receipt in `docs/engine/` was produced with.
+    """
+    if chunk_tiles == "auto":
+        from .hardware import HardwareProfile, plan_chunk_tiles
+        chunk_tiles = plan_chunk_tiles(HardwareProfile.detect())
     N = windows.shape[0]
     out = np.zeros(N)
     fill = windows.reshape(N, -1).mean(1)

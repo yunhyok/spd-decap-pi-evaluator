@@ -70,11 +70,45 @@ from __future__ import annotations
 
 import json
 import time
+from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
 from scipy.sparse.linalg import splu
 
 from .receipt import Result, decap_config_sha256, numerics_id_of
+
+
+def _basis_block(Y, ports, chunk, gpu=None):
+    """The (K, K) basis block of one frequency: solve Y V = B for every port/decap terminal.
+
+    The whole per-frequency numerics of the basis, in one place, so the serial and the
+    frequency-parallel paths cannot drift apart.  `gpu` is a `CudssLU` planned for `nrhs=chunk`,
+    or None for `scipy.splu`.  A short last chunk is zero-padded (a zero column gives zeros).
+    """
+    K, N = len(ports), Y.shape[0]
+    lu = None if gpu else splu(Y, permc_spec="COLAMD")
+    Zf = np.zeros((K, K), complex)
+    B = np.zeros((N, chunk), complex, order="F")        # width fixed: cuDSS plans on it
+    for c0 in range(0, K, chunk):
+        m = min(chunk, K - c0)
+        B[:] = 0.0
+        for j in range(m):
+            pa, pb = ports[c0 + j]
+            if pa >= 0:
+                B[pa, j] += 1.0
+            if pb >= 0:
+                B[pb, j] -= 1.0
+        V = gpu.solve(Y, B)[0] if gpu else lu.solve(B)
+        for i2, (pa, pb) in enumerate(ports):
+            Zf[i2, c0:c0 + m] = ((V[pa, :m] if pa >= 0 else 0.0)
+                                 - (V[pb, :m] if pb >= 0 else 0.0))
+        del V
+    return Zf
+
+
+def _basis_block_worker(args):
+    """`_basis_block` behind one picklable argument -- the `ProcessPoolExecutor` entry point."""
+    return _basis_block(*args)
 
 
 class BasisResult(Result):
@@ -144,13 +178,23 @@ class DecapBasis:
 
     # ------------------------------------------------------------------ build
     @classmethod
-    def build(cls, model, freqs, chunk=24):
+    def build(cls, model, freqs, chunk=24, workers=1):
         """`run9.multiport` on an engine `Model`: assemble with y = 0 at every decap, solve for the
         port and every decap terminal in chunks of `chunk` right-hand sides.
 
         The model's configuration is restored on the way out.  With a decap on an explicit GND node
         (`gnd_node >= 0`) the terminal is the node pair, as in `run9.port_vectors`; with the ideal
         reference (`-1`) only the rail node enters.  Both are handled here.
+
+        `workers > 1` (W13, splu only) runs the frequencies in parallel: every frequency is an
+        independent factorization, so the basis is embarrassingly parallel over `freqs`.  The
+        parent keeps assembling Y itself -- assembly is 0.15 s against a 20 s factorization on P18,
+        and the assembled Y is what has to stay bit-identical -- and ships (Y, ports, chunk) to a
+        `ProcessPoolExecutor`, which sends back the (K, K) block (2.8 MB for P18's 422 terminals,
+        against 1.9 GB if the (N, K) solution had to come back).  No model rebuild in the worker,
+        no cache, no extraction.  Frequencies go out in waves of `workers`, so at most `workers`
+        copies of Y are alive at once.  The workers inherit this process's environment, so the
+        BLAS thread count -- and therefore the last bits, W12-a 5 -- is the parent's.
         """
         freqs = np.asarray(freqs, float)
         base = model.decap_config
@@ -163,32 +207,30 @@ class DecapBasis:
                 continue
             refdes.append(r)
             ports.append((int(ra[k]), int(ga[k])))
-        K, N = len(ports), int(model.N)
+        K = len(ports)
         Zs = np.zeros((len(freqs), K, K), complex)
         t0 = time.time()
+        workers = int(workers)
+        if workers > 1 and model.backend.solver != "splu":
+            model.log(f"[basis] workers={workers} needs solver='splu' (one card, one cuDSS context "
+                      f"per process); running the {model.backend.solver} basis serially")
+            workers = 1
         try:
             model.set_decaps({r: None for r in base})          # the bare board
-            for i, f in enumerate(freqs):
-                Y = model.assemble(float(f))
-                gpu = model._gpu_solver(Y, nrhs=chunk)
-                lu = None if gpu else splu(Y, permc_spec="COLAMD")
-                B = np.zeros((N, chunk), complex, order="F")    # width fixed: cuDSS plans on it
-                for c0 in range(0, K, chunk):
-                    m = min(chunk, K - c0)
-                    B[:] = 0.0
-                    for j in range(m):
-                        pa, pb = ports[c0 + j]
-                        if pa >= 0:
-                            B[pa, j] += 1.0
-                        if pb >= 0:
-                            B[pb, j] -= 1.0
-                    V = gpu.solve(Y, B)[0] if gpu else lu.solve(B)
-                    for i2, (pa, pb) in enumerate(ports):
-                        Zs[i, i2, c0:c0 + m] = ((V[pa, :m] if pa >= 0 else 0.0)
-                                                - (V[pb, :m] if pb >= 0 else 0.0))
-                    del V
-                del lu
-                model.log(f"  basis f={f:11.4e} K={K} {time.time() - t0:7.1f}s")
+            if workers > 1:
+                with ProcessPoolExecutor(max_workers=workers) as pool:
+                    for i0 in range(0, len(freqs), workers):
+                        wave = [(model.assemble(float(f)), ports, chunk)
+                                for f in freqs[i0:i0 + workers]]
+                        for j, Zf in enumerate(pool.map(_basis_block_worker, wave)):
+                            Zs[i0 + j] = Zf
+                        model.log(f"  basis f={freqs[i0]:11.4e}+{len(wave) - 1} K={K} "
+                                  f"x{workers} {time.time() - t0:7.1f}s")
+            else:
+                for i, f in enumerate(freqs):
+                    Y = model.assemble(float(f))
+                    Zs[i] = _basis_block(Y, ports, chunk, model._gpu_solver(Y, nrhs=chunk))
+                    model.log(f"  basis f={f:11.4e} K={K} {time.time() - t0:7.1f}s")
             # the backend/device this build ran on: `decap_basis` restores the model's afterwards
             dev, be = getattr(model._cudss, "device", None), model.backend
         finally:

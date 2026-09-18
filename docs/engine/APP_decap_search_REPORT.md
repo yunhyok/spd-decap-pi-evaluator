@@ -261,3 +261,127 @@ python -m apps.decap_search.main --spd "$env:SPD_PI_DATA_DIR\s5m6585_32p_260414_
 `numerics_id = 7053d7fa5745988212815cf1a27032db95f0fc1548c49f3c1b903fdc0e95599b`(두 데모 공통.
 W9 보고서의 `2ebf77e1…`에서 바뀌었다 — 그 뒤 `NUMERIC_MODULES`의 소스가 바뀌었다는 뜻이고,
 이 앱은 엔진을 고치지 않았다). 기존 영수증은 덮어쓰지 않는다(`cli.unique_path`).
+
+---
+
+## 9. v2 (W12 API) — 2026-09-19
+
+(번호가 9인 이유: 기존 §8 "재현"이 이미 있어서 과제가 제안한 "§8"을 그대로 쓰면 번호가
+겹친다.) 과제: `docs/engine/W12A_REPORT.md`(§3 한 프로세스 기저+직접, §7)·`W12C_REPORT.md`(API
+표) 위에서 이 앱을 단순화하고 결과가 바뀌지 않았음을 증명한다. `apps/`·`docs/engine/APP_*_REPORT.md`
+밖은 건드리지 않았다(`src/spd_pi_engine`은 다른 세션이 하드웨어 사이징으로 동시에 고치는 중이라
+있는 그대로 import만 했다).
+
+### 9-1. 무엇을 없앴나 (diff 요약)
+
+`git diff --numstat`: `main.py` 242 → 209줄(순감 −33, +82/−115), `search.py` 190 → 169줄
+(순감 −21, +61/−82), `__init__.py` +1(+3/−2). 앱 전체(README 제외) **439 → 386줄(−53)**.
+
+| 없앤 것 | 대체 |
+|---|---|
+| `--stage search\|validate`, `subprocess.run`으로 자기 자신을 두 번 재호출 | 한 함수 `run(a)` — `rail.build` 1회, `mdl.decap_basis(...)`, `mdl.set_decaps(cfg, replace=True)` + `mdl.solve` **같은 모델·같은 프로세스**(W12-b) |
+| `search_state.json`/`validate.json` 중간 파일(두 프로세스를 잇는 용도) | 필요 없음 — 메모리에 있는 `basis`/`mdl`을 그대로 다음 단계에 넘긴다 |
+| `stage_search`의 두 번째 `Design.open(...).rail(...).build(...)`(검증용 재빌드) | 같은 `mdl` 재사용. 근접-빈 구성의 CPU 교차검증만 (여전히) 별도 `splu` 모델을 하나 더 빌드한다 — 그건 애초에 다른 백엔드라 W9 §2-1의 제약 밖이다 |
+| `search.Mask` 클래스(`__init__`/`parse`/`from_full`/`target`/`margin`/`to_dict`) | `search.parse_mask`(CLI 문자열 파싱만 남음), `search.mask_from_full`; 여유 계산은 `spd_pi_engine.mask_margin` |
+| `validate()`가 손으로 채우던 `margin_basis`/`margin_direct`/`verdict_basis`/`verdict_direct`/`Z_re`/`Z_im` 등 | `zb.receipt(light=True)`/`zd.receipt(breakdown_100k=False, light=True)` + `spd_pi_engine.attach_mask` — 구성별 레코드가 엔진 영수증 그대로(가벼움) |
+| `model.reset_decaps().set_decaps(cfg)` | `model.set_decaps(cfg, replace=True)`(한 호출, W12-a API) |
+| `from spd_pi_engine.cli import ladder_freqs, unique_path` | `from spd_pi_engine import ladder_freqs, unique_path`(W12-c, `__all__`에 있음) |
+| 하드코드 `tol = 1e-6 if a.solver == "cudss" else 1e-9` | `BASIS_TOL = {"splu": 1e-9, "cudss": 1e-5}[basis_solver]`(E4, `--basis-solver`에서 정해진다) |
+| `--chunk`만 있고 기저 백엔드를 못 바꾸던 것 | `--basis-solver cudss\|splu`(기본값 = `--solver`) |
+
+`DecapSite.capacitance_F`(과제 (c) 항목)는 **이 앱에는 적용 대상이 없다** — `decap_search`는
+용량으로 정렬하지 않는다(마스크 여유로만 순위를 매긴다, `grep capacitance apps/decap_search`
+결과 없음). 그 요구사항은 `apps/site_decision`의 `decide.capacitance`/`rank_sites`에 적용했다
+(`APP_site_decision_REPORT.md` §8).
+
+### 9-2. 재현: 260729 Port18_SITE0(GPU 기저), s5m6585 Port1_U1_0(GPU 기저), Port18(`--basis-solver splu`)
+
+```powershell
+python -m apps.decap_search.main --spd "$env:SPD_PI_DATA_DIR\S4LB002-2Para_260729_1_injected.spd" `
+  --port Port18_SITE0 --cache "$env:SPD_PI_WORK_DIR\engine_cache" `
+  --outdir "$env:SPD_PI_WORK_DIR\apps\decap_search_v2\260729_Port18_SITE0" `
+  --freqs ladder --mask-from-full 1.5 --solver cudss --fast
+
+python -m apps.decap_search.main --spd "$env:SPD_PI_DATA_DIR\s5m6585_32p_260414_length3_1.spd" `
+  --port Port1_U1_0 --cache "$env:SPD_PI_WORK_DIR\engine_cache" `
+  --outdir "$env:SPD_PI_WORK_DIR\apps\decap_search_v2\s5m6585_Port1_U1_0" `
+  --freqs ladder --mask-from-full 1.5 --solver cudss --fast
+
+python -m apps.decap_search.main --spd "$env:SPD_PI_DATA_DIR\S4LB002-2Para_260729_1_injected.spd" `
+  --port Port18_SITE0 --cache "$env:SPD_PI_WORK_DIR\engine_cache" `
+  --outdir "$env:SPD_PI_WORK_DIR\apps\decap_search_v2\260729_Port18_SITE0_cpubasis" `
+  --freqs ladder --mask-from-full 1.5 --solver cudss --fast --basis-solver splu
+```
+
+**최종 실장 집합 — 세 실행 모두 완전히 같다.**
+
+| 실행 | `final_config_sha256` | 실장 | 제거 순서 |
+|---|---|---|---|
+| v1(2026-09-18, GPU 기저) | `cc9f9690…` | 305/421 | 기준 |
+| v2 GPU 기저(오늘) | `cc9f9690…` **동일** | 305/421 | v1과 **116개 중 114개 위치 동일**, 93·94번째만 자리바꿈(`C5903_0`↔`C6048_0`) |
+| v2 `--basis-solver splu`(CPU 기저) | `cc9f9690…` **동일** | 305/421 | **v2 GPU와 순서까지 완전히 동일**(116/116) — v1과는 v2 GPU와 같은 두 자리(93·94)만 다르다 |
+
+`C5903_0`/`C6048_0`는 단독 제거 여유가 사실상 동률인 두 사이트다(순위 임계 부근) — GPU cuDSS
+기저의 실행 간 비결정성(W12A_REPORT §4-1, 5.7e-7~1.03e-5)이 이 둘의 상대 순서를 흔든 것으로
+보이고, **CPU(splu, 정확·결정적) 기저가 v2 GPU와 같은 순서를 냈다는 것**이 그 해석을 뒷받침한다
+— v1의 순서가 이 둘에 한해 "덜 정확한" 쪽이었을 가능성이 있다(둘 다 최종 결과에는 영향 없음:
+어느 순서든 최종 305개 실장 집합은 같다).
+
+PCB(s5m6585 Port1_U1_0, GPU 기저): 제거 `['C85/0', 'C77/0']`, 실장 5/7,
+`final_config_sha256 = d0a7d507e85e39fd…` — **v1과 완전히 동일**(집합·순서 모두).
+
+### 9-3. 검증 수치와 소요 시간
+
+| 실행 | max\|ΔZ\|/\|Z\| (all_mounted→remove_116) | 허용(tol) | 판정 | 기저 구축 | 탐색(순위+제거) | 검증 | 모델 빌드 | **전체** |
+|---|---|---|---|---|---|---|---|---|
+| v1 Port18(GPU, 2프로세스) | 1.99e−06 ~ 2.04e−06 | 1e−6 | **FAIL**(계약이 구식, §4-2) | 331.5 s | 152.8 s | 49.5 s(+재빌드) | 8.9 s ×2 | 551.2 s |
+| v2 Port18(GPU, 1프로세스) | 5.00e−07 ~ 5.32e−07 | **1e−5**(E4) | **PASS** | 320.4 s | 211.2 s | 45.0 s | 8.4 s **×1** | 597.2 s |
+| v2 Port18(`--basis-solver splu`, 1프로세스) | 1.19e−08 ~ 1.93e−08 | **1e−9**(E4) | **FAIL**(§9-4) | 641.0 s | 260.4 s | 61.1 s | 19.3 s **×1** | 990.3 s |
+| v1 PCB(GPU, 2프로세스) | 3.46e−07 ~ 3.52e−07 | 1e−6 | PASS | 14.5 s | ~0 s | 22.3 s(+재빌드) | 2.3 s ×2 | 39.3 s |
+| v2 PCB(GPU, 1프로세스) | 3.65e−07 ~ 3.73e−07 | **1e−5**(E4) | PASS | 15.0 s | ~0 s | 18.7 s | 2.3 s **×1** | 36.3 s |
+
+- **모델 빌드가 두 번에서 한 번으로 줄었다**(과제가 예상한 그대로) — Port18에서 8.4~19.3 s를
+  아낀다. Port18의 전체 벽시계가 v1보다 늘어난 것(551→597 s)은 빌드 절감보다 **기저 구축·탐색
+  자체의 실행 간 변동**(W12A_REPORT §4-1이 이미 275–354 s 범위로 보고한 것과 같은 자릿수)이 더
+  크기 때문이다 — 코드 경로의 회귀가 아니라 GPU 인수분해·시스템 부하의 정상 변동이다(§9-4).
+- v2 Port18(GPU)의 `max|ΔZ|/|Z|` (5.0–5.3e−7)가 v1(2.0e−6)보다 4배 작다 — 같은 코드, 다른
+  실행의 cuDSS 잡음 표본일 뿐이다(W12A_REPORT §4-1: 실행 간 5.7e−7~1.03e−5). 새 계약 1e-5는
+  두 실행 모두 넉넉히 통과한다(v1을 그때 이 계약으로 다시 채점해도 PASS).
+- `--basis-solver splu`의 기저 구축 641 s는 W12A_REPORT §4-3의 실측(552 s)과 같은 자릿수(주파수당
+  23.7 s vs 20.5 s — 이 실행 중 다른 프로세스가 CPU를 같이 썼을 수 있다, `OPENBLAS_NUM_THREADS=4`
+  는 고정).
+
+### 9-4. 새로 드러난 것 — "정확 CPU 기저 + GPU 직접 풀이"는 CPU 기저의 1e-9 계약이 아니라 GPU 직접 풀이의 계약(≤1e-8)을 문다
+
+`--basis-solver splu`로 돌리되 `--solver cudss`(직접 풀이는 그대로 GPU)로 둔 조합에서
+`max|ΔZ|/|Z|`가 **1.19e−08 ~ 1.93e−08**로 나왔다 — `BASIS_TOL["splu"] = 1e-9`를 넘어 5건 모두
+`pass=False`다(마스크 판정 `verdict_basis`/`verdict_direct`는 5건 모두 일치·PASS, `decap_config_sha256`도
+5건 모두 일치 — **판정 결과는 바뀌지 않는다**, README §9 FAIL 표기 규칙과 같은 성격).
+
+과제 (d)의 "CPU 기저 ≤ 1e-9 — `--basis-solver`에서 정해진다"는 **기저와 직접 풀이가 같은
+백엔드일 때**의 W9/E4 계약이다(`decaps.py` 독스트링: "CPU 기저는 직접 풀이 대비 라운드오프로
+같다"의 "직접 풀이"는 **같은 CPU splu 직접 풀이**를 뜻한다). `--basis-solver splu`이면서
+`--solver cudss`이면 비교 대상이 **CPU 기저 vs GPU 직접 풀이**로 바뀌어, 실제로 물리는 것은
+"CPU 기저 = CPU 직접"(≈0)과 "GPU 직접 vs CPU 직접"(패키지 레일 계약 ≤1e-8, `README.md` §4)의
+합성값이다 — 측정값 1.2–1.9e-8은 그 ≤1e-8 계약과 같은 자릿수다(약간 위, 이 레일의 특정 구성·
+주파수에서일 수 있다). **이 앱은 계약을 다시 조정하지 않는다**(결과를 본 뒤 기준을 바꾸지 않는다,
+CLAUDE.md §3) — `BASIS_TOL`는 과제가 지시한 대로 `--basis-solver`에서만 정해지고, 이 조합의
+FAIL은 영수증에 정직하게 남는다. 엔진 문서에 "기저와 직접 풀이의 백엔드가 다를 때 유효한 계약은
+둘 중 더 느슨한 쪽(직접 풀이의 GPU-vs-CPU 계약)"이라는 문구가 없다는 것이 이번에 드러난 격차다
+(아래 9-5).
+
+### 9-5. 남은 엔진 격차
+
+1. **혼합 백엔드(기저 ≠ 직접 풀이) 검증 계약이 문서화되어 있지 않다**(§9-4). `decaps.py`의
+   ACCURACY CONTRACT는 "기저 백엔드"만 말하고, 검증에 쓰는 직접 풀이가 다른 백엔드일 때 어느
+   계약이 우선하는지 적지 않는다.
+2. **`mask_margin`은 여유가 묶이는 주파수를 돌려주지 않는다**(엔진 §의 `mask_margin(freq, Z,
+   mask) -> float`, 튜플이 아니라 스칼라). 이 앱의 옛 `Mask.margin`은 `(margin, f_bind)`를
+   돌려줬고 `summary.md`가 "최종 여유 1.000344 @ 100 kHz"처럼 찍었다 — v2는 그 "@ f" 부분을
+   구성별 검증 레코드(엔진 영수증의 `mask_ratio` 배열에서 `argmin`으로 구할 수 있다)에서만
+   유지하고, 탐색 로그의 시작/최종 여유에서는 **뺐다**(엔진 함수가 스칼라만 주므로 다시 구현하지
+   않았다, YAGNI) — 리포트의 정보량이 약간 줄었다.
+3. **`Rail.site(refdes)`를 쓸 데가 없었다.** 이 앱은 항상 전체 사이트 리스트를 순회한다
+   (기저의 `refdes` 리스트, `basis.resolve()`); 단일 refdes 조회가 필요한 지점이 없었다.
+4. **`DecapSite.capacitance_F`는 이 앱에 적용 대상이 없다**(§9-1) — `apps/site_decision`에서
+   썼다.

@@ -950,10 +950,14 @@ class Model:
             self._cudss = None
         return old
 
-    def decap_basis(self, freqs, chunk=24, backend=None):
+    def decap_basis(self, freqs, chunk=24, backend=None, workers=1):
         """The (1 + Nd)-port basis of this rail with every decap removed (W9, `decaps.py`).
 
         `mdl.decap_basis(freqs).Z(config)` then closes it per configuration in milliseconds.
+
+        `chunk="auto"` and `workers="auto"` size the RHS block and the frequency-parallel CPU pool
+        for the machine this runs on (`hardware.plan_basis`); the defaults (24, serial) are the
+        A2000 numbers every receipt so far was made with.  `workers > 1` needs `solver="splu"`.
 
         `backend` overrides this model's backend for the basis build only (W12-b): a model that
         keeps cuDSS for direct solves can build its basis on `Backend("splu", fast=True)` -- the
@@ -967,9 +971,18 @@ class Model:
         keep_backend, keep_solver = self.backend, self._cudss
         if keep_solver:
             self._cudss = None              # `release_solver()`, inline: the basis plans its own
+        be = backend or keep_backend
+        if "auto" in (chunk, workers):      # W13: size the RHS block / the process pool for this box
+            from .hardware import HardwareProfile, plan_basis
+
+            plan = plan_basis(HardwareProfile.detect(), int(self.N), len(self._dec_refdes),
+                              len(freqs), be.solver)
+            chunk = plan.chunk if chunk == "auto" else chunk
+            workers = plan.workers if workers == "auto" else workers
+            self.log(f"[basis] plan: chunk={chunk} workers={workers} ({'; '.join(plan.notes)})")
         try:
-            self.backend = backend or keep_backend
-            return DecapBasis.build(self, freqs, chunk)
+            self.backend = be
+            return DecapBasis.build(self, freqs, chunk, workers)
         finally:                            # and the basis' solver is released the same way
             self.backend, self._cudss = keep_backend, keep_solver
 

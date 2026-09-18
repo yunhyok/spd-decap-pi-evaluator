@@ -4,12 +4,17 @@
     info   --spd PATH --port NAME --cache DIR
     solve  --spd PATH --port NAME --cache DIR --out receipt.json [options]
     verify --receipt A.json --against B.json [--tol 1e-8]
-    sweep  --spd PATH --ports all|a,b,c --cache DIR --outdir DIR --jobs N [options]
+    sweep  --spd PATH --ports all|a,b,c --cache DIR --outdir DIR [--jobs auto|N] [options]
 
 No numerics live here: `solve` is `Design.open -> .rail -> .build -> .solve -> .receipt()`
 (api.py, receipt.py) exactly as `docs/engine/W4_REPORT.md` §2 shows it, and `sweep` is
 `tools/research-claude/exp15/runall15.py`'s subprocess-per-port pattern re-pointed at
 `python -m spd_pi_engine solve` (stdlib only, no import of the research tree).
+
+W13: `--jobs` defaults to `auto` and the old hardcoded "cudss -> clamp to 4" is gone; the cap now
+comes out of `hardware.plan_sweep(HardwareProfile.detect(), ...)`, which still says 4 on this
+laptop's A2000 and says 10 on a Threadripper/A6000.  The workers' BLAS thread count is set in the
+*subprocess* environment (never this process's), see `hardware.plan_threads`.
 
 The frequency ladder (`LADDER` + 21 log points 3e5..3e7) is `exp5/pipeline.LADDER` /
 `tests/engine/ladder.py`. Without `--ref-npz` it is used unsnapped; with `--ref-npz` each point is
@@ -23,6 +28,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import time
@@ -33,6 +39,7 @@ import numpy as np
 
 from .api import LADDER, Design, ladder_freqs, unique_path
 from .backend import Backend
+from .hardware import DEFAULT_UNKNOWNS, HardwareProfile, plan_sweep
 from .model import FLAGS_LEGACY, FLAGS_P, FLAGS_PMK, FLAGS_Q, ModelOptions
 from .receipt import attach_reference
 
@@ -143,11 +150,29 @@ def cmd_verify(args) -> int:
 
 def cmd_sweep(args) -> int:
     ports = Design.open(args.spd).ports() if args.ports == "all" else args.ports.split(",")
-    jobs = args.jobs
-    if args.solver in ("cudss", "auto") and jobs > 4:
-        print(f"[warn] solver={args.solver}: each worker pins CUDA context on the A2000 -- "
-              f"clamping --jobs {jobs} -> 4 (plan 5-5)")
-        jobs = 4
+    profile = HardwareProfile.detect()
+    plan = plan_sweep(profile, n_ports=len(ports), solver=args.solver,
+                      unknowns_estimate=args.unknowns or DEFAULT_UNKNOWNS,
+                      max_jobs=args.max_jobs)
+    print(f"[hardware] {profile.describe()}")
+    for n in plan.notes:
+        print(f"[hardware] {n}")
+    if args.jobs == "auto":
+        jobs = plan.jobs
+    else:
+        jobs = max(1, int(args.jobs))
+        if jobs > plan.jobs:
+            print(f"[warn] --jobs {jobs} is above what this box plans for ({plan.jobs}); "
+                  f"clamping (pass --max-jobs to raise the plan's own cap)")
+            jobs = plan.jobs
+    # W13: the worker env, never the caller's (W12-a 5: OPENBLAS_NUM_THREADS moves the last bits
+    # of splu by 2.7e-13).  `--threads 0` inherits, which is what a bit-for-bit rerun wants.
+    threads = plan.threads if args.threads == "auto" else int(args.threads)
+    env = dict(os.environ)
+    if threads:
+        env.update({k: str(threads) for k in
+                    ("OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "OMP_NUM_THREADS")})
+    print(f"[hardware] {jobs} jobs x {threads or 'inherited'} BLAS threads")
 
     outdir = Path(args.outdir)
     log_dir = outdir / "logs"
@@ -172,7 +197,8 @@ def cmd_sweep(args) -> int:
         t0 = time.time()
         log_fn = log_dir / f"{port}.log"
         with open(log_fn, "w", encoding="utf-8") as logf:
-            p = subprocess.run(solve_argv(port), stdout=logf, stderr=subprocess.STDOUT)
+            p = subprocess.run(solve_argv(port), stdout=logf, stderr=subprocess.STDOUT,
+                               env=env)
         ok = p.returncode == 0 and receipt_path(port).exists()
         return port, ok, p.returncode, time.time() - t0, log_fn
 
@@ -240,7 +266,16 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--ports", required=True, help="'all' or a comma-separated list of port names")
     sp.add_argument("--cache", required=True)
     sp.add_argument("--outdir", required=True)
-    sp.add_argument("--jobs", type=int, default=4)
+    sp.add_argument("--jobs", default="auto",
+                    help="'auto' (default, from hardware.plan_sweep) or a number")
+    sp.add_argument("--max-jobs", type=int, default=None,
+                    help="cap what 'auto' may choose")
+    sp.add_argument("--threads", default="auto",
+                    help="BLAS threads per worker: 'auto' (from the plan), a number, or 0 to "
+                         "inherit this process's environment (bit-for-bit reruns)")
+    sp.add_argument("--unknowns", type=int, default=0,
+                    help="size of the biggest port in the sweep; sharpens the 'auto' plan "
+                         f"(default {DEFAULT_UNKNOWNS}, a P18-class package rail)")
     _add_solve_options(sp)
     sp.set_defaults(func=cmd_sweep)
 

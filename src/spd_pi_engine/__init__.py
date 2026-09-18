@@ -20,12 +20,15 @@ from __future__ import annotations
 
 __version__ = "0.1.0.dev0"
 
-from . import api, cache, decaps, geometry, homogenise, model, receipt, reference, solver, spd_source
+from . import (api, cache, decaps, geometry, hardware, homogenise, model, receipt, reference,
+               solver, spd_source)
 from .api import (LADDER, DecapSite, Design, Rail, find_site_pair, ladder_freqs, match_sites,
                   unique_path)
 from .backend import DEFAULT, Backend
 from .cache import CacheDir
 from .decaps import DecapBasis
+from .hardware import (HardwareProfile, Plan, plan_basis, plan_chunk_tiles, plan_sweep,
+                       plan_threads)
 from .model import FLAGS, FLAGS_LEGACY, FLAGS_P, FLAGS_PMK, FLAGS_Q, Model, ModelOptions, Sheet
 from .receipt import (RECEIPT_VERSION, VALIDITY_NOTES, Result, attach_mask, attach_reference,
                       decap_config_sha256, ladder_gates, mask_margin, numerics_id)
@@ -34,12 +37,13 @@ from .spd_source import (SPD_PARSER_SYMBOLS, check_parser_api, extract, list_por
                          load_layer_shapes, prepare, sha256_of)
 
 __all__ = ["Backend", "CacheDir", "DEFAULT", "DecapBasis", "DecapSite", "Design",
-           "DesignConventions", "FLAGS",
+           "DesignConventions", "FLAGS", "HardwareProfile", "Plan",
            "FLAGS_LEGACY", "FLAGS_P", "FLAGS_PMK", "FLAGS_Q", "LADDER", "Model", "ModelOptions",
            "RECEIPT_VERSION", "Rail", "ReferenceSearch", "Result", "SPD_PARSER_SYMBOLS", "Sheet",
            "VALIDITY_NOTES", "api", "attach_mask", "attach_reference", "cache", "check_parser_api",
            "decaps", "decap_config_sha256", "extract", "find_site_pair", "geometry", "homogenise",
-           "ladder_freqs", "ladder_gates", "list_ports", "load_layer_shapes", "mask_margin",
+           "hardware", "ladder_freqs", "ladder_gates", "list_ports", "load_layer_shapes",
+           "mask_margin", "plan_basis", "plan_chunk_tiles", "plan_sweep", "plan_threads",
            "match_sites", "model", "numerics_id", "prepare", "receipt", "reference", "sha256_of",
            "solver", "spd_source", "unique_path", "__version__"]
 

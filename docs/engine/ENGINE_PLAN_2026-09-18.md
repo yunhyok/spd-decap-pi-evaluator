@@ -159,3 +159,8 @@ mdl.set_decaps({"C1234": None, "C1235": "GRM155R61A106M"}); res2 = mdl.solve(res
 - W12-c(`W12C_REPORT.md`): `DecapSite.xy/layer/capacitance_F/impedance()`, `Rail.site()`, `find_site_pair`, `match_sites`, 공개 `LADDER/ladder_freqs/unique_path`, `mask_margin/attach_mask`, `Result.receipt(light=True)`.
 - 앱 후속(선택): `apps/decap_search`의 2단계 프로세스 구조를 W12-b로 단순화하고 마스크 영수증을 `attach_mask`로 통일; `apps/site_decision`이 `find_site_pair/match_sites/DecapSite.capacitance_F`를 쓰도록 교체.
 - W12-a 추가 발견: `OPENBLAS_NUM_THREADS`가 CPU 경로의 비트 동일성을 바꾼다(4 vs 기본값 2.7e-13; 각 설정은 결정적). 허용치 게이트 무관, 비트 비교는 스레드 수 고정 필요(README §5).
+
+## W13·앱 v2·D9 (2026-09-19)
+- 소유자 지시 반영: D9 microvia 구리 충전 가정(수치 변경 없음, `validity` 문구 추가), 앱 v2(W12 API로 단순화: decap_search 439→386줄·1프로세스, 결과 동일 — Port18 305/421 sha 동일, PCB 5/7 동일; site_decision 판정 10/10 동일·Z 3.8e-12), W13 하드웨어 프로파일(`hardware.py`: 감지 + 순수 산정 `plan_sweep/plan_basis/plan_threads/plan_chunk_tiles`; 노트북 jobs 4/6, 워크스테이션 32C/64T·512 GB·A6000 프로파일에서 sweep 10(cudss)/15(splu), CPU 기저 워커 15, 92포트 sweep 예상 9–10분; 주파수 병렬 CPU 기저는 비트 동일, P18 147→56 s). `sweep --jobs auto` 기본, `chunk_tiles="auto"`는 옵트인(수치 비중립).
+- 드러난 격차: (1) 기저·직접 풀이 백엔드가 다를 때의 계약 문구(README §7에 추가), (2) OpenBLAS 기본 스레드 수에서 CPU 인수분해가 2배 느리고 불안정(워커 env로 고정), (3) A1 CPU-기저+GPU-직접 조합 1.2–1.9e-8은 GPU 직접 계약(1e-8) 경계 — 조사 대상으로 기록.
+- 남은 항목: W11 제품 통합. 워크스테이션 실측은 장비 접속 시 `tests/engine/test_hardware.py`의 프로파일 테스트와 92포트 sweep으로 검증.

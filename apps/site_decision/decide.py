@@ -11,7 +11,14 @@ rail and its own model.  This app builds both, unmounts one site at a time on ea
     out["sites"][0]["verdict"]                                  # "unmount_ok" | "keep"
 
 Cost: 2 builds + 2 x (1 + len(targets)) solves.  Each SITE runs in its own process because
-cuDSS 0.8 allows one `DirectSolver` per process (W8 §4, W10 §4).
+cuDSS 0.8 allows one `DirectSolver` per process (W8 §4, W10 §4) -- two independent GPU models,
+unlike `apps.decap_search`'s single model doing basis + direct solve (W12-b).
+
+W12-c: SITE-pair lookup, site matching and decap coordinates/capacitance are now engine API
+(`spd_pi_engine.find_site_pair`/`match_sites`, `DecapSite.xy`/`.capacitance_F`) instead of this
+app reaching into `rail.ex["rail_nodes"]`/`rail.ex["models"]` -- see APP_site_decision_REPORT §8.
+The `"geometry"` matching rule stays app-local: the engine only ported `"refdes-suffix"` (the rule
+this design needs), `"geometry"` is kept here purely as `match_report`'s cross-check diagnostic.
 
 Self-check without SPD data: `python apps/site_decision/decide.py`.
 """
@@ -22,9 +29,8 @@ from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
 
-from spd_pi_engine import Backend, Design, FLAGS_P, ModelOptions
+from spd_pi_engine import Backend, Design, FLAGS_P, ModelOptions, find_site_pair, match_sites
 from spd_pi_engine.cli import LADDER, read_npz_ref
-from spd_pi_engine.multiport import port_rails
 
 #: The D7 baseline (variant p) as W8/W10 ran it; `fine_box` is each rail's own (`Rail.build`).
 OPTIONS = ModelOptions(reference="powersi-compatible", flags=FLAGS_P, h=200.0, fh=50.0,
@@ -46,110 +52,64 @@ def ladder(ref_npz=None, port=None) -> np.ndarray:
     return fref[sorted({int(np.argmin(abs(fref - x))) for x in f})]
 
 
-# ---------------------------------------------------------------- SITE pair / site matching
-def _site(rail_net: str) -> str:
-    """The trailing `/0` or `/1` of a SITE net."""
-    return rail_net.rpartition("/")[2]
-
-
-def _stem(refdes: str, site: str) -> str:
-    """`C2001_0` on a `/0` rail -> `C2001`; a refdes without the suffix is its own stem."""
-    tail = "_" + site
-    return refdes[: -len(tail)] if refdes.endswith(tail) else refdes
-
-
-def find_site_pair(spd, port) -> str:
-    """The partner port whose rail net differs from `port`'s only in the trailing `/0` vs `/1`.
-
-    Reads the `.Port` headers only (`multiport.port_rails`, 0.9 s), not the extraction.
+# ---------------------------------------------------------------- SITE / site matching diagnostics
+def _geometry_match(rail0, rail1) -> dict:
+    """{refdes on rail0: refdes on rail1} by same `model_id` + nearest (x, y) after translating
+    SITE0 by the centroid difference.  This is the fallback the engine did NOT port (W12C_REPORT
+    §3, APP_site_decision_REPORT §7-3): on this design it is *wrong* -- SITE1's decap field is not
+    a rigid copy of SITE0's (20 distinct per-pair offsets), so it reproduces only 35 of the 421
+    refdes-suffix pairs and is not injective.  Kept only as `match_report`'s cross-check.
     """
-    rails = port_rails(spd)
-    net = rails[str(port)]
-    base, _, site = net.rpartition("/")
-    if site not in ("0", "1"):
-        raise ValueError(f"{port}: rail net {net!r} does not end in /0 or /1 -- no SITE pair")
-    want = f"{base}/{'1' if site == '0' else '0'}"
-    hits = [p for p, r in rails.items() if r == want]
-    if len(hits) != 1:
-        raise ValueError(f"{port}: {len(hits)} ports on the partner net {want!r}: {hits}")
-    return hits[0]
-
-
-def _xy(rail) -> dict:
-    """{refdes: (x, y)} of each decap's rail-side node."""
-    rn = rail.ex["rail_nodes"]
-    return {d.refdes: np.array(rn[d.node][:2], float) for d in rail.decaps}
-
-
-def match_sites(rail0, rail1, rule: str = "refdes") -> dict:
-    """{refdes on rail0: refdes on rail1} -- the same physical site on the other SITE.
-
-    `rule="refdes"` (default, the rule this app uses): the SPD names the two copies of a site with
-    one stem plus the site suffix its net carries, exactly like the net itself -- `C2001_0` on
-    `.../0` pairs with `C2001_1` on `.../1`.  Strip the suffix, match the stem.  Measured on
-    260729 Port18_SITE0 / Port64_SITE1: 421 of 421 matched, 0 unmatched, 0 `model_id` mismatches,
-    bijective.
-
-    `rule="geometry"`: same `model_id` + nearest (x, y) after translating SITE0 by the centroid
-    difference.  This is the fallback when refdes carry no suffix, but on this design it is
-    *wrong*: SITE1's decap field is not a rigid copy of SITE0's (20 distinct per-pair offsets),
-    so it reproduces only 35 of the 421 refdes pairs and is not injective.  `match_report`
-    measures both -- use it before trusting either rule on a new design.
-    """
-    if rule == "refdes":
-        s0, s1 = _site(rail0.rail_net), _site(rail1.rail_net)
-        k1 = {_stem(d.refdes, s1): d.refdes for d in rail1.decaps}
-        return {d.refdes: k1[_stem(d.refdes, s0)]
-                for d in rail0.decaps if _stem(d.refdes, s0) in k1}
-    if rule != "geometry":
-        raise ValueError(f"rule must be 'refdes' or 'geometry', not {rule!r}")
-    p0, p1 = _xy(rail0), _xy(rail1)
-    shift = np.mean(list(p1.values()), 0) - np.mean(list(p0.values()), 0)
+    xy0 = {d.refdes: np.array(d.xy, float) for d in rail0.decaps}
+    xy1 = {d.refdes: np.array(d.xy, float) for d in rail1.decaps}
+    shift = np.mean(list(xy1.values()), 0) - np.mean(list(xy0.values()), 0)
     # ponytail: O(n*n) nearest match (421 sites = 0.2 s); a KD-tree per model_id if it ever grows.
     out = {}
     for d in rail0.decaps:
-        t = p0[d.refdes] + shift
+        t = xy0[d.refdes] + shift
         cand = [e.refdes for e in rail1.decaps if e.model_id == d.model_id]
-        out[d.refdes] = min(cand, key=lambda r: float(np.hypot(*(p1[r] - t))))
+        out[d.refdes] = min(cand, key=lambda r: float(np.hypot(*(xy1[r] - t))))
     return out
 
 
 def match_report(rail0, rail1) -> dict:
-    """Both rules measured on this pair -- the receipt's and the report's matching evidence."""
-    m = match_sites(rail0, rail1)
-    g = match_sites(rail0, rail1, rule="geometry")
+    """Both rules measured on this pair -- the receipt's and the report's matching evidence.
+
+    The adopted rule (`spd_pi_engine.match_sites`, `rule="refdes-suffix"`) is engine API now; the
+    `"geometry"` fallback stays app-local (see `_geometry_match`).
+    """
+    m = match_sites(rail0, rail1)                   # {"mapping": {...}, "unmatched": [...]}
+    mapping, unmatched = m["mapping"], m["unmatched"]
+    g = _geometry_match(rail0, rail1)
     mid0 = {d.refdes: d.model_id for d in rail0.decaps}
     mid1 = {d.refdes: d.model_id for d in rail1.decaps}
-    p0, p1 = _xy(rail0), _xy(rail1)
-    offsets = {tuple(np.round(p1[q] - p0[r], 3)) for r, q in m.items()}
+    xy0 = {d.refdes: np.array(d.xy, float) for d in rail0.decaps}
+    xy1 = {d.refdes: np.array(d.xy, float) for d in rail1.decaps}
+    offsets = {tuple(np.round(xy1[q] - xy0[r], 3)) for r, q in mapping.items()}
     return dict(
         rule="refdes_site_suffix",
         n_sites_site0=len(rail0.decaps), n_sites_site1=len(rail1.decaps),
-        matched=len(m), unmatched=[d.refdes for d in rail0.decaps if d.refdes not in m],
-        model_id_mismatches=[r for r, q in m.items() if mid0[r] != mid1[q]],
-        injective=len(set(m.values())) == len(m),
+        matched=len(mapping), unmatched=unmatched,
+        model_id_mismatches=[r for r, q in mapping.items() if mid0[r] != mid1[q]],
+        injective=len(set(mapping.values())) == len(mapping),
         distinct_offsets=len(offsets),
-        geometry_rule=dict(agrees_with_refdes=sum(1 for r in g if g[r] == m.get(r)),
+        geometry_rule=dict(agrees_with_refdes=sum(1 for r in g if g[r] == mapping.get(r)),
                            injective=len(set(g.values())) == len(g)))
 
 
 # ---------------------------------------------------------------- target sites
-def capacitance(rail, f: float = 1e3) -> dict:
-    """{refdes: effective C at `f`} from the decap model's own impedance: C = -1/(2*pi*f*Im Z).
-
-    The models are series R-L-C ladders, so at 1 kHz Im Z is the capacitive branch and this ranks
-    sites without parsing the `.SUBCKT` text (260729: CAP_1608_10UF 6.96 uF, CAP_0603_1UF
-    0.776 uF, CAP_0402_100NF 0.0889 uF -- the parts' nominal order, derated).
-    """
-    c = {mid: -1.0 / (2 * np.pi * f * complex(m.impedance([f])[0]).imag)
-         for mid, m in rail.ex["models"].items()}
-    return {d.refdes: c[d.model_id] for d in rail.decaps}
+def capacitance(rail) -> dict:
+    """{refdes: `DecapSite.capacitance_F`} -- effective C at 1 kHz from the decap model's own
+    impedance (W12-c: was `rail.ex["models"][mid].impedance([1e3])` read by hand).  `None` for a
+    site that is not capacitive at 1 kHz (see `DecapSite.capacitance_F`'s docstring)."""
+    return {d.refdes: d.capacitance_F for d in rail.decaps}
 
 
 def rank_sites(rail, n: int | None = None) -> list:
-    """Refdes by capacitance, largest first; ties keep `ex["decaps"]` order (`sorted` is stable)."""
+    """Refdes by capacitance, largest first (`None` last); ties keep `rail.decaps` order (`sorted`
+    is stable)."""
     c = capacitance(rail)
-    ranked = sorted((d.refdes for d in rail.decaps), key=lambda r: -c[r])
+    ranked = sorted((d.refdes for d in rail.decaps), key=lambda r: -(c[r] or 0.0))
     return ranked if n is None else ranked[:n]
 
 
@@ -185,7 +145,7 @@ def site_curves(spd, port, targets, freqs, cache_dir, options, backend_args, max
     res = mdl.solve(freqs, verbose=False)
     out = dict(port=str(port), rail_net=rail.rail_net, unknowns=int(mdl.N),
                n_decaps=len(rail.decaps), freq=[float(f) for f in freqs], Z_all=_z(res.Z),
-               Z_off={}, receipt=res.receipt(breakdown_100k=False),
+               Z_off={}, receipt=res.receipt(breakdown_100k=False, light=True),
                prepare_seconds=rail.prepare_seconds, build_seconds=t_build,
                solve_seconds=[res.solve_seconds])
     for refdes in targets:
@@ -225,13 +185,18 @@ def evaluate(spd, port0, port1=None, targets=10, freqs=None, delta=0.05, backend
     SITEs' |Z| still agree within `delta` -- and, when a `mask` is given, both stay under it.
     """
     port0 = str(port0)
-    port1 = str(port1 or find_site_pair(spd, port0))
+    if port1 is None:
+        port1 = find_site_pair(spd, port0)          # W12-c: None (not an exception) on no pair
+        if port1 is None:
+            raise ValueError(f"{port0}: no SITE pair (rail net must end in /0 or /1 with exactly "
+                             f"one port on the partner net) -- see match_report")
+    port1 = str(port1)
     freqs = np.asarray(ladder() if freqs is None else freqs, float)
     backend = backend or Backend(solver="auto", fast=True)
     design = Design.open(spd)
     rail0 = design.rail(port0, cache_dir, max_layers=max_layers)
     rail1 = design.rail(port1, cache_dir, max_layers=max_layers)
-    pairs = match_sites(rail0, rail1)
+    pairs = match_sites(rail0, rail1)["mapping"]
     if isinstance(targets, int):
         targets = rank_sites(rail0, targets)
     targets = [str(t) for t in targets]
@@ -290,21 +255,25 @@ def evaluate(spd, port0, port1=None, targets=10, freqs=None, delta=0.05, backend
 
 # ---------------------------------------------------------------- data-free self-check
 def demo() -> None:
-    """Assert the pure parts on a fake pair: matching, ranking, mask, deviation."""
+    """Assert the pure parts on a fake pair: matching, ranking, mask, deviation.
+
+    Fake decaps carry `.xy`/`.capacitance_F` directly (what `Rail.decaps` -- real `DecapSite`s --
+    would fill in), not a raw `ex` dict: this app no longer reaches into `rail.ex` itself (W12-c).
+    """
     from types import SimpleNamespace as NS
 
-    def rail(site, xs, mids):
-        dec = [NS(refdes=f"C{i + 1}_{site}", model_id=m, node=i) for i, m in enumerate(mids)]
-        ex = dict(rail_nodes={i: (x, 10.0 * int(site), "TOP", None) for i, x in enumerate(xs)},
-                  models={m: NS(impedance=lambda f, m=m: [1j * -1.0 / (2 * np.pi * f[0] * C[m])])
-                          for m in set(mids)})
-        return NS(rail_net=f"NET/{site}", decaps=dec, ex=ex)
-
     C = {"BIG": 1e-5, "SMALL": 1e-7}
+
+    def rail(site, xs, mids):
+        dec = [NS(refdes=f"C{i + 1}_{site}", model_id=m, xy=(x, 10.0 * int(site)),
+                  capacitance_F=C[m]) for i, (x, m) in enumerate(zip(xs, mids))]
+        return NS(rail_net=f"NET/{site}", decaps=dec)
+
     mids = ["SMALL", "BIG", "SMALL"]
     r0, r1 = rail("0", [0.0, 1.0, 2.0], mids), rail("1", [5.0, 6.0, 7.0], mids)
     m = match_sites(r0, r1)
-    assert m == {"C1_0": "C1_1", "C2_0": "C2_1", "C3_0": "C3_1"}, m
+    assert m["mapping"] == {"C1_0": "C1_1", "C2_0": "C2_1", "C3_0": "C3_1"}, m
+    assert m["unmatched"] == [], m
     rep = match_report(r0, r1)
     assert rep["matched"] == 3 and rep["unmatched"] == [] and rep["injective"], rep
     assert rep["model_id_mismatches"] == [] and rep["distinct_offsets"] == 1, rep
