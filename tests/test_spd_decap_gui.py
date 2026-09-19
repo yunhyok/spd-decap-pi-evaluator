@@ -480,6 +480,25 @@ def test_evaluation_layout_uses_an_expanding_rail_list_and_detached_plot_button(
             "Experimental: actual-artwork uniform C00 "
             "(topology certificate required)"
         )
+        # W11-b: the two opt-in spd_pi_engine profiles join the list without
+        # moving the application default off layerwise.
+        assert window.evaluation_solver_profile_combo.count() == 5
+        for key, expected_label in (
+            (
+                "hybrid_plane_pair_v1",
+                "Hybrid plane-pair engine (SPD original required)",
+            ),
+            (
+                "hybrid_plane_pair_v1_gnd",
+                "Hybrid plane-pair engine, physical-GND reference "
+                "(SPD original required)",
+            ),
+        ):
+            engine_index = window.evaluation_solver_profile_combo.findData(key)
+            assert engine_index >= 0
+            assert window.evaluation_solver_profile_combo.itemText(engine_index) == (
+                expected_label
+            )
         assert "comparison-only" in window.evaluation_solver_profile_combo.toolTip()
         assert "LAYERWISE" in window.evaluation_solver_profile_status.text()
         notes = window.findChild(QTextBrowser, "evaluationNotes")

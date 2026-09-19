@@ -78,6 +78,7 @@ from spd_decap_pi._core.solver.profiles import (
     LAYERWISE_ADMITTANCE_PROFILE,
     LEGACY_MODAL_PROFILE,
     RESEARCH_UNIFORM_ADMITTANCE_PROFILE,
+    solver_profile as resolve_solver_profile,
     solver_profile_static_identity_sha256,
 )
 from spd_decap_pi._core.solver.research_uniform_profile import (
@@ -157,6 +158,12 @@ _EXPLORATORY_FIDELITY_WARNING = (
 _LEGACY_SOLVER_PROFILE_KEY = "legacy_modal_v017"
 _LAYERWISE_SOLVER_PROFILE_KEY = "layerwise_admittance_v1"
 _RESEARCH_SOLVER_PROFILE_KEY = "research_uniform_admittance"
+_HYBRID_SOLVER_PROFILE_KEY = "hybrid_plane_pair_v1"
+_HYBRID_GND_SOLVER_PROFILE_KEY = "hybrid_plane_pair_v1_gnd"
+_ENGINE_SOLVER_PROFILE_KEYS = frozenset(
+    {_HYBRID_SOLVER_PROFILE_KEY, _HYBRID_GND_SOLVER_PROFILE_KEY}
+)
+_ENGINE_SOLVER_PROFILE_BADGES = frozenset({"HYBRID", "HYBRID-GND"})
 _SOLVER_PROFILE_ITEMS: tuple[tuple[str, str], ...] = (
     ("Layer-surface global Y (terminal-complete)", _LAYERWISE_SOLVER_PROFILE_KEY),
     ("Legacy modal", _LEGACY_SOLVER_PROFILE_KEY),
@@ -164,6 +171,27 @@ _SOLVER_PROFILE_ITEMS: tuple[tuple[str, str], ...] = (
         "Experimental: actual-artwork uniform C00 (topology certificate required)",
         _RESEARCH_SOLVER_PROFILE_KEY,
     ),
+    (
+        "Hybrid plane-pair engine (SPD original required)",
+        _HYBRID_SOLVER_PROFILE_KEY,
+    ),
+    (
+        "Hybrid plane-pair engine, physical-GND reference (SPD original required)",
+        _HYBRID_GND_SOLVER_PROFILE_KEY,
+    ),
+)
+
+# Shown once per session the first time an engine profile is selected (plan §5).
+_ENGINE_FIRST_USE_NOTICE = (
+    "Hybrid plane-pair engine selected.\n"
+    "- The original PowerSI SPD file must still exist at the imported path and "
+    "hash to the same SHA-256; the scenario alone is not enough.\n"
+    "- The first extraction of a rail takes about 25-30 s; later runs reuse the "
+    "engine cache at {cache}.\n"
+    "- Results use the engine's own 1 kHz-100 MHz ladder (28 points), not the "
+    "product sweep, and every result carries the engine validity notes.\n"
+    "- Numerical convergence preset and the alternate plane-pair policy do not "
+    "apply to this model and are disabled."
 )
 
 _RESEARCH_HASH_FIELDS = (
@@ -208,6 +236,10 @@ class _SolverProvenancePresentation:
     base_layerwise_evidence_sha256: str = ""
     termination_manifest_sha256: str = ""
     layerwise_identity_sha256: str = ""
+    # spd_pi_engine results only: the engine's own numerical identity.  The
+    # per-result receipt hash deliberately stays out of this presentation so an
+    # Original/Tuned batch still has one comparable solver identity.
+    numerics_id: str = ""
 
     @property
     def source_model_identity_sha256(self) -> str:
@@ -225,19 +257,30 @@ class _SolverProvenancePresentation:
             "two_named_case_validation_required": "layerwise validation pending",
             "validated_two_named_cases": "validated on the two named SPD/PowerSI cases",
             "legacy_regression": "Legacy regression baseline",
+            "engine_validity_notes_bound": (
+                "bounded by the engine receipt validity notes"
+            ),
         }.get(self.validation_status, self.validation_status)
         evidence_identity = self.source_model_identity_sha256
-        identity = (
-            f"compiler {self.compiler_algorithm_id} / {self.compiler_version} · "
-            f"evidence {evidence_identity[:12]}… · "
-            if self.badge in {"RESEARCH", "LAYERWISE"}
-            else ""
-        )
+        if self.badge in _ENGINE_SOLVER_PROFILE_BADGES:
+            identity = (
+                f"compiler {self.compiler_algorithm_id} / {self.compiler_version} · "
+                f"numerics {self.numerics_id[:12]}… · "
+            )
+        elif self.badge in {"RESEARCH", "LAYERWISE"}:
+            identity = (
+                f"compiler {self.compiler_algorithm_id} / {self.compiler_version} · "
+                f"evidence {evidence_identity[:12]}… · "
+            )
+        else:
+            identity = ""
         engine = (
             "terminal-complete global-Y Device-port engine"
             if self.badge == "LAYERWISE"
             else "research uniform-C00 + modal-correction engine"
             if self.badge == "RESEARCH"
+            else "spd_pi_engine 2-D plane-pair + circuit hybrid (direct sparse LU)"
+            if self.badge in _ENGINE_SOLVER_PROFILE_BADGES
             else "modal backend"
         )
         return (
@@ -251,6 +294,17 @@ class _SolverProvenancePresentation:
     def details_text(self) -> str:
         """Return copyable full identities for tooltip/result audit details."""
 
+        if self.badge in _ENGINE_SOLVER_PROFILE_BADGES:
+            return "\n".join(
+                (
+                    self.banner_text,
+                    f"Compiler algorithm ID: {self.compiler_algorithm_id}",
+                    f"Engine version: {self.compiler_version}",
+                    f"Engine numerics ID: {self.numerics_id}",
+                    "Static compiler/algorithm SHA-256: "
+                    f"{self.static_compiler_algorithm_sha256}",
+                )
+            )
         if self.badge not in {"RESEARCH", "LAYERWISE"}:
             return self.banner_text
         common = (
@@ -304,14 +358,20 @@ def _solver_provenance_for_view(view: Any) -> _SolverProvenancePresentation:
         _LEGACY_SOLVER_PROFILE_KEY,
         _LAYERWISE_SOLVER_PROFILE_KEY,
         _RESEARCH_SOLVER_PROFILE_KEY,
+        *_ENGINE_SOLVER_PROFILE_KEYS,
     }:
         raise ValueError(f"Evaluation result has unknown solver profile {key!r}.")
     research = key == _RESEARCH_SOLVER_PROFILE_KEY
     layerwise = key == _LAYERWISE_SOLVER_PROFILE_KEY
+    engine_profile = (
+        resolve_solver_profile(key) if key in _ENGINE_SOLVER_PROFILE_KEYS else None
+    )
     label = str(
         getattr(view, "solver_profile_label", None)
         or (
-            "Layer-surface terminal-complete network"
+            engine_profile.label
+            if engine_profile is not None
+            else "Layer-surface terminal-complete network"
             if layerwise
             else "Actual-artwork uniform mode"
             if research
@@ -321,10 +381,26 @@ def _solver_provenance_for_view(view: Any) -> _SolverProvenancePresentation:
     badge = str(
         getattr(view, "solver_profile_badge", None)
         or provenance.get("profile_badge")
-        or ("LAYERWISE" if layerwise else "RESEARCH" if research else "LEGACY")
+        or (
+            engine_profile.badge
+            if engine_profile is not None
+            else "LAYERWISE"
+            if layerwise
+            else "RESEARCH"
+            if research
+            else "LEGACY"
+        )
     ).strip().upper()
     solver_version = str(getattr(view, "solver_version", "unknown")).strip()
-    expected_badge = "LAYERWISE" if layerwise else "RESEARCH" if research else "LEGACY"
+    expected_badge = (
+        engine_profile.badge
+        if engine_profile is not None
+        else "LAYERWISE"
+        if layerwise
+        else "RESEARCH"
+        if research
+        else "LEGACY"
+    )
     if not label or badge != expected_badge or not solver_version:
         raise ValueError("Evaluation result has incomplete solver identity provenance.")
     powersi_used = provenance.get("powersi_used_for_parameters") is True
@@ -358,6 +434,59 @@ def _solver_provenance_for_view(view: Any) -> _SolverProvenancePresentation:
         raise ValueError(
             "Layerwise evaluation result is missing explicit source-only or "
             "PowerSI-parameter provenance."
+        )
+    if engine_profile is not None:
+        if (
+            provenance.get("profile_key") != engine_profile.key
+            or provenance.get("profile_badge") != engine_profile.badge
+            or provenance.get("source_only") is not True
+            or provenance.get("powersi_used_for_parameters") is not False
+            or provenance.get("compiler_algorithm_id")
+            != engine_profile.compiler_algorithm_id
+        ):
+            raise ValueError(
+                "Engine evaluation result is missing explicit source-only or "
+                "PowerSI-parameter provenance."
+            )
+        engine_hashes = {
+            "numerics_id": str(provenance.get("numerics_id", "")).strip().lower(),
+            "static_compiler_algorithm_sha256": str(
+                provenance.get("solver_static_identity_sha256", "")
+            )
+            .strip()
+            .lower(),
+            "source_sha256": str(provenance.get("spd_sha256", "")).strip().lower(),
+        }
+        for name, value in engine_hashes.items():
+            if len(value) != 64 or any(
+                character not in "0123456789abcdef" for character in value
+            ):
+                raise ValueError(
+                    f"Engine evaluation result is missing complete {name} provenance."
+                )
+        if engine_hashes["static_compiler_algorithm_sha256"] != (
+            solver_profile_static_identity_sha256(engine_profile)
+        ):
+            raise ValueError(
+                "Engine evaluation result was produced by a different compiler identity."
+            )
+        return _SolverProvenancePresentation(
+            key=key,
+            label=label,
+            badge=badge,
+            solver_version=solver_version,
+            source_only=True,
+            source_only_status=str(
+                provenance.get("status") or "source_engine_hybrid"
+            ).strip(),
+            validation_status=str(
+                provenance.get("validation_status") or "engine_validity_notes_bound"
+            ).strip(),
+            powersi_used_for_parameters=False,
+            compiler_algorithm_id=engine_profile.compiler_algorithm_id,
+            compiler_version=str(provenance.get("engine_version", "")).strip()
+            or "unknown",
+            **engine_hashes,
         )
     research_hashes: dict[str, str] = {}
     if research:
@@ -1166,6 +1295,15 @@ def _job_prepare_plane_layer(
 def _modal_convergence_text(view: Any) -> str:
     """Summarize profile-specific convergence without implying model accuracy."""
 
+    if str(getattr(view, "solver_profile_key", "")) in _ENGINE_SOLVER_PROFILE_KEYS:
+        # The engine is a direct sparse LU on a frozen ladder, not a modal
+        # expansion: its SolverDiagnostics mode count is a zero placeholder and
+        # must never be rendered as "0 modes".
+        points = len(getattr(view, "frequency_hz", ()) or ())
+        return (
+            f"Direct sparse LU (no modal expansion); frozen {points}-point engine "
+            "ladder to 100 MHz; no modal or frequency-refinement sweep"
+        )
     convergence = getattr(view, "convergence", None)
     if not isinstance(convergence, dict):
         return "Not reported"
@@ -1260,6 +1398,16 @@ def _rejected_comparison_convergence(
             ("Tuned", getattr(comparison, "tuned", None)),
         ):
             view = getattr(evaluation, "view", None)
+            if (
+                str(getattr(view, "solver_profile_key", ""))
+                in _ENGINE_SOLVER_PROFILE_KEYS
+            ):
+                # The engine solves a frozen ladder with a direct sparse LU:
+                # there is no modal order and no frequency-refinement sweep to
+                # converge, so this gate has nothing to measure.  The engine's
+                # accuracy bound is the receipt validity notes every engine
+                # result carries in `assumptions` and `confidence_note`.
+                continue
             convergence = getattr(view, "convergence", None)
             if _combined_converged(convergence):
                 continue
@@ -2203,6 +2351,9 @@ class MainWindow(QMainWindow):
         self._distribution_table_updating = False
         self._distribution_import_notice: str | None = None
         self._distribution_status_notice: str | None = None
+        self._engine_notice_shown = False
+        self._modal_control_tooltips: dict[str, str] = {}
+        self._evaluation_controls_enabled = False
         self._evaluation_rail_sort_order: Qt.SortOrder | None = None
         self._selection_presentation_cache_scenario: ScenarioSpec | None = None
         self._selection_presentation_cache_key: tuple[Any, ...] | None = None
@@ -2585,7 +2736,12 @@ class MainWindow(QMainWindow):
             "surfaces receive zero synthesized adjacent-gap capacitance or fringing. Legacy "
             "uses a rectangular PWR bounding-box cavity with continuous DGND. Research "
             "replaces only uniform C00 with exact artwork and retains the rectangular "
-            "nonuniform correction. Every profile is single-rail Zii with no inter-rail/"
+            "nonuniform correction. The two Hybrid plane-pair entries hand the rail to "
+            "the spd_pi_engine 2-D plane-pair + circuit model in a separate process: "
+            "they need the original PowerSI SPD at the imported path, use the engine's "
+            "own 28-point 1 kHz-100 MHz ladder instead of the product sweep, ignore the "
+            "numerical convergence preset, and are bounded by the engine validity notes. "
+            "Every profile is single-rail Zii with no inter-rail/"
             "site coupling and no full-wave claim. PowerSI is comparison-only."
         )
         self.evaluation_solver_profile_combo.currentIndexChanged.connect(
@@ -5443,6 +5599,8 @@ class MainWindow(QMainWindow):
             self.distribution_protect_signal_routing_checkbox,
         ):
             widget.setEnabled(loaded)
+        self._evaluation_controls_enabled = loaded
+        self._update_engine_profile_controls()
         self.ai_rail_combo.setEnabled(loaded and bool(self._tuned_evaluations_by_rail))
         self.ai_button.setEnabled(loaded and self._last_evaluation is not None)
         self.plane_layer_bar.setEnabled(loaded and bool(self._plane_layer_checks))
@@ -5483,6 +5641,8 @@ class MainWindow(QMainWindow):
             self.distribution_trace_clearance_edit,
         ):
             widget.setEnabled(not busy and self._scenario is not None)
+        self._evaluation_controls_enabled = not busy and self._scenario is not None
+        self._update_engine_profile_controls()
         self.ai_button.setEnabled(
             not busy
             and self._scenario is not None
@@ -5648,6 +5808,20 @@ class MainWindow(QMainWindow):
             )
             self.status_text.setText(
                 "Layerwise evaluation blocked by source/network evidence"
+            )
+        elif profile_key in _ENGINE_SOLVER_PROFILE_KEYS:
+            self.evaluation_summary.setPlainText(
+                "Hybrid plane-pair engine evaluation did not run. No other physics "
+                "model was used as a fallback, and the open source/scenario was "
+                "preserved.\n\n"
+                + final_line
+                + "\n\nCheck that the original PowerSI SPD is still at its imported "
+                "path with an unchanged SHA-256, that this PWR NET maps to exactly "
+                "one SPD port, and that no decap was reassigned from another NET, "
+                "or explicitly select another physics model and run again."
+            )
+            self.status_text.setText(
+                "Engine evaluation blocked by the SPD source or rail mapping"
             )
         else:
             self.evaluation_summary.setPlainText(
@@ -6856,13 +7030,59 @@ class MainWindow(QMainWindow):
     def _evaluation_solver_profile_changed(self, _index: int) -> None:
         """Invalidate results when the selected physics contract changes."""
 
+        # Order matters: the control gate and the notice must not depend on
+        # `_update_evaluation_notes`, which imports `spd_pi_engine` (for the
+        # receipt validity notes) and can therefore fail on a broken install.
+        self._update_engine_profile_controls()
         self._update_evaluation_solver_profile_help()
-        self._update_evaluation_notes()
         if self._comparison_batch is not None:
             self._invalidate_evaluation(
                 "Physics model changed; run Original + Tuned evaluation again."
             )
             self.status_text.setText("Physics model changed; evaluation required")
+        self._show_engine_first_use_notice()
+        self._update_evaluation_notes()
+
+    def _update_engine_profile_controls(self) -> None:
+        """Grey out the rectangular-modal controls an engine profile ignores."""
+
+        if not hasattr(self, "evaluation_modal_preset_combo"):
+            return
+        engine = self._selected_evaluation_solver_profile() in (
+            _ENGINE_SOLVER_PROFILE_KEYS
+        )
+        for name in (
+            "evaluation_modal_preset_combo",
+            "evaluation_alternate_pair_checkbox",
+        ):
+            widget = getattr(self, name)
+            original = self._modal_control_tooltips.setdefault(name, widget.toolTip())
+            widget.setEnabled(self._evaluation_controls_enabled and not engine)
+            widget.setToolTip(
+                "Disabled: the hybrid plane-pair engine has no rectangular modal "
+                "basis and no alternate plane-pair approximation."
+                if engine
+                else original
+            )
+
+    def _show_engine_first_use_notice(self) -> None:
+        """State the engine's preconditions once per session, without blocking."""
+
+        if self._engine_notice_shown:
+            return
+        if self._selected_evaluation_solver_profile() not in (
+            _ENGINE_SOLVER_PROFILE_KEYS
+        ):
+            return
+        from .._core.solver.engine_adapter import engine_cache_dir
+
+        self._engine_notice_shown = True
+        self.evaluation_summary.setPlainText(
+            _ENGINE_FIRST_USE_NOTICE.format(cache=engine_cache_dir())
+        )
+        self.status_text.setText(
+            "Hybrid plane-pair engine selected; the original SPD is required"
+        )
 
     def _selected_evaluation_solver_profile(self) -> str:
         value = self.evaluation_solver_profile_combo.currentData()
@@ -6870,6 +7090,7 @@ class MainWindow(QMainWindow):
             _LEGACY_SOLVER_PROFILE_KEY,
             _LAYERWISE_SOLVER_PROFILE_KEY,
             _RESEARCH_SOLVER_PROFILE_KEY,
+            *_ENGINE_SOLVER_PROFILE_KEYS,
         }:
             return str(value)
         return APPLICATION_DEFAULT_SOLVER_PROFILE_KEY
@@ -6878,7 +7099,22 @@ class MainWindow(QMainWindow):
         selected = self._selected_evaluation_solver_profile()
         research = selected == _RESEARCH_SOLVER_PROFILE_KEY
         layerwise = selected == _LAYERWISE_SOLVER_PROFILE_KEY
-        if research:
+        if selected in _ENGINE_SOLVER_PROFILE_KEYS:
+            reference = (
+                "PowerSI-compatible cavity wall"
+                if selected == _HYBRID_SOLVER_PROFILE_KEY
+                else "physical-GND reference search"
+            )
+            self.evaluation_solver_profile_status.setText(
+                f"{resolve_solver_profile(selected).badge} · spd_pi_engine 2-D "
+                f"plane-pair + circuit hybrid · {reference} · original SPD required · "
+                "frozen 1 kHz-100 MHz ladder (28 pt) · direct sparse LU · "
+                "bounded by the engine validity notes"
+            )
+            self.evaluation_solver_profile_status.setStyleSheet(
+                "color: #c98fd6; font-weight: 700;"
+            )
+        elif research:
             self.evaluation_solver_profile_status.setText(
                 "EXPERIMENTAL RESEARCH · exact-artwork uniform C00 only · "
                 "rectangular nonuniform correction · topology certificate required · "
@@ -6929,6 +7165,14 @@ class MainWindow(QMainWindow):
                 "per-frequency Schur/Kron at the external Device port · "
                 "global-Y Zii used alone, with no legacy modal add-on."
             )
+        elif profile_key in _ENGINE_SOLVER_PROFILE_KEYS:
+            engine_profile = resolve_solver_profile(profile_key)
+            first_line = (
+                f"Selected physics model: [{engine_profile.badge}] "
+                f"{engine_profile.label} · spd_pi_engine 2-D plane-pair cavity plus "
+                "lumped via/trace/decap circuit, solved from the original PowerSI "
+                "SPD on the engine's own 1 kHz-100 MHz ladder."
+            )
         else:
             first_line = (
                 "Selected physics model: [LEGACY] Legacy modal · rollback/regression path."
@@ -6938,16 +7182,31 @@ class MainWindow(QMainWindow):
             if provenance is not None
             else profile_key == _RESEARCH_SOLVER_PROFILE_KEY
         )
+        transient = research or profile_key in _ENGINE_SOLVER_PROFILE_KEYS
         cache_note = (
             "Research Original is recomputed for each run and remains transient: "
             "it is not cached, persisted, saved, or reused. "
             if research
+            else "The engine Original is recomputed for each run and is not written "
+            "to the scenario baseline cache; the engine receipt is kept instead. "
+            if transient
             else (
                 "Original results are cached inside the scenario and compared with "
                 "the current Tuned state. "
             )
         )
-        if profile_key == _LAYERWISE_SOLVER_PROFILE_KEY:
+        if profile_key in _ENGINE_SOLVER_PROFILE_KEYS:
+            profile_note = (
+                "The hybrid plane-pair engine requires the original PowerSI SPD at "
+                "the imported path with a matching SHA-256, evaluates exactly one "
+                "SPD port per PWR NET, and refuses a rail whose decaps were moved in "
+                "from another NET. It returns single-rail Zii on a frozen 28-point "
+                "ladder solved with a direct sparse LU, so the numerical convergence "
+                "preset and the alternate plane-pair policy do not apply and are "
+                "disabled. Every result is bounded by the engine receipt validity "
+                "notes reproduced below. "
+            )
+        elif profile_key == _LAYERWISE_SOLVER_PROFILE_KEY:
             profile_note = (
                 "Layerwise assembles all retained adjacent-gap uniform Maxwell-Y "
                 "blocks and exact same-NET Trace/Via surface contacts before one "
@@ -6971,7 +7230,10 @@ class MainWindow(QMainWindow):
                 "PWR bounding-box cavity with a continuous DGND return. "
             )
         convergence_note = (
-            "For terminal-complete Layerwise, the shared numerical preset is retained "
+            "The engine has no rectangular modal basis and no refinement sweep: the "
+            "frozen ladder is solved directly, so no modal convergence gate applies. "
+            if profile_key in _ENGINE_SOLVER_PROFILE_KEYS
+            else "For terminal-complete Layerwise, the shared numerical preset is retained "
             "in run provenance but does not add rectangular modal terms; convergence "
             "uses frequency refinement plus an external-input invariance check. "
             if profile_key == _LAYERWISE_SOLVER_PROFILE_KEY
@@ -7806,18 +8068,28 @@ class MainWindow(QMainWindow):
             evaluation_policy=request.evaluation_policy,
             attachments=dict(request.attachments),
         )
+        engine_run = request.solver_profile in _ENGINE_SOLVER_PROFILE_KEYS
         profile_prefix = (
             "RESEARCH / not PowerSI-validated · "
             if request.solver_profile == _RESEARCH_SOLVER_PROFILE_KEY
             else "LAYERWISE · adjacent-gap Y/Kron · "
             if request.solver_profile == _LAYERWISE_SOLVER_PROFILE_KEY
+            else f"{resolve_solver_profile(request.solver_profile).badge} · "
+            "spd_pi_engine subprocess · "
+            if engine_run
             else "LEGACY rollback · "
+        )
+        convergence_phrase = (
+            "the frozen 28-point engine ladder (direct sparse LU; the numerical "
+            "convergence preset does not apply)"
+            if engine_run
+            else f"{self.evaluation_modal_preset_combo.currentText()} numerical convergence"
         )
         self.evaluation_summary.setPlainText(
             f"Evaluating Original and Tuned configurations for "
             f"{len(rail_ids):,} PWR NET(s) with "
             f"{profile_prefix}{self.evaluation_solver_profile_combo.currentText()} and "
-            f"{self.evaluation_modal_preset_combo.currentText()} numerical convergence. "
+            f"{convergence_phrase}. "
             "All computation runs in the background; Cancel remains available.\n\n"
             + "\n".join(manifest.summary_lines())
         )
@@ -7948,7 +8220,7 @@ class MainWindow(QMainWindow):
                 f"{baseline.max_violation_db:.3f} → {tuned.max_violation_db:.3f} dB",
                 (
                     "Transient / not cached"
-                    if provenance.badge == "RESEARCH"
+                    if provenance.badge in {"RESEARCH", *_ENGINE_SOLVER_PROFILE_BADGES}
                     else (
                         "Reused" if comparison.baseline_from_cache else "Saved now"
                     )
@@ -7982,15 +8254,19 @@ class MainWindow(QMainWindow):
         self.ai_rail_combo.blockSignals(False)
         self._ai_rail_changed()
 
-        research = provenance.badge == "RESEARCH"
-        if research:
+        # Research and the engine both bypass the scenario baseline cache.
+        transient = provenance.badge in {"RESEARCH", *_ENGINE_SOLVER_PROFILE_BADGES}
+        if transient:
             baseline_note = (
                 "Original baseline: recomputed for this run; transient / not cached "
                 "or persisted."
             )
             save_note = (
-                "Research result curves are session-only and are not written to the "
-                "scenario baseline cache."
+                "Engine result curves are session-only and are not written to the "
+                "scenario baseline cache; the engine receipt JSON is kept instead."
+                if provenance.badge in _ENGINE_SOLVER_PROFILE_BADGES
+                else "Research result curves are session-only and are not written to "
+                "the scenario baseline cache."
             )
         else:
             cached_count = sum(item.baseline_from_cache for item in comparisons)
@@ -8023,7 +8299,11 @@ class MainWindow(QMainWindow):
                     "Result plot window: one shared impedance view; all PWR NETs start visible and can be filtered independently.",
                     "Tuned Decap CSV: enabled final assignments from the evaluated PWR NETs.",
                     (
-                        "Numerical convergence preset: "
+                        "Numerical convergence preset: not applicable. The engine "
+                        "solves its frozen 28-point ladder with a direct sparse LU "
+                        "and has no rectangular modal basis."
+                        if provenance.key in _ENGINE_SOLVER_PROFILE_KEYS
+                        else "Numerical convergence preset: "
                         f"{self.evaluation_modal_preset_combo.currentText()}. "
                         + (
                             "The terminal-complete Layerwise result uses global-Y "

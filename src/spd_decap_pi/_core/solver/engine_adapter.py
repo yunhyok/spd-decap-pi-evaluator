@@ -18,9 +18,11 @@ from dataclasses import dataclass, field
 from hashlib import sha256
 import json
 import os
+import queue
 import subprocess
 import sys
 import tempfile
+import threading
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
@@ -55,6 +57,9 @@ ENGINE_RAIL_TOO_LARGE = "ENGINE_RAIL_TOO_LARGE"
 #: ``ModelOptions`` of the frozen exp28/p baseline.  This must stay character
 #: for character identical to ``tests/engine/test_reproduction.py`` ``OPT``.
 ENGINE_MESH = {"h": 200.0, "fh": 50.0, "top_h": 50.0, "sub": (20, 10, 10), "fringe": True}
+
+#: How often :func:`solve` looks at ``is_cancelled`` while the worker runs.
+_CANCEL_POLL_S = 0.2
 
 
 class EngineSolveError(RuntimeError):
@@ -327,10 +332,33 @@ def solve(
         errors="replace",
         bufsize=1,
     )
-    tail: list[str] = []
+    # Cancellation must not wait for the worker's next stdout line: the solve
+    # phase can run for minutes without printing.  A reader thread drains the
+    # pipe (which must stay drained anyway) while this loop polls `cancelled()`
+    # on a timer and kills the process.
     assert process.stdout is not None
-    for line in process.stdout:
-        line = line.rstrip()
+    lines: queue.Queue[str | None] = queue.Queue()
+
+    def _drain(stream: Any) -> None:
+        try:
+            for raw in stream:
+                lines.put(raw.rstrip())
+        finally:
+            lines.put(None)
+
+    threading.Thread(target=_drain, args=(process.stdout,), daemon=True).start()
+    tail: list[str] = []
+    while True:
+        if cancelled():
+            process.kill()
+            process.wait()
+            raise RuntimeError("evaluation cancelled")
+        try:
+            line = lines.get(timeout=_CANCEL_POLL_S)
+        except queue.Empty:
+            continue
+        if line is None:
+            break
         tail.append(line)
         del tail[:-40]
         if line.startswith("PROGRESS "):
@@ -340,10 +368,6 @@ def solve(
                 report(int(float(value)), message)
             except ValueError:
                 pass
-        if cancelled():
-            process.kill()
-            process.wait()
-            raise RuntimeError("evaluation cancelled")
     returncode = process.wait()
     if returncode != 0 or not result_path.is_file():
         detail = "\n".join(tail[-12:]) or f"exit code {returncode}"

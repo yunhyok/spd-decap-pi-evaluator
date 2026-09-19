@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import json
 import sys
+import threading
+import time
 from pathlib import Path
 
 import numpy as np
@@ -24,9 +26,41 @@ from .engine_adapter import (
     EngineSolveRequest,
 )
 
+#: Extraction, build and solve each run for tens of seconds to minutes without
+#: printing anything.  A heartbeat keeps the GUI's progress line moving; the
+#: parent still cancels by killing this process, not by reading these lines.
+HEARTBEAT_INTERVAL_S = 2.0
+_PHASE: tuple[int, str] = (0, "starting")
+_STDOUT_LOCK = threading.Lock()
+
+
+def _write(line: str) -> None:
+    # One write call under a lock: the heartbeat thread and the main thread
+    # share stdout and a split `print` would garble a PROGRESS line.
+    with _STDOUT_LOCK:
+        sys.stdout.write(line + "\n")
+        sys.stdout.flush()
+
 
 def _progress(value: int, message: str) -> None:
-    print(f"PROGRESS {int(value)} {message}", flush=True)
+    global _PHASE
+    _PHASE = (int(value), message)
+    _write(f"PROGRESS {int(value)} {message}")
+
+
+def _start_heartbeat() -> None:
+    """Repeat the current phase with an elapsed-time suffix, forever."""
+
+    started = time.monotonic()
+
+    def beat() -> None:
+        while True:
+            time.sleep(HEARTBEAT_INTERVAL_S)
+            value, message = _PHASE
+            elapsed = time.monotonic() - started
+            _write(f"PROGRESS {value} {message} ({elapsed:.0f} s elapsed)")
+
+    threading.Thread(target=beat, daemon=True).start()
 
 
 def _library_versions() -> dict[str, str]:
@@ -124,13 +158,14 @@ def run(request: EngineSolveRequest) -> dict:
 def main(argv: list[str]) -> int:
     request_path = Path(argv[0])
     request = EngineSolveRequest.from_json(request_path.read_text(encoding="utf-8"))
+    _start_heartbeat()
     payload = run(request)
     out = request_path.with_name(request_path.name + ".result.json")
     out.write_text(
         json.dumps(payload, ensure_ascii=False, sort_keys=True, default=float),
         encoding="utf-8",
     )
-    print(f"wrote {out}", flush=True)
+    _write(f"wrote {out}")
     return 0
 
 
