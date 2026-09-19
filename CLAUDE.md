@@ -57,4 +57,4 @@ python tools\research-claude\common\run_chain.py --list   # .sh 체인의 크로
 - 연구 동결 모델(기준선 exp28/p)을 앱이 호출하는 패키지로 옮긴 것. 진입 문서 `src/spd_pi_engine/README.md`, 계획 `docs/engine/ENGINE_PLAN_2026-09-18.md`(결합 C1–C20, 작업 W1–W11), 단계 보고 `docs/engine/W*_REPORT.md`.
 - 규칙: 엔진의 수치 모듈(`geometry, homogenise, reference, model, solver`)은 연구 코드와 동일해야 하며, 변경은 사전 등록 + `tests/engine` 재현 테스트(exp8 P18 5.83e-12, exp28/p 7케이스, exp30 PCB)로 증명한다. `numerics_id`가 바뀌면 영수증 비교 기준도 갱신한다. `tools/research-claude/`는 읽기 전용이다.
 - 표준 실행: `Backend(solver="auto", fast=True)`. GPU 계약은 CPU 대비 ≤ 1e-6 전 대역, ≤ 1e-8은 f ≥ 1 MHz(PCB 저주파는 조건수 때문에 1.6e-7까지, `docs/engine/IR_REPORT.md`).
-- 제품 통합(W11)은 패키지 급전 경로 R 관례가 해결되기 전에는 시작하지 않는다. 그때까지 엔진 영수증의 `validity`가 정확도 범위를 명시한다.
+- 제품 통합(W11, 2026-09-19 완료): 제품 프로파일 `hybrid_plane_pair_v1`/`_gnd`가 엔진을 서브프로세스로 호출한다. 기본 프로파일은 layerwise 그대로(전환은 `_core/solver/profiles.py`의 `APPLICATION_DEFAULT_SOLVER_PROFILE_KEY` 한 줄, 소유자 결정). 엔진 결과는 항상 `validity` 5줄을 표시한다. 제품 테스트 게이트는 "FAILED/ERROR 노드 집합이 `docs/engine/W5_REPORT.md` §4-3 기준선과 동일"이며 새 테스트는 `tmp_path`를 쓰지 않는다. `scripts/benchmark_raw_spd_powersi_correlation.py`는 sha256이 검증되는 동결 자산이라 수정하지 않는다(`accuracy_parse.py`와 같은 급).

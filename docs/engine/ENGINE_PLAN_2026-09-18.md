@@ -168,3 +168,5 @@ mdl.set_decaps({"C1234": None, "C1235": "GRM155R61A106M"}); res2 = mdl.solve(res
 ## W11 착수 (2026-09-19)
 - 소유자 지시("다음 단계 진행")로 W11 시작. 계획 `W11_PLAN_2026-09-19.md`(사전 등록): 프로파일 2개 옵트인·기본값 불변, 진입점 3곳 분기, 항상 서브프로세스, CPU 전용 프리즈 빌드, 재현 테스트 ≤1e-9, 제품 테스트 FAILED/ERROR 집합 불변. 미해결 패키지 R 관례는 게이트가 아니라 validity 문구로 처리(소유자 확인 사항).
 - W11-a 완료(`W11A_REPORT.md`, 커밋): 프로파일 2개 옵트인, 어댑터/워커, 진입점 분기, 재현 5.858e-12, 제품 테스트 집합 불변, e2e 일치. 진행 중: W11-b(GUI)·W11-c(시나리오 매핑 검증)·W11-d(패키징) 병렬.
+- **W11 완료(2026-09-19)**: a(어댑터·프로파일·워커·재현 5.858e-12), b(GUI: 콤보·배지·고지·취소·수렴 게이트 예외, 라이브 GUI PASS), c(시나리오 매핑 정확 dict·교차-net 블로커·사용자 모델·build 1회), d(CPU 전용 프리즈 빌드 285 MiB, 프리즈 워커 CPU 영수증과 비트 동일, 예외 시 1–2 s 종료), e(문서: README §7·제품 README·CLAUDE.md). 제품 테스트 FAILED/ERROR 집합은 W5 기준선과 동일(2573 passed). 기본 프로파일은 layerwise 유지(전환 = `profiles.py` 한 줄). 주의: `scripts/benchmark_raw_spd_powersi_correlation.py`는 sha256이 검증되는 동결 자산 — 수정 금지. 제품 SPD 임포트(2 h)의 캐시 `WORK_DIR/engine_w11/scenario_port18.json`(802 MB)은 첨부물이 없어 완전한 e2e에는 합성 첨부물이 필요(W11C §).
+- 계획의 모든 항목(W1–W13)이 끝났다. 남은 정책 결정: 엔진 프로파일을 기본값으로 전환할 시점(패키지 급전 경로 R 관례·validity 문구 기준).
