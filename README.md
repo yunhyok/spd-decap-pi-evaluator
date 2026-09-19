@@ -567,3 +567,38 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\scripts\build_spd_deca
 - `installer-output\SPDDecapPIEvaluatorSetup-0.23.1.exe.sha256`
 
 프로그램명과 버전은 title bar와 installer metadata에 함께 표시된다.
+
+## PI 엔진 프로파일(hybrid_plane_pair_v1)
+
+기존 layerwise admittance 대신 `src/spd_pi_engine/`의 2-D plane-pair + 회로 하이브리드 모델로
+Evaluation을 돌리는 옵트인 physics profile이다. 자세한 설계는
+[`docs/engine/W11_PLAN_2026-09-19.md`](docs/engine/W11_PLAN_2026-09-19.md),
+[`docs/engine/W11A_REPORT.md`](docs/engine/W11A_REPORT.md)를 참고한다.
+
+- **선택**: 현재는 CLI에만 노출되어 있다(GUI PWR NET Evaluation의 solver profile 콤보는 아직
+  기존 3개뿐이다). `scripts/validate_real_distribution_replay.py --solver-profile
+  hybrid_plane_pair_v1`(physical-gnd 변형은 `hybrid_plane_pair_v1_gnd`)로 실행하며, 옵션을
+  생략하면 기존 application 기본값(`layerwise_admittance_v1`)이 그대로 적용된다.
+- **원본 SPD 필요**: 이 프로파일은 scenario에 저장된 값이 아니라 원본 PowerSI SPD 파일을 다시
+  읽어서 계산한다. `.spdpi`를 저장한 SPD 원본 경로가 존재하고 SHA-256이 그때와 같아야 실행되며,
+  경로가 없거나 파일이 바뀌었으면 실행 대신 `ENGINE_SPD_MISSING` / `ENGINE_SPD_SHA256_MISMATCH`로
+  fail-closed 처리한다.
+- **캐시 디렉터리**: SPD에서 뽑아낸 레일 형상(포트당 1회, 이후 재사용)은
+  `SPD_PI_ENGINE_CACHE` 환경변수 경로에 캐시한다. 지정하지 않으면
+  `%LOCALAPPDATA%\SPD Decap PI Evaluator\engine-cache`를 쓰며, 최초 사용 시점에만 생성한다
+  (import 시점에는 파일시스템에 접촉하지 않는다). 엔진 영수증 원본은 같은 위치 옆
+  `outputs\engine-receipts\`에 보존된다.
+- **CPU 전용 프리즈 빌드**: `scripts/build_spd_decap_pi.ps1`로 만든 배포용 exe는 `cupy`,
+  `nvmath`, `cuda-bindings`, `cupyx`를 번들하지 않는다(`--exclude-module`). 엔진의
+  `solver="auto"`는 이 빌드에서 cuDSS를 시도하다 `ImportError`를 잡아 자동으로 scipy `splu`로
+  내려간다(`src/spd_pi_engine/model.py` `Model._gpu_solver`) — 실측 결과는
+  [`docs/engine/W11D_REPORT.md`](docs/engine/W11D_REPORT.md) 참고. 엔진 계산 자체는 항상
+  서브프로세스(`--engine-worker`)로 돌며 GUI는 그동안 응답 가능한 상태를 유지한다.
+- **GPU 사용**: 소스 설치에서 `pip install .[gpu]`로 `nvmath-python`, `nvidia-cudss-cu12`,
+  `cuda-bindings==12.*`, `cupy-cuda12x`를 추가하면 NVIDIA GPU(cuDSS)로 계산한다. 프리즈 빌드에는
+  포함되지 않으므로 GPU 가속이 필요하면 소스에서 실행해야 한다.
+- **validity 표시**: 이 프로파일의 모든 결과에는 모델 경계 설명과 검증 범위(예: 대형 plane 위
+  레일은 오차 수 % 이내, package 전체 1 MHz 오차 중앙값은 더 크고 `f_res` 편향 존재, microvia는
+  drill 지름의 구리 원기둥으로 가정)를 명시한 validity note가 confidence 문구와 결과 assumptions에
+  그대로 붙는다. 이 프로파일은 application 기본값이 아니며, 소유자가 명시적으로 전환하기 전까지는
+  선택했을 때만 동작한다.
