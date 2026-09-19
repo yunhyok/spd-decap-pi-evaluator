@@ -19,6 +19,7 @@ from hashlib import sha256
 import json
 import os
 import queue
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -352,6 +353,7 @@ def solve(
         if cancelled():
             process.kill()
             process.wait()
+            shutil.rmtree(work, ignore_errors=True)
             raise RuntimeError("evaluation cancelled")
         try:
             line = lines.get(timeout=_CANCEL_POLL_S)
@@ -383,6 +385,7 @@ def solve(
             ),
             "ENGINE_WORKER_FAILED",
         )
+        shutil.rmtree(work, ignore_errors=True)
         raise EngineSolveError(code, f"engine worker failed: {detail}")
 
     payload = json.loads(result_path.read_text(encoding="utf-8"))
@@ -403,9 +406,7 @@ def solve(
         receipts[role] = receipt
         paths[role] = str(kept)
         digests[role] = sha256(blob).hexdigest()
-    for item in (result_path, request_path):
-        item.unlink(missing_ok=True)
-    work.rmdir()
+    shutil.rmtree(work, ignore_errors=True)
     return EngineSolveResult(
         receipts=receipts,
         receipt_paths=paths,
