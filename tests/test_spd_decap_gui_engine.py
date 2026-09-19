@@ -420,6 +420,8 @@ def test_cancel_kills_the_engine_worker_process(
         assert started[0].poll() is not None, "the worker process is still running"
         assert isinstance(outcome[0], RuntimeError)
         assert "cancelled" in str(outcome[0])
+        # A cancelled solve must not leave its request directory behind.
+        assert not list(receipts.glob("engine-solve-*"))
     finally:
         cancelled.set()
         for process in started:

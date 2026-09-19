@@ -211,6 +211,12 @@ Cancel을 눌러도 워커는 끝까지 돈다.
   `FunctionWorker.cancel()` → `is_cancelled()` True → 0.2 s 내 `kill()`.
 - `Popen.kill()`은 Windows에서 이미 죽은 프로세스의 `ERROR_ACCESS_DENIED`를
   CPython이 처리한다(`subprocess.Popen.terminate`) → 추가 가드 불필요.
+- **임시 디렉터리 정리**: `solve()`는 요청 JSON을 `outputs/engine-receipts/engine-solve-*`에
+  쓰는데, W11-a는 성공 경로에서만 지웠다. 취소 경로를 새로 만들면서 취소마다
+  디렉터리가 쌓이므로, 성공/워커 실패/취소 세 경로 모두 `shutil.rmtree(work,
+  ignore_errors=True)`로 통일했다(성공 경로의 `unlink` 2회 + `rmdir`을 대체 → 순감).
+  보존되는 영수증은 `work`가 아니라 `receipt_dir`에 쓰므로 영향 없다.
+  회귀: 취소 테스트가 `engine-solve-*`가 남지 않는지 확인한다.
 
 ### 4-3. 하트비트 — `engine_worker.py:30-63, 161`
 
@@ -313,7 +319,7 @@ python -m pytest tests\test_research_av_bs1_boundary_schur_h4_p1.py tests\test_s
 
 ```
 python -m pytest tests\test_spd_decap_gui_engine.py -q -p no:cacheprovider
-8 passed in 2.51s
+8 passed in 2.47s
 ```
 
 ### 6-2. 지시의 GUI 명령
@@ -321,7 +327,7 @@ python -m pytest tests\test_spd_decap_gui_engine.py -q -p no:cacheprovider
 ```
 python -m pytest tests\test_spd_decap_gui.py tests\test_spd_decap_gui_engine.py -q -p no:cacheprovider
   --deselect tests/test_spd_decap_gui.py::test_evaluation_worker_receives_scenario_model_attachments
-3 failed, 58 passed, 1 deselected in 7.32s
+3 failed, 58 passed, 1 deselected in 6.24s
 ```
 
 - deselect 1건의 이유는 §7-2(**W11-b와 무관한 사전 존재 행**, HEAD에서 재현 확인).
@@ -342,15 +348,16 @@ python -m pytest tests\test_spd_decap_gui.py tests\test_spd_decap_gui_engine.py 
 
 ```
 python -m pytest tests -q --ignore=tests\engine --ignore=tests\test_audit_source_l29_l30_port_window.py -p no:cacheprovider
-31 failed, 2573 passed, 5 skipped, 260 errors in 389.47s (0:06:29)
+31 failed, 2573 passed, 5 skipped, 260 errors in 401.92s (0:06:42)
 ```
-(`work/engine_w11/product_w11b.log`)
+(`work/engine_w11/product_w11b_final.log`. 임시 디렉터리 정리(§4-2 마지막 항목)를 넣기 전
+실행 `product_w11b.log`도 동일 집합 / 389.47 s였다 — 정리 후 다시 돌린 것이 위 결과다.)
 
 | 실행 | failed | passed | skipped | errors | wall |
 |---|---|---|---|---|---|
 | W5 기준선 `engine_w5/product_clean.log` | 31 | 2 556 | 1 | 260 | 433.59 s |
 | W11-a 최종 `engine_w11/product_final.log` | 31 | 2 561 | 5 | 260 | 372.61 s |
-| **W11-b** `engine_w11/product_w11b.log` | **31** | **2 573** | 5 | **260** | 389.47 s |
+| **W11-b** `engine_w11/product_w11b_final.log` | **31** | **2 573** | 5 | **260** | 401.92 s |
 
 **게이트: FAILED/ERROR 노드 이름 집합 diff = 양방향 모두 비어 있음(291개 완전 동일).**
 
@@ -499,3 +506,18 @@ W11-a의 `solver_provenance`에는 이 두 키가 없다. GUI는
 stdout만 바뀐다. W11-a의 재현 테스트(`-m engine_reproduction`, 약 19분)는 이번에 다시
 돌리지 않았다 — 워커의 수치 경로는 한 줄도 바뀌지 않았고(`run()` 본문 무변경),
 `solve()`도 stdout 소비 방식만 바뀌었다. 정상 경로 영수증 보존·해시는 §5-3에서 확인했다.
+
+### 7-12. 세션 중 소유자가 커밋했다
+
+나는 커밋하지 않았다. 작업 중 소유자가 `e9e25e1 product: W11-b GUI integration of the
+engine profiles`와 후속 `f545aae product: engine_adapter — remove the worker temp dir
+with rmtree (covers error.json)`, `1385759 docs: W11-e …`를 커밋했다. `f545aae`는
+§4-2 마지막 항목과 같은 정리이며 현재 트리와 바이트 동일하다. 이 보고서의 최종판과
+취소 테스트의 `engine-solve-*` 잔여물 검사 2줄은 그 커밋들 이후의 미커밋 변경이다.
+
+### 7-13. `test_research_av_bs1_boundary_schur_h4_p1.py`의 저장소 sentinel은 취약하다
+
+같은 세션 픽스처가 setup/teardown에 `git status --porcelain`을 비교한다. 여러 에이전트가
+같은 체크아웃에서 동시에 파일을 쓰는 동안 한 번 teardown에서 실패했고(내 마지막 테스트
+노드에 ERROR로 붙었다), 동시 쓰기가 없을 때는 재현되지 않았다(연속 2회 `40 passed`).
+전체 제품 실행 2회 모두 이 노드는 깨끗했다.
