@@ -33,6 +33,8 @@ from .solver.evaluator import (
 )
 from .solver.profiles import (
     DEFAULT_SOLVER_PROFILE_KEY,
+    ENGINE_PROFILES,
+    ENGINE_REFERENCE_MODE,
     LAYERWISE_ADMITTANCE_PROFILE,
     RESEARCH_UNIFORM_ADMITTANCE_PROFILE,
     solver_profile as resolve_solver_profile,
@@ -259,6 +261,20 @@ def evaluation_model_boundary_disclosure(solver_profile: str) -> str:
     """Return the user-facing modeling boundary for one solver profile."""
 
     profile = resolve_solver_profile(solver_profile)
+    if profile in ENGINE_PROFILES:
+        # The engine owns this text: its receipt carries the same five lines in
+        # ``validity.notes`` and an app is contractually required to show them
+        # next to Z(f) (``spd_pi_engine/README.md`` §1, receipt.VALIDITY_NOTES).
+        from spd_pi_engine.receipt import VALIDITY_NOTES
+
+        return (
+            "Hybrid plane-pair engine model boundary "
+            f"(spd_pi_engine, reference {ENGINE_REFERENCE_MODE[profile.key]}): "
+            "2-D plane-pair cavity plus lumped via/trace/decap circuit, solved "
+            "from the original PowerSI SPD on the engine's own 1 kHz-100 MHz "
+            "ladder; single-rail Zii only, no inter-rail/site coupling and no "
+            "full-wave claim. Engine validity notes: " + " ".join(VALIDITY_NOTES)
+        )
     if profile.key == LAYERWISE_ADMITTANCE_PROFILE.key:
         return (
             "Layerwise model boundary: terminal-complete exact retained-surface "
@@ -4559,6 +4575,15 @@ def _evaluation_view(project: ProjectSpec, outcome: EvaluationOutcome) -> Evalua
                 f"{mixed_reference}; exact artwork is used by the uniform C00 term, "
                 "while nonuniform modes retain the continuous rectangular-return "
                 "approximation (LOW geometry confidence)"
+            )
+        elif profile in ENGINE_PROFILES:
+            # The engine never builds a rectangular cavity, so the legacy
+            # wording below would be a false statement about this result.
+            disclosure = (
+                f"{mixed_reference}; the engine rasterizes the actual artwork of "
+                "this plane pair and picks the reference per cell "
+                f"({ENGINE_REFERENCE_MODE[profile.key]}); no rectangular-return "
+                "approximation is used (LOW geometry confidence)"
             )
         else:
             disclosure = (

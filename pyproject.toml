@@ -54,4 +54,5 @@ pythonpath = ["src"]
 markers = [
   "slow: engine reproduction that builds a large model (minutes); run with --slow",
   "gpu: engine variant that needs the cuDSS/RTX A2000 path; run with --gpu",
+  "engine_reproduction: product engine-adapter reproduction of the exp28/p receipt (about 32 min on CPU); run with -m engine_reproduction",
 ]

@@ -65,6 +65,10 @@ from spd_decap_pi.distribution_workbook import (
     DISTRIBUTION_WORKBOOK_FORMAT_VERSION,
     load_distribution_targets,
 )
+from spd_decap_pi._core.solver.profiles import (
+    APPLICATION_DEFAULT_SOLVER_PROFILE_KEY,
+    SOLVER_PROFILES,
+)
 from spd_decap_pi.evaluation import (
     evaluate_comparison_batch,
     preflight_evaluation_comparison,
@@ -673,7 +677,7 @@ def run_replay(args: argparse.Namespace) -> dict[str, object]:
         preflight = preflight_evaluation_comparison(
             applied,
             evaluation_rails,
-            solver_profile="layerwise_admittance_v1",
+            solver_profile=args.solver_profile,
             attachments=imported.attachments,
         )
         if not preflight.is_clear:
@@ -686,7 +690,7 @@ def run_replay(args: argparse.Namespace) -> dict[str, object]:
             evaluation_rails,
             modal_max_index=args.evaluation_modal_max_index,
             attachments=imported.attachments,
-            solver_profile="layerwise_admittance_v1",
+            solver_profile=args.solver_profile,
         )
         batch.validate_for_scenario(applied)
         evaluation_report = _evaluation_batch_summary(batch)
@@ -805,6 +809,17 @@ def _parser() -> argparse.ArgumentParser:
         help=(
             "compatibility modal index recorded by Evaluation; terminal-complete "
             "layerwise results are analytically invariant to this basis"
+        ),
+    )
+    parser.add_argument(
+        "--solver-profile",
+        # Every registered profile, so the spd_pi_engine hybrid keys (W11-a)
+        # resolve here without another edit.  The default is unchanged.
+        choices=tuple(item.key for item in SOLVER_PROFILES),
+        default=APPLICATION_DEFAULT_SOLVER_PROFILE_KEY,
+        help=(
+            "Evaluation physics profile for --evaluation-rail "
+            "(default: application default)"
         ),
     )
     parser.add_argument("--keep-artifacts", type=Path, help="directory for the reopened .spdpi and export/reimport XLSX")

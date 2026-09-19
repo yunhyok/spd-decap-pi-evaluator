@@ -79,11 +79,51 @@ LAYERWISE_ADMITTANCE_PROFILE = SolverProfile(
     ),
 )
 
+HYBRID_PLANE_PAIR_PROFILE = SolverProfile(
+    key="hybrid_plane_pair_v1",
+    label="Hybrid plane-pair (engine)",
+    badge="HYBRID",
+    description=(
+        "spd_pi_engine 2-D plane-pair + circuit hybrid model solved from the "
+        "original PowerSI SPD with the PowerSI-compatible cavity-wall reference; "
+        "every result is bounded by the engine receipt's validity notes and uses "
+        "the frozen engine frequency ladder instead of the product sweep"
+    ),
+    experimental=False,
+    compiler_algorithm_id="spd-pi-engine-hybrid-plane-pair-powersi-compatible-v1",
+)
+
+HYBRID_PLANE_PAIR_GND_PROFILE = SolverProfile(
+    key="hybrid_plane_pair_v1_gnd",
+    label="Hybrid plane-pair (physical GND)",
+    badge="HYBRID-GND",
+    description=(
+        "the same spd_pi_engine hybrid model with the physical-GND reference "
+        "search in place of the PowerSI cavity-wall convention; an exploratory "
+        "reference-plane variant bounded by the same engine validity notes"
+    ),
+    experimental=False,
+    compiler_algorithm_id="spd-pi-engine-hybrid-plane-pair-physical-gnd-v1",
+)
+
 SOLVER_PROFILES = (
     LEGACY_MODAL_PROFILE,
     LAYERWISE_ADMITTANCE_PROFILE,
     RESEARCH_UNIFORM_ADMITTANCE_PROFILE,
+    HYBRID_PLANE_PAIR_PROFILE,
+    HYBRID_PLANE_PAIR_GND_PROFILE,
 )
+# Profiles whose numbers come from ``spd_pi_engine`` rather than this package's
+# own solver.  Their numerical identity is the engine receipt's ``numerics_id``;
+# ``compiler_algorithm_id`` above is only the static profile identity.
+ENGINE_PROFILES = frozenset(
+    {HYBRID_PLANE_PAIR_PROFILE, HYBRID_PLANE_PAIR_GND_PROFILE}
+)
+# ``spd_pi_engine.ModelOptions(reference=...)`` for each engine profile.
+ENGINE_REFERENCE_MODE = {
+    HYBRID_PLANE_PAIR_PROFILE.key: "powersi-compatible",
+    HYBRID_PLANE_PAIR_GND_PROFILE.key: "physical-gnd",
+}
 # Low-level dataclass/API defaults stay legacy so older callers and persisted
 # results do not suddenly require artwork attachments. The desktop product
 # deliberately selects the validated layerwise profile through the separate
@@ -143,6 +183,10 @@ def solver_profile_static_identity_sha256(
 __all__ = [
     "APPLICATION_DEFAULT_SOLVER_PROFILE_KEY",
     "DEFAULT_SOLVER_PROFILE_KEY",
+    "ENGINE_PROFILES",
+    "ENGINE_REFERENCE_MODE",
+    "HYBRID_PLANE_PAIR_GND_PROFILE",
+    "HYBRID_PLANE_PAIR_PROFILE",
     "LEGACY_MODAL_PROFILE",
     "LAYERWISE_ADMITTANCE_PROFILE",
     "PROFILE_IDENTITY_FORMAT",

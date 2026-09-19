@@ -54,6 +54,7 @@ from spd_decap_pi._core.solver import (
 )
 from spd_decap_pi._core.solver.profiles import (
     DEFAULT_SOLVER_PROFILE_KEY,
+    ENGINE_PROFILES,
     LAYERWISE_ADMITTANCE_PROFILE,
     LEGACY_MODAL_PROFILE,
     solver_profile as resolve_solver_profile,
@@ -78,6 +79,7 @@ from .scenario import (
     ScenarioResultKey,
     ScenarioSpec,
     SharedPadClusterState,
+    SourceIdentity,
     derive_shared_pad_current_components,
     mixed_reference_ground_witness_failures,
     shared_pad_component_eligibility,
@@ -555,6 +557,24 @@ def _evaluation_settings(
             ),
         },
     }
+    if profile in ENGINE_PROFILES:
+        # The engine's numerical identity is its own; the static profile hash
+        # only says which product profile asked for it.
+        settings["solver_static_identity_sha256"] = (
+            solver_profile_static_identity_sha256(profile)
+        )
+        provenance = solver_provenance or {}
+        settings["engine"] = {
+            name: provenance.get(name)
+            for name in (
+                "numerics_id",
+                "engine_version",
+                "reference_mode",
+                "freq_grid_sha256",
+                "decap_config_sha256",
+            )
+        }
+        return settings
     if profile == LAYERWISE_ADMITTANCE_PROFILE:
         settings["solver_static_identity_sha256"] = (
             solver_profile_static_identity_sha256(profile)
@@ -2585,6 +2605,11 @@ def preflight_evaluation_comparison(
     canonical_rails = _canonical_rail_ids(
         scenario, rail_ids, _project=source_project
     )
+    if profile in ENGINE_PROFILES:
+        # The engine reads the original SPD rather than the normalized project,
+        # so its gate is a different one: source identity, exactly one SPD port
+        # per rail, and no decap assignment the `.Connect` net cannot express.
+        return _engine_preflight(scenario, canonical_rails, project=source_project)
     # Provenance is the first public comparison gate.  Do not profile or
     # alternate-transform the project before rejecting a stale/malformed
     # source proof; those transforms can otherwise hide the authoritative
@@ -3145,7 +3170,11 @@ def _load_baseline_evaluation(
     evaluation_policy: str = EVALUATION_POLICY_STRICT,
 ) -> ScenarioEvaluation | None:
     profile = resolve_solver_profile(solver_profile)
-    if profile.experimental or profile == LAYERWISE_ADMITTANCE_PROFILE:
+    if (
+        profile.experimental
+        or profile == LAYERWISE_ADMITTANCE_PROFILE
+        or profile in ENGINE_PROFILES
+    ):
         # Evidence is compiled only inside the source-only evaluation path.
         # The layerwise result additionally owns all-board mounted
         # terminations, while the historical BaselineCapture schema freezes
@@ -3202,7 +3231,11 @@ def _cache_baseline_evaluation(
     evaluation: ScenarioEvaluation,
 ) -> tuple[ScenarioSpec, dict[str, bytes]]:
     profile = resolve_solver_profile(evaluation.view.solver_profile_key)
-    if profile.experimental or profile == LAYERWISE_ADMITTANCE_PROFILE:
+    if (
+        profile.experimental
+        or profile == LAYERWISE_ADMITTANCE_PROFILE
+        or profile in ENGINE_PROFILES
+    ):
         raise ScenarioEvaluationCacheError(
             "source-compiled/all-board baseline results are intentionally not persisted or reused"
         )
@@ -4475,6 +4508,12 @@ def build_evaluation_workspace(
 ) -> WorkspaceState:
     """Return an isolated workspace for evaluation; source scenario stays immutable."""
 
+    if resolve_solver_profile(solver_profile) in ENGINE_PROFILES:
+        # An engine result is computed from the original SPD, so rehydrating one
+        # must not run the artwork/template builder for a project it never used.
+        return WorkspaceState(
+            project=scenario.base_project, attachments=dict(attachments or {})
+        )
     project = build_evaluation_project(
         scenario,
         evaluation_rail_id=evaluation_rail_id,
@@ -4561,6 +4600,361 @@ def _with_layerwise_mounted_view_counts(
     return replace(view, cap_count=raw_cap_count, model_count=len(model_keys))
 
 
+# --------------------------------------------------------------------------
+# spd_pi_engine profiles (W11-a).  The 40 layerwise branches below/above are
+# untouched: the engine path forks at the three public entry points only, and
+# everything it needs lives in `_core/solver/engine_adapter.py`.
+# --------------------------------------------------------------------------
+
+
+def _engine_rail(project: ProjectSpec, rail_id: str) -> RailSpec:
+    return next(
+        item for item in project.rails if item.rail_id.casefold() == rail_id.casefold()
+    )
+
+
+def _engine_blocker(
+    rail_id: str, refdes: str, code: str, message: str
+) -> EvaluationConnectivityBlocker:
+    return EvaluationConnectivityBlocker(
+        rail_id=rail_id,
+        refdes=refdes,
+        kind=DecapConnectionKind.UNRESOLVED,
+        reason=f"engine evaluation [{code}]: {message}",
+    )
+
+
+def _engine_preflight(
+    scenario: ScenarioSpec,
+    canonical_rails: Sequence[str],
+    *,
+    project: ProjectSpec,
+) -> EvaluationConnectivityPreflight:
+    """Three fail-closed engine gates before any solve (plan §0, §1-3).
+
+    A scenario does not store the SPD bytes, so the original file must still be
+    where it was imported from and still hash the same; the engine models one
+    SPD port per rail; and a decap moved onto this rail from another source net
+    cannot be expressed at all by the engine's fixed ``.Connect`` decap set.
+    """
+
+    from spd_decap_pi._core.solver import engine_adapter
+
+    rails = tuple(canonical_rails)
+    blockers: list[EvaluationConnectivityBlocker] = []
+    ports: dict[str, str] | None = None
+    try:
+        identity = SourceIdentity.from_path(scenario.source.path)
+    except ValueError as exc:
+        blockers.extend(
+            _engine_blocker(
+                rail_id,
+                "<spd source>",
+                engine_adapter.ENGINE_SPD_MISSING,
+                f"the original SPD is required and unreadable: {exc}",
+            )
+            for rail_id in rails
+        )
+    else:
+        if identity.sha256.lower() != scenario.source.sha256.lower():
+            blockers.extend(
+                _engine_blocker(
+                    rail_id,
+                    "<spd source>",
+                    engine_adapter.ENGINE_SPD_SHA256_MISMATCH,
+                    f"{scenario.source.path} is sha256 {identity.sha256}, but this "
+                    f"scenario was imported from {scenario.source.sha256}",
+                )
+                for rail_id in rails
+            )
+        else:
+            from spd_pi_engine import port_rails
+
+            ports = port_rails(scenario.source.path)
+    for rail_id in rails:
+        if ports is not None:
+            try:
+                engine_adapter.engine_port_for_rail(
+                    scenario.source.path,
+                    _engine_rail(project, rail_id).net,
+                    ports=ports,
+                )
+            except engine_adapter.EngineSolveError as exc:
+                blockers.append(
+                    _engine_blocker(
+                        rail_id, "<rail port>", exc.code, str(exc).split("] ", 1)[-1]
+                    )
+                )
+        for refdes in engine_adapter.cross_net_decap_refdes(scenario, rail_id):
+            blockers.append(
+                _engine_blocker(
+                    rail_id,
+                    refdes,
+                    engine_adapter.ENGINE_CROSS_NET_DECAP_ASSIGNMENT,
+                    "this decap was reassigned from another source net; the engine "
+                    "decap set is fixed by the SPD `.Connect` net and cannot "
+                    "represent a cross-net move",
+                )
+            )
+    return EvaluationConnectivityPreflight(rails, tuple(blockers))
+
+
+def _engine_outcomes(
+    scenario: ScenarioSpec,
+    project: ProjectSpec,
+    rail: RailSpec,
+    profile: Any,
+    *,
+    configs: Mapping[str, Mapping[str, str | None]],
+    attachments: Mapping[str, bytes] | None,
+    progress: ProgressCallback | None = None,
+    is_cancelled: CancelCallback | None = None,
+) -> dict[str, Any]:
+    """One worker run for one rail: one build, one receipt per configuration."""
+
+    import numpy as np
+
+    from spd_decap_pi._core.solver import engine_adapter
+    from spd_decap_pi._core.solver.evaluator import _target_from_rail
+
+    models: dict[str, str] = {}
+    for config in configs.values():
+        models.update(engine_adapter.extra_models(scenario, attachments, config))
+    request = engine_adapter.solve_request(
+        spd_path=scenario.source.path,
+        spd_sha256=scenario.source.sha256,
+        port=engine_adapter.engine_port_for_rail(scenario.source.path, rail.net),
+        profile=profile,
+        configs=configs,
+        extra_models=models,
+    )
+    result = engine_adapter.solve(
+        request, progress=progress, is_cancelled=is_cancelled
+    )
+    target = _target_from_rail(rail, np.asarray(request.freqs, dtype=float))
+    critical_band_hz = (
+        project.frequency.critical_start_hz,
+        project.frequency.critical_stop_hz,
+    )
+    return {
+        role: engine_adapter.evaluation_outcome(
+            receipt,
+            rail_id=rail.rail_id,
+            profile=profile,
+            target=target,
+            critical_band_hz=critical_band_hz,
+            receipt_sha256=result.receipt_sha256[role],
+            libraries=result.libraries,
+        )
+        for role, receipt in result.receipts.items()
+    }
+
+
+def _engine_scenario_evaluation(
+    project: ProjectSpec,
+    rail: RailSpec,
+    outcome: Any,
+    attachments: Mapping[str, bytes] | None,
+    *,
+    design_fingerprint: str,
+    target_ohm: float | None,
+    modal_max_index: int,
+    config: Mapping[str, str | None],
+    scenario_revision: int,
+) -> ScenarioEvaluation:
+    """Bind one engine outcome to the existing view/result-key machinery."""
+
+    view = evaluation_services._evaluation_view(project, outcome)
+    view.evaluation_policy = EVALUATION_POLICY_STRICT
+    mounted = [str(value) for value in config.values() if value]
+    view.cap_count = len(mounted)
+    view.model_count = len({item.casefold() for item in mounted})
+    state = WorkspaceState(project=project, attachments=dict(attachments or {}))
+    state.last_evaluation = view
+    state.evaluation_history = [view]
+    result_key = ScenarioResultKey.from_settings(
+        design_fingerprint=design_fingerprint,
+        rail_id=rail.rail_id,
+        settings=_evaluation_settings(
+            target_ohm,
+            modal_max_index,
+            view.solver_profile_key,
+            solver_provenance=view.solver_provenance,
+            evaluation_policy=EVALUATION_POLICY_STRICT,
+        ),
+        solver_version=view.solver_version,
+    )
+    return ScenarioEvaluation(
+        state=state,
+        view=view,
+        result_key=result_key,
+        scenario_revision=scenario_revision,
+    )
+
+
+def _engine_project(
+    scenario: ScenarioSpec, rail_id: str, target_ohm: float | None
+) -> ProjectSpec:
+    project = scenario.base_project
+    if target_ohm is None:
+        return project
+    return evaluation_services._project_with_target(project, rail_id, target_ohm)
+
+
+def _evaluate_scenario_with_engine(
+    scenario: ScenarioSpec,
+    rail_id: str,
+    target_ohm: float | None,
+    modal_max_index: int,
+    *,
+    profile: Any,
+    attachments: Mapping[str, bytes] | None,
+    progress: ProgressCallback | None,
+    is_cancelled: CancelCallback | None,
+) -> ScenarioEvaluation:
+    from spd_decap_pi._core.solver import engine_adapter
+
+    project = _engine_project(scenario, rail_id, target_ohm)
+    preflight = _engine_preflight(scenario, (rail_id,), project=project)
+    if not preflight.is_clear:
+        raise ScenarioEvaluationPreflightError(preflight)
+    config = engine_adapter.decap_config(scenario, rail_id)
+    rail = _engine_rail(project, rail_id)
+    outcomes = _engine_outcomes(
+        scenario,
+        project,
+        rail,
+        profile,
+        configs={EvaluationRole.TUNED.value: config},
+        attachments=attachments,
+        progress=progress,
+        is_cancelled=is_cancelled,
+    )
+    return _engine_scenario_evaluation(
+        project,
+        rail,
+        outcomes[EvaluationRole.TUNED.value],
+        attachments,
+        design_fingerprint=scenario.design_fingerprint,
+        target_ohm=target_ohm,
+        modal_max_index=modal_max_index,
+        config=config,
+        scenario_revision=scenario.revision,
+    )
+
+
+def _engine_comparison_batch(
+    scenario: ScenarioSpec,
+    canonical_rails: tuple[str, ...],
+    target_ohm: float | None,
+    modal_max_index: int,
+    *,
+    profile: Any,
+    attachments: Mapping[str, bytes] | None,
+    report: ProgressCallback,
+    cancelled: CancelCallback,
+) -> ScenarioEvaluationBatch:
+    """Original/Tuned for every selected rail: one engine build per rail.
+
+    Both configurations are solved from the same built model (``set_decaps``),
+    which is why they are sent to the worker together.  Baseline results are
+    never cached for an engine profile, so there is no capture reuse here.
+    """
+
+    from spd_decap_pi._core.solver import engine_adapter
+
+    report(0, "Checking the engine source identity, rail ports and decap assignment")
+    base_project = scenario.base_project
+    preflight = _engine_preflight(scenario, canonical_rails, project=base_project)
+    if not preflight.is_clear:
+        raise ScenarioEvaluationPreflightError(preflight)
+    prepared = scenario.with_baseline_captures(canonical_rails)
+    working_attachments = _validated_scenario_attachments(prepared, attachments)
+    baseline_role = EvaluationRole.BASELINE.value
+    tuned_role = EvaluationRole.TUNED.value
+    comparisons: list[RailComparison] = []
+    for index, rail_id in enumerate(canonical_rails):
+        if cancelled():
+            raise RuntimeError("evaluation cancelled")
+        project = _engine_project(prepared, rail_id, target_ohm)
+        rail = _engine_rail(project, rail_id)
+        baseline_config = engine_adapter.decap_config(
+            prepared.original_configuration(rail_id), rail_id
+        )
+        tuned_config = engine_adapter.decap_config(prepared, rail_id)
+        span_start = round(5 + 95 * index / len(canonical_rails))
+        span = 95 / len(canonical_rails)
+
+        def stage(value: int, message: str, _start=span_start, _span=span) -> None:
+            report(
+                min(100, _start + round(max(0, min(100, int(value))) * _span / 100)),
+                f"{rail_id}: {message}",
+            )
+
+        outcomes = _engine_outcomes(
+            prepared,
+            project,
+            rail,
+            profile,
+            configs={baseline_role: baseline_config, tuned_role: tuned_config},
+            attachments=working_attachments,
+            progress=stage,
+            is_cancelled=cancelled,
+        )
+        capture = next(
+            item
+            for key, item in prepared.baseline_captures.items()
+            if key.casefold() == rail_id.casefold()
+        )
+        baseline = _engine_scenario_evaluation(
+            project,
+            rail,
+            outcomes[baseline_role],
+            working_attachments,
+            design_fingerprint=capture.evaluation_input_sha256,
+            target_ohm=target_ohm,
+            modal_max_index=modal_max_index,
+            config=baseline_config,
+            scenario_revision=prepared.revision,
+        )
+        tuned = _engine_scenario_evaluation(
+            project,
+            rail,
+            outcomes[tuned_role],
+            working_attachments,
+            design_fingerprint=prepared.design_fingerprint,
+            target_ohm=target_ohm,
+            modal_max_index=modal_max_index,
+            config=tuned_config,
+            scenario_revision=prepared.revision,
+        )
+        comparisons.append(
+            RailComparison(
+                rail_id=rail_id,
+                baseline=baseline.compact(),
+                tuned=tuned.compact(),
+                baseline_from_cache=False,
+                configuration_unchanged=baseline_config == tuned_config,
+            )
+        )
+    updated_scenario = prepared
+    if prepared.baseline_captures != scenario.baseline_captures:
+        updated_scenario = ScenarioSpec.model_validate(
+            {
+                **prepared.model_dump(mode="python"),
+                "revision": scenario.revision + 1,
+            }
+        )
+    report(100, f"Completed {len(comparisons)} PWR rail comparison(s)")
+    return ScenarioEvaluationBatch(
+        comparisons=tuple(comparisons),
+        updated_scenario=updated_scenario,
+        updated_attachments=working_attachments,
+        requested_design_fingerprint=scenario.design_fingerprint,
+        requested_revision=scenario.revision,
+    )
+
+
 def evaluate_scenario(
     scenario: ScenarioSpec,
     rail_id: str,
@@ -4590,6 +4984,18 @@ def evaluate_scenario(
         raise ScenarioEvaluationBuildError(
             "EVALUATION_RAIL_UNKNOWN",
             f"evaluation rail {rail_id!r} is absent from the SPD project",
+        )
+    requested_profile = resolve_solver_profile(solver_profile)
+    if requested_profile in ENGINE_PROFILES:
+        return _evaluate_scenario_with_engine(
+            scenario,
+            canonical_rail,
+            target_ohm,
+            modal_max_index,
+            profile=requested_profile,
+            attachments=attachments,
+            progress=progress,
+            is_cancelled=is_cancelled,
         )
     state = build_evaluation_workspace(
         scenario,
@@ -4679,6 +5085,17 @@ def evaluate_comparison_batch(
     if evaluation_policy not in _EVALUATION_POLICIES:
         raise ScenarioEvaluationBuildError("EVALUATION_POLICY_UNKNOWN", f"unknown Evaluation geometry policy {evaluation_policy!r}")
     profile = resolve_solver_profile(solver_profile)
+    if profile in ENGINE_PROFILES:
+        return _engine_comparison_batch(
+            scenario,
+            _canonical_rail_ids(scenario, rail_ids),
+            target_ohm,
+            modal_max_index,
+            profile=profile,
+            attachments=attachments,
+            report=report,
+            cancelled=cancelled,
+        )
     alternate_cache: dict[tuple[str, str, str, str], _AlternateEvaluationContext] = {}
     canonical_rails = _canonical_rail_ids(scenario, rail_ids)
     preflight_span = 5
