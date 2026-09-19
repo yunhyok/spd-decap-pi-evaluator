@@ -540,6 +540,10 @@ def evaluation_outcome(
         "profile_key": resolved.key,
         "profile_badge": resolved.badge,
         "source_only": True,
+        # W11-e: these two defaults belong to the adapter, not to the GUI
+        # fallbacks in `gui/main_window.py` (W11-b report 7-6).
+        "status": "source_engine_hybrid",
+        "validation_status": "engine_validity_notes_bound",
         "powersi_used_for_parameters": False,
         "compiler_algorithm_id": resolved.compiler_algorithm_id,
         "solver_static_identity_sha256": solver_profile_static_identity_sha256(resolved),

@@ -223,6 +223,12 @@ def test_outcome_carries_validity_and_numerics_id(worker_solve):
     assert outcome.solver_provenance["numerics_id"] == receipt["numerics_id"]
     assert outcome.solver_provenance["powersi_used_for_parameters"] is False
     assert outcome.solver_provenance["unknowns"] == UNKNOWNS
+    # W11-e: the GUI must not have to invent these two (W11-b report 7-6).
+    assert outcome.solver_provenance["status"] == "source_engine_hybrid"
+    assert (
+        outcome.solver_provenance["validation_status"]
+        == "engine_validity_notes_bound"
+    )
 
 
 # ---------------------------------------------------------------- data-free

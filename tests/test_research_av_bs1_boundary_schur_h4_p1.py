@@ -254,7 +254,10 @@ def _repository_sentinel() -> tuple[bytes, bytes, str, str, bool]:
     )
 
 
-@pytest.fixture(scope="session", autouse=True)
+# W11-e: module scope, not session.  At session scope the guards below stayed
+# installed for the rest of the run and every later test that needs a writable
+# file -- including pytest's own `tmp_path` lock -- failed (W11-b report 7-3).
+@pytest.fixture(scope="module", autouse=True)
 def no_write_no_factor_and_repository_sentinel() -> object:
     """Fail closed on mutation/factor entry points and prove pre/post state."""
     import scipy.sparse.linalg as sparse_linalg

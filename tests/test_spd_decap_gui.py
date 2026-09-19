@@ -2085,6 +2085,14 @@ def test_evaluation_worker_receives_scenario_model_attachments(
             captured.update(kwargs)
 
         monkeypatch.setattr(window, "_run_worker", capture)
+        # The second rail is blocked, so `_accept_evaluation_preflight` opens the
+        # "Run a partial Evaluation Analysis?" consent box.  Offscreen there is
+        # nobody to click it and `exec()` blocks forever (W11-b report 7-2).
+        monkeypatch.setattr(
+            QMessageBox,
+            "exec",
+            lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+        )
 
         def run_through_preflight() -> None:
             captured.clear()
