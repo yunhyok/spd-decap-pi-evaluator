@@ -1,0 +1,19 @@
+{
+  "status": "FINAL_WORKER_BUDGET_AFTER_RESULT",
+  "result": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-complete-current-gcrotmk-01\\result.json",
+    "sha256": "17eec05e5f710020703a40ec62916d3a01c563fa895d3cde1463979e1a2c4f25",
+    "size_bytes": 42353
+  },
+  "artifact": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-complete-current-gcrotmk-01\\complete-current-final.npz",
+    "sha256": "85e8db88de6a07024a7076549d53e7fc4060789cffbca39f229e025ff4fdaa91",
+    "size_bytes": 534185159
+  },
+  "budget": {
+    "elapsed_s": 978.7340000000004,
+    "peak_rss_bytes": 21903667200,
+    "max_runtime_s": 1200.0,
+    "max_rss_bytes": 34359738368
+  }
+}

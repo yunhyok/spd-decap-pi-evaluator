@@ -1,0 +1,201 @@
+{
+  "findings": [
+    {
+      "evidence": "Every point NPZ contains only active_voltage, sheet_active_indices, and l14_sheet_active_indices. No positive_active_index, negative_active_index, device_port vector, or field_zdd is persisted.",
+      "impact": "The frozen point Zdd/checkpoint JSONs agree, but Vpos-Vneg cannot be independently recomputed from the saved field alone without reconstructing the excluded native assembly.",
+      "minimal_fix": "Persist a two-element device_port_active_indices array and field_zdd_ohm in each field/checkpoint, then assert their difference against point zdd_ohm.",
+      "priority": "P2",
+      "title": "Field artifact omits Device port indices"
+    }
+  ],
+  "frequencies_hz_exact": [
+    10000000,
+    100000000,
+    1000000000
+  ],
+  "inputs": {
+    "frequency_stamps": {
+      "frequency_data": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-frequency-stamps-01\\frequency-stamps.npz",
+        "sha256": "bf2903c044423ea7429ce907567250528903c53eedddd9fffe3265a2669cba3b"
+      },
+      "frequency_receipt": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-frequency-stamps-01\\receipt.json",
+        "sha256": "4d93c4a89a02c7bc6295c27e8aa430ce3711edb2d2102576fbc7cf7535a52856"
+      },
+      "frequency_review": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-frequency-stamps-01\\independent-review.json",
+        "sha256": "74d4476018645392c66164990ee7a44c08a09ca9594edc7df7dc95fff1ad2f94"
+      }
+    },
+    "frozen_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-two-sheet-frequency-shadow-01\\driver-at-run.py",
+      "sha256": "ef7432f3087b521c223ae99542b23741be3ab53c1b172334edaa6e5c5a258f6c"
+    },
+    "one_mhz_reproduction": {
+      "lu_repeated": false,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-two-sheet-frequency-shadow-01\\one_mhz_reproduction.json",
+      "physical_residual_max_a": 1.6474404817133085e-10,
+      "sha256": "2a24f86ceb7be48b285d4ffddc1b0960ee03f178acfea88edf2b32395c17f28c"
+    },
+    "run_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-two-sheet-frequency-shadow-01\\result.json",
+      "sha256": "f580a47697385efdd234f6c8738119285bc3cac94a4ad1827ffd5e7b449f4372"
+    }
+  },
+  "limitations": [
+    "No LU, source scenario, geometry, or native compilation was replayed.",
+    "Matrix reciprocity/row-sum, residual, pivot, and category passivity were checked against point receipts; full matrices are not persisted.",
+    "The separately requested 1MHz result/field Zdd triad is outside this review and is being handled by the stated separate posthoc receipt."
+  ],
+  "maxima": {
+    "matrix_row_sum_max_abs_s": 6.0252818319779315e-05,
+    "matrix_symmetry_max_abs_s": 1.752282635249473e-10,
+    "normalized_backward_residual": 2.0245327909096415e-19,
+    "physical_residual_max_abs_a": 1.178784446772166e-09,
+    "pivot_abs_ratio": 238852.30763349717,
+    "power_closure_error_ohm": 2.7551605691183238e-11,
+    "power_sum_minus_zdd_abs_ohm": 2.7551605694416945e-11
+  },
+  "point_count": 3,
+  "points": [
+    {
+      "allow_pickle": false,
+      "checkpoint_matches_point": true,
+      "checkpoint_sha256": "8565352734e3ed7a45e4f7cc9c637e61be42983fb54a4477086b57ecbd0d64a2",
+      "field_arrays": {
+        "active_voltage": {
+          "dtype": "complex128",
+          "shape": [
+            1436468
+          ]
+        },
+        "l14_sheet_active_indices": {
+          "dtype": "int64",
+          "shape": [
+            147057
+          ]
+        },
+        "sheet_active_indices": {
+          "dtype": "int64",
+          "shape": [
+            532524
+          ]
+        }
+      },
+      "field_hash_matches_receipt": true,
+      "field_sha256": "38d9abb48f8175871953d453cf0f87efa70b804de66f9eb8096cee5dfb6f751a",
+      "field_zip_crc": "PASS",
+      "frequency_hz": 10000000,
+      "normalized_backward_residual": 9.297046792081036e-20,
+      "passive_category_real_min_ohm": 1.8307607068543075e-12,
+      "physical_residual_max_abs_a": 2.123593885844771e-10,
+      "pivot_abs_ratio": 238852.30763349717,
+      "point_result_sha256": "31233df45eb0449f2de8cc7549be3fdb1aafb5db7879912832921baaae85c391",
+      "power_closure_error_ohm": 3.256170157641644e-14,
+      "power_sum_minus_zdd_abs_ohm": 3.2561593159696547e-14,
+      "reason": "No Device port active-index mapping is stored in the point field NPZ.",
+      "root_point_matches_point": true,
+      "row_sum_max_abs_s": 6.0252818319779315e-05,
+      "symmetry_max_abs_s": 1.752282635249473e-10,
+      "vpos_minus_vneg_recomputed": false,
+      "zdd_ohm": [
+        0.0005966084647432856,
+        0.0001445518250458507
+      ]
+    },
+    {
+      "allow_pickle": false,
+      "checkpoint_matches_point": true,
+      "checkpoint_sha256": "b7f832f0786af260a4af5855f863f8b073038136bd7f1d8abaf46eeee99baa38",
+      "field_arrays": {
+        "active_voltage": {
+          "dtype": "complex128",
+          "shape": [
+            1436468
+          ]
+        },
+        "l14_sheet_active_indices": {
+          "dtype": "int64",
+          "shape": [
+            147057
+          ]
+        },
+        "sheet_active_indices": {
+          "dtype": "int64",
+          "shape": [
+            532524
+          ]
+        }
+      },
+      "field_hash_matches_receipt": true,
+      "field_sha256": "3ad071af5940a4b15cbfbebc318af8bc354767db399aeda09cc34d929f62e2e4",
+      "field_zip_crc": "PASS",
+      "frequency_hz": 100000000,
+      "normalized_backward_residual": 1.7803496179238975e-19,
+      "passive_category_real_min_ohm": 9.113654294971743e-11,
+      "physical_residual_max_abs_a": 3.535368678975725e-10,
+      "pivot_abs_ratio": 6712.191899774982,
+      "point_result_sha256": "e7bf4f2533feda218c57f43f76a1609a4f14c39457e849a18f4872a009b2749f",
+      "power_closure_error_ohm": 2.1543206661759258e-13,
+      "power_sum_minus_zdd_abs_ohm": 2.154321747380272e-13,
+      "reason": "No Device port active-index mapping is stored in the point field NPZ.",
+      "root_point_matches_point": true,
+      "row_sum_max_abs_s": 3.71649086818125e-06,
+      "symmetry_max_abs_s": 9.094947017729282e-12,
+      "vpos_minus_vneg_recomputed": false,
+      "zdd_ohm": [
+        0.0008376874678580425,
+        0.001303127368813163
+      ]
+    },
+    {
+      "allow_pickle": false,
+      "checkpoint_matches_point": true,
+      "checkpoint_sha256": "457c0d396279ecd2c331cf044bd23b65fcda470835b356d7d38e7de0d6463061",
+      "field_arrays": {
+        "active_voltage": {
+          "dtype": "complex128",
+          "shape": [
+            1436468
+          ]
+        },
+        "l14_sheet_active_indices": {
+          "dtype": "int64",
+          "shape": [
+            147057
+          ]
+        },
+        "sheet_active_indices": {
+          "dtype": "int64",
+          "shape": [
+            532524
+          ]
+        }
+      },
+      "field_hash_matches_receipt": true,
+      "field_sha256": "99e574942d72aa8c8fc025500b05a0f72e2749c0ceb045000f61c4e43de64acf",
+      "field_zip_crc": "PASS",
+      "frequency_hz": 1000000000,
+      "normalized_backward_residual": 2.0245327909096415e-19,
+      "passive_category_real_min_ohm": 5.304087306791605e-08,
+      "physical_residual_max_abs_a": 1.178784446772166e-09,
+      "pivot_abs_ratio": 12910.678083952056,
+      "point_result_sha256": "736b370ecf301110fbfd577963eb7ec31796ed55c8c098ab88a792a14aa58c5c",
+      "power_closure_error_ohm": 2.7551605691183238e-11,
+      "power_sum_minus_zdd_abs_ohm": 2.7551605694416945e-11,
+      "reason": "No Device port active-index mapping is stored in the point field NPZ.",
+      "root_point_matches_point": true,
+      "row_sum_max_abs_s": 7.633968350436858e-07,
+      "symmetry_max_abs_s": 9.094947017729282e-12,
+      "vpos_minus_vneg_recomputed": false,
+      "zdd_ohm": [
+        0.0020916686934944182,
+        0.01034718034772955
+      ]
+    }
+  ],
+  "program": "SPD Decap PI Evaluator",
+  "rail_id": "ADC_VDD_075_VTRIP_SRAM/0",
+  "status": "ACCEPT_CONDITIONAL_HIGH_FREQUENCY_POINT_ARTIFACTS_WITH_P2_PORT_METADATA"
+}

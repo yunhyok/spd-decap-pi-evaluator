@@ -1,0 +1,121 @@
+{
+  "ancestry": {
+    "changed_child_count": 42417,
+    "changed_contact_parent_count": 20,
+    "changed_parent_count": 2793,
+    "missing_parent_count": 0,
+    "original_triangle_count": 542091,
+    "parent_area_coverage_pass": true,
+    "parent_area_max_relative_error": 1.6202448916871038e-12,
+    "refined_contact_triangle_count": 2538,
+    "unchanged_parent_count": 539298
+  },
+  "artifact": {
+    "driver_sha256": "650f64338e270d988e32a7b28359747c6bf1912274239dfbe978c8b5514f9892",
+    "npz_sha256": "9a67c1a84ea08b8de2bd8cb9dcd315dab6d8831de540f2f53ace567d5a8baf3f",
+    "result_sha256": "8c0cd86b78ac647eadbf15962eadb5ad4d7a2ab385e41488982771a2432a69ef"
+  },
+  "bindings": {
+    "external_island_ids_match": true,
+    "input_hash_checks": {
+      "legacy.areas": true,
+      "legacy.assets": true,
+      "legacy.inventory": true,
+      "legacy.mesh": true,
+      "legacy.refiner": true,
+      "legacy.selection": true,
+      "refined.adaptive_driver": true,
+      "refined.adaptive_result": true,
+      "refined.mesh": true,
+      "refined.step_result": true
+    },
+    "owner_count": 4,
+    "source_member_count": 4
+  },
+  "checks": {
+    "csr_structure": true,
+    "data_finite_nonnegative": true,
+    "mesh_arrays_match_longest_step06": true,
+    "npz_crc_schema": true,
+    "owner_area_recollapse": true,
+    "owner_capacitance_recollapse": true,
+    "owner_source_bindings": true,
+    "parent_ancestry_complete": true,
+    "parent_area_coverage": true,
+    "receipt_input_hashes_consistent": true,
+    "receipt_output_consistent": true
+  },
+  "limitations": [
+    "Independent saved-artifact QA only; no source geometry decode, clipping rerun, global G/C rebuild, LU, convergence, board, native, magnetic, or PowerSI claim."
+  ],
+  "mesh_comparison": {
+    "original_triangle_index": true,
+    "parent_triangle_index": true,
+    "triangle_contact_index": true
+  },
+  "npz": {
+    "crc_read_with_allow_pickle_false": true,
+    "dtypes": {
+      "data_um2": "float64",
+      "indices": "int32",
+      "indptr": "int32",
+      "original_triangle_index": "int64",
+      "owner_bindings_json_utf8": "uint8",
+      "owner_density_f_per_um2": "float64",
+      "parent_triangle_index": "int64",
+      "shape": "int64",
+      "triangle_contact_index": "int64"
+    },
+    "nnz": 1128662,
+    "shape": [
+      4,
+      581715
+    ]
+  },
+  "owner_recollapse": {
+    "refined_area_um2": [
+      1483407934.9834595,
+      1466729339.7697601,
+      7587109.1640217975,
+      7275910.545729836
+    ],
+    "refined_capacitance_f": [
+      5.647780157516815e-10,
+      5.318361646944962e-10,
+      2.751086331678091e-12,
+      2.6382456901752737e-12
+    ],
+    "relative_area_error": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "relative_capacitance_error": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "saved_area_um2": [
+      1483407934.9834595,
+      1466729339.7697601,
+      7587109.1640217975,
+      7275910.545729836
+    ],
+    "saved_capacitance_f": [
+      5.647780157516815e-10,
+      5.318361646944962e-10,
+      2.751086331678091e-12,
+      2.6382456901752737e-12
+    ]
+  },
+  "program": "SPD Decap PI Evaluator v0.23.1",
+  "receipt_consistency": {
+    "output_matches": true,
+    "reported_capacitance_relative_error": 1.1295582356867148e-13,
+    "reported_parent_area_max_relative_error": 1.6202448916871038e-12,
+    "status": "COMPLETED_SOURCE_CLIPPED_L25_REFINED_GC_AREAS_GENERIC_ANCESTRY"
+  },
+  "status": "INDEPENDENT_REVIEW_PASS"
+}

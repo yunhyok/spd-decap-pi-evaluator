@@ -1,0 +1,10 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "RETURNED_CONTACT_NTD_REUSED_ONCE",
+  "metrics": {
+    "shape": true,
+    "relative": 0.0
+  },
+  "selected_rows": "dual_potential_v[free_cell_count:][independent_contacts]"
+}

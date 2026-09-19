@@ -1,0 +1,108 @@
+{
+  "budget": {
+    "elapsed_s": 21.42199999996228,
+    "max_rss_bytes": 12884901888,
+    "max_runtime_s": 180.0,
+    "peak_rss_bytes": 2616524800
+  },
+  "checks": {
+    "all_p0_cross_owner_terms_retained": true,
+    "all_source_categories_and_finite_once_owned": true,
+    "cell_block_expected_row_sum_abs_max_s": 1.8524588085711002e-08,
+    "cell_block_row_sum_formula_roundoff_ratio": 0.006524778001411719,
+    "cell_coo_entries": 15453815,
+    "cell_coo_vs_direct_scatter_relative_error": 1.2811259786790942e-16,
+    "cell_csc_nnz": 9699599,
+    "cell_reconstruction_relative_error": 4.828948783824817e-16,
+    "conditional_exterior_flux_restricted_before_local_elimination": true,
+    "deterministic_conductance_power_w": 12577347647.906902,
+    "deterministic_joule_w": 616.6877040963939,
+    "global_component_action_relative_error": 5.02918599669237e-14,
+    "global_y_row_sum_relative_max": 2.426791449485301e-13,
+    "global_y_symmetry_relative_max": 1.6311015956292175e-18,
+    "l25_b_column_sum_max": 0.0,
+    "l25_r_symmetry_relative_max": 0.0,
+    "no_lu_field_or_fmm": true
+  },
+  "component_nnz": {
+    "finite_once_owned": 3023730,
+    "l02_contact_gc": 61183,
+    "l02_hybrid_cells": 9699599,
+    "l14_distributed_gc": 1196872,
+    "l14_sheet_dc": 773755,
+    "l25_distributed_gc": 2821635,
+    "retained_gc": 5437,
+    "termination": 5312
+  },
+  "dimensions": {
+    "b_nnz": 1208062,
+    "conditional_local_terminal_count": 1694809,
+    "contact_count": 38856,
+    "internal_trace_count": 1655953,
+    "l25_current_count": 604031,
+    "mixed_count_after_gauge": 3782134,
+    "mixed_count_before_gauge": 3782135,
+    "potential_count": 3178104,
+    "r_nnz": 1949981,
+    "y_nnz": 16784042,
+    "zero_flux_exterior_count": 817918
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-operator-02\\driver-at-run.py",
+    "sha256": "79ab74ff53bef21347038a8ab0c243260049cd97dfea5e707320f84de19210d3",
+    "size_bytes": 29539
+  },
+  "elapsed_s": 21.427365600015037,
+  "frequency_hz": 1000000.0,
+  "inputs": {
+    "boundary_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-boundary-01\\result.json",
+      "sha256": "f5b6874bcdf8edfbfefb7aad58d1feeee03e4bb2adb8813a3589b0b6e9f99e05",
+      "size_bytes": 2304
+    },
+    "pack": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-full-face-hybrid-operator-06\\hybrid-operator-pack.npz",
+      "sha256": "01ff4236af30621ca6cc4b87c4688c28ee23c22ed99b15aadd047f91a25c0b2c",
+      "size_bytes": 101366745
+    },
+    "pack_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-full-face-hybrid-operator-06\\result.json",
+      "sha256": "9b40449be75122903a0014e688c2ad228910fa11b2c704701e167a0f18ff78d7",
+      "size_bytes": 5782
+    },
+    "restricted": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-restricted-hybrid-cell-geometry-02\\restricted-hybrid-cell-geometry.npz",
+      "sha256": "e03297ce292d082422585e71e47a05c3d3caed8ccfe0cd24e99d06ebeb7eac0b",
+      "size_bytes": 37066801
+    },
+    "restricted_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-restricted-hybrid-cell-geometry-02\\result.json",
+      "sha256": "7599746f63ab032bd6b78ec83e1e14fd1051b99f5aa716fe76facb2075d4b4b3",
+      "size_bytes": 3419
+    },
+    "transfer": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-hybrid-p1-transfer-01\\p1-hybrid-transfer.npz",
+      "sha256": "7db244bf196f7c2195a0ce79e7abed848ae0c2404809ea2c25dcedec23528a68",
+      "size_bytes": 16620587
+    },
+    "transfer_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-hybrid-p1-transfer-01\\result.json",
+      "sha256": "01e6634740daa33cbed0d25b076fe30c8a2502e8a77b4b7548a1de4ab48f9dd5",
+      "size_bytes": 2908
+    }
+  },
+  "output": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-operator-02\\conditional-hybrid-operator.npz",
+    "sha256": "5ab5ba38aaf8c317aa05ae1d4f790c1d6447406ec25afe3c30e96536c714aa92",
+    "size_bytes": 115480771
+  },
+  "port": {
+    "gauge_active_index": 0,
+    "negative_active_index": 2656,
+    "positive_active_index": 2699
+  },
+  "program": "SPD Decap PI Evaluator",
+  "scope": "Executable 1 MHz sparse Y/R/B operator for the qualified conditional finite-2D L02 RT0/P0 lateral-conduction model combined with the retained L14/L25 circuit. Exterior L02 flux is restricted before local elimination; contacts, all P0 owner cross terms, original non-L02 categories, and the once-owned finite list remain. Cell u/q reconstruction and the P1 auxiliary transfer selection are saved. This is no solve and no magnetic, 3D-fringing, convergence, impedance, PowerSI, or board-accuracy claim.",
+  "status": "PASS_CONDITIONAL_L02_RT0_P0_HYBRID_GLOBAL_OPERATOR_NO_SOLVE",
+  "version": "0.23.1"
+}

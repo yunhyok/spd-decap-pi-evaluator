@@ -1,0 +1,842 @@
+{
+  "elapsed_s": 0.9529999999795109,
+  "inputs": {
+    "contact_receipt": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-source-contact-inputs-01\\result.json",
+      "sha256": "98bce62fde03d676e43d121207d00bb5ed840552bf8fd02793ae6732ab8bffd2"
+    },
+    "flat_domain": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-flat-conductor-domain-01\\l02-artwork-flat-trace-domain.wkb",
+      "sha256": "b99d76360170a0e3c80dde1a84982fd5d6c5658e2bdc9cc0c261123c8bdb0e26"
+    },
+    "flat_receipt": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-flat-conductor-domain-01\\result.json",
+      "sha256": "c2757aa69aca3186852b8332c2ccf6cc84ec170f1a34fdb0098a09a74e8050d4"
+    },
+    "inventory": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-source-inventory-02\\result.json",
+      "sha256": "0af954600a5070f8f2fa27a81ba941889b46ac9f26ac2b76d8669f4ce3af93f2"
+    },
+    "overlap_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l02_gc_source_overlaps.py",
+      "sha256": "535e57dfdf656b4000a9e0703ab4d4aa3b8ea5f0d86b0b60f8d1a8aa4c7b86d1"
+    },
+    "pad_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\src\\spd_decap_pi\\_core\\io\\shared_pad.py",
+      "sha256": "f6a53ca964efe79bed9da2bc88099d395f5f01f65d9b925ab9c8e18749ce8b4c"
+    },
+    "persistence_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\project_astra_l14_gc_mass.py",
+      "sha256": "f2c668fd090db5c4606eec27558c9bdbbdde6552d2f82c3b64b8837bd7350dc3"
+    }
+  },
+  "pad_fully_covered_count": 2,
+  "positive_drill_overlap_count": 2,
+  "positive_pad_overlap_count": 42,
+  "program": "SPD Decap PI Evaluator",
+  "rows": [
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.5109003731081,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 815.8031902778321,
+      "pad_polygon_area_um2": 2827.1495258394707,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0102_60",
+      "source_row_sha256": "4cbd76f77a407a38749c3515073d1395331f78e57ea55e7056ebc1c6ee88fa62",
+      "source_via_ordinal": 343760,
+      "via_id": "Via1309387",
+      "xy_um": [
+        -12356.9,
+        9097.1
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.5109003731081,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 815.8031902778321,
+      "pad_polygon_area_um2": 2827.1495258394707,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0203_60",
+      "source_row_sha256": "9b22c22843cbd4c1d00294e671a0cb74c2f4f0f5c3e8b709ad88ed3685bd5abc",
+      "source_via_ordinal": 343761,
+      "via_id": "Via1309388",
+      "xy_um": [
+        -12356.9,
+        9097.1
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": true,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 1256.510900373094,
+      "drill_polygon_area_um2": 1256.510900373094,
+      "drill_polygon_fully_covered": true,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 2827.149525839491,
+      "pad_polygon_area_um2": 2827.149525839491,
+      "pad_polygon_fully_covered": true,
+      "padstack_id": "DR-0203_60",
+      "source_row_sha256": "7cbea6bd2f97821d014943a6e9671fc3c32238d062fcd6741aaaba4955f6dcde",
+      "source_via_ordinal": 347535,
+      "via_id": "Via1312784",
+      "xy_um": [
+        12354.599999999999,
+        22424.399999999998
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.5109003731081,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 977.8569511362443,
+      "pad_polygon_area_um2": 2827.1495258394707,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0203_60",
+      "source_row_sha256": "cfe64ea464fb3d8d7e6a919d0ef16de4ca37138c902040de3320a9e732608f9f",
+      "source_via_ordinal": 534246,
+      "via_id": "Via1480824",
+      "xy_um": [
+        12190.599999999999,
+        10549.8
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.5109003731081,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 977.8569511362443,
+      "pad_polygon_area_um2": 2827.1495258394707,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0102_60",
+      "source_row_sha256": "4df0aeb1c60392337d68ce419ed76d48e8f47c963cbf2739f952067cdfbca0a6",
+      "source_via_ordinal": 534247,
+      "via_id": "Via1480825",
+      "xy_um": [
+        12190.599999999999,
+        10549.8
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.5109003731086,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 583.7426217642092,
+      "pad_polygon_area_um2": 2827.149525839491,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0203_60",
+      "source_row_sha256": "45d7b189c459fd8084c6f23d06b3227f43498a97d24e456e839aaba365160d85",
+      "source_via_ordinal": 538560,
+      "via_id": "Via1484707",
+      "xy_um": [
+        -7437.0,
+        10458.699999999999
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.5109003731086,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 583.7426217642092,
+      "pad_polygon_area_um2": 2827.149525839491,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0102_60",
+      "source_row_sha256": "2d73755f40b421e862d524a8b711ca6be9579dab8118ba22c5936970424589a6",
+      "source_via_ordinal": 538561,
+      "via_id": "Via1484708",
+      "xy_um": [
+        -7437.0,
+        10458.699999999999
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.5109003731081,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 977.8568434907045,
+      "pad_polygon_area_um2": 2827.1495258394707,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0203_60",
+      "source_row_sha256": "5d9669ec9619cd9d761037250f47fe85995090279e2dccd94e167e3c25c18e2e",
+      "source_via_ordinal": 546272,
+      "via_id": "Via1491648",
+      "xy_um": [
+        -12421.9,
+        9885.3
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.5109003731081,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 977.8568434907045,
+      "pad_polygon_area_um2": 2827.1495258394707,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0102_60",
+      "source_row_sha256": "a6f0e7eb25879c5fb5d05a6556917c21087587b0797897cd38226d0fb9bce04f",
+      "source_via_ordinal": 546273,
+      "via_id": "Via1491649",
+      "xy_um": [
+        -12421.9,
+        9885.3
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.5109003731081,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 813.6384551003073,
+      "pad_polygon_area_um2": 2827.1495258394707,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0203_60",
+      "source_row_sha256": "3aeb7f2827dc3265b2a89d2451c0a57e78c874d8d7c93d3ec6beebddb515ba74",
+      "source_via_ordinal": 549505,
+      "via_id": "Via1494558",
+      "xy_um": [
+        -12096.9,
+        9097.1
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.5109003731081,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 813.6384551003073,
+      "pad_polygon_area_um2": 2827.1495258394707,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0102_60",
+      "source_row_sha256": "b74dc5e21948740fc5ecd7ed9c09a93e5e7f408917b404952b46970f2b9e05f7",
+      "source_via_ordinal": 549506,
+      "via_id": "Via1494559",
+      "xy_um": [
+        -12096.9,
+        9097.1
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.5109003731081,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 977.8568082314331,
+      "pad_polygon_area_um2": 2827.1495258394707,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0203_60",
+      "source_row_sha256": "d681c58d383ba5189fc1532090fd83bcbe66ffde1888e16a28281d817f9eae88",
+      "source_via_ordinal": 549758,
+      "via_id": "Via1494786",
+      "xy_um": [
+        11515.0,
+        8729.8
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.5109003731081,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 977.8568082314331,
+      "pad_polygon_area_um2": 2827.1495258394707,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0102_60",
+      "source_row_sha256": "3350d6377866dc030a80d64d814c04ba1f23b48c64692b64f7cc50a384334bfa",
+      "source_via_ordinal": 549759,
+      "via_id": "Via1494787",
+      "xy_um": [
+        11515.0,
+        8729.8
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.5109003731081,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 977.8569260020574,
+      "pad_polygon_area_um2": 2827.1495258394707,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0203_60",
+      "source_row_sha256": "675627232d83402ab47f6102af326e88c00591457df8535d207f5b5a67afebd5",
+      "source_via_ordinal": 552299,
+      "via_id": "Via1497072",
+      "xy_um": [
+        -8911.9,
+        8984.5
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.5109003731081,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 977.8569260020574,
+      "pad_polygon_area_um2": 2827.1495258394707,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0102_60",
+      "source_row_sha256": "d70667ee0847f72acfb47ab9bc7896b30813dbb3c34cf955e1c8e92758b7e316",
+      "source_via_ordinal": 552300,
+      "via_id": "Via1497073",
+      "xy_um": [
+        -8911.9,
+        8984.5
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.5109003731081,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 977.8568337883939,
+      "pad_polygon_area_um2": 2827.1495258394707,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0203_60",
+      "source_row_sha256": "3387d09eaa44bfb9afc2e885782c6fc260445d37e7b918a1b391faf9d6744e42",
+      "source_via_ordinal": 552573,
+      "via_id": "Via1497319",
+      "xy_um": [
+        -10211.9,
+        8984.5
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.5109003731081,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 977.8568337883939,
+      "pad_polygon_area_um2": 2827.1495258394707,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0102_60",
+      "source_row_sha256": "5efff4fad1bc720029595f191a89d0228c47fea3caf48b4780c8a351cc886973",
+      "source_via_ordinal": 552575,
+      "via_id": "Via1497320",
+      "xy_um": [
+        -10211.9,
+        8984.5
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.5109003731081,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 977.8569511362416,
+      "pad_polygon_area_um2": 2827.1495258394707,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0203_60",
+      "source_row_sha256": "db36c17f846812098b68c7728af03c4d9887b75f1e3ac8fd935989f2d667b05a",
+      "source_via_ordinal": 552726,
+      "via_id": "Via1497457",
+      "xy_um": [
+        -11836.9,
+        8871.9
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.5109003731081,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 977.8569511362416,
+      "pad_polygon_area_um2": 2827.1495258394707,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0102_60",
+      "source_row_sha256": "1de8f526af1da9f5c445aaada6f4aec96608ff0028b08b21c407f01a370c1e36",
+      "source_via_ordinal": 552727,
+      "via_id": "Via1497458",
+      "xy_um": [
+        -11836.9,
+        8871.9
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.5109003731081,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 815.2006563703836,
+      "pad_polygon_area_um2": 2827.1495258394707,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0203_60",
+      "source_row_sha256": "d915c8a797e039591902210fbd0db27748c1ff2c1a6c83a818e92da89ff33a98",
+      "source_via_ordinal": 552811,
+      "via_id": "Via1497533",
+      "xy_um": [
+        -12226.9,
+        8871.9
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.5109003731081,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 815.2006563703836,
+      "pad_polygon_area_um2": 2827.1495258394707,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0102_60",
+      "source_row_sha256": "6c4087c471dc94f98532e027b06edb4fc516700dc9a19204656a07fca47fc0e5",
+      "source_via_ordinal": 552812,
+      "via_id": "Via1497534",
+      "xy_um": [
+        -12226.9,
+        8871.9
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.510900373094,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 815.8031902779145,
+      "pad_polygon_area_um2": 2827.149525839491,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0102_60",
+      "source_row_sha256": "3f18392b3e4a8b5c8dd7c228a5a2917182a1e4fe456746a08a24228d928778b3",
+      "source_via_ordinal": 678343,
+      "via_id": "Via1610510",
+      "xy_um": [
+        -12356.9,
+        -23508.8
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.510900373094,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 815.8031902779145,
+      "pad_polygon_area_um2": 2827.149525839491,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0203_60",
+      "source_row_sha256": "08480e9128632796df2dea959601dcf57629712910b5a795f761dda3b538d5a3",
+      "source_via_ordinal": 678344,
+      "via_id": "Via1610511",
+      "xy_um": [
+        -12356.9,
+        -23508.8
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": true,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 1256.5109003731081,
+      "drill_polygon_area_um2": 1256.5109003731081,
+      "drill_polygon_fully_covered": true,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 2827.1495258394707,
+      "pad_polygon_area_um2": 2827.1495258394707,
+      "pad_polygon_fully_covered": true,
+      "padstack_id": "DR-0203_60",
+      "source_row_sha256": "ec392c96e7a7819a20f8f0feab383ca33763763c59b6e5a5a0e9a129c4ecee05",
+      "source_via_ordinal": 680236,
+      "via_id": "Via1612214",
+      "xy_um": [
+        12354.599999999999,
+        -10181.5
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.510900373094,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 977.8569511363597,
+      "pad_polygon_area_um2": 2827.149525839491,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0203_60",
+      "source_row_sha256": "c3808e513951ffc9ab497cbd5b9ee6407c3489f4b704ab3bd4ec5da732b1313e",
+      "source_via_ordinal": 869355,
+      "via_id": "Via1782422",
+      "xy_um": [
+        12190.599999999999,
+        -22056.1
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.510900373094,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 977.8569511363597,
+      "pad_polygon_area_um2": 2827.149525839491,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0102_60",
+      "source_row_sha256": "e8ceeceab9cf6fbe88bcdbe131ed5d8f8b25c3c04cde2c15509e525c9cceca1a",
+      "source_via_ordinal": 869356,
+      "via_id": "Via1782423",
+      "xy_um": [
+        12190.599999999999,
+        -22056.1
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.5109003730956,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 583.7426217641744,
+      "pad_polygon_area_um2": 2827.1495258395125,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0203_60",
+      "source_row_sha256": "6a013f9807d7c1e483b681617056f49a408b992e706d431ad3d3f33788460c23",
+      "source_via_ordinal": 873669,
+      "via_id": "Via1786305",
+      "xy_um": [
+        -7437.0,
+        -22147.2
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.5109003730956,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 583.7426217641744,
+      "pad_polygon_area_um2": 2827.1495258395125,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0102_60",
+      "source_row_sha256": "af901639bce8721f318fa3a837cc1890659bcb2597472c9ebc7d0551543d5e2c",
+      "source_via_ordinal": 873670,
+      "via_id": "Via1786306",
+      "xy_um": [
+        -7437.0,
+        -22147.2
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.510900373094,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 977.8568434907312,
+      "pad_polygon_area_um2": 2827.149525839491,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0203_60",
+      "source_row_sha256": "21a30f87a47074121d8669e44aff2b8eaf03d281ef58b201bf1cdbaadecec46f",
+      "source_via_ordinal": 880895,
+      "via_id": "Via1792809",
+      "xy_um": [
+        -12421.9,
+        -22720.6
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.510900373094,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 977.8568434907312,
+      "pad_polygon_area_um2": 2827.149525839491,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0102_60",
+      "source_row_sha256": "a8d6070c23dbbfba90f93edc5e4a2a8da81218a85308156891112513564006bb",
+      "source_via_ordinal": 880897,
+      "via_id": "Via1792810",
+      "xy_um": [
+        -12421.9,
+        -22720.6
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.510900373094,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 977.8568337883247,
+      "pad_polygon_area_um2": 2827.149525839491,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0203_60",
+      "source_row_sha256": "82b9665c2f860c4453d4ebcef34e1551b9320297b85378041bca24c32f5b12b8",
+      "source_via_ordinal": 883748,
+      "via_id": "Via1795377",
+      "xy_um": [
+        -10211.9,
+        -23621.399999999998
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.510900373094,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 977.8568337883247,
+      "pad_polygon_area_um2": 2827.149525839491,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0102_60",
+      "source_row_sha256": "17596375f9f1d5a35e28c160e5dc762bf0a55368b394b0c36e126716040e050e",
+      "source_via_ordinal": 883749,
+      "via_id": "Via1795378",
+      "xy_um": [
+        -10211.9,
+        -23621.399999999998
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.510900373094,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 813.63845510037,
+      "pad_polygon_area_um2": 2827.149525839491,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0203_60",
+      "source_row_sha256": "fd2087ada8e96a40e80341b9ef2fad4a0793f5c0306ae619fb1e6b26368d9b4c",
+      "source_via_ordinal": 884302,
+      "via_id": "Via1795876",
+      "xy_um": [
+        -12096.9,
+        -23508.8
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.510900373094,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 813.63845510037,
+      "pad_polygon_area_um2": 2827.149525839491,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0102_60",
+      "source_row_sha256": "fd7436a15db366c3c433e4ffd9d61c7c22ea73afaa23ed4032940c909dcfa686",
+      "source_via_ordinal": 884303,
+      "via_id": "Via1795877",
+      "xy_um": [
+        -12096.9,
+        -23508.8
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.510900373094,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 977.8568082315028,
+      "pad_polygon_area_um2": 2827.149525839491,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0203_60",
+      "source_row_sha256": "537acd7cdb21d0916fcbf4bf0a338203eb9ffaf13b06a9a43d8b65df52c55f2b",
+      "source_via_ordinal": 884557,
+      "via_id": "Via1796104",
+      "xy_um": [
+        11515.0,
+        -23876.1
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.510900373094,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 977.8568082315028,
+      "pad_polygon_area_um2": 2827.149525839491,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0102_60",
+      "source_row_sha256": "b5e957d5aa6ea99b6a7ed3fb5ef085ecc45d048aeb31c79d8f2683bad357e269",
+      "source_via_ordinal": 884558,
+      "via_id": "Via1796105",
+      "xy_um": [
+        11515.0,
+        -23876.1
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.510900373094,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 977.8569260020174,
+      "pad_polygon_area_um2": 2827.149525839491,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0203_60",
+      "source_row_sha256": "adc0c9830e97864f3b50b5846f119dac5df07a92f7604e5c6750a381828bbf5d",
+      "source_via_ordinal": 887096,
+      "via_id": "Via1798390",
+      "xy_um": [
+        -8911.9,
+        -23621.399999999998
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.510900373094,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 977.8569260020174,
+      "pad_polygon_area_um2": 2827.149525839491,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0102_60",
+      "source_row_sha256": "615394eadd483a722812f01a837710ac5479f1f33ca576674e3dc4d5464d76ae",
+      "source_via_ordinal": 887097,
+      "via_id": "Via1798391",
+      "xy_um": [
+        -8911.9,
+        -23621.399999999998
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.510900373094,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 977.8569511362538,
+      "pad_polygon_area_um2": 2827.149525839491,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0203_60",
+      "source_row_sha256": "7c9e1d08cf8a954f3e405b50eeda0a82ffe83b04c193e3ae654f8cfda8f5238c",
+      "source_via_ordinal": 887349,
+      "via_id": "Via1798618",
+      "xy_um": [
+        -11836.9,
+        -23734.0
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.510900373094,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 977.8569511362538,
+      "pad_polygon_area_um2": 2827.149525839491,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0102_60",
+      "source_row_sha256": "6eb5fc7d57663404f7f02825756bf3cbb7ec0f6c4591ce80ff450932d1e123e7",
+      "source_via_ordinal": 887350,
+      "via_id": "Via1798619",
+      "xy_um": [
+        -11836.9,
+        -23734.0
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.510900373094,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 815.2006563704257,
+      "pad_polygon_area_um2": 2827.149525839491,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0203_60",
+      "source_row_sha256": "8965e8da1f69e84b521535c0635ca119c57b1b9e259ebd2f129f6e268a3a2d7c",
+      "source_via_ordinal": 887391,
+      "via_id": "Via1798656",
+      "xy_um": [
+        -12226.9,
+        -23734.0
+      ]
+    },
+    {
+      "center_strictly_inside_flat_domain": false,
+      "drill_diameter_um": 40.0,
+      "drill_overlap_area_um2": 0.0,
+      "drill_polygon_area_um2": 1256.510900373094,
+      "drill_polygon_fully_covered": false,
+      "pad_diameter_um": 60.0,
+      "pad_overlap_area_um2": 815.2006563704257,
+      "pad_polygon_area_um2": 2827.149525839491,
+      "pad_polygon_fully_covered": false,
+      "padstack_id": "DR-0102_60",
+      "source_row_sha256": "083dea1a4b389d0cecc6dd990186b0d1444410c88e4e18b6303db082f8014eb6",
+      "source_via_ordinal": 887392,
+      "via_id": "Via1798657",
+      "xy_um": [
+        -12226.9,
+        -23734.0
+      ]
+    }
+  ],
+  "scope": "42 excluded source vias only. Geometry uses256-edge inscribed circles and the conditional flat artwork/trace union. Positive overlap is a polygon contact witness; zero is not analytic-circle noncontact proof. No native composite-link splitting, leaf policy, via magnetic effect, pad union, physical electrode or circuit replacement is certified.",
+  "script_sha256": "4f029256756bccca74f92889fb8089ef1d9456982cddb037e9ca996eb1c3b537",
+  "status": "COMPLETED_L02_EXCLUDED_VIA_FLAT_DOMAIN_DIAGNOSTIC",
+  "version": "0.23.1",
+  "via_count": 42
+}

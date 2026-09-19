@@ -1,0 +1,334 @@
+{
+  "binding_counts": {
+    "DERIVED_SINGLE_VIA_ENDPOINT_COMPLEMENT": 22765,
+    "EXISTING_SPLIT_COMPOSITE_LEG_SOURCE_PENDING": 20,
+    "UNRESOLVED_SOURCE_ENDPOINT_JOIN": 4005
+  },
+  "budget": {
+    "elapsed_s": 7.405999999959022,
+    "max_rss_bytes": 4294967296,
+    "max_runtime_s": 90,
+    "peak_rss_bytes": 718880768
+  },
+  "cache_byte_hash_recomputed": false,
+  "cache_identity": {
+    "compiled_meta": {
+      "compiler_id": "layerwise-compiled-topology-sqlite-v1",
+      "payload_schema": "spd-layerwise-compiled-topology-sqlite-v1",
+      "project_binding_sha256": "a20f131070142ecb4c332d9a8339454c13021eb6787c51944cc628f19449616e",
+      "source_sha256": "40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2",
+      "surface_schema_version": "spd-layer-surface-connectivity-v4",
+      "topology_identity_sha256": "0e242c069a55707b554eb632ea7a0747a29b6ad1451453c6496e8dd4cc1ac8cf"
+    },
+    "compiled_views_not_opened": [
+      {
+        "name": "external",
+        "payload_sha256": "9152f371671f71b8c310684c898705e4f2e78c8a36e17355a5df9beeba349117",
+        "payload_size": 38971988
+      },
+      {
+        "name": "scenario",
+        "payload_sha256": "e6a698dabab7bdf7fde5ac843ce3278d75960829c7d2ede118e3e206f84f620c",
+        "payload_size": 145732047
+      },
+      {
+        "name": "surface",
+        "payload_sha256": "b3eb6eac61bb4ccca78f745a9bd5d9395f4c436cd1657e81e0b31f9a62ae2169",
+        "payload_size": 6030912
+      }
+    ],
+    "raw_meta": {
+      "compiler_id": "raw-spd-finite-via-spatial-contact-v3",
+      "geometry_identity_sha256": "1593dcbe3e59c1eac48173a348a9b893862e99bcd3e66b14e69057197660cb4e",
+      "layers_count": "95",
+      "payload_schema": "spd-raw-spatial-contact-sqlite-v3",
+      "plane_sheet_dielectric_points_count": "301",
+      "project_binding_sha256": "a20f131070142ecb4c332d9a8339454c13021eb6787c51944cc628f19449616e",
+      "source_sha256": "40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2",
+      "surfaces_count": "371",
+      "traces_count": "1412611",
+      "vias_count": "1810200"
+    },
+    "schemas": {
+      "compiled": {
+        "meta": [
+          "key",
+          "value"
+        ],
+        "views": [
+          "name",
+          "payload",
+          "payload_size",
+          "payload_sha256"
+        ]
+      },
+      "raw": {
+        "dielectric_points": [
+          "layer_ordinal",
+          "point_ordinal",
+          "frequency_hz",
+          "epsilon_r",
+          "loss_tangent"
+        ],
+        "meta": [
+          "key",
+          "value"
+        ],
+        "nodes": [
+          "ordinal",
+          "node_id",
+          "node_id_fold",
+          "net_name",
+          "net_fold",
+          "net_status",
+          "layer_id",
+          "layer_id_fold",
+          "x_pm",
+          "y_pm",
+          "padstack_id",
+          "padstack_id_fold",
+          "rotation_microdegrees",
+          "source_record_sha256"
+        ],
+        "pad_shapes": [
+          "ordinal",
+          "padstack_id",
+          "padstack_id_fold",
+          "layer_id",
+          "layer_id_fold",
+          "shape_kind",
+          "width_pm",
+          "height_pm",
+          "source_record_sha256"
+        ],
+        "padstacks": [
+          "ordinal",
+          "padstack_id",
+          "padstack_id_fold",
+          "drill_diameter_pm",
+          "material",
+          "source_record_sha256"
+        ],
+        "plane_circles": [
+          "primitive_ordinal",
+          "center_x_um",
+          "center_y_um",
+          "radius_um"
+        ],
+        "plane_primitives": [
+          "primitive_ordinal",
+          "layer_ordinal",
+          "layer_name",
+          "net_name",
+          "polarity",
+          "kind",
+          "source_asset_name",
+          "source_asset_sha256",
+          "coordinate_unit",
+          "primitive_sha256"
+        ],
+        "plane_vertices": [
+          "primitive_ordinal",
+          "vertex_ordinal",
+          "x_um",
+          "y_um"
+        ],
+        "section_ledger": [
+          "section_name",
+          "row_count",
+          "logical_sha256"
+        ],
+        "source_coverage": [
+          "ordinal",
+          "source_basename",
+          "source_size_bytes",
+          "source_sha256",
+          "raw_header_count",
+          "logical_record_count"
+        ],
+        "stackup_layers": [
+          "layer_ordinal",
+          "layer_name",
+          "layer_kind",
+          "thickness_um",
+          "conductivity_s_per_m",
+          "material_name"
+        ],
+        "surfaces": [
+          "ordinal",
+          "surface_id",
+          "surface_id_fold",
+          "net_name",
+          "net_fold",
+          "layer_id",
+          "layer_id_fold",
+          "artwork_asset_sha256",
+          "island_manifest_sha256",
+          "source_record_sha256",
+          "min_x_pm",
+          "min_y_pm",
+          "max_x_pm",
+          "max_y_pm"
+        ],
+        "traces": [
+          "ordinal",
+          "trace_id",
+          "trace_id_fold",
+          "net_name",
+          "net_fold",
+          "layer_id",
+          "layer_id_fold",
+          "start_node_id",
+          "start_node_id_fold",
+          "end_node_id",
+          "end_node_id_fold",
+          "width_pm",
+          "width_status",
+          "width_location",
+          "geometry_status",
+          "owner_id",
+          "owner_id_fold",
+          "source_record_sha256",
+          "min_x_pm",
+          "min_y_pm",
+          "max_x_pm",
+          "max_y_pm"
+        ],
+        "vias": [
+          "ordinal",
+          "via_id",
+          "via_id_fold",
+          "net_name",
+          "net_fold",
+          "start_layer_id",
+          "start_layer_id_fold",
+          "end_layer_id",
+          "end_layer_id_fold",
+          "start_node_id",
+          "start_node_id_fold",
+          "end_node_id",
+          "end_node_id_fold",
+          "padstack_id",
+          "padstack_id_fold",
+          "status",
+          "owner_id",
+          "owner_id_fold",
+          "start_x_pm",
+          "start_y_pm",
+          "end_x_pm",
+          "end_y_pm",
+          "rotation_microdegrees",
+          "source_record_sha256"
+        ]
+      }
+    },
+    "section_ledger": [
+      {
+        "logical_sha256": "16cd09ec05f0e586433dbb82615797a3171824332e5ac6e646e5e1b1338cfa86",
+        "row_count": 95,
+        "section_name": "layers"
+      },
+      {
+        "logical_sha256": "8566c149fe8e34db61f6a7bb96a734fdfe99b6a82458e3c79569cb524027d97d",
+        "row_count": 2751337,
+        "section_name": "nodes"
+      },
+      {
+        "logical_sha256": "bc1059f752e1645e8a713379f429528a8fd16b261c7d20e04f9bc26ca11f47ed",
+        "row_count": 186,
+        "section_name": "pad_shapes"
+      },
+      {
+        "logical_sha256": "34afae8e5d24168fb9934fa1ddb6e064df75e50b66a5b85ff4b90c64ec807714",
+        "row_count": 98,
+        "section_name": "padstacks"
+      },
+      {
+        "logical_sha256": "0498118e6156916ef3a264e673af5fa8f5aa9e75292a1694a1e05447ccbb8009",
+        "row_count": 3,
+        "section_name": "section_coverage"
+      },
+      {
+        "logical_sha256": "80fe5fa2dbc15c6687f371e97ee81c7dee2e890dcabb0ec6280b395231154d2d",
+        "row_count": 1,
+        "section_name": "source_coverage"
+      },
+      {
+        "logical_sha256": "31e771345a20428cceb40c7efd1270c5a0599f6531ba43235f9857ad3d663136",
+        "row_count": 371,
+        "section_name": "surfaces"
+      },
+      {
+        "logical_sha256": "4f3fa78f01a3b7ffacfaa22ef48d18ce0965e864458426f79fdc4749fea6c02a",
+        "row_count": 1412611,
+        "section_name": "traces"
+      },
+      {
+        "logical_sha256": "893cd231e08e886ade6b1496893889957cc11d75d3ff05df30cec4f21267fb96",
+        "row_count": 1810200,
+        "section_name": "vias"
+      }
+    ],
+    "source_coverage": {
+      "logical_record_count": 5974148,
+      "ordinal": 0,
+      "raw_header_count": 5974148,
+      "source_basename": "S4LB002-2Para_260729_1_injected.spd",
+      "source_sha256": "40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2",
+      "source_size_bytes": 1116717287
+    }
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\inspect_astra_full_return_source_owners.py",
+    "sha256": "aceaad3707e0b143ee3f660fe5a8c790db50df2ba77ef3535f51356faa157c0e",
+    "size_bytes": 11718
+  },
+  "endpoint_complement_rule": "The exact singleton/count-one finite edge has two distinct quotient endpoints and one source via with two distinct raw endpoints. Its unique outward terminal landing binds one endpoint; the other endpoint is its complement. The lower connection is derived, not a direct landing-cache row.",
+  "inputs": {
+    "budget_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\reconstruct_astra_native_loaded_field.py",
+      "sha256": "354d9e004b189cf8193c2922c8fa4dc1903b407bebb295a4576673200ce6b213",
+      "size_bytes": 33457
+    },
+    "inventory": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-3d-source-domain-inventory-01\\result.json",
+      "sha256": "daed9082c027fb36706fb8a2eb9a00d094272f7bc7dfaf4b7d378e3a2fe6e663",
+      "size_bytes": 72957
+    },
+    "map": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-assembly-map-02\\combined-assembly-map.npz",
+      "sha256": "a6ccff514fe788396eb9d7620ebc828f966efbea3f7899e7a73991c17f8a2469",
+      "size_bytes": 16919703
+    },
+    "numeric_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l02_conditional_hybrid_block_lgmres.py",
+      "sha256": "ae0fb71ea00d02381abf28bf440d9407191e45f1c43d774cae31da6e0fb8da5e",
+      "size_bytes": 35889
+    },
+    "pack": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-full-face-hybrid-operator-06\\hybrid-operator-pack.npz",
+      "sha256": "01ff4236af30621ca6cc4b87c4688c28ee23c22ed99b15aadd047f91a25c0b2c",
+      "size_bytes": 101366745
+    },
+    "raw": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\raw-field-snapshot.npz",
+      "sha256": "6eac098738598a78b2068ce4f80e46fd70e17010a89bfb5949ec8a68124df4a7",
+      "size_bytes": 145099492
+    }
+  },
+  "output": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-full-return-source-owners-04\\source-owner-inventory.json",
+    "sha256": "4cdca3e08018ed552d987a0d23489499d03fc4365d6d5d37cfb498c9478caa82",
+    "size_bytes": 77810742
+  },
+  "program": "SPD Decap PI Evaluator",
+  "role_counts": {
+    "ground": 25812,
+    "power": 978
+  },
+  "scope": "Field-independent source identity and endpoint inventory for every conditional P/G-port finite edge. No reused current, cylinder approximation, padstack material qualification, source mesh, magnetic coupling, physical field acceptance or reference comparison. Unresolved owners are explicit.",
+  "source_node_count": 53658,
+  "status": "COMPLETED_ALL_PORT_SOURCE_OWNER_INVENTORY_NO_FIELD",
+  "unique_via_count": 26863,
+  "version": "0.23.1"
+}

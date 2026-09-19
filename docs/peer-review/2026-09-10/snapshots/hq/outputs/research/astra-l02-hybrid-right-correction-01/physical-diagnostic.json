@@ -1,0 +1,163 @@
+{
+  "budget": {
+    "elapsed_s": 17.405999999959022,
+    "max_rss_bytes": 8589934592,
+    "max_runtime_s": 180.0,
+    "peak_rss_bytes": 1630883840
+  },
+  "gates": {
+    "backward": true,
+    "cell_kcl": true,
+    "csc_kcl": true,
+    "finite_forward_bound": true,
+    "global_current_cell_kcl": true,
+    "l02_global_constitutive": true,
+    "l02_local_constitutive": true,
+    "l25_constitutive": true,
+    "local_global_rt0_joule": true,
+    "local_rt0_joule_passivity": true,
+    "matrix_power": true,
+    "passivity": true,
+    "physical_power": true,
+    "physical_source_kcl": true,
+    "shared_facet_jump_before_averaging": true,
+    "source_forward_bound": true
+  },
+  "inputs": {
+    "budget_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\reconstruct_astra_native_loaded_field.py",
+      "sha256": "354d9e004b189cf8193c2922c8fa4dc1903b407bebb295a4576673200ce6b213"
+    },
+    "local_r_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\assemble_astra_l25_rt0_resistance.py",
+      "sha256": "ec299b76564463bcea09a54aea4391cb2659e5267375cb7b3b2175d1fe475010"
+    },
+    "mesh": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-sheet-mesh-preflight-02\\mesh-stiffness.npz",
+      "sha256": "137b4952f739a75e7bf6f2e21684529a43c48558412df59faab0ad003ea10fb9"
+    },
+    "mesh_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-sheet-mesh-preflight-02\\result.json",
+      "sha256": "2ff4183b727373d8f6d9dbd32a39fcfc55a92b19bc55328b7e79082e766bfe59",
+      "status": "COMPLETED_CONDITIONAL_L02_SHEET_MESH_PREFLIGHT"
+    },
+    "operator": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-operator-02\\conditional-hybrid-operator.npz",
+      "sha256": "5ab5ba38aaf8c317aa05ae1d4f790c1d6447406ec25afe3c30e96536c714aa92"
+    },
+    "operator_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-operator-02\\result.json",
+      "sha256": "604a44f12ce843b4ccbf2d268ae4a6887b95cf9c3133c8f55576a484b49bc7b5",
+      "status": "PASS_CONDITIONAL_L02_RT0_P0_HYBRID_GLOBAL_OPERATOR_NO_SOLVE"
+    },
+    "pack": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-full-face-hybrid-operator-06\\hybrid-operator-pack.npz",
+      "sha256": "01ff4236af30621ca6cc4b87c4688c28ee23c22ed99b15aadd047f91a25c0b2c"
+    },
+    "pack_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-full-face-hybrid-operator-06\\result.json",
+      "sha256": "9b40449be75122903a0014e688c2ad228910fa11b2c704701e167a0f18ff78d7",
+      "status": "PASS_NO_SOLVE_L02_FULL_FACE_HYBRID_OPERATOR_PACK"
+    },
+    "prior_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\solve_astra_l02_l14_l25_combined_block_lgmres.py",
+      "sha256": "853f193fd51d3c204668019f7957cc74ea295a0e47206aae338076dfa796c692"
+    },
+    "restricted": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-restricted-hybrid-cell-geometry-02\\restricted-hybrid-cell-geometry.npz",
+      "sha256": "e03297ce292d082422585e71e47a05c3d3caed8ccfe0cd24e99d06ebeb7eac0b"
+    },
+    "restricted_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-restricted-hybrid-cell-geometry-02\\result.json",
+      "sha256": "7599746f63ab032bd6b78ec83e1e14fd1051b99f5aa716fe76facb2075d4b4b3",
+      "status": "PASS_REAL_L02_RESTRICTED_HYBRID_CELLS_CONDITIONAL_ZERO_EXTERIOR_FLUX"
+    },
+    "space": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-full-rt0-current-space-01\\l02-rt0-current-space.npz",
+      "sha256": "7cd77ee8b03fd0226596748a1913ee5a913381617498c9927ef12d8b080bc98f"
+    },
+    "space_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-full-rt0-current-space-01\\result.json",
+      "sha256": "eb7357b118cec6a4579f958fc0cba189ce0a06a4656c05711c058848366906b5",
+      "status": "PASS_CONDITIONAL_L02_RT0_SPARSE_CURRENT_SPACE_WITH_EXTERIOR_SUPPORTS"
+    }
+  },
+  "physical": {
+    "cell_kcl_max_abs_a": 8.706841894088782e-16,
+    "csc_kcl_max_abs_a": 5.678042861202402e-11,
+    "finite_forward_bound_ratio": 0.002018448097900632,
+    "global_current_cell_kcl_max_abs_a": 1.7166624858529353e-15,
+    "global_rt0_constitutive_max_abs_v": 2.9454894232867513e-15,
+    "global_rt0_joule_w": [
+      3.505123040965357e-07,
+      1.7867101231145398e-22
+    ],
+    "inactive_exterior_current_max_abs_a": 0.0,
+    "l25_constitutive_max_abs_v": 5.424821171598957e-19,
+    "local_global_joule_difference_ohm": 5.296970135571537e-21,
+    "local_rt0_constitutive_max_abs_v": 1.4811914091997778e-15,
+    "local_rt0_joule_w": 3.50512304096541e-07,
+    "matrix_power_closure_error_ohm": 7.752138773541324e-13,
+    "normalized_backward_residual": 2.0644262900920478e-20,
+    "physical_kcl_max_abs_a": 5.678042861202443e-11,
+    "power_closure_error_ohm": 7.611018087455151e-13,
+    "power_contributions_ohm": {
+      "finite_branches": [
+        7.59910002005268e-05,
+        4.167873218150023e-05
+      ],
+      "l02_cell_gc": [
+        2.5473735949282186e-18,
+        -6.213106329093214e-16
+      ],
+      "l02_contact_gc": [
+        1.4802727627114669e-21,
+        -3.6104213724669923e-19
+      ],
+      "l02_rt0_resistance": [
+        3.505123040965357e-07,
+        1.7867101231145398e-22
+      ],
+      "l14_distributed_gc": [
+        3.794789680544834e-11,
+        -9.255584586695242e-09
+      ],
+      "l14_sheet_dc": [
+        0.0002587921928865075,
+        1.5492029317373812e-15
+      ],
+      "l25_distributed_gc": [
+        3.198408707905925e-11,
+        -3.198408707906381e-09
+      ],
+      "l25_rt0_resistance": [
+        0.00015167747465992792,
+        -3.3881317890172014e-21
+      ],
+      "retained_gc": [
+        3.3864369548529787e-13,
+        -5.003072420268707e-11
+      ],
+      "termination": [
+        6.77622504835262e-05,
+        -0.0006300482747049575
+      ]
+    },
+    "reconstructed_field": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-hybrid-right-correction-01\\l02-reconstructed-field.npz",
+      "sha256": "b715867457410d6e2ba5154143b479f4d0868f263a3d487d5780c2c77c6c6f19",
+      "size_bytes": 81796516
+    },
+    "shared_facet_jump_max_abs_a": 1.7251461066135995e-15,
+    "source_forward_bound_ratio": 0.0007056316792227402,
+    "zdd_ohm": [
+      0.0005545735011944134,
+      -0.0005883820472006132
+    ]
+  },
+  "program": "SPD Decap PI Evaluator",
+  "scope": "Conditional finite2D RT0/P0 R/GC field only. Original finite/contact/five category actions and reconstructed cell currents are compared to saved CSC. No magnetic, mesh, broadband or PowerSI acceptance; numerical info/residual is separately required.",
+  "status": "PASS_CONDITIONAL_HYBRID_PHYSICAL_FIELD",
+  "validator_sha256": "fd28d5a3eef17d7d85e0fab52de1a88e1910faa2ad46a4cde3b16d3607c8abd9",
+  "version": "0.23.1"
+}

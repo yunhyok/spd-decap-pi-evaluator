@@ -1,0 +1,354 @@
+# SPD Decap PI Evaluator v0.23.1 — 연구 방향 독립 재검토 및 Peer Review 요청서
+
+> 게시 편집 주: 2026-09-10 레드팀 원문의 결론과 수치를 보존하고 파일 링크·경로 안내만 GitHub용으로 바꿨다. [원문](snapshots/red-team/20260910-peer-review.md.txt)과 [원문 근거 JSON](snapshots/red-team/20260910-peer-review-evidence.json)을 함께 보존했다. 아래의 “이번에 재해시하지 않았다”는 레드팀 검토 당시 범위다. 이후 **게시 준비에서는 NPZ 7개를 복사하고 SHA256을 재계산하여 receipt와 일치함을 확인**했다. 계산·solver·SPD 파싱을 재실행한 것은 아니다. [대형 데이터 다운로드 및 범위](DATA.md).
+
+문서일: 2026-09-10 KST · 문서 상태: 외부 동료 심사용 · 검토 책임: 현재 Astra/xhigh 레드팀 세션
+
+대상은 SPD에서 전원 무결성(Power Integrity, PI)을 계산하는 연구 구현이다. 14:46에 보고된 `forward-closed-gcrotmk-01`의 실패와 14:49의 완료된 블록 분해까지 검토했다. 15:01 정지 체크포인트와 15:03 공개 종료 메시지로 연구 중지 상태를 대조했다. **이 문서는 재개 승인이 아니다. 모든 계산·구현·하위 연구는 새 사용자 지시 전까지 중지 상태를 유지한다.**
+
+본문의 **[사실]**은 읽은 코드·완료 산출물·명시된 문헌으로 확인한 내용, **[해석]**은 그 증거에 대한 판단, **[제안]**은 실행하지 않은 후속 선택이다. 작성 과정에서 작은 JSON, 코드, 문서와 공개 메시지만 읽고 저장된 숫자를 재계산했다. SPD 재파싱, 대형 배열 로드·해시 재계산, FMM, 새 solver, 구현 변경, 추가 위임은 하지 않았다. 제외 지시가 있는 `accuracy_parse.py`는 열거나 실행하지 않았다.
+
+## 1. 심사 요청의 핵심과 최초 목표
+
+**[해석] 현재 연구는 방향 재설정이 필요하다.** 정확한 공통 물리 모델과 포트 오차 예산이 확립되기 전에, 조건부 두 층 모델의 보조행렬을 반복 수정하는 작업이 주된 경로가 됐다. 구현의 일관성은 좋아졌지만 빠르고 정확한 실제 보드 계산이라는 목표에 도달했다는 증거는 없다. 다음 보조행렬 변형이나 장시간 반복을 자동으로 이어가는 방식은 보류해야 한다.
+
+그렇다고 모든 작업이 무의미했거나 GCROT·PEEC·FEM 중 한 방법이 불가능하다고 결론내릴 근거도 없다. L04의 닫힌 전류 누락을 찾아 보존했고, 동일 시작 상태·동일 원래 연산자에서 대조하는 기반과 비싼 작용의 재사용 자료를 확보했다. 그러나 **국소 방정식을 정확히 푸는 것, 현재 이산 방정식을 푸는 것, 실제 보드를 정확하게 표현하는 것은 서로 다른 성과**다.
+
+**[사실] 최초 목표**는 주 관심 대역 **1kHz~100MHz**에서 동일 조건의 복소 임피던스 Z를 PowerSI 수준으로 추정하면서, 부품 선정·배치 변경에 사용할 만큼 빠른 pre-design 도구를 만드는 것이다. 1GHz는 보조 진단이다. 정확한 공통 물리 모델이 우선이며, 512GB RAM·Threadripper·가능한 GPU는 이를 계산하는 수단이다. 현재 노트북의 32GiB 실행 한도가 물리를 생략할 근거는 아니다.
+
+현재 외부 비교의 기준값은 다음과 같다.
+
+- 기존 1MHz 보드 비교의 복소 오차: **26.182684%**. 여기서 기존 ‘검증’은 해당 계산·비교 결과의 검토를 뜻하며, PowerSI 수준의 제품 정확도 달성을 뜻하지 않는다.
+- 최근 10MHz 미수렴 후보: 약 **54.59%**. 최신 값은 54.593151%다. 1MHz와 다른 주파수·모델이므로 26%→54%를 같은 조건에서의 악화율로 계산하지 않는다.
+- 최신 모델의 100MHz 응답, 광대역 복소 Z, 공진 및 반공진 위치·높이, 독립 설계, 부품 변경 효과: 완료 증거 없음.
+
+**[미확인]** ‘PowerSI 수준’의 허용 오차와 ‘빠름’의 시간 목표가 현재 자료에서 수치 계약으로 확정돼 있지 않다. 복소 오차의 절대 floor, 위상·공진 허용량, 대표 포트 수, 처음 읽기부터의 시간과 반복 설계 변경 시간, 목표 장비를 심사에서 먼저 정해야 한다. PowerSI 결과도 포트·재료·종단·해석 설정이 일치하는 비교 기준이지 무조건적인 실물 정답은 아니다.
+
+## 2. 용어, 기호와 평가량
+
+시간 의존성은 `exp(+jωt)`, `j²=-1`, `ω=2πf`로 쓴다. T는 켤레를 취하지 않는 전치, H는 켤레 전치다. Ω는 ohm, mΩ=10⁻³Ω, µΩ=10⁻⁶Ω, nΩ=10⁻⁹Ω다.
+
+| 용어·기호 | 이 문서의 뜻 |
+|---|---|
+| SPD | 도체 형상·층·재료·연결 등 계산 입력을 담은 보드 파일 |
+| mesh, h, p | 공간을 나눈 메시, 요소 크기, 요소 안의 근사 차수. 요소 수가 많아도 필요한 장 모드가 없을 수 있음 |
+| RT0 | Raviart–Thomas lowest-order 전류 기저. 여기서는 삼각형 사이의 법선 전류 연결을 보존하는 sheet 전류 표현 |
+| v, i₂₅, g, ψ | 각각 회로 전위, L25 분기 전류, L04 독립 접점 주입 전류, L04 닫힌 전류의 좌표 |
+| P, C | 접점 전류를 저항 sheet 전류로 올리는 lift, 닫힌 전류 좌표를 분기 전류로 바꾸는 행렬. C는 여기서 정전용량 기호가 아님 |
+| R₀₄, H_R | L04 저항 행렬, `H_R=CᵀR₀₄C`. 아래 켤레 전치 기호 H와 이름을 구분 |
+| L, L_self | 자기 flux linkage를 만드는 인덕턴스 작용과 그중 지정된 local self 부분 |
+| G/C | 도전성·유전 손실 및 정전용량 결합. 전류 기저 행렬 C와 구분하여 G/C로 표기 |
+| A_phys, A_s | 현재 물리 근사와 이산화로 만든 선형 연산자, 그 스케일된 계산 표현. ‘true A’는 구현이 기준으로 삼는 A_s이며 정확한 Maxwell 해라는 뜻이 아님 |
+| D, x_s, b_s | 고정 대각 스케일, 계산 좌표, 원래 우변. `x_phys=D x_s`, `A_s=D A_phys D`, `b_s=D b_phys` |
+| r_s=b_s−A_s x_s | **방정식 불일치(residual)**. 현재 후보가 현재 방정식을 얼마나 만족하지 않는지 나타냄 |
+| M, M_b | solver에 주는 근사 역작용(preconditioner), 그중 ψ를 제외한 기존 블록의 보조 풀이. SciPy의 M은 A의 근사 역행렬 작용임 |
+| GCROT(m,k) | flexible Krylov 반복법. m은 내부 반복 수, k는 보존하는 부분공간 크기. 이번은 m=2, k=0, outer cycle 1회 |
+| FMM | Fast Multipole Method. 원거리 상호작용을 빠르게 계산하는 방법이며 그 자체가 물리 모델·근접 구적의 정확도를 보증하지 않음 |
+| KCL, MNA | Kirchhoff Current Law(전류 보존), Modified Nodal Analysis(전위·분기 전류를 함께 쓰는 회로 방정식) |
+| VIE, PEEC | Volume Integral Equation(체적 적분 방정식), Partial Element Equivalent Circuit(부분 소자의 등가회로). 이름이 같아도 전류·전하와 포함 물리의 정의는 다를 수 있음 |
+| BEM/SIE, FEM | Boundary Element Method/Surface Integral Equation(경계 요소법/표면 적분 방정식), Finite Element Method(유한요소법) |
+| MQS, DC | Magneto-Quasi-Static(자기준정적 근사), 직류. MQS R/L 추출은 완전한 전기장·전파 PI 모델과 구분 |
+| Schur, adjoint | 다른 블록을 소거해 얻는 결합 방정식, 관심 출력의 오차·민감도를 계산하는 수반 문제 |
+| PWR/DGND, Re/Im | 전원/디지털 접지 net, 복소수의 실수부/허수부 |
+| Z_raw | 후보 전위에서 읽은 포트 전압/전류. 이번은 1A 여기이므로 전압의 수치가 Ω 단위 Z와 같음 |
+| J_stat | 현재 대칭 이산 방정식에 대한 stationary bilinear functional. 전류밀도 J와 다른 기호이며 실물 전력·정답 Z를 뜻하지 않음 |
+
+비교식은 `E_Z=100|Z−Z_ref|/|Z_ref|`, `Δφ=arg(Z/Z_ref)`, `ΔdB=20log10|Z/Z_ref|`다. 일반적인 여러 포트 비교에서는 |Z_ref|가 작은 항에 사전 정의한 절대 오차 floor가 필요하다. 현재 수치 표의 10MHz 기준은 0에 가깝지 않으므로 위 분모를 그대로 사용했다.
+
+계산 표의 전체 norm은 `||r_s||₂`, original-RHS 상대값은 `||r_s||₂/||b_s||₂`다. **원래 RHS**는 보정 방정식의 우변 `r_warm`과 다르다. 서로 다른 모델·D를 쓴 전체 norm을 직접 비교하거나, 스케일된 블록 norm을 A 단위 KCL 오차로 읽으면 안 된다.
+
+## 3. 현재 실제 모델과 원래 연산자
+
+### 3.1 계산 공간과 공통 전류 표현
+
+**[사실]** 최신 조건부 시스템에는 전위 3,178,103개, L25 분기 전류 604,031개, L04 독립 접점 38,277개, 닫힌 전류 좌표 644,870개가 있어 총 **4,465,281개 계산 미지수**가 있다. L25 579,177개 삼각형과 L04 1,589,827개 삼각형의 centroid를 합쳐 2,169,004개 지점에서 자기 작용을 계산한다. L04 분기 전류는 2,272,974개다. 이 크기는 목표 정확도 달성의 증거가 아니다.
+
+L04는 다음과 같이 표현한다.
+
+```text
+q₀₄ = P g + C ψ
+B₀₄ P g = E g,       B₀₄ C = 0
+H_R = Cᵀ R₀₄ C,      Pᵀ R₀₄ C ≈ 0
+```
+
+`B₀₄`는 sheet 전류의 발산/보존 연산자, E는 접점 주입 매핑이다. Pg는 지정 접점 전류에 대한 저항 최소 에너지 전류이고, Cψ는 그 주입을 바꾸지 않는 내부 순환 전류다. 자기 유도가 있는데 Pg만 유지하면 순환 전류 재분포가 빠진다. Cψ를 되살린 것은 중요한 수정이다.
+
+그러나 이 완전성은 **현재 `B₀₄q=Eg`인 조건부 sheet 공간**에 한정된다. 분포된 셀 전하를 위한 추가 발산 원천, 모든 재료 계면 및 도체 두께 방향의 장이 이 식에 자동 포함되는 것은 아니다. ‘complete-current’라는 산출물 이름을 완전한 3D 보드 모델로 읽으면 안 된다.
+
+**Adaptive mesh의 구분과 확인 범위.** 형상 기반 국소 세분화는 pad/via 크기·모서리·좁은 간격 등을 보고 미리 요소 크기 h를 정하는 방식이다. 해의 오차 추정에 따른 적응 세분화는 계산한 해와 오차 지표를 이용해 다음 h/p 변경을 선택한다. 둘은 다르며, 파일명에 adaptive가 있거나 요소 수가 많다는 이유로 후자가 구현·검증됐다고 할 수 없다. **이번 세 GCROT 대조는 이미 저장된 L25/L04 고정 메시를 재사용했고 해에 따라 메시를 바꾸는 반복은 포함하지 않았다.** 이번에 확인한 것은 그 메시의 크기, 전류 공간과 연산자 연결이다. 전체 프로그램의 실제 메시 크기 선택 규칙, 포트 오차를 기준으로 한 적응 알고리즘 및 현재 보드의 h/p 수렴 증거는 확인하지 않았다. Peer reviewer는 형상 규칙에 의한 세분화인지 해 기반 적응인지, 어떤 포트 오차 지표가 다음 변경과 종료를 결정하는지, 고정 메시 간 비교가 같은 물리·구적 조건인지부터 확인해야 한다.
+
+### 3.2 코드로 확인한 A의 작용
+
+다음은 코드의 `interface_apply`와 `assemble_ad2/ad3`를 같은 표기로 정리한 것이다. `Y, ΔY`는 저장된 native/유한 도체/종단/G/C의 회로 작용, B₂₅는 L25 incidence, U는 L04 접점 연결, D_c는 접점 어드미턴스 대각이다. D_c는 계산 스케일 D와 다르다. `Z₀₄ᴿg`는 저항 NtD(Neumann-to-Dirichlet), 즉 접점 전류로부터 접점 전위를 얻는 작용이다.
+
+```text
+d = D_c⁻¹(Uᵀv + g)
+[f₂₅ ; f₀₄] = L [i₂₅ ; P g + C ψ]
+
+A_phys x_phys 의 네 블록:
+전위:       (Y + ΔY)v + B₂₅ i₂₅ − U d
+L25 전류:  B₂₅ᵀv − R₂₅ i₂₅ − jω f₂₅
+L04 접점:  −d − Z₀₄ᴿg − PᵀR₀₄Cψ − jω Pᵀf₀₄
+L04 closed: −CᵀR₀₄(Pg+Cψ) − jω Cᵀf₀₄
+```
+
+여기서 x_phys는 `(v,i₂₅,g,ψ)`다. 구현은 작은 직교 항도 명시적으로 조립한다. full A 평가에서는 Pg를 다시 계산하고, 두 층의 임의 전류에 공동 자기 작용을 적용한 뒤 Pᵀ/Cᵀ로 되돌린다. 마지막 후보에 대한 독립 A 적용은 Krylov 안에서 저장한 작용의 선형결합과 비교된다. **같은 A 구현을 다시 호출한 독립 계산**이지, 다른 전자장 구현 또는 독립 구적으로 A 자체를 검증한 것은 아니다.
+
+### 3.3 포함 범위와 소유가 확정되지 않은 항
+
+| 물리/표현 | 실제 확인한 범위 | 남는 한계 |
+|---|---|---|
+| Native 회로·종단·분산 | 부분별 native dispersion/termination, source-owned scalar R/L, L02 cell/contact G/C 및 L14/L25 G/C 주파수 조립 | 같은 보드 전체 Maxwell 경계 문제와의 등가성은 미확정. 기존 범주의 G/C 재조립은 누락된 결합의 복원이 아님 |
+| 유한 도체 저항 | L02/L14 등 기존 회로 경로, L25 및 L04 sheet 저항과 실제 접점 연결 | L14/L25 DC sheet R, L04 고정 저항 NtD가 현재 경로에 유지됨. 두께 방향 skin/proximity를 전 대역에서 해결한 모델이 아님 |
+| 자기 self/mutual | L25 및 L04의 평면 전류를 함께 적용. L25 self+기존 shared-edge near 보정, L04 self 추가 | L04 near 및 모든 층간 근접 구적 미완. 두 층 외의 전체 도체/비아 귀환 자기 결합은 완전하지 않음 |
+| 자기 Green kernel | `lfmm3d` 및 1/(4πr)의 Laplace 작용, 두 접선 성분의 실수·허수 4회 호출 | 이 자기 블록에는 retarded kernel의 위상 지연이 없음. 전체 구현을 broadband full-wave 검증 완료라고 할 수 없음 |
+| 두께·기하 | L25/L04 midplane 1527/165µm, 간격 1362µm, 기존 조건부 도체 합집합·RT0 공간 | 유한 두께 전류, 모서리·접합 spreading, 도금/채움 및 포트 footprint의 민감도와 소유가 남음 |
+| 전하·유전체 | 기존 회로 G/C와 제한된 접점 주입 | 전역 전류·계면/체적 전하를 하나의 연속식으로 함께 계산하는 완전한 모델은 아직 아님 |
+| 전체 전원/귀환 | 기존 source 목록은 선택 PWR+DGND가 35개 층에 걸침 | L02/L04 또는 L25/L04 성공을 전체 귀환 검증으로 확대할 수 없음. 다른 net의 결합 배제도 입증되지 않음 |
+
+**[사실]** 기존 source 감사는 47개 물리 gap 중 36개만 G/C 표에 있고 11개가 제외됐음을 기록했다. L03/L05 등의 artwork 부재가 원본 구리 부재를 뜻하지 않으며, 해당 층에 많은 trace가 존재한다. 최신 주파수 조립 자료는 기존 범주를 재조립한 것으로, 이 전체 전기장 범위 공백을 닫았다는 증거는 발견하지 못했다. 이 수치는 기존 감사 기록의 재사용이며 이번에 SPD를 다시 읽어 확인한 값은 아니다.
+
+**[해석]** 내부 구리 손실/자기장, 외부 자기장, gap 항, scalar via L, 전기장 G/C마다 어떤 식과 영역이 소유하는지 한 표와 한 경계 문제로 고정해야 한다. 같은 영역을 소유하는 volume/표면 연산자에 내부 임피던스나 경험식 L을 더하면 중복될 수 있고, 반대로 회로 stamp를 보존했다는 사실만으로 누락 fringing·비인접 결합이 복원되지는 않는다. 현재 자료는 중복 가능성을 경고하지만, 그 중복이 최근 54.59% 오차의 원인이라고 확정하지는 못한다.
+
+## 4. M 변경과 A 변경을 구분한 실제 대조
+
+### 4.1 이번 세 가지 보조 풀이
+
+**[사실]** 정오 이후 세 full cycle은 모두 같은 THIRD 후보, original RHS, 스케일, 주파수 연산자·bridge를 입력으로 사용했다. 입력 receipt 해시를 대조했고, 저장된 실행 코드의 `a_apply`와 `load_warm_and_scales` AST가 세 실험에서 동일함을 별도로 확인했다. 결과가 다음 실험의 시작점으로 이어지는 연속 세 cycle이 아니다.
+
+`z_b=M_b r_b`는 ψ를 제외한 블록의 기존 근사 역작용이다. z_g는 그 접점 부분, Sg와 Sψ는 각각 접점과 closed 좌표의 스케일이다. `H_ω=H_R+jωCᵀL_self C`로 두면 다음과 같다.
+
+| 실험 | closed 보정 | 바뀐 대상 |
+|---|---|---|
+| 기준 real-H | `zψ=−(Sψ H_R Sψ)⁻¹ rψ` | 저항 closed block을 쓰는 M |
+| diagonal Hω | `zψ=−(Sψ H_ω Sψ)⁻¹ rψ` | M의 closed diagonal 근사만 자기 self 포함 |
+| forward Hω | `cross=−jω Sψ CᵀL_self P Sg z_g`, `zψ=−(Sψ H_ω Sψ)⁻¹(rψ−cross)` | M에 접점→closed 단방향 결합 추가 |
+
+forward M은 접점 보정이 유도하는 closed force를 고려하지만, 그 closed 보정이 다시 다른 블록에 주는 영향을 역방향으로 함께 풀지는 않는다. **A는 양방향 결합을 유지한다.** 그러므로 forward 실패를 물리 방정식에 역방향 항이 없다는 주장으로 바꾸면 안 된다. 반대로 단방향 삼각 M의 국소 closed 방정식을 정확히 푼 사실이 전체 A의 근사 역으로 충분하다는 뜻도 아니다.
+
+R-only→L25 자기 추가→L04 closed/두 층 공동 자기 추가는 A와 표현 공간을 바꾼 이전 단계다. 최근 real-H→Hω→forward는 **같은 A를 푸는 보조 방법의 변경**이다. 전자를 후자와 섞어 오차 감소나 처리 속도를 비교하지 않는다.
+
+### 4.2 비교 가능한 전체·블록 방정식 불일치
+
+공통 시작 상태의 `||b_s||₂=0.00100108140073312`다. 아래 블록은 모두 같은 고정 스케일에서 계산된 norm이며 물리 단위 전류 오차가 아니다.
+
+| 상태 | 전체 norm | original-RHS 상대값 | 전위 | L25 | 접점 | closed |
+|---|---:|---:|---:|---:|---:|---:|
+| 공통 THIRD 시작 | 1.396392415 | 1394.883986 | 0.000898558 | 0.009963268 | 1.396320661 | 0.010015741 |
+| real-H 기준 | 0.989076263 | 988.007831 | 0.000898550 | 0.006871570 | 0.989033779 | 0.006001015 |
+| diagonal Hω | 0.689818096 | 689.072932 | 0.000898458 | 0.009763765 | 0.689678743 | 0.009803022 |
+| forward Hω | 0.711289132 | 710.520774 | 0.000898416 | 0.009989406 | 0.711146875 | 0.010087401 |
+
+각 full cycle은 `m=2,k=0,maxiter=1`, M 2회·전체 A 3회·scalar FMM 12회다. 마지막 A는 최종 후보를 새로 적용하는 데 사용됐다. B1/Q/R 카운터는 내부 보조 풀이 횟수로, 각각의 저항·전력 등 물리량과 혼동하지 않는다. 세 경우 모두 `info=1`, 원래 수치 기준은 실패했다.
+
+### 4.3 포트·시간·메모리와 통과의 의미
+
+10MHz 기준은 port18 `ADC_VDD_075_VTRIP_SRAM/0`, 1A, `Z_ref=1.335133270526+j0.876112983039mΩ`다. 실행 후 이미 보유한 개발 reference와 비교한 값이며 독립 holdout 성적은 아니다.
+
+| 상태 | Z_raw (mΩ) | J_stat (mΩ) | 복소 오차 (%) | 위상 차이 (°) | abs(J−Z) (mΩ) | 시간 (초) | private peak (GiB) |
+|---|---|---|---:|---:|---:|---:|---:|
+| real-H 기준 | 0.842518701+j0.156772027 | 0.930655044+j0.250277389 | 54.595639 | -22.732056 | 0.128496178 | 979.954 | 22.164 |
+| diagonal Hω | 0.842513576+j0.156823425 | 1.070544364+j0.219711441 | 54.593165 | -22.728615 | 0.236543743 | 1030.469 | 22.164 |
+| forward Hω | 0.842513479+j0.156823763 | 1.081215730+j0.212053651 | 54.593151 | -22.728592 | 0.245008378 | 1075.469 | 22.164 |
+
+메모리는 외부에서 관측한 peak private bytes를 GiB로 환산했다. 시간은 해당 native worker의 실행·저장 경과시간이다. 앞선 데이터 전처리·기저/행렬 자격 시험·개발·검토 시간 및 제품의 첫 입력 로드 시간은 포함하지 않는다.
+
+| 상태 | 사전 전체 norm cap | 사전 gap cap (mΩ) | full / gap 진행 판정 | 원래 수치 판정 | 최종 A 대 선형결합 상대 차이 |
+|---|---:|---:|---|---|---:|
+| real-H 기준 | 1.117113932 | 0.160619330 | PASS / PASS | info1, FAIL | 3.8240e-11 |
+| diagonal Hω | 0.791261010 | 0.102796942 | PASS / FAIL | info1, FAIL | 6.7942e-11 |
+| forward Hω | 0.551854477 | 0.102796942 | FAIL / FAIL | info1, FAIL | 6.5342e-11 |
+
+대조 Hω는 전체 norm을 기준 cycle보다 30.26% 줄였지만 |J−Z|는 84.09% 증가했다. forward는 이전 최선 전체 norm보다 3.11% 크고, 이전 최선 gap보다 90.67% 크다. 두 최신 M 사이 raw Z의 차이는 약 **0.352nΩ**에 불과하다. 이는 포트 값이 강하게 정체되어 있음을 보여주지만, 수렴한 정확한 Z임을 보여주지 않는다.
+
+세 full cycle의 외부 시간 합은 **3,085.892초, 51.43분**이다. Hω 자격·forward 자격·저장 union 진단까지 더한 6개 worker 합은 **3,130.985초, 52.18분**이다. 모든 해당 worker는 exit0였지만 그중 대조 실험은 선별 기준을 실패했다. 프로세스 종료 성공과 수치 성공을 구분한다. FMM 합은 real-H 766.845초, Hω 812.775초, forward 829.795초로 각각 전체의 약 78.3%, 78.9%, 77.2%였다.
+
+역사적 비교의 범위도 고정한다.
+
+| 이전 결과 | 확인 가능한 값 | 최근 대조와의 차이 |
+|---|---|---|
+| 기존 R/G/C 1MHz | 복소 오차 26.182684%, 기존 비교 SHA 유지 | 주파수·모델이 달라 최근 표와 직접 우열 비교 불가 |
+| R-only 10MHz | 63.411798%, original-RHS 상대 0.000220726, 물리 진단 19/23 | 자기 없는 다른 A. L04 접점 KCL 통과, 전체 KCL/전력 등 4개 기존 기준 실패 |
+| L25 자기 추가 10MHz | 54.603488%, 상대 3.253614, 물리 진단 18/23 | 다른 A. 전체 KCL 3.708mA·L25 구성 방정식 0.312399mV·전력 차이 0.150906mΩ |
+| 세 방향 complete-current | 54.594380%, 상대 1394.883986, abs(J−Z) 0.200774mΩ | 최근 세 full cycle의 공통 시작점. 이 후보 자체는 저장 선형결합, 새 최종 A 적용 전 |
+| 100MHz | 연산자 조립 자료 있음 | 응답 미완, 오차/공진 검증 없음 |
+
+최신 세 full cycle에는 새 전체 물리 field 검증이 없다. 결과 파일의 `actual_magnetic_physical_failures` 5개는 **예전 L25 자기 모델의 진단을 상속한 목록**이다. 이 목록을 최신 후보의 실제 검사 결과나 정확한 실패 개수로 사용해서는 안 된다.
+
+## 5. 왜 국소 PASS가 목적 달성으로 이어지지 않았는가
+
+### 5.1 무엇이 실제로 반증됐는가
+
+**[사실]** forward 자격 시험은 같은 첫 M 입력에서 자기 결합을 포함한 국소 closed 불일치를 0.0925735363에서 4.19416e−15로 줄였다. 그러나 그 M을 전체 A 안에 넣은 대조는 전체 진행 기준을 실패했다. 따라서 **‘그 국소 closed 방정식만 정확히 풀면 전체 결과도 개선된다’는 기대는 이번 대조에서 지지되지 않는다.**
+
+**[사실]** 저장한 기준/Hω 네 방향의 union은 rank4였고, 그 공간의 최소 전체 norm 0.5642063이 정해진 cap 0.5518545를 넘었다. 새 FMM 없이 같은 span의 계수 조정으로 full cap을 넘을 수 없음을 판별한 것은 유용했다. 다만 이는 그 4개 방향과 고정 norm에 대한 결과다. 다른 Krylov 공간·장기 수렴·다른 A의 가능성까지 반증하지는 않는다.
+
+**[해석]** 두 내부 방향만 허용한 cycle은 엄격한 비용 제한 아래의 진행 판별이지 전체 알고리즘의 수렴성 실험이 아니다. 이번 결과로 GCROT 계열을 폐기할 수는 없다. 하지만 cycle마다 16~18분이 걸리는 상태에서 충분한 원인 판별 없이 긴 반복을 허용할 근거도 없다.
+
+### 5.2 서로 다른 지표가 다른 문제를 본다
+
+14:49 저장 블록 분해에서 forward의 접점 블록은 `||r_s||₂²`의 **99.9600%**였다. 반면 `x_sᵀr_s`의 각 블록 항의 크기는 다음과 같다.
+
+| 블록 | real-H의 항 크기 (µΩ) | Hω (µΩ) | forward (µΩ) |
+|---|---:|---:|---:|
+| 전위 | 81.063 | 81.011 | 81.004 |
+| L25 | 156.178 | 157.129 | 157.061 |
+| L04 접점 | 25.828 | 23.519 | 24.131 |
+| L04 closed | 57.856 | 209.742 | 222.360 |
+
+복소 항은 서로 상쇄하므로 표의 크기를 더한 비율을 ‘인과 기여율’로 해석하지 않는다. 그래도 전체 norm을 지배하는 접점과 J−Z를 크게 바꾸는 closed 블록이 다르다는 사실은 분명하다. 전체 norm 최소화가 곧 포트 오차 최소화라는 근거가 없다. 동일 입력의 M1 및 ψ 방향 차이로 원인을 분리하는 후속 감사는 **held/미완료**이며 이번에 실행하지 않았다.
+
+### 5.3 J_stat과 |J−Z|의 정확한 한계
+
+**[사실·수식]** 이번 1A, 동일 입력/출력 포트와 대칭 좌표에서 `Z_raw=b_sᵀx_s`이고 코드의 지표는 다음과 같다.
+
+```text
+J_stat = b_sᵀx_s + x_sᵀr_s = 2b_sᵀx_s − x_sᵀA_s x_s
+J_stat − Z_raw = x_sᵀr_s
+```
+
+`A_sᵀ=A_s`이고 정확한 이산 해 x*가 존재할 때, e=x*−x_s라 두면 `J_stat(x*)−J_stat(x_s)=eᵀA_s e`다. 복소 bilinear 형태는 양의 오차 norm이 아니다. J_stat이 해 근처에서 stationary하다는 성질을 전방 오차 상계나 실제 물리 전력으로 바꾸면 안 된다. 수동성은 켤레 전치를 사용하는 `Re(aᴴZa)≥0`과 관련되며 다른 검사다.
+
+가장 작은 대수 반례도 있다. `A=I₂`, `b=(1,0)`, 후보 `x=(1/2,1/2)`이면 정확한 Z는 1, raw Z는 1/2다. `r=(1/2,−1/2)`이고 `xᵀr=0`이므로 **|J−Z|=0인데 포트 오차는 50%**다. 이는 실제 보드 실험이 아니라 항등식의 한계를 보이는 산술이다.
+
+**[해석]** |J−Z| 악화는 현재 후보의 일관성 경고로 유지할 가치가 있다. 그러나 그 값의 20% 감소를 모든 좋은 보정의 필수 조건으로 만들면 실제 포트에 유익한 방향을 잘못 버릴 수 있다. Hω를 실패로 기록한 원래 약속은 보존하되, 그 실패가 더 큰 공간에서의 수렴 성능 열세를 증명한다고 해석해서는 안 된다.
+
+### 5.4 20% screen과 1e−9 기준의 목적 적합성
+
+**[사실]** 20%는 물리식이나 제품 요구에서 유도된 값이 아니라 해당 단계의 사전 진행 선별(screen) 수치다. 기준 cycle은 두 지표 모두 20% 개선해 PASS였고, paired/forward는 이를 실패했다. forward의 공통 cap은 서로 다른 기존 결과에서 각 지표의 최선을 가져온 값이다. 하나의 기존 해가 그 최선 두 값을 동시에 달성했던 것은 아니다.
+
+**[해석]** 동일 시작 상태와 사전 cap은 사후 목표 변경을 막지만, cap 자체의 과학적 타당성을 보증하지 않는다. 독립 A 적용당 오차 예산 감소, 실제 포트의 수치 불확실성, 예상 남은 비용이 우선이어야 한다. 1.1배 시간 cap 또한 단발 측정의 운용 제한이다. forward는 1.09747배로 간신히 통과했으므로 반복 측정 없이 유의한 성능 차이라고 보기 어렵다.
+
+원래 `1e−9` 기준은 `||r_s||/||b_s||`에 적용되며, 이번 절대 목표는 **1.0010814e−12**다. 최신 상대값 710.52는 이 기준뿐 아니라 훨씬 느슨한 통상적 작은 상대 불일치와도 멀다. 따라서 실패를 단지 ‘너무 엄격한 마지막 몇 자리’ 문제라고 설명할 수 없다.
+
+동시에 독립 최종 A와 저장 선형결합의 절대 차이는 약 **3.78e−11~4.69e−11**로 목표 절대값의 **38~47배**였다. 이는 현재 큰 불일치 상태에서의 측정이며 수렴 한계의 증명은 아니다. 다만 지금의 근사 작용·스케일·내부 풀이 정밀도로 1e−9를 안정적으로 달성하고 포트 정확도와 연결할 수 있는지 검증되지 않았다는 경고다. 국소 1e−14 PASS만 계속 쌓아도 이 문제는 해결되지 않는다.
+
+**[제안]** 기존 판정을 덮어쓰지 말고 별도 전향적 기준으로 (a) 물리 단위 KCL·단위·연결·항 소유, (b) 수치적 포트 오차 예산, (c) 이산화/구적 오차 예산, (d) PowerSI 비교 및 설계 판단의 허용량을 분리한다. 행 스케일에 따른 전체 norm, 물리 단위 블록 검사와 backward error를 구분한다. `||r||/(||A||||x||+||b||)` 같은 backward error는 유용할 수 있으나 현재 ||A||를 측정하지 않았으므로 이 문서에 수치를 만들지 않았다.
+
+## 6. 원인 가설과 반증 가능한 판단
+
+| 가설 | 지지 증거 | 아직 증명되지 않은 점 / 반증 조건 |
+|---|---|---|
+| H1. 전체 결합에 비해 M의 일부 블록·방향이 부적절하다 | 국소 Hω/forward 역작용 성공과 전체 실패가 공존. 접점 norm 개선과 closed J−Z 악화 | 단방향 feedback이 유일 원인이라는 증거는 없음. 같은 물리의 신뢰 가능한 축소 기준에서 충분한 결합 M도 같은 실패를 보이면 단순 M 가설 약화 |
+| H2. 현재 norm과 매우 짧은 부분공간이 포트에 중요한 방향을 충분히 선택하지 못한다 | 접점 99.96% 지배, 전위 블록 거의 그대로, 여러 후보의 Z 정체 | 2방향→4방향 결과만으로 전체 공간의 정체를 증명하지 못함. 포트 오차를 독립 추정한 결과도 작거나 충분한 공간에서도 동일하면 가설 재평가 |
+| H3. A의 물리·구적·공간 누락이 수치 오차와 별개로 크다 | 제한된 두 층 자기 범위, 기존 G/C 공백, DC sheet R, 미완 near/전역 귀환 | 아직 현재 A를 충분히 풀지 못해 54.59%를 특정 누락 항에 배분할 수 없음. 소유가 완전한 공통 기준과 수렴한 같은-A 해가 일치하면 해당 누락 가설 약화 |
+| H4. 포트/종단/재료의 비교 조건 차이가 포함돼 있다 | 포트 이름·1A 및 저장 reference는 연결되지만 전체 EM footprint·de-embedding·reference 해석 설정의 완전 대응은 이번에 재검증하지 않음 | 실제 오류를 발견했다는 뜻은 아님. 해당 계약의 원문/설정 일치가 확인되면 가설 우선순위 감소 |
+| H5. 작은 보조 풀이 정확도를 높이는 데 과투자했다 | 국소 1e−14에도 전체 710.52. full cycle 비용의 대부분은 FMM | 특정 내부 정확도가 전체 잡음을 지배한다면 완화가 해를 악화시킬 수 있음. 무조건 tolerance를 낮추지 말고 포트 영향·작용 일관성으로 판별 |
+| H6. 연구 운영이 ‘한 실패→한 패치→한 큰 대조’로 굳었다 | half-day 안에 방향/보조행렬 변형과 반복 자격·대조가 이어졌으나 광대역·독립 설계 성과는 없음 | 각 패치가 모델 선택 질문에 답한다면 가치가 있음. 다음 실험의 결정·기각 조건을 문서 한 줄로 못 쓰면 구현을 시작하지 않는 것이 타당 |
+
+**[해석]** 현 단계에서 가장 강한 결론은 H1/H2에 관한 제한된 수치 진단과 H3의 명백한 검증 공백이다. ‘물리가 틀려서 54%다’, ‘solver만 고치면 정확하다’, ‘더 큰 메모리면 해결된다’ 중 어느 하나도 증명되지 않았다. 따라서 정확한 모델을 정의하는 일과 그 모델을 푸는 전략을 함께 심사해야 한다.
+
+## 7. 유지·수치 재설계·물리/이산화 전환의 비교
+
+아래는 구현 지시가 아니라 peer reviewer가 선택할 대안이다. 같은 입력·포트·물리 범위와 검증 오차를 맞추지 않은 속도 우열은 인정하지 않는다.
+
+| 선택 | 얻을 수 있는 것 | 주요 위험·비용 | 권고 |
+|---|---|---|---|
+| A. 현재 조건부 A와 M를 유지하며 반복 | 이미 있는 작용·캐시·연결 자료 활용, 같은-A 수치 수렴 가능성 확인 | 3개 비교 cycle에 51.43분. 물리 범위가 불완전하고 현재 제품 시간 목표와 멂 | 연구 자료로 보존. 동일 장기 cycle 자동 연장은 보류 |
+| B. 같은 A에서 수치 전략 재설계 | 물리 변경과 분리된 진단. 블록 스케일, 양방향 Schur 결합, 적정한 flexible/recycling 공간, inexact solve 정책을 비교 가능 | 작은 matrix의 완벽한 역작용이 전체에 유효하다는 보장은 없음. 큰 factor·새 프레임워크가 먼저 생길 위험 | 공통 기준·포트 오차 지표 확정 후 소형이되 대표성을 가진 대조에서 선택. 즉시 큰 M를 구현하지 않음 |
+| C. 일관된 전류·전하 VIE/volume PEEC와 적합한 h/p 공간 | 도체·유전체·계면·귀환을 같은 전자기 문제로 정의하고 누락/중복을 줄일 기준 | 구리의 고대비·저주파 작은 성분, 접점, 구적, 기저 완전성, 비용을 모두 해결해야 함 | 물리 기준 후보로 우선 심사. 기존 작은 3D/고차 결과는 재사용하되 완성 solver로 취급하지 않음 |
+| D. 유한 도전율 potential BEM/내부 경계 연산자 또는 안정화 FEM | 다른 이산화로 독립 기준을 제공. 표면법은 내부 두께 메시 부담, FEM은 재료 경계·기하 처리의 대조 가능 | 접점/적층 배경/DC 안정화/외부 경계 및 포트 조건이 접근마다 다름. 전 보드 전환은 큰 작업 | C와 동일한 최소 port 구조에서 필요한 한 대조만 선택. 동시에 여러 solver를 새로 만들지 않음 |
+| E. 적층 평면 전압 모드 또는 MQS RL의 축약 제품 경로 | 검증된 범위에서 더 적은 미지수와 재사용으로 빠른 설계 변경 가능 | 누락된 common mode·관통장·fringing·C/return을 별도 항으로 덧붙이며 다른 문제를 만들 위험 | 공통 기준에 대한 오차가 먼저 측정된 영역에서만 후속 축약 후보 |
+
+**문헌 근거와 적용 한계.** 기존 9/8 문헌 보고서를 재사용했다. Henry 등의 D-VIE는 재료 가중 quasi-Helmholtz 분해로 저주파·고대비 성분을 다루며, simply connected 비자성 손실 유전체를 설정한다. 이 논문은 현재 구리 접점 보드의 안정성 보증이 아니다. 여기서 가져올 근거는 성분별 스케일·공간을 식에서 유도해야 한다는 점이다. [Henry 등, 원문 §§II–VII](https://arxiv.org/html/2108.10690v1)
+
+Sharma–Triverio의 potential BEM은 DC까지의 유한 도전율·포트 결합을 다루므로 ‘표면법은 저주파에서 전부 실패한다’는 일반화를 반박한다. 그러나 이 연구의 적층 기판/큰 평면에 대한 제한을 현재 보드에 그대로 넘길 수 없다. 이번 저자 최종 PDF 재접근은 timeout이었고, 서지·초록을 재확인하고 세부 제한은 기존 전문 검토를 재사용했다. [저자 preprint](https://arxiv.org/abs/2112.07360), [기존 최종본 링크](https://www.waves.utoronto.ca/triverio/papers/jnl-2022-mtt-vpie-ports.pdf)
+
+Stysch 등의 FEM 임피던스 추출은 단자 연결 원천, 전위 및 필수 저주파 안정화를 함께 다룬다. 독립 기준의 후보이지 현재 코드에 단순 요소 교체로 연결할 방법은 아니다. XRL은 MQS R/L 추출이며 완전한 G/C·전파·종단 PI 문제의 대체가 아니다. 공개된 Q3D 대비 속도를 PowerSI 대비 성능으로 옮기지 않는다. [Stysch 등](https://arxiv.org/abs/2009.08232), [XRL](https://arxiv.org/abs/2409.12375)
+
+SciPy는 M이 가변 근사 역작용임과 `info>0`이 허용값 미달임을 명시한다. 이 공식 규약과 실행 코드는 이번 ‘2방향 판별’의 범위를 설명하며, PowerSI 정확도를 보증하지 않는다. [gcrotmk 공식 문서](https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.gcrotmk.html)
+
+**[해석·권고]** 지금 선택할 것은 완성 solver의 즉시 교체가 아니라 **공통 물리 기준과 포트 오차 예산을 먼저 확정하는 연구 순서로의 전환**이다. 이후 B가 충분한지, C/D가 필요한지를 작은 공통 문제에서 가른다. proprietary PowerSI 내부 알고리즘은 공개 근거 없이 추정하지 않는다. 더 많은 논문 수집이나 GPU 기반구조 구축은 현재 판별의 선행 조건이 아니다.
+
+## 8. 중지 중 보존할 것과 재개 전 판별 제안
+
+현재 허용된 작업은 이 문서와 근거 요약 작성뿐이다. 아래 실험은 **제안만**이며 수행하지 않았다. 레드팀 문서 승인과 계산 재개 승인을 구분한다.
+
+**계속 보존할 것:** 원본 매핑·접점·포트/종단 출처, 실패를 포함한 driver-at-run/result/guard, P/C와 transpose 검증, 공통 A의 저장 방향과 독립 최종 A 결과, source G/C/귀환 inventory. 실패한 결과를 삭제하거나 기존 acceptance를 소급 변경하지 않는다.
+
+**폐기할 해석:** tiny PASS=보드 정확도, exit0=수렴, 작은 |J−Z|=오차 상한, source 보존=전역 물리 완전성, 상반성=구적 정확성, 최신 결과의 상속된 실패 목록=최신 물리 검사, self-only가 참조에 더 가까움=그 물리가 정답이라는 해석.
+
+**보류할 작업:** 다음 Hω/양방향 M 즉시 구현, 같은 두/네 방향의 재최적화, 완료한 box/h32/SPD 검사 반복, 100MHz 장기 확장, 새 리뷰 인프라·여러 solver·GPU 도입. 중지된 `audit_astra_l04_saved_forward_response.py`는 미완료이며 결과로 인용하지 않는다.
+
+| 순서 | 재개 전에 답할 질문 / 최소 판별 제안 | 고정해야 할 것과 필요한 증거 | 종료·반증 조건 |
+|---|---|---|---|
+| P0, 문서 심사 | 제품 허용량과 공통 물리 항 소유를 확정할 수 있는가 | 원천·재료·포트·전류/전하·내외부 자기·G/C의 한 표. 알려진 35층/누락 gap을 어떻게 포함 또는 제한할지 설명 | 빠진 영역을 ‘작은 전류’만으로 배제하거나 서로 다른 물리식을 합친 채 소유를 못 설명하면 큰 계산 재개 보류 |
+| P1, 저장 자료 한정 제안 | 같은 첫 M 입력의 forward 변화가 어떤 블록 작용을 바꿨는가 | held 코드의 미완 검토부터. 동일 입력 해시, Δψ와 저장 AΔx, 블록별 변화·포트 출력. 새 FMM 없는 선형 결합의 범위 명시 | 이미 존재하는 2/4방향 span의 같은 질문이면 반복하지 않음. 상관을 인과로 확대하지 않고 다음 방법을 기각/유지할 근거가 없으면 종료 |
+| P1, 같은 물리의 기준 제안 | 선형 풀이가 문제인지 A의 공간/구적이 문제인지 가를 수 있는가 | 기존 소형 자료 중 실제 port–via–pad–PWR–return 및 전하/closed coupling을 가진 경우 선택. 없을 때만 새 대표 구조를 제안. 충분한 기준해와 같은-A 후보를 먼저 대조 | 동일 A에서도 오차가 남으면 수치 문제 우선. 충분히 푼 같은-A들이 일치해도 독립 공간/구적과 달라지면 이산화/모델 문제로 전환 |
+| P1, 포트 기준 제안 | 실제 수치 불확실성을 계산비용에 연결할 수 있는가 | 고정 A의 포트 functional ℓ에 대해 `A_sᴴz=ℓ`, `δZ=zᴴr_s`를 검증하거나 충분히 정확한 기준 해와 대조. 공간 오차에는 enriched 공간 필요 | 같은 공간의 항등식을 누락 물리까지의 보증으로 확대하지 않음. estimator가 작은 transfer Z 등을 과소평가하면 사용 중단 |
+| P2, 모델 대조 제안 | C/D 중 어떤 물리·이산화 경로가 필요한가 | 같은 단자·재료·외부 경계의 최소 구조에서 1kHz, 전이 주파수, 100MHz. 한 번에 한 항/표현만 변경; 기존 완료 box 반복 금지 | 서로 다른 포트/물리 조건이면 비교 무효. 참조 fitting을 하지 않고 차이가 허용량을 넘는 원인을 분리하지 못하면 전 보드 확대 보류 |
+| P2, 제품 검증 제안 | 실제 보드의 대역·설계 판단을 만족하는가 | 앞 단계 통과 후 동일 조건 1/10MHz부터, 100MHz/공진 및 untouched 설계로 확장. Re/Im·위상·공진·부품 변경 효과와 전체 시간 | 같은 자료에 맞춰 재튜닝하면 holdout 지위 상실. 수치/공간/참조 오차 예산과 실행시간 모두 충족할 때만 제품 성과 인정 |
+
+P1의 adjoint 식은 ℓᴴx_s로 정의한 포트 출력에 대한 이산 선형 항등식이다. 같은-A 수치 오차를 계산하는 일과 다른 공간/물리 모델의 오차를 계산하는 일을 구분해야 한다. 현재 4.46백만 미지수 문제에 adjoint를 바로 한 번 더 돌리라는 제안이 아니다.
+
+## 9. 외부 Peer Reviewer에게 요청하는 우선 질문
+
+1. **P0 — 기준 물리 문제:** 이 문서의 조건부 A가 실제로 어떤 경계값 문제를 근사하는가? 모든 전원·귀환·유전체·비아·포트 항의 포함/제외/중복을 명시할 수 있는가? 필요한 증거는 모델 유도와 source-owner 표이며, topology 보존 검사만으로 답을 대체하지 말아 달라.
+2. **P0 — 목표 오차:** 26.18% 및 54.59%에서 허용 정확도까지 어떤 오차 예산이 필요한가? |J−Z|의 반례와 스케일 의존성을 고려하면 20%/1e−9를 무엇으로 보완해야 하는가? 새 기준은 과거 판정의 소급 변경이 아니어야 한다.
+3. **P1 — 수치 원인:** 같은 THIRD 시작·같은 A에서 세 결과의 차이는 M의 어떤 성분과 연결되는가? 두 방향 한 cycle로 판정할 수 없는 점은 무엇인가? 다음 결합 M 구현을 정당화하거나 기각할 최소 증거를 제시해 달라.
+4. **P1 — 공간과 구적:** 현재 RT0 sheet·midplane·Laplace 자기 kernel·부분 near 보정과 전하 공간은 주대역에 충분한가? 어떤 포트/field 비교가 이 가설을 반증할 수 있는가? 상반성과 양의 단일 에너지 값을 충분조건으로 삼지 말아 달라.
+5. **P1 — 대안 선택:** 기존 A의 수치 재설계, 일관된 volume current/charge, 유한 도전율 경계법, 안정화 FEM 중 어떤 한 대조가 가장 빨리 원인을 가르는가? 논문의 가정과 현재 보드의 차이를 포함해 답해 달라.
+6. **P2 — 제품 비용:** FMM이 cycle 비용의 대부분인 조건에서 몇 번의 A로 목적 정확도에 도달할 전망이 있는가? 512GB/Threadripper/GPU가 바꿀 비용과 바꾸지 못하는 물리·오차 문제를 구분해 달라. 현재 단발 worker 시간만으로 end-to-end 속도를 약속하지 말아 달라.
+
+심사 결과는 각 질문에 **동의/수정/반대, 근거 파일·식, 가장 작은 반증 조건, 재개에 필요한 증거**를 함께 적어 주면 된다. 추가 구현보다 연구 경로의 유지·수정·전환 여부를 판단하는 것이 목적이다.
+
+## 10. 재현·출처 및 확인 한계
+
+본문의 경로 기준 H는 이 묶음의 `snapshots/hq/`, R은 `snapshots/red-team/`이다. 원래 경로와 게시 파일의 대응은 [근거 자료 목록](EVIDENCE.md)과 [manifest](manifest.json)에 있다. 아래 상대경로는 H 기준이다. 채팅 이력이 없어도 이 문서와 지정한 파일로 수치·소스 대조를 추적할 수 있다. 실행은 별도 사용자 재개 승인 후에만 가능하며 재현을 위해 과거 root를 무조건 재실행하지 않는다.
+
+주요 결과와 실행 소스(실제 작은 파일의 SHA256을 재계산):
+
+| 실험 / H 기준 상대경로 | SHA256 |
+|---|---|
+| [outputs/research/astra-l04-10mhz-complete-current-gcrotmk-01/result.json](snapshots/hq/outputs/research/astra-l04-10mhz-complete-current-gcrotmk-01/result.json) | `17eec05e5f710020703a40ec62916d3a01c563fa895d3cde1463979e1a2c4f25` |
+| [outputs/research/astra-l04-10mhz-complete-current-gcrotmk-01/external-budget.json](snapshots/hq/outputs/research/astra-l04-10mhz-complete-current-gcrotmk-01/external-budget.json) | `19ade392a5e26be674e0b26bd580a7c5bda112e4c8440ad4221e544da4492fb7` |
+| [outputs/research/astra-l04-10mhz-complete-current-gcrotmk-01/driver-at-run.py](snapshots/hq/outputs/research/astra-l04-10mhz-complete-current-gcrotmk-01/driver-at-run.py) | `c84e6475deee8374b4af0a3ba50df32d1f40b59a2bc5193904a9d348b90573b9` |
+| [outputs/research/astra-l04-10mhz-closed-magnetic-gcrotmk-paired-01/result.json](snapshots/hq/outputs/research/astra-l04-10mhz-closed-magnetic-gcrotmk-paired-01/result.json) | `ef23ddf9c0a81f5ef0e234932592ea6403685f022c7e3dc1c04bd4517c488f03` |
+| [outputs/research/astra-l04-10mhz-closed-magnetic-gcrotmk-paired-01/external-budget.json](snapshots/hq/outputs/research/astra-l04-10mhz-closed-magnetic-gcrotmk-paired-01/external-budget.json) | `1d87f15f23219a26f2e690f26ae8ad12b4bbdbd006f8d08155aef4e63bb1c111` |
+| [outputs/research/astra-l04-10mhz-closed-magnetic-gcrotmk-paired-01/driver-at-run.py](snapshots/hq/outputs/research/astra-l04-10mhz-closed-magnetic-gcrotmk-paired-01/driver-at-run.py) | `c3db59964538be2c2c5bed5e789f201245f8fd7c4c52206610d5cb1ff6032dff` |
+| [outputs/research/astra-l04-10mhz-forward-closed-gcrotmk-01/result.json](snapshots/hq/outputs/research/astra-l04-10mhz-forward-closed-gcrotmk-01/result.json) | `30045d8ac4540b096f9b26c75238c5d9e98e1375efc3fb1c5f4b888141fd2128` |
+| [outputs/research/astra-l04-10mhz-forward-closed-gcrotmk-01/external-budget.json](snapshots/hq/outputs/research/astra-l04-10mhz-forward-closed-gcrotmk-01/external-budget.json) | `cd46d1aaee838830d2061c18993ad293494ed58c3fc8f03b535fbef995bcbc90` |
+| [outputs/research/astra-l04-10mhz-forward-closed-gcrotmk-01/driver-at-run.py](snapshots/hq/outputs/research/astra-l04-10mhz-forward-closed-gcrotmk-01/driver-at-run.py) | `466cd9ef7e10d1d39b3821040c79899690170e5bc17e7d217023565e4683a087` |
+| [docs/evaluation-research/astra_hybrid_r_gc_1mhz_comparison_2026-09-09.json](snapshots/hq/docs/evaluation-research/astra_hybrid_r_gc_1mhz_comparison_2026-09-09.json) | `2049cf1033a94250098987f47ed0e3d18ff2cd0dba61a90b2916e730b897584e` |
+
+중요한 큰 배열 식별자(아래 SHA256은 **receipt 주장값**, 이번 재해시 없음):
+
+| H 기준 상대경로 | receipt의 SHA256 |
+|---|---|
+| `outputs/research/astra-l04-10mhz-three-direction-complete-current-01/three-direction-fit-before-gates.npz` | `79c3ff3f9ab87591c5c762851f3baff1b4d76a2143e433fcb456989c123987de` |
+| `outputs/research/astra-full-contact-frequency-operators-02/frequency-10000000-conditional-operator.npz` | `7d528de4ced4e24e6fbf1c0ba437276ce8ccc706684e36028f63494685171701` |
+| `outputs/research/astra-l04-frequency-partial-inputs-01/frequency-10000000-partial-inputs.npz` | `f5fff0c74c667d8243852b709ed07238585eec427a878bb074519d995f5f680a` |
+| `outputs/research/astra-l04-10mhz-closed-current-direction-01/initial-complete-model-residual.npz` | `16fd56e355f950b6ac5127a979758d4135343713d9a5b432fa2d2c57b664dd1b` |
+| `outputs/research/astra-l04-10mhz-complete-current-gcrotmk-01/complete-current-final.npz` | `85e8db88de6a07024a7076549d53e7fc4060789cffbca39f229e025ff4fdaa91` |
+| `outputs/research/astra-l04-10mhz-closed-magnetic-gcrotmk-paired-01/complete-current-final.npz` | `db4a1c4a1d1b1a1279616419900b2a98380c4ac2d8a3a25727f97fb108dc07f1` |
+| `outputs/research/astra-l04-10mhz-forward-closed-gcrotmk-01/complete-current-final.npz` | `f971eacc2f05b8cc4508960dc56b219a0de9ab9fb03e1d19bf0252d73b5ea2f2` |
+
+소스 읽기 순서와 정확한 상대경로:
+
+| 확인 대상 | H 기준 상대경로와 함수/행 |
+|---|---|
+| L04 접점 부호/연결 | [tools/research/solve_astra_l04_full_contact_coupled.py](snapshots/hq/tools/research/solve_astra_l04_full_contact_coupled.py#L57) — interface_apply, 57–62 |
+| 전체 자기 행 | [tools/research/probe_astra_l04_10mhz_two_direction_complete_current.py](snapshots/hq/tools/research/probe_astra_l04_10mhz_two_direction_complete_current.py#L98) — assemble_ad2, 98–104 |
+| 추가 저항·closed 행 | [tools/research/probe_astra_l04_10mhz_three_direction_complete_current.py](snapshots/hq/tools/research/probe_astra_l04_10mhz_three_direction_complete_current.py#L70) — assemble_ad3, 70–76 |
+| 공통 Laplace/FMM 작용 | [tools/research/probe_astra_l25_l04_joint_magnetic_action.py](snapshots/hq/tools/research/probe_astra_l25_l04_joint_magnetic_action.py#L100) — joint_action, 100–123 |
+| Hω 조립·scale 검증 | [tools/research/qualify_astra_l04_10mhz_closed_magnetic_auxiliary.py](snapshots/hq/tools/research/qualify_astra_l04_10mhz_closed_magnetic_auxiliary.py#L156) — worker, 156–281 |
+| forward 부호 및 남는 역방향 defect | [tools/research/qualify_astra_l04_forward_closed_magnetic.py](snapshots/hq/tools/research/qualify_astra_l04_forward_closed_magnetic.py#L33) — forward_solve / self_check, 33–60 |
+| 블록별 bilinear 분해 | [tools/research/audit_astra_l04_saved_stationary_blocks.py](snapshots/hq/tools/research/audit_astra_l04_saved_stationary_blocks.py#L29) — attribute, 29–40 |
+| 최신 감독 기록 | [docs/evaluation-research/ASTRA_STEP5_SUPERVISION_2026-09-07.md](snapshots/hq/docs/evaluation-research/ASTRA_STEP5_SUPERVISION_2026-09-07.md.txt#L10) — 15:01 중지 및 14:49/14:46 기록 |
+| 실제 중지/held 상태 | [outputs/research/HQ_REBOOT_CHECKPOINT_20260910.md](snapshots/hq/outputs/research/HQ_REBOOT_CHECKPOINT_20260910.md.txt#L3) — 최상단 현재 정지 상태 |
+
+핵심 추가 결과:
+
+- [outputs/research/astra-l04-10mhz-forward-closed-gcrotmk-01/hq-saved-stationary-blocks.json](snapshots/hq/outputs/research/astra-l04-10mhz-forward-closed-gcrotmk-01/hq-saved-stationary-blocks.json): `716024c7a07f3564a55571d582770b23129956ed0a7372006762ef38c813c920`.
+- [outputs/research/astra-l04-saved-gcrotmk-union-01/result.json](snapshots/hq/outputs/research/astra-l04-saved-gcrotmk-union-01/result.json): `f2d89a98e651e2a664182cdf91adca25f542b44470db2d5a1889d6cbed7a6983`.
+- [outputs/research/astra-l04-forward-closed-magnetic-qualifier-01/result.json](snapshots/hq/outputs/research/astra-l04-forward-closed-magnetic-qualifier-01/result.json): `4b617a1f5159d8e011585e65c72887e9886b421553456f3787df03787fc0ead5`.
+- [outputs/research/astra-l04-10mhz-closed-magnetic-auxiliary-01/result.json](snapshots/hq/outputs/research/astra-l04-10mhz-closed-magnetic-auxiliary-01/result.json): `8dcab2dd118a7711dadd37e38f0f936986f842d57ab826fe5f0674f9f5f958c4`.
+- [outputs/research/astra-full-contact-frequency-operators-02/result.json](snapshots/hq/outputs/research/astra-full-contact-frequency-operators-02/result.json): `7efcd3d999162b27311136a462ef5335071c00e371c6bbe6ac1333d7a98f6555`.
+
+- [근거 요약 JSON](snapshots/red-team/20260910-peer-review-evidence.json)에는 작은 파일의 재계산 SHA256, 결과별 original-RHS/포트/시간 산술, 동일 시작 입력 receipt 및 A 함수 AST 대조가 있다.
+- [기존 문헌 보고서](snapshots/literature/pi-literature-method-review-20260908.md.txt)는 관련 전문 검토와 적용 한계를 제공한다. 이번의 웹 재확인 범위와 과거 전문 검토를 구분했다.
+- [정오 결과 스냅샷](snapshots/red-team/evidence-20260910-1201.json)은 이전 조건부 모델 및 물리 진단의 보존된 출처다. 본 문서는 그 평가의 단순 요약이 아니며 정오 이후 동일-A 세 대조와 14:49 결과를 추가해 방향을 재판정했다.
+
+**검증 한계:** 큰 NPZ의 해시는 producer가 작은 receipt에 기록한 값으로 식별에 사용했으며 이번에 독립 재계산하지 않았다. 저장 숫자와 코드의 일관성을 확인했지만 FMM·구적·물리 진단·PowerSI 변환을 새로 실행하지 않았다. 따라서 현재 A의 연속체 오차, 실제 보드 오차의 원인별 분배, 독립 설계 정확도, 목표 장비의 end-to-end 시간은 미확인이다. 본문에 없는 결과를 tiny PASS나 대칭성으로 보충해 주장하지 않는다.
+
+최종 권고는 **연구 중지를 유지한 채 공통 물리 기준·제품 오차 예산·최소 반증 실험을 peer review로 확정하는 것**이다. 이후 명시적 재개 지시가 있을 때 승인된 한 판별만 수행하고, 그 결과로 수치 재설계와 물리/이산화 전환 중 다음 경로를 선택해야 한다.

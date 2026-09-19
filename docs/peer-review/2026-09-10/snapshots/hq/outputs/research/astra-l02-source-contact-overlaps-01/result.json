@@ -1,0 +1,131 @@
+{
+  "elapsed_s": 17.23399999999674,
+  "excluded": {
+    "drill_overlap_count_histogram": {
+      "0": 40,
+      "1": 2
+    },
+    "native_indices_present": false,
+    "ordered_row_count": 42,
+    "pad_overlap_count_histogram": {
+      "0": 40,
+      "1": 2
+    },
+    "via_ids": [
+      "Via1309387",
+      "Via1309388",
+      "Via1312784",
+      "Via1480824",
+      "Via1480825",
+      "Via1484707",
+      "Via1484708",
+      "Via1491648",
+      "Via1491649",
+      "Via1494558",
+      "Via1494559",
+      "Via1494786",
+      "Via1494787",
+      "Via1497072",
+      "Via1497073",
+      "Via1497319",
+      "Via1497320",
+      "Via1497457",
+      "Via1497458",
+      "Via1497533",
+      "Via1497534",
+      "Via1610510",
+      "Via1610511",
+      "Via1612214",
+      "Via1782422",
+      "Via1782423",
+      "Via1786305",
+      "Via1786306",
+      "Via1792809",
+      "Via1792810",
+      "Via1795377",
+      "Via1795378",
+      "Via1795876",
+      "Via1795877",
+      "Via1796104",
+      "Via1796105",
+      "Via1798390",
+      "Via1798391",
+      "Via1798618",
+      "Via1798619",
+      "Via1798656",
+      "Via1798657"
+    ]
+  },
+  "geometry": {
+    "exact_circle_builder": "shared_pad._PlacedPad + shared_pad._placed_pad_polygon; quad_segs=64",
+    "intersection_method": "prepared island covers, then shell intersection minus STRtree-selected exact holes",
+    "island_count": 491,
+    "map_path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-source-contact-overlaps-01\\l02-island-geometry-map.npz",
+    "map_sha256": "d8948303d4463cf46512ad73f5888c0f953f6ba01a0e05cc867bba18db88de53"
+  },
+  "inputs": {
+    "exact_overlap": {
+      "bytes": 6549,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l02_gc_source_overlaps.py",
+      "sha256": "535e57dfdf656b4000a9e0703ab4d4aa3b8ea5f0d86b0b60f8d1a8aa4c7b86d1"
+    },
+    "input_arrays": {
+      "bytes": 11036928,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-source-contact-inputs-01\\contact-ledger-inputs.npz",
+      "sha256": "c5c0dab9ac22d750aeecf3a4290c2b9ef9285bcf7ed33a5d8a7a2775c8430984"
+    },
+    "input_driver": {
+      "bytes": 20840,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\qualify_astra_l02_source_contacts.py",
+      "sha256": "282def7c0eff7a7e6b822766bbb104ee910945a2af95b49d800badcd89a4deb1"
+    },
+    "input_receipt": {
+      "bytes": 29477,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-source-contact-inputs-01\\result.json",
+      "sha256": "98bce62fde03d676e43d121207d00bb5ed840552bf8fd02793ae6732ab8bffd2"
+    },
+    "input_review": {
+      "bytes": 1887,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-source-contact-inputs-01\\independent-review.json",
+      "sha256": "666463b00303314583df7c6413c803d417b01d94f680e96c9b0696ab0fb7499c"
+    },
+    "persistence_helper": {
+      "bytes": 61282,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\project_astra_l14_gc_mass.py",
+      "sha256": "f2c668fd090db5c4606eec27558c9bdbbdde6552d2f82c3b64b8837bd7350dc3"
+    },
+    "placed_pad_geometry": {
+      "bytes": 112768,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\src\\spd_decap_pi\\_core\\io\\shared_pad.py",
+      "sha256": "f6a53ca964efe79bed9da2bc88099d395f5f01f65d9b925ab9c8e18749ce8b4c"
+    }
+  },
+  "native": {
+    "coincident_distinct_radius_support_pair_count": 0,
+    "drill_overlap_count_histogram": {
+      "1": 76139
+    },
+    "exact_xy_group_count": 38836,
+    "multi_island_pad_overlap_count": 0,
+    "noncoincident_positive_pad_overlap_pair_count": 0,
+    "noncoincident_tangent_pad_pair_count": 8503,
+    "ordered_row_count": 76139,
+    "pad_overlap_count_histogram": {
+      "1": 76139
+    },
+    "prospective_coincident_contact_count": 38836,
+    "prospective_island_contact_dof_count": 38836,
+    "unique_polygonal_pad_support_count": 38836,
+    "zero_polygonal_pad_overlap_count": 0
+  },
+  "output": {
+    "bytes": 1731234,
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-source-contact-overlaps-01\\l02-source-contact-overlaps.npz",
+    "sha256": "dcdc4b8022cfce7e2decb206a812fc62f75b968a5c3e0d0cb2b27f4395707501"
+  },
+  "program": "SPD Decap PI Evaluator",
+  "scope": "Positive polygonal pad/drill-to-island area evidence only. Multi-island contacts remain explicit. A zero area for the 256-edge inscribed circle is unresolved and is not analytic-circle no-contact proof. The 42 excluded rows have no fabricated native indices. No trace/domain union, mesh, operator, solve, or current split.",
+  "script_sha256": "29051b25bbbc49303c653f2dbe62b809c47a24ac8787f7ca32eb8f97a87e8859",
+  "status": "COMPLETED_L02_CACHED_CIRCLE_CONTACT_OVERLAPS",
+  "version": "0.23.1"
+}

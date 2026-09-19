@@ -1,0 +1,114 @@
+{
+  "artifact": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-saved-contact-potentials-01\\l04-saved-contact-dual-potentials.npz",
+    "sha256": "d638dcf046a22709111bceea53f720477430c78d46ed2f79d8dc1b60b52f0fd2",
+    "size_bytes": 1223786
+  },
+  "budget": {
+    "elapsed_s": 2.8130000000237487,
+    "max_rss_bytes": 4294967296,
+    "max_runtime_s": 60,
+    "peak_rss_bytes": 422158336
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-saved-contact-potentials-01\\driver-at-run.py",
+    "sha256": "e3b0ff15c28b2ecd9f132e311a843225cd9ac6834915c63cc61ef84df57c2c39",
+    "size_bytes": 9649
+  },
+  "frequency_hz": 1000000.0,
+  "geometry_approximation": {
+    "domain": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-conditional-sheet-mesh-02\\l04-coalesced-conductor-domain.wkb",
+      "sha256": "8dbfbb75d87efa7c9504b1ab521a78687ef97b45d1eb0e6a8d5ff6007658c674",
+      "size_bytes": 14024197
+    },
+    "max_vertex_displacement_um": 1.473493695890548e-10,
+    "method": "EXACT_TWO_SOURCE_VERTEX_COALESCENCE_L04_RING563",
+    "source_domain": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-pad-conductor-domain-01\\l04-pad-augmented-conductor-domain.wkb",
+      "sha256": "0eeaffc34a6b9759fd285f28d35ebd59042e6bcd909a697fad3f18a5d2eafa68",
+      "size_bytes": 14024197
+    },
+    "unchanged_source_geometry": false,
+    "witness_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-cdt-local-coalescence-witness-02\\result.json",
+      "sha256": "3e097e7086f6bd10e009afbcdb6b98ca8029f6555273f4e7b1f92c3059a216ce",
+      "size_bytes": 6819
+    }
+  },
+  "inputs": {
+    "field": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\l04-fixed-contact-current.npz",
+      "sha256": "dec07e1681c8400c43b6c79ab7a25ef37f7c19443441ad369016f6daefbfe9fd",
+      "size_bytes": 63886278
+    },
+    "outputs\\research\\astra-l04-fixed-contact-stream-01\\driver-at-run.py": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\driver-at-run.py",
+      "sha256": "65c48fe18db408a9c38ee28a86b50f57c470e3286b7dab975ca0a77f1c6b8c27",
+      "size_bytes": 24864
+    },
+    "outputs\\research\\astra-l04-fixed-contact-stream-01\\external-budget.json": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\external-budget.json",
+      "sha256": "016bd3039ada75e8475a23ab328b2b0f135f641235bf5c9088e62636c0d04efc",
+      "size_bytes": 1634
+    },
+    "outputs\\research\\astra-l04-fixed-contact-stream-01\\result.json": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\result.json",
+      "sha256": "3e5417fa1a2db0308208449896c2aa1650beff5051d2ee03b60a8b4a11fe2bf1",
+      "size_bytes": 8797
+    },
+    "space": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\l04-fixed-contact-rt0-space.npz",
+      "sha256": "5d31b3c6183eb4f43723eb80d1a545953a42fb2c9320be425d3ebc034cb51bb6",
+      "size_bytes": 79222436
+    },
+    "stream_system": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\l04-fixed-contact-stream-system.npz",
+      "sha256": "b299d67995b58b7fa698b080380cda495032472d0f426ed2dd9e4b78542fb34a",
+      "size_bytes": 21072655
+    },
+    "tools\\research\\project_astra_l14_gc_mass.py": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\project_astra_l14_gc_mass.py",
+      "sha256": "f2c668fd090db5c4606eec27558c9bdbbdde6552d2f82c3b64b8837bd7350dc3",
+      "size_bytes": 61282
+    },
+    "tools\\research\\reconstruct_astra_native_loaded_field.py": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\reconstruct_astra_native_loaded_field.py",
+      "sha256": "354d9e004b189cf8193c2922c8fa4dc1903b407bebb295a4576673200ce6b213",
+      "size_bytes": 33457
+    }
+  },
+  "metrics": {
+    "all_branch_constitutive_relative": 9.879896034364875e-11,
+    "all_branch_defect_max_v": 5.362562546342743e-15,
+    "contact_bilinear_a_v": [
+      0.0004697882095343343,
+      -1.8659346757001695e-05
+    ],
+    "contact_hermitian_a_v": [
+      0.0004742739539031807,
+      1.4162390878091902e-18
+    ],
+    "electrode_work_relative": 8.835539746602974e-13,
+    "real_imag_contact_potential_l2_v": [
+      0.10543679791959903,
+      0.00805290538109305
+    ],
+    "real_imag_energy_condition": 229.49141940517947,
+    "real_imag_energy_eigenvalues_w": [
+      2.0576642511358504e-06,
+      0.000472216289652462
+    ]
+  },
+  "program": "SPD Decap PI Evaluator",
+  "scope": "Saved mixed-RT0 dual graph potentials, not P1 nodal potentials. Raw real/imag shapes remain real candidate directions without automatic rank truncation. No mesh/R assembly, current solve, factorization, source recensus, coupled circuit, magnetic completeness, new Z or accuracy claim.",
+  "self_check": "PASS_TREE_DUAL_REVERSED_EDGE_PARALLEL_CHORD_CHECK",
+  "source_current_a": 1.0,
+  "source_result": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\result.json",
+    "sha256": "3e5417fa1a2db0308208449896c2aa1650beff5051d2ee03b60a8b4a11fe2bf1",
+    "size_bytes": 8797
+  },
+  "status": "PASS_SAVED_L04_RT0_CONTACT_DUAL_POTENTIALS",
+  "version": "0.23.1"
+}

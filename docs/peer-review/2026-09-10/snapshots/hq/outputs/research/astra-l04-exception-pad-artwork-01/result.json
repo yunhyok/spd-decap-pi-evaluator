@@ -1,0 +1,1163 @@
+{
+  "center_in_artwork_count": 10,
+  "elapsed_s": 20.68799999996554,
+  "inputs": {
+    "inventory": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-source-inventory-root-02\\result.json",
+      "sha256": "c86cf3410188e5386bfa8b5f4b57faddc6c219456e59a4ba8ac1d8e9b5f041d1"
+    },
+    "pad_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\src\\spd_decap_pi\\_core\\io\\shared_pad.py",
+      "sha256": "f6a53ca964efe79bed9da2bc88099d395f5f01f65d9b925ab9c8e18749ce8b4c"
+    },
+    "paths": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-composite-source-paths-03\\result.json",
+      "sha256": "e534da4f465ecb081ae3ec0bcdf96a1ba5329bd4f5c1353b6dfa262ef4f858ff"
+    },
+    "polygon_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\project_astra_l14_gc_mass.py",
+      "sha256": "f2c668fd090db5c4606eec27558c9bdbbdde6552d2f82c3b64b8837bd7350dc3"
+    },
+    "raw_db": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-step4-basis-01\\indexes\\raw-spatial.sqlite",
+      "sha256": "287c1850a113b23b89c97c38941502f866131d938773c1b346d0e4972733d3a7"
+    },
+    "split": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-cached-path-splits-02\\result.json",
+      "sha256": "17ca350bbb4913283315812e746b547d3ee01c4fec85133d411fb0e8602fe48d"
+    }
+  },
+  "pad_definitions": [
+    {
+      "height_pm": 60000000,
+      "layer_id": "Signal$L04(DGND)",
+      "layer_id_fold": "signal$l04(dgnd)",
+      "ordinal": 20,
+      "padstack_id": "DR-0304_60",
+      "padstack_id_fold": "dr-0304_60",
+      "shape_kind": "CIRCLE",
+      "source_record_sha256": "780407cd9588bb16376342af7e06d7c1da8674f3b4ef7c9c3279b34cccc8f947",
+      "width_pm": 60000000
+    },
+    {
+      "height_pm": 60000000,
+      "layer_id": "Signal$L04(DGND)",
+      "layer_id_fold": "signal$l04(dgnd)",
+      "ordinal": 23,
+      "padstack_id": "DR-0405_60",
+      "padstack_id_fold": "dr-0405_60",
+      "shape_kind": "CIRCLE",
+      "source_record_sha256": "780407cd9588bb16376342af7e06d7c1da8674f3b4ef7c9c3279b34cccc8f947",
+      "width_pm": 60000000
+    }
+  ],
+  "padstack_definitions": [
+    {
+      "drill_diameter_pm": 40000000,
+      "material": "COPPER",
+      "ordinal": 16,
+      "padstack_id": "DR-0304_60",
+      "padstack_id_fold": "dr-0304_60",
+      "source_record_sha256": "94c550fdc0b403c34a6aca56f28a44bf52827648715f968f32cab0446f1efe69"
+    },
+    {
+      "drill_diameter_pm": 40000000,
+      "material": "COPPER",
+      "ordinal": 18,
+      "padstack_id": "DR-0405_60",
+      "padstack_id_fold": "dr-0405_60",
+      "source_record_sha256": "a4a9d72a37ff0e98879c86a393a25bd5112587d123eac7209326b863a37faef9"
+    }
+  ],
+  "positive_drill_overlap_count": 10,
+  "positive_pad_overlap_count": 10,
+  "program": "SPD Decap PI Evaluator",
+  "rows": [
+    {
+      "center_artwork_islands": [
+        "spd-surface-island:0284e805fcb69d835563bc5f"
+      ],
+      "footprints": [
+        {
+          "area_um2": 2827.149525839491,
+          "artwork_overlap_area_um2": 2827.149525839491,
+          "fully_covered": true,
+          "positive_island_overlaps": [
+            {
+              "area_um2": 2827.149525839491,
+              "island_id": "spd-surface-island:0284e805fcb69d835563bc5f"
+            }
+          ],
+          "support": "pad"
+        },
+        {
+          "area_um2": 1256.510900373094,
+          "artwork_overlap_area_um2": 1256.510900373094,
+          "fully_covered": true,
+          "positive_island_overlaps": [
+            {
+              "area_um2": 1256.510900373094,
+              "island_id": "spd-surface-island:0284e805fcb69d835563bc5f"
+            }
+          ],
+          "support": "drill"
+        }
+      ],
+      "original_active_finite_index": 30657,
+      "path_action": "REMAP_EXISTING_L02_FIRST_LEG_L04_ENDPOINT",
+      "source_node": "node2736591",
+      "source_via_ids": [
+        "via1792808"
+      ],
+      "source_via_sha256": [
+        "6cd0ed93bb03d08af006ed69bb380760cefd8d6512c5970fe5528481aaa49516"
+      ],
+      "xy_um": [
+        -12421.9,
+        -22720.6
+      ]
+    },
+    {
+      "center_artwork_islands": [],
+      "footprints": [
+        {
+          "area_um2": 2827.149525839491,
+          "artwork_overlap_area_um2": 0.0,
+          "fully_covered": false,
+          "positive_island_overlaps": [],
+          "support": "pad"
+        },
+        {
+          "area_um2": 1256.5109003731086,
+          "artwork_overlap_area_um2": 0.0,
+          "fully_covered": false,
+          "positive_island_overlaps": [],
+          "support": "drill"
+        }
+      ],
+      "original_active_finite_index": 186263,
+      "path_action": "REPLACE_EXISTING_L02_FIRST_LEG_WITH_TWO_SERIES_LEGS",
+      "source_node": "node2556771",
+      "source_via_ids": [
+        "via1484705",
+        "via1484706"
+      ],
+      "source_via_sha256": [
+        "df38a8a4eb53c71468670d00122aaf34d3af3844dfd63b7295c1d455d41a8e5b",
+        "a051e11c5078ac90c11ca59b395223af317b0e2fd296a75bc7a0c6606444f8a8"
+      ],
+      "xy_um": [
+        -7437.0,
+        10458.699999999999
+      ]
+    },
+    {
+      "center_artwork_islands": [
+        "spd-surface-island:0284e805fcb69d835563bc5f"
+      ],
+      "footprints": [
+        {
+          "area_um2": 2827.1495258394707,
+          "artwork_overlap_area_um2": 2827.1495258394707,
+          "fully_covered": true,
+          "positive_island_overlaps": [
+            {
+              "area_um2": 2827.1495258394707,
+              "island_id": "spd-surface-island:0284e805fcb69d835563bc5f"
+            }
+          ],
+          "support": "pad"
+        },
+        {
+          "area_um2": 1256.5109003731081,
+          "artwork_overlap_area_um2": 1256.5109003731081,
+          "fully_covered": true,
+          "positive_island_overlaps": [
+            {
+              "area_um2": 1256.5109003731081,
+              "island_id": "spd-surface-island:0284e805fcb69d835563bc5f"
+            }
+          ],
+          "support": "drill"
+        }
+      ],
+      "original_active_finite_index": 388189,
+      "path_action": "REMAP_EXISTING_L02_FIRST_LEG_L04_ENDPOINT",
+      "source_node": "node2562596",
+      "source_via_ids": [
+        "via1491647"
+      ],
+      "source_via_sha256": [
+        "05fb6650f1b84d8e3b71184834ec0b9bf911207f37c27e682b0883498c7f238a"
+      ],
+      "xy_um": [
+        -12421.9,
+        9885.3
+      ]
+    },
+    {
+      "center_artwork_islands": [
+        "spd-surface-island:0284e805fcb69d835563bc5f"
+      ],
+      "footprints": [
+        {
+          "area_um2": 2827.1495258394707,
+          "artwork_overlap_area_um2": 2827.1495258394707,
+          "fully_covered": true,
+          "positive_island_overlaps": [
+            {
+              "area_um2": 2827.1495258394707,
+              "island_id": "spd-surface-island:0284e805fcb69d835563bc5f"
+            }
+          ],
+          "support": "pad"
+        },
+        {
+          "area_um2": 1256.5109003731081,
+          "artwork_overlap_area_um2": 1256.5109003731081,
+          "fully_covered": true,
+          "positive_island_overlaps": [
+            {
+              "area_um2": 1256.5109003731081,
+              "island_id": "spd-surface-island:0284e805fcb69d835563bc5f"
+            }
+          ],
+          "support": "drill"
+        }
+      ],
+      "original_active_finite_index": 395047,
+      "path_action": "REMAP_EXISTING_L02_FIRST_LEG_L04_ENDPOINT",
+      "source_node": "node2567397",
+      "source_via_ids": [
+        "via1497456"
+      ],
+      "source_via_sha256": [
+        "dacd015aa14d647c51bdaff127b96350cda25d2aba78ab2c3487955b5e08ff89"
+      ],
+      "xy_um": [
+        -11836.9,
+        8871.9
+      ]
+    },
+    {
+      "center_artwork_islands": [],
+      "footprints": [
+        {
+          "area_um2": 2827.1495258394707,
+          "artwork_overlap_area_um2": 0.0,
+          "fully_covered": false,
+          "positive_island_overlaps": [],
+          "support": "pad"
+        },
+        {
+          "area_um2": 1256.5109003731081,
+          "artwork_overlap_area_um2": 0.0,
+          "fully_covered": false,
+          "positive_island_overlaps": [],
+          "support": "drill"
+        }
+      ],
+      "original_active_finite_index": 466710,
+      "path_action": "REPLACE_EXISTING_L02_FIRST_LEG_WITH_TWO_SERIES_LEGS",
+      "source_node": "node2564979",
+      "source_via_ids": [
+        "via1494556",
+        "via1494557"
+      ],
+      "source_via_sha256": [
+        "7dedf46be2e2fce77c4058c0c150684b0699353c7504836130ca9ecfe954a0c7",
+        "9ec8b12c029f72356d233b4e91b0b997a457a0e0296799f579dbb8d7e2ff058b"
+      ],
+      "xy_um": [
+        -12096.9,
+        9097.1
+      ]
+    },
+    {
+      "center_artwork_islands": [
+        "spd-surface-island:0284e805fcb69d835563bc5f"
+      ],
+      "footprints": [
+        {
+          "area_um2": 2827.1495258394707,
+          "artwork_overlap_area_um2": 2827.1495258394707,
+          "fully_covered": true,
+          "positive_island_overlaps": [
+            {
+              "area_um2": 2827.1495258394707,
+              "island_id": "spd-surface-island:0284e805fcb69d835563bc5f"
+            }
+          ],
+          "support": "pad"
+        },
+        {
+          "area_um2": 1256.5109003731081,
+          "artwork_overlap_area_um2": 1256.5109003731081,
+          "fully_covered": true,
+          "positive_island_overlaps": [
+            {
+              "area_um2": 1256.5109003731081,
+              "island_id": "spd-surface-island:0284e805fcb69d835563bc5f"
+            }
+          ],
+          "support": "drill"
+        }
+      ],
+      "original_active_finite_index": 510496,
+      "path_action": "REMAP_EXISTING_L02_FIRST_LEG_L04_ENDPOINT",
+      "source_node": "node2567461",
+      "source_via_ids": [
+        "via1497532"
+      ],
+      "source_via_sha256": [
+        "fe7c88aa807eca210ea81f48fe118ccfa40e8664f6391f6e4074de16e0d99569"
+      ],
+      "xy_um": [
+        -12226.9,
+        8871.9
+      ]
+    },
+    {
+      "center_artwork_islands": [],
+      "footprints": [
+        {
+          "area_um2": 2827.1495258394707,
+          "artwork_overlap_area_um2": 0.0,
+          "fully_covered": false,
+          "positive_island_overlaps": [],
+          "support": "pad"
+        },
+        {
+          "area_um2": 1256.5109003731081,
+          "artwork_overlap_area_um2": 0.0,
+          "fully_covered": false,
+          "positive_island_overlaps": [],
+          "support": "drill"
+        }
+      ],
+      "original_active_finite_index": 551039,
+      "path_action": "REPLACE_EXISTING_L02_FIRST_LEG_WITH_TWO_SERIES_LEGS",
+      "source_node": "node2553526",
+      "source_via_ids": [
+        "via1480822",
+        "via1480823"
+      ],
+      "source_via_sha256": [
+        "7d0ef2ea6c8dec7622a8dc4970573197210016b5bc1bbf00ac8481f2d8fc6067",
+        "217133e261e4fe0cf82c0635c395affa3a24ff54b5e01304e1d92ccc7ddbc8a9"
+      ],
+      "xy_um": [
+        12190.599999999999,
+        10549.8
+      ]
+    },
+    {
+      "center_artwork_islands": [],
+      "footprints": [
+        {
+          "area_um2": 2827.1495258394707,
+          "artwork_overlap_area_um2": 0.0,
+          "fully_covered": false,
+          "positive_island_overlaps": [],
+          "support": "pad"
+        },
+        {
+          "area_um2": 1256.5109003731081,
+          "artwork_overlap_area_um2": 0.0,
+          "fully_covered": false,
+          "positive_island_overlaps": [],
+          "support": "drill"
+        }
+      ],
+      "original_active_finite_index": 754981,
+      "path_action": "REPLACE_EXISTING_L02_FIRST_LEG_WITH_TWO_SERIES_LEGS",
+      "source_node": "node2567283",
+      "source_via_ids": [
+        "via1497317",
+        "via1497318"
+      ],
+      "source_via_sha256": [
+        "542da8a67a3e1e7e8c57057be70b90c94c4b402a574f57ee75544ae1a9a11678",
+        "5dff3df19cfb0dd153de825f3c7758b64e22c766262f322b753a7874424e107d"
+      ],
+      "xy_um": [
+        -10211.9,
+        8984.5
+      ]
+    },
+    {
+      "center_artwork_islands": [
+        "spd-surface-island:0284e805fcb69d835563bc5f"
+      ],
+      "footprints": [
+        {
+          "area_um2": 2827.149525839491,
+          "artwork_overlap_area_um2": 2827.149525839491,
+          "fully_covered": true,
+          "positive_island_overlaps": [
+            {
+              "area_um2": 2827.149525839491,
+              "island_id": "spd-surface-island:0284e805fcb69d835563bc5f"
+            }
+          ],
+          "support": "pad"
+        },
+        {
+          "area_um2": 1256.510900373094,
+          "artwork_overlap_area_um2": 1256.510900373094,
+          "fully_covered": true,
+          "positive_island_overlaps": [
+            {
+              "area_um2": 1256.510900373094,
+              "island_id": "spd-surface-island:0284e805fcb69d835563bc5f"
+            }
+          ],
+          "support": "drill"
+        }
+      ],
+      "original_active_finite_index": 779676,
+      "path_action": "REMAP_EXISTING_L02_FIRST_LEG_L04_ENDPOINT",
+      "source_node": "node2741422",
+      "source_via_ids": [
+        "via1798655"
+      ],
+      "source_via_sha256": [
+        "1ac00a30d3b443e3834f31c4ca9d8833022329c33f8bbb36dd0771226eb4aaf2"
+      ],
+      "xy_um": [
+        -12226.9,
+        -23734.0
+      ]
+    },
+    {
+      "center_artwork_islands": [],
+      "footprints": [
+        {
+          "area_um2": 2827.149525839491,
+          "artwork_overlap_area_um2": 0.0,
+          "fully_covered": false,
+          "positive_island_overlaps": [],
+          "support": "pad"
+        },
+        {
+          "area_um2": 1256.510900373094,
+          "artwork_overlap_area_um2": 0.0,
+          "fully_covered": false,
+          "positive_island_overlaps": [],
+          "support": "drill"
+        }
+      ],
+      "original_active_finite_index": 1024973,
+      "path_action": "REPLACE_EXISTING_L02_FIRST_LEG_WITH_TWO_SERIES_LEGS",
+      "source_node": "node2741205",
+      "source_via_ids": [
+        "via1798388",
+        "via1798389"
+      ],
+      "source_via_sha256": [
+        "31e9c54feaba223edeca4bc0b4d78607d265e1d77bd1f1990b2c823955b0c44b",
+        "1100b006bc4443ea4ffa31e61474afc3b51a817259f4822d1dfaee1f21271a16"
+      ],
+      "xy_um": [
+        -8911.9,
+        -23621.399999999998
+      ]
+    },
+    {
+      "center_artwork_islands": [
+        "spd-surface-island:0284e805fcb69d835563bc5f"
+      ],
+      "footprints": [
+        {
+          "area_um2": 2827.149525839491,
+          "artwork_overlap_area_um2": 2827.149525839491,
+          "fully_covered": true,
+          "positive_island_overlaps": [
+            {
+              "area_um2": 2827.149525839491,
+              "island_id": "spd-surface-island:0284e805fcb69d835563bc5f"
+            }
+          ],
+          "support": "pad"
+        },
+        {
+          "area_um2": 1256.510900373094,
+          "artwork_overlap_area_um2": 1256.510900373094,
+          "fully_covered": true,
+          "positive_island_overlaps": [
+            {
+              "area_um2": 1256.510900373094,
+              "island_id": "spd-surface-island:0284e805fcb69d835563bc5f"
+            }
+          ],
+          "support": "drill"
+        }
+      ],
+      "original_active_finite_index": 1235716,
+      "path_action": "REMAP_EXISTING_L02_FIRST_LEG_L04_ENDPOINT",
+      "source_node": "node2739295",
+      "source_via_ids": [
+        "via1796103"
+      ],
+      "source_via_sha256": [
+        "b8473402b55f150b6b0558b8604864aa74769ce2fd14a02252728ed00362509d"
+      ],
+      "xy_um": [
+        11515.0,
+        -23876.1
+      ]
+    },
+    {
+      "center_artwork_islands": [
+        "spd-surface-island:0284e805fcb69d835563bc5f"
+      ],
+      "footprints": [
+        {
+          "area_um2": 2827.1495258394707,
+          "artwork_overlap_area_um2": 2827.1495258394707,
+          "fully_covered": true,
+          "positive_island_overlaps": [
+            {
+              "area_um2": 2827.1495258394707,
+              "island_id": "spd-surface-island:0284e805fcb69d835563bc5f"
+            }
+          ],
+          "support": "pad"
+        },
+        {
+          "area_um2": 1256.5109003731081,
+          "artwork_overlap_area_um2": 1256.5109003731081,
+          "fully_covered": true,
+          "positive_island_overlaps": [
+            {
+              "area_um2": 1256.5109003731081,
+              "island_id": "spd-surface-island:0284e805fcb69d835563bc5f"
+            }
+          ],
+          "support": "drill"
+        }
+      ],
+      "original_active_finite_index": 1250218,
+      "path_action": "REMAP_EXISTING_L02_FIRST_LEG_L04_ENDPOINT",
+      "source_node": "node2565171",
+      "source_via_ids": [
+        "via1494785"
+      ],
+      "source_via_sha256": [
+        "5311e88f9409b8e7b0114f31d4b12dc8774b8a6d903d71c02d823a60c766a3e9"
+      ],
+      "xy_um": [
+        11515.0,
+        8729.8
+      ]
+    },
+    {
+      "center_artwork_islands": [],
+      "footprints": [
+        {
+          "area_um2": 2827.149525839491,
+          "artwork_overlap_area_um2": 0.0,
+          "fully_covered": false,
+          "positive_island_overlaps": [],
+          "support": "pad"
+        },
+        {
+          "area_um2": 1256.510900373094,
+          "artwork_overlap_area_um2": 0.0,
+          "fully_covered": false,
+          "positive_island_overlaps": [],
+          "support": "drill"
+        }
+      ],
+      "original_active_finite_index": 1254243,
+      "path_action": "REPLACE_EXISTING_L02_FIRST_LEG_WITH_TWO_SERIES_LEGS",
+      "source_node": "node2739103",
+      "source_via_ids": [
+        "via1795874",
+        "via1795875"
+      ],
+      "source_via_sha256": [
+        "7cb366843aaa4720b1165cdcd76df1fe61d5fc6459c5f36476b96ae1245d93b3",
+        "8f02c6daac8dd52162929f564ffac7f44d82d17822e967f2b718624ceb61b1fe"
+      ],
+      "xy_um": [
+        -12096.9,
+        -23508.8
+      ]
+    },
+    {
+      "center_artwork_islands": [],
+      "footprints": [
+        {
+          "area_um2": 2827.149525839491,
+          "artwork_overlap_area_um2": 0.0,
+          "fully_covered": false,
+          "positive_island_overlaps": [],
+          "support": "pad"
+        },
+        {
+          "area_um2": 1256.510900373094,
+          "artwork_overlap_area_um2": 0.0,
+          "fully_covered": false,
+          "positive_island_overlaps": [],
+          "support": "drill"
+        }
+      ],
+      "original_active_finite_index": 1336715,
+      "path_action": "REPLACE_EXISTING_L02_FIRST_LEG_WITH_TWO_SERIES_LEGS",
+      "source_node": "node2727888",
+      "source_via_ids": [
+        "via1782420",
+        "via1782421"
+      ],
+      "source_via_sha256": [
+        "76b9c2e715aab646e7c1d687fb0f638f49e3c9d6db0117a03cac92088528f7fc",
+        "443e1fb7742300cc9cfb6408fcdadc1bf687747f10e6063388bf9f2a7da9e118"
+      ],
+      "xy_um": [
+        12190.599999999999,
+        -22056.1
+      ]
+    },
+    {
+      "center_artwork_islands": [],
+      "footprints": [
+        {
+          "area_um2": 2827.1495258394707,
+          "artwork_overlap_area_um2": 0.0,
+          "fully_covered": false,
+          "positive_island_overlaps": [],
+          "support": "pad"
+        },
+        {
+          "area_um2": 1256.5109003731081,
+          "artwork_overlap_area_um2": 0.0,
+          "fully_covered": false,
+          "positive_island_overlaps": [],
+          "support": "drill"
+        }
+      ],
+      "original_active_finite_index": 1392846,
+      "path_action": "REPLACE_EXISTING_L02_FIRST_LEG_WITH_TWO_SERIES_LEGS",
+      "source_node": "node2567081",
+      "source_via_ids": [
+        "via1497070",
+        "via1497071"
+      ],
+      "source_via_sha256": [
+        "0f393082a7238a38477a0f0dbead7d40489785e0740bb64065e8271288db6490",
+        "d991cf9c377243791ef1cf85a62cf2215382cd9b187d91778d94447af9d8c795"
+      ],
+      "xy_um": [
+        -8911.9,
+        8984.5
+      ]
+    },
+    {
+      "center_artwork_islands": [
+        "spd-surface-island:eb97dac49fb6d5068d819c57"
+      ],
+      "footprints": [
+        {
+          "area_um2": 2827.1495258394707,
+          "artwork_overlap_area_um2": 2827.1495258394707,
+          "fully_covered": true,
+          "positive_island_overlaps": [
+            {
+              "area_um2": 2827.1495258394707,
+              "island_id": "spd-surface-island:eb97dac49fb6d5068d819c57"
+            }
+          ],
+          "support": "pad"
+        },
+        {
+          "area_um2": 1256.5109003731081,
+          "artwork_overlap_area_um2": 1256.5109003731081,
+          "fully_covered": true,
+          "positive_island_overlaps": [
+            {
+              "area_um2": 1256.5109003731081,
+              "island_id": "spd-surface-island:eb97dac49fb6d5068d819c57"
+            }
+          ],
+          "support": "drill"
+        }
+      ],
+      "original_active_finite_index": 1498455,
+      "path_action": "REMAP_EXISTING_L02_FIRST_LEG_L04_ENDPOINT",
+      "source_node": "node2410468",
+      "source_via_ids": [
+        "via1309389"
+      ],
+      "source_via_sha256": [
+        "80b549a9dd0781508d0421f9df2d8617dde4fd1201ccb7832c7d803c7e66c52d"
+      ],
+      "xy_um": [
+        -12356.9,
+        9097.1
+      ]
+    },
+    {
+      "center_artwork_islands": [],
+      "footprints": [
+        {
+          "area_um2": 2827.149525839491,
+          "artwork_overlap_area_um2": 0.0,
+          "fully_covered": false,
+          "positive_island_overlaps": [],
+          "support": "pad"
+        },
+        {
+          "area_um2": 1256.510900373094,
+          "artwork_overlap_area_um2": 0.0,
+          "fully_covered": false,
+          "positive_island_overlaps": [],
+          "support": "drill"
+        }
+      ],
+      "original_active_finite_index": 1521556,
+      "path_action": "REPLACE_EXISTING_L02_FIRST_LEG_WITH_TWO_SERIES_LEGS",
+      "source_node": "node2738684",
+      "source_via_ids": [
+        "via1795375",
+        "via1795376"
+      ],
+      "source_via_sha256": [
+        "d4030e9b49aff2e1fc095ade509761b964217a8a21ed592a841ebdb1f6695b32",
+        "11011ac58b77746c61f7079d419741d10df9cd085b83ae42ba95ca0e9250371a"
+      ],
+      "xy_um": [
+        -10211.9,
+        -23621.399999999998
+      ]
+    },
+    {
+      "center_artwork_islands": [
+        "spd-surface-island:7b1feb1f44b63cee3a1ed8d5"
+      ],
+      "footprints": [
+        {
+          "area_um2": 2827.149525839491,
+          "artwork_overlap_area_um2": 2827.149525839491,
+          "fully_covered": true,
+          "positive_island_overlaps": [
+            {
+              "area_um2": 2827.149525839491,
+              "island_id": "spd-surface-island:7b1feb1f44b63cee3a1ed8d5"
+            }
+          ],
+          "support": "pad"
+        },
+        {
+          "area_um2": 1256.510900373094,
+          "artwork_overlap_area_um2": 1256.510900373094,
+          "fully_covered": true,
+          "positive_island_overlaps": [
+            {
+              "area_um2": 1256.510900373094,
+              "island_id": "spd-surface-island:7b1feb1f44b63cee3a1ed8d5"
+            }
+          ],
+          "support": "drill"
+        }
+      ],
+      "original_active_finite_index": 1591596,
+      "path_action": "REMAP_EXISTING_L02_FIRST_LEG_L04_ENDPOINT",
+      "source_node": "node2584429",
+      "source_via_ids": [
+        "via1610512"
+      ],
+      "source_via_sha256": [
+        "8eccdbddf2e1a17fca87a2a2523c0f7718b56cbd02384bfe0a87bf0d24352af1"
+      ],
+      "xy_um": [
+        -12356.9,
+        -23508.8
+      ]
+    },
+    {
+      "center_artwork_islands": [
+        "spd-surface-island:0284e805fcb69d835563bc5f"
+      ],
+      "footprints": [
+        {
+          "area_um2": 2827.149525839491,
+          "artwork_overlap_area_um2": 2827.149525839491,
+          "fully_covered": true,
+          "positive_island_overlaps": [
+            {
+              "area_um2": 2827.149525839491,
+              "island_id": "spd-surface-island:0284e805fcb69d835563bc5f"
+            }
+          ],
+          "support": "pad"
+        },
+        {
+          "area_um2": 1256.510900373094,
+          "artwork_overlap_area_um2": 1256.510900373094,
+          "fully_covered": true,
+          "positive_island_overlaps": [
+            {
+              "area_um2": 1256.510900373094,
+              "island_id": "spd-surface-island:0284e805fcb69d835563bc5f"
+            }
+          ],
+          "support": "drill"
+        }
+      ],
+      "original_active_finite_index": 1670923,
+      "path_action": "REMAP_EXISTING_L02_FIRST_LEG_L04_ENDPOINT",
+      "source_node": "node2741390",
+      "source_via_ids": [
+        "via1798617"
+      ],
+      "source_via_sha256": [
+        "b20490d6bff4ff6750c1a7239882805414e1de77696067ca19402239b3ecb40a"
+      ],
+      "xy_um": [
+        -11836.9,
+        -23734.0
+      ]
+    },
+    {
+      "center_artwork_islands": [],
+      "footprints": [
+        {
+          "area_um2": 2827.1495258395125,
+          "artwork_overlap_area_um2": 0.0,
+          "fully_covered": false,
+          "positive_island_overlaps": [],
+          "support": "pad"
+        },
+        {
+          "area_um2": 1256.5109003730956,
+          "artwork_overlap_area_um2": 0.0,
+          "fully_covered": false,
+          "positive_island_overlaps": [],
+          "support": "drill"
+        }
+      ],
+      "original_active_finite_index": 1690188,
+      "path_action": "REPLACE_EXISTING_L02_FIRST_LEG_WITH_TWO_SERIES_LEGS",
+      "source_node": "node2731133",
+      "source_via_ids": [
+        "via1786303",
+        "via1786304"
+      ],
+      "source_via_sha256": [
+        "93f76d4a9529bd6da690c319ecc29dcc58001e9e183dc93b1cffe8e496072b4c",
+        "4333b8e2dc70ffab2a082128f5ba26adc206945f41a51188ba7095f52c7a045d"
+      ],
+      "xy_um": [
+        -7437.0,
+        -22147.2
+      ]
+    }
+  ],
+  "scope": "Twenty source sites only, including ten hidden L04 midpoints. Exact source artwork islands and the existing 256-edge inscribed circle convention. Positive area certifies polygon overlap only; zero does not certify analytic-circle or trace noncontact. No trace/pad domain union, full76146-link contact ledger, current electrode, joint sheet attachment, mesh, G/C replacement, board solve or PowerSI accuracy claim. Only the named3.15MB ZIP asset was read; scenario and source SPD were not read.",
+  "script_sha256": "ddfeb02568cab5ba2e18a017d501bf18f9950a1043088864e7a4cfc53110b49c",
+  "source_asset": {
+    "asset": "geometry/0001-f7ddeb208553e127.spdgeom.zlib",
+    "asset_sha256": "f7ddeb208553e1279e4a4ca36333d2b5e0180b7ea6391b3a3705afccc3a896f3",
+    "bytes": 3154011,
+    "island_ids": [
+      "spd-surface-island:01379d49109a4b7fe79381a5",
+      "spd-surface-island:015cd8b3396c5fbe99fc0015",
+      "spd-surface-island:025b7f6829f974bba816caf7",
+      "spd-surface-island:0284e805fcb69d835563bc5f",
+      "spd-surface-island:0418f5fbecdc0958e94157ed",
+      "spd-surface-island:04290b47369f2ba7a532865f",
+      "spd-surface-island:043c2e1715b5d87092a09890",
+      "spd-surface-island:044568837573cf1708ebc2b3",
+      "spd-surface-island:050a46c64b1ffd0053df187f",
+      "spd-surface-island:051b5567fe8b4f41f57dd5d8",
+      "spd-surface-island:05bf6c925a358443fa43fde7",
+      "spd-surface-island:05e24ab46361e152bd8d0838",
+      "spd-surface-island:073a79d3aa506595d80af8da",
+      "spd-surface-island:081638ff12930a14888a9d78",
+      "spd-surface-island:08287e8188f4a8ba64ccb4fe",
+      "spd-surface-island:089d5791577f1526b0bc9190",
+      "spd-surface-island:09744eef5ef438af255a7621",
+      "spd-surface-island:0a180c00c62d3d6952fe97ca",
+      "spd-surface-island:0a571197048a45d57d84effd",
+      "spd-surface-island:0a891f587e18abb060ae8a86",
+      "spd-surface-island:0b3c6659cc75d71a4fc2b0d3",
+      "spd-surface-island:0c255f366e82331c8c0a342c",
+      "spd-surface-island:0d0458e78fd82056b9a14173",
+      "spd-surface-island:0e04ad7566b7117314a5c788",
+      "spd-surface-island:0e446285f8a398d99306586b",
+      "spd-surface-island:10a1ca91e12d44040789bd0e",
+      "spd-surface-island:10a80bd282913eed2f21d341",
+      "spd-surface-island:11906393fca4fd70d1507daf",
+      "spd-surface-island:11bf47171839ef3bf8b09105",
+      "spd-surface-island:1226f401e8489e0649f9e3dd",
+      "spd-surface-island:132cbd3a7140eead0ee899c6",
+      "spd-surface-island:133edc3eb679ba93b7107e26",
+      "spd-surface-island:1419e742b52fec2121c50a98",
+      "spd-surface-island:1438dac7ec4c28a7839aa563",
+      "spd-surface-island:1457cb635d4e4aa3c3118dda",
+      "spd-surface-island:14b752edbac366ce98e94b3c",
+      "spd-surface-island:160c03261139143b525d9674",
+      "spd-surface-island:16142afcce288d8444308c2f",
+      "spd-surface-island:18914c498fc3173207d911d8",
+      "spd-surface-island:1a90a2c0661a64c098d20b5f",
+      "spd-surface-island:1bdbeb6d7e730a3f2c90d1ed",
+      "spd-surface-island:1cfcdd73a025973bd5f2c0eb",
+      "spd-surface-island:1f8bf48747527c9adfb8ac3b",
+      "spd-surface-island:207b5595d3c30333cca7c779",
+      "spd-surface-island:21b3066fe004b5541bb0fc19",
+      "spd-surface-island:2209d5788b4b2e374cafe120",
+      "spd-surface-island:2273e06e6e0eeeb2d5c091ff",
+      "spd-surface-island:2279dd9e29aa09c023285ca9",
+      "spd-surface-island:22d33949d564878110d1920e",
+      "spd-surface-island:22e54116b5e568770d74ada5",
+      "spd-surface-island:238a6a5ac59aed5cf1434954",
+      "spd-surface-island:2404b5db3a282f63b8aa0f86",
+      "spd-surface-island:2475498f7ca7cb54924e1058",
+      "spd-surface-island:24ca602d0a947fba273b5515",
+      "spd-surface-island:2528335b7efa8eb9ccd14a24",
+      "spd-surface-island:26e8cf2e34b960c1d530b98f",
+      "spd-surface-island:2967e03458c1a44dce7efa46",
+      "spd-surface-island:299649484d437c98dc7de3a4",
+      "spd-surface-island:2997ce839c1ceb8b10831913",
+      "spd-surface-island:2a136c86fe56a0802bac9be0",
+      "spd-surface-island:2a42ccdae0ffbc9fb1622e39",
+      "spd-surface-island:2b488173d61f7229db2dfdce",
+      "spd-surface-island:2c06b91b586ab600429b1891",
+      "spd-surface-island:2c18636da2142d5293399819",
+      "spd-surface-island:2cec070915f2a366ba289d89",
+      "spd-surface-island:2d19ef749f9a24c368121626",
+      "spd-surface-island:2d9a3ec50444981e6a425dfd",
+      "spd-surface-island:2ec334a8b6efc5bc6f09f2df",
+      "spd-surface-island:3018dd855a1ec2ec5c62c56d",
+      "spd-surface-island:302340e80bccf42d09b97a32",
+      "spd-surface-island:323e616ceb6d5b847e54450e",
+      "spd-surface-island:32848325caef0755f7f25cd1",
+      "spd-surface-island:32dc594db64524729208c6d3",
+      "spd-surface-island:330704d96e209a3e0fe026b1",
+      "spd-surface-island:339ada558a34a288d8a7031f",
+      "spd-surface-island:35237b147f04f644a502ca08",
+      "spd-surface-island:35d6b9291475be3490ebd1c9",
+      "spd-surface-island:35ef58a32fc44f7704de81db",
+      "spd-surface-island:36c515f9eed1bbf9f9efdbb2",
+      "spd-surface-island:36f18f4bf00e1de924d11706",
+      "spd-surface-island:385b596a4be58b47349f142a",
+      "spd-surface-island:3995dce5d942da19f0713bca",
+      "spd-surface-island:39f5aceba963880a51ddd024",
+      "spd-surface-island:3a6ca999c5e068cc0710189e",
+      "spd-surface-island:3c6b86ad0c9de504717f2c68",
+      "spd-surface-island:3debd53f9fa7f0e66d4e7986",
+      "spd-surface-island:3e2738b6d2c6a67f58c7659c",
+      "spd-surface-island:4061a4410d53540453815e6d",
+      "spd-surface-island:40deee2571b32bfa60801613",
+      "spd-surface-island:412378d3c79cdf48e1f0df3e",
+      "spd-surface-island:42706e396afb8b9083948903",
+      "spd-surface-island:464136643fb25e8783b6eb70",
+      "spd-surface-island:4702e8458a67cc75c468f404",
+      "spd-surface-island:4b0fe436bdee0eaf42f9ef02",
+      "spd-surface-island:4be5f52471b7cf13dd1f5784",
+      "spd-surface-island:4c60233fe4e97c979afe9fca",
+      "spd-surface-island:4ca17bb659171964a5182833",
+      "spd-surface-island:4dfb9cd378513bccf05845f1",
+      "spd-surface-island:4e4e60240f2ef615e3c58379",
+      "spd-surface-island:512be1618177c04b65fe24f5",
+      "spd-surface-island:5227467dd115691670b585dc",
+      "spd-surface-island:52d2271d280ceba127845c5d",
+      "spd-surface-island:53549f2e6c70acb713edab52",
+      "spd-surface-island:559ca55f431a9b891d16f950",
+      "spd-surface-island:561896218eb66152e396c8a6",
+      "spd-surface-island:56e6607321fa8a7db4d0f530",
+      "spd-surface-island:57f29bce737f21bcd1fbd084",
+      "spd-surface-island:59e0e8f5f0974cc97c437a9c",
+      "spd-surface-island:5a3c955682b9266a787c88de",
+      "spd-surface-island:5a452658804dab4a6c5b52ad",
+      "spd-surface-island:5a8cdfe25a31675518b99c78",
+      "spd-surface-island:5ab394f5fb88fd03a2ab3605",
+      "spd-surface-island:5acfb8edf91eedbba0357d1d",
+      "spd-surface-island:5c424b36d312c5c15c5be828",
+      "spd-surface-island:5cb5b05e638e626a5804246c",
+      "spd-surface-island:5cca5f49b771992606b1f7b0",
+      "spd-surface-island:5d1bf3097b72ba277f13f098",
+      "spd-surface-island:5d3a077a5d4df338896a4903",
+      "spd-surface-island:5fa2d1367207eaf5ea03c46a",
+      "spd-surface-island:5ffd2c09acf49d2dae8bae3c",
+      "spd-surface-island:60663624673e0f31eb3c9905",
+      "spd-surface-island:613ae8ff22720b64740e7212",
+      "spd-surface-island:61778956a8491ce86f7ccdd9",
+      "spd-surface-island:62d1724ace218e65f282f835",
+      "spd-surface-island:6466b2818ec565c59bce173a",
+      "spd-surface-island:64b64a8972c688d99c968d3b",
+      "spd-surface-island:64bf4304e6fd65168dcc256f",
+      "spd-surface-island:65cb118892df236994632cd5",
+      "spd-surface-island:671716185b7ba9db3429c72e",
+      "spd-surface-island:67858f683b5db4663b0600db",
+      "spd-surface-island:67caf6f123aabac244bbf962",
+      "spd-surface-island:67e16541384d622b96c912be",
+      "spd-surface-island:683cb149889031307176f171",
+      "spd-surface-island:6b0203a3cc13ee25f1f2da7a",
+      "spd-surface-island:6b4fe90d4af95c4d37f7d893",
+      "spd-surface-island:6bb26e2ccd57d56214a091f8",
+      "spd-surface-island:6caac397a956f08da807ffa5",
+      "spd-surface-island:6d449ef087de13ad39ec7adb",
+      "spd-surface-island:6e431d6ecd2dd3df0f9095e1",
+      "spd-surface-island:7131a257b407355a93448271",
+      "spd-surface-island:716a2be0ba9286449465bc7e",
+      "spd-surface-island:72a49feaf8e58836ad402d08",
+      "spd-surface-island:732938db1f26f6b17aead345",
+      "spd-surface-island:73bb3a4ba040d78a1ab7b122",
+      "spd-surface-island:743280d9f18ad5a83e4682ae",
+      "spd-surface-island:7564ea6007afe1077a71a949",
+      "spd-surface-island:75e3a3dedcdf977f38406cb6",
+      "spd-surface-island:767558a96df50fd27561b259",
+      "spd-surface-island:76ecec2328ffa07a15313740",
+      "spd-surface-island:77ee3ecd0f903585be3a1877",
+      "spd-surface-island:79cbbce4a253e2f98f5ba367",
+      "spd-surface-island:7aa87348872998e5dca18439",
+      "spd-surface-island:7ac8f7da6ce101ee954fc905",
+      "spd-surface-island:7b1feb1f44b63cee3a1ed8d5",
+      "spd-surface-island:7c5d211160cf80171294038f",
+      "spd-surface-island:7e486b113251e4276a74252f",
+      "spd-surface-island:7f03a4e971c68cf12bf77235",
+      "spd-surface-island:7fbe2bed7b66e5019cce027b",
+      "spd-surface-island:8271a68bf779b2347c6dc82a",
+      "spd-surface-island:8355b5c88fd6c3f847d2d007",
+      "spd-surface-island:84a4c60803e63c6ed6d06903",
+      "spd-surface-island:8796fc3c5efba831ffceb7a3",
+      "spd-surface-island:8888935b78abb7e80397072e",
+      "spd-surface-island:88f24d52db6a5772eedba3b0",
+      "spd-surface-island:896c2a48fe65ec3e23466f9f",
+      "spd-surface-island:8ba9b84bbca148caab5a4958",
+      "spd-surface-island:8ce490ba81fa6d4be7bf9ca7",
+      "spd-surface-island:8ce82879d41163b7f493e369",
+      "spd-surface-island:8d43d4189241e65b0821a8c5",
+      "spd-surface-island:8d88bb8d58c4c55252110477",
+      "spd-surface-island:8dcf8ba3ad761d5b319ae328",
+      "spd-surface-island:8e32166411b039b211a4dcb3",
+      "spd-surface-island:90a1bca327fea71430d85fda",
+      "spd-surface-island:90e30d10b33d583fa1a6f1fc",
+      "spd-surface-island:923d2c4c4d8af0ecadd97237",
+      "spd-surface-island:9294d71d2bff0adbd343fb73",
+      "spd-surface-island:93164f8a9d1c859495fcb9b9",
+      "spd-surface-island:97057dc1086457919d1808ee",
+      "spd-surface-island:97753e3461bb0764b408231f",
+      "spd-surface-island:979f1c6300c2439833dcaa78",
+      "spd-surface-island:985f49dd1f99e03ea9214a84",
+      "spd-surface-island:9865c39ed1ff4960b9d6c4e3",
+      "spd-surface-island:9894498c8e863043daff71ae",
+      "spd-surface-island:9905aea8aa63faae672daca7",
+      "spd-surface-island:99d1b0bc32cc825322320e5f",
+      "spd-surface-island:9cb5f11e4812876b6f46a5be",
+      "spd-surface-island:9cc846e81c3d4ef5ddc62083",
+      "spd-surface-island:9ea225fa2777e340748b0ca5",
+      "spd-surface-island:9f782178c463db519df901a3",
+      "spd-surface-island:a26cb63b401a0624314d4d4b",
+      "spd-surface-island:a279df1cc606248e5617fe66",
+      "spd-surface-island:a355ec8fba067e5611d55478",
+      "spd-surface-island:a3a8e8fef83140ce0b67c4b9",
+      "spd-surface-island:a442d6de8c8af4ac29c30770",
+      "spd-surface-island:a4e61dcf3835f19f90f4ab5d",
+      "spd-surface-island:a5217828100d2b7e54caf665",
+      "spd-surface-island:a53fb075835363413fece37c",
+      "spd-surface-island:a601074e3425930558eb50fd",
+      "spd-surface-island:a73531979611636ae108d149",
+      "spd-surface-island:a750b70fb89093cbc949c86f",
+      "spd-surface-island:aa7cd3ace8f93e7f67002896",
+      "spd-surface-island:aaeb982c475c0354df898ddc",
+      "spd-surface-island:aee99a61279e7671a0b9c186",
+      "spd-surface-island:afda0d83d4b9f139772f31f0",
+      "spd-surface-island:b1621e813f1ba7918916e407",
+      "spd-surface-island:b2eeffe5be9e5fb089e7c650",
+      "spd-surface-island:b3868cd679aacfa1e44d6e02",
+      "spd-surface-island:b46f98cd04f85c1bd63e039d",
+      "spd-surface-island:b59d1b67b08681978ffcc90e",
+      "spd-surface-island:b63a3b00794369fb764e03c4",
+      "spd-surface-island:b6978c0ef827856080aec6ec",
+      "spd-surface-island:b77e085481f0e7deef7b777b",
+      "spd-surface-island:b80807ed49039479d0687cf7",
+      "spd-surface-island:b9218c0460ae29e7d622c768",
+      "spd-surface-island:ba1f3dade71ad339dae1a411",
+      "spd-surface-island:ba28dd6628effa57d9f9eb7a",
+      "spd-surface-island:ba47a88ee2569cad7485652a",
+      "spd-surface-island:babb5eaa19944566df9958bc",
+      "spd-surface-island:bac610855cf2ee2fa99f3e2d",
+      "spd-surface-island:bb4c84f5f0b8b145a95cb2db",
+      "spd-surface-island:bd251ec537e9079aa9af3f9a",
+      "spd-surface-island:bfe5668c04204a29c6f5e03c",
+      "spd-surface-island:bfe7ddba9a8bb003ec3795f3",
+      "spd-surface-island:c13ec9b352352107c8a56c34",
+      "spd-surface-island:c19513e6c5c6e26205ceedf8",
+      "spd-surface-island:c34ef756bb7d3d5f3d84991e",
+      "spd-surface-island:c4dbbd9e6b74983f1390bcc2",
+      "spd-surface-island:c4edaab3b97eea7bd9912d77",
+      "spd-surface-island:c517f3658a94bdc6fea7415c",
+      "spd-surface-island:c6106b99cfa823846f0fb531",
+      "spd-surface-island:c7510e6f5e4aeb523ccd19b2",
+      "spd-surface-island:c7c5bd7608653c91f093ccba",
+      "spd-surface-island:c86bf3dc69bd528dc56b90d5",
+      "spd-surface-island:cbb574cdb5754b8d9714193a",
+      "spd-surface-island:cceae987f9aab5b4a2eadc5a",
+      "spd-surface-island:cd39a195e9d13f7508126afb",
+      "spd-surface-island:cd9e1979f7ea2a5a2282c6d8",
+      "spd-surface-island:d0b0e54b640803a335ea23e3",
+      "spd-surface-island:d0d1dbcb194580bc5359e570",
+      "spd-surface-island:d0d75b6918a3e59ac676f070",
+      "spd-surface-island:d1d6062988eb57b0ef7bdcf0",
+      "spd-surface-island:d326ac91e1f16d7e944e363c",
+      "spd-surface-island:d3928e2ca4e3483ef78aea5b",
+      "spd-surface-island:d3fac7905b93ac497406d41b",
+      "spd-surface-island:d4e6879189bb4a5fadbf94d8",
+      "spd-surface-island:d57b9e4abf7330981adb4363",
+      "spd-surface-island:d65fe6def5c766fce0e97e9c",
+      "spd-surface-island:d748889ec0a7e229d4ff1bd0",
+      "spd-surface-island:d98f1434333aa2d3d703c82e",
+      "spd-surface-island:ddbf98a2d57420cb5ef800b2",
+      "spd-surface-island:df1a40c7491189d980279dab",
+      "spd-surface-island:df91295d4bebce58af53ddd8",
+      "spd-surface-island:e05b0077ad5a5925fdb20c88",
+      "spd-surface-island:e0b6d37157a6f83b887027a9",
+      "spd-surface-island:e22174f54ad518b1780871ae",
+      "spd-surface-island:e2861ff87832f804980f8b84",
+      "spd-surface-island:e2949e9e4cb115457f349604",
+      "spd-surface-island:e635cc367cef0aad2ce7ee3b",
+      "spd-surface-island:e6b0dc0e41b5e5346016fee7",
+      "spd-surface-island:e828fd0601eb2a144b77ef1c",
+      "spd-surface-island:e884e962f911a0e1193f172b",
+      "spd-surface-island:e9ba10732f42d79f496e8868",
+      "spd-surface-island:ea68fb3f181fff70588e4d78",
+      "spd-surface-island:eb97dac49fb6d5068d819c57",
+      "spd-surface-island:ec0bd2706aa708d1b681af6e",
+      "spd-surface-island:ed05d15bcde3dab8d524386a",
+      "spd-surface-island:edeb89b37e212b7a434899f9",
+      "spd-surface-island:ee1ee889dd1380b035cf16c9",
+      "spd-surface-island:eec98e323788c87459b6d6e3",
+      "spd-surface-island:ef0e6022badc0a07f620a7e5",
+      "spd-surface-island:ef58fb2d3738394058d68988",
+      "spd-surface-island:efe249c51c29350bfb9e1740",
+      "spd-surface-island:f06b133bf2c36fd876a9bac8",
+      "spd-surface-island:f1976a4636aca25bd8a6634a",
+      "spd-surface-island:f1f39c204319d1a61e92d670",
+      "spd-surface-island:f42c36f0516789058d3a36db",
+      "spd-surface-island:f44e4669395e2f6c32a54476",
+      "spd-surface-island:f4b5360b965dda9de02a1938",
+      "spd-surface-island:f52a2e5916a3603898e2b612",
+      "spd-surface-island:f5344561b91209c82d55beb2",
+      "spd-surface-island:f5b468fb834b27c610e88203",
+      "spd-surface-island:f611a0c21ce2fed1dcb32485",
+      "spd-surface-island:f7a32d7c519467fbce7c820a",
+      "spd-surface-island:f813e4297ecb0343066ddbd9",
+      "spd-surface-island:f9455f99041879d884414464",
+      "spd-surface-island:f94b1c317d20177770198a67",
+      "spd-surface-island:faa485d8d6a5ba6a96d0edcb",
+      "spd-surface-island:fb8529a290380c661f21c04a",
+      "spd-surface-island:febeee56c4b2e849dee3cf98"
+    ],
+    "layer": "Signal$L04(DGND)",
+    "local_path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-exception-pad-artwork-01\\0001-f7ddeb208553e127.spdgeom.zlib",
+    "net": "DGND"
+  },
+  "source_bundle_path": "D:\\SPD-Decap-PI-Evaluator-W7\\e2f219e71d8c8a397009f72242cce10d78cfc7ab\\260902-d115b-source-plane-ownership-materialization-04\\source_plane_ownership_candidate.spdpi",
+  "source_site_count": 20,
+  "source_via_count": 30,
+  "status": "COMPLETED_L04_EXCEPTION_SOURCE_PAD_ARTWORK_DIAGNOSTIC",
+  "version": "0.23.1"
+}

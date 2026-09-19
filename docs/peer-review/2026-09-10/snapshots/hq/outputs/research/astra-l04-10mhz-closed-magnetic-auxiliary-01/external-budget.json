@@ -1,0 +1,24 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "COMPLETED_NATIVE_WORKER",
+  "exit_code": 0,
+  "driver_sha256": "f49ceb023a1b1ce5aaaec6f329b7623f2f79dd3d3301dc8f64ac054ce2e35e0f",
+  "worker_command": [
+    "C:\\Users\\User\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+    "-B",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\qualify_astra_l04_10mhz_closed_magnetic_auxiliary.py",
+    "--native-worker",
+    "--output",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-closed-magnetic-auxiliary-01"
+  ],
+  "owned_pid": 28564,
+  "external_seconds": 150.0,
+  "elapsed_s": 14.031999999999243,
+  "max_memory_bytes": 8589934592,
+  "printed_memory_cap_gib": 8,
+  "sampled_peak_private_bytes": 8171208704,
+  "sampled_peak_working_set_bytes": 1580544000,
+  "sampling_interval_s": 0.5,
+  "guard_failure": null
+}

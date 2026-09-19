@@ -1,0 +1,220 @@
+{
+  "elapsed_s": 189.0126522000064,
+  "frequency_hz": 1000000.0,
+  "inputs": {
+    "budget_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_native_device_branch_2port.py",
+      "sha256": "5f73464f9bd8aea1eac54bae7c7840134fbf19a63d62b28e1edb57e76ec844eb",
+      "size_bytes": 26545
+    },
+    "corrected_drive_json": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-sheet-drive-02\\sheet-electrode-drive.json",
+      "sha256": "ada249febeb03dd48b57bc54294d5360477534d33c4c8586fdf089eb998906b5",
+      "size_bytes": 101496
+    },
+    "corrected_drive_npz": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-sheet-drive-02\\sheet-electrode-drive.npz",
+      "sha256": "dd1e927ba48e86be331e9c5e0bb0a966dcee77f8bf47052aa94660654065a266",
+      "size_bytes": 7344654
+    },
+    "independent_review": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-source-sheet-01\\l25-gc-inventory-independent-review.json",
+      "sha256": "e1da1189e77876c2e79b1cd4a37efc5549c672b33bf76868789811073e42894a",
+      "size_bytes": 7319
+    },
+    "inventory": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-source-sheet-01\\l25-gc-projection-inventory.json",
+      "sha256": "703e8cdf9988805a2fb05a40ff659bc9890ba999e2eef00c741a112aa5976a77",
+      "size_bytes": 20467
+    },
+    "mesh": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-sheet-mesh-preflight-01\\mesh-stiffness.npz",
+      "sha256": "09e79fcbdac766603a3e2f451e2079c3c6b8b588026d0aa47f532f1e98d78134",
+      "size_bytes": 11048098
+    },
+    "saved_l14_epsilon_field": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-sheet-r-shadow-01\\epsilon-1-field.npz",
+      "sha256": "15265003d3d93e3765cc22f4985c6a5edda77628fa57912b9676f4952dcc9f9a",
+      "size_bytes": 5732075
+    },
+    "source_gc_assets_receipt": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-source-sheet-01\\source-gc-assets\\receipt.json",
+      "sha256": "91f6dbfa0fed88b040dc84444110112dd1bd4a445a7ff9affc27536b8d835c5c",
+      "size_bytes": 2687
+    },
+    "source_receipt": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-source-sheet-01\\receipt.json",
+      "sha256": "a45f6601bae33dc72f9c56190cd85a42037c4046c460bedbdd7cecbc9e85851b",
+      "size_bytes": 774113
+    },
+    "watchdog_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_native_loaded_voltage_field.py",
+      "sha256": "9381ff41328962f40fe5663eb91dd4689989a58dcda5304f7cb67cb09ba9b403",
+      "size_bytes": 70003
+    }
+  },
+  "layer": "Signal$L25(MAIN_POWER4)",
+  "limitations": [
+    "No native/global solve, mesh solve, PowerSI fit, or finite-resistance replacement was run.",
+    "The source HOLLOW_PLATED_BARREL receipt remains a conditional drill-radius/equipotential footprint contract; it is not a filled-barrel claim.",
+    "This is a first-order GC mass shadow at saved epsilon-1 voltages; it does not certify physical current sharing."
+  ],
+  "mass": {
+    "canonical_upper_mirrored_once": true,
+    "coordinate_units": "um; raw mass data is um^2 and density is F/um^2",
+    "corrected_gc_outgoing_a": [
+      4.568265556782165e-06,
+      9.749542902640428e-07
+    ],
+    "expanded_nnz": 4830117,
+    "expanded_shape": [
+      535153,
+      535153
+    ],
+    "final_owner_checkpoint": {
+      "owner_count": 4,
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-gc-mass-02\\owner-mass-candidate-04-unvalidated.npz",
+      "sha256": "a4104fb325502a36b00588d20967fc828ed584e12b59ee310287a77c1a0f1dd3",
+      "size_bytes": 19234315
+    },
+    "m1_external_outgoing_a": [
+      4.5682655567826745e-06,
+      9.749542902641514e-07
+    ],
+    "m1_external_owner_relative": 1.1314303084725762e-13,
+    "mesh_node_count": 535149,
+    "mesh_triangle_count": 542091,
+    "minimum_triangle_mass_eigenvalue": 1.934196091271002e-09,
+    "owner_checkpoint_count": 4,
+    "owner_checkpoints": [
+      {
+        "owner_count": 1,
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-gc-mass-02\\owner-mass-candidate-01-unvalidated.npz",
+        "sha256": "cdf7f44934238161a0235d340522773beb9484b5b919bb8063b2435d3f590b05",
+        "size_bytes": 9578111
+      },
+      {
+        "owner_count": 2,
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-gc-mass-02\\owner-mass-candidate-02-unvalidated.npz",
+        "sha256": "38d619762560de4f04b66ea2b5456c64752ee5ba10f1142b70e0b72ca249cf25",
+        "size_bytes": 18914764
+      },
+      {
+        "owner_count": 3,
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-gc-mass-02\\owner-mass-candidate-03-unvalidated.npz",
+        "sha256": "fb5dbd4308bee905ac61082da2febe17adc6079b82799b46fa09f96d0f3f04a9",
+        "size_bytes": 19082354
+      },
+      {
+        "owner_count": 4,
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-gc-mass-02\\owner-mass-candidate-04-unvalidated.npz",
+        "sha256": "a4104fb325502a36b00588d20967fc828ed584e12b59ee310287a77c1a0f1dd3",
+        "size_bytes": 19234315
+      }
+    ],
+    "owner_first_moment_max_abs_error": 3.0427145247813314e-09,
+    "owner_m1_nnz": 1070446,
+    "owner_mass_data_um2": true,
+    "owner_scalar_capacitance_relative": 1.1295582356867148e-13,
+    "owner_scalar_y_relative": 1.1291812823114398e-13,
+    "owner_tagged_upper_entry_count": 6475980,
+    "physical_gc_y_nnz": 4830117,
+    "physical_gc_y_rowsum_original_owner_y_relative": 7.452984080161297e-13,
+    "raw_rowsum_backward_relative": 1.7486721484024945e-13,
+    "total_positive_triangle_intersections": 1079330
+  },
+  "output": {
+    "allow_pickle_required": false,
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-gc-mass-02\\gc-mass-shadow.npz",
+    "sha256": "1aaee9b7f045385afcb37bf3bb4889466c3584793f52273e513863cac0ca45fe",
+    "size_bytes": 56197796
+  },
+  "owner_binding": {
+    "external_global_reduced_indices": [
+      126094,
+      725157,
+      744014,
+      163769
+    ],
+    "fingerprints": [
+      "924e8e16018d8ec9d77f29498aa8426818730a5ce3de08ecce1c146895dfc273",
+      "5776b2c1a763d33b89bc512c109cbd08726cf0a1c343959573bbeb6a84fbf59b",
+      "6ea83bab6eb091d1207ebd49a72ceddb37cf3edb72ec0338fdbf3c1c255cb278",
+      "c954833ee80a07df419f342a5543c5a02b1d144cfbc0b496ae8b2d17962a0645"
+    ],
+    "owner_count": 4,
+    "partial_owner_counts": {
+      "13": 1,
+      "14": 3
+    },
+    "retained_nonincident_owner_counts": {
+      "13": 3,
+      "14": 11
+    }
+  },
+  "program": "SPD Decap PI Evaluator",
+  "projection_contract": {
+    "contact_drive_role": "corrected 350-contact drive is RHS validation only, never geometry input",
+    "external_global_order": [
+      126094,
+      725157,
+      744014,
+      163769
+    ],
+    "frequency_stamp": "owner density(F/um^2) * original dispersion(S/F) applied once",
+    "m1_rhs": "constant saved L25 target voltage and saved external voltages; external row sign is incoming, negated to compare target GC outgoing/contact drive",
+    "physical_gc_y_schema": "physical_gc_y_{data,indices,indptr,shape}"
+  },
+  "rail_id": "ADC_VDD_075_VTRIP_SRAM/0",
+  "runtime_budget": {
+    "max_rss_gib": 16.0,
+    "max_runtime_s": 600.0,
+    "peak_private_bytes": 3835924480,
+    "peak_working_set_bytes": 2485473280
+  },
+  "script_sha256": "6cd278b088955686faa279da1c06eda615520e370e87455e266448c69bdc2be2",
+  "source_geometry": [
+    {
+      "layer": "Signal$L25(MAIN_POWER4)",
+      "net": "ADC_VDD_075_VTRIP_SRAM/0",
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-source-sheet-01\\0247-c80867ceb7f82d7b.spdgeom.zlib",
+      "sha256": "c80867ceb7f82d7ba4f886c63c68dbdc88c55fc3c1d9cc703d8fdea4a25ca711",
+      "size_bytes": 21897,
+      "source_island_count": 1
+    },
+    {
+      "layer": "Signal$L26(MAIN_POWER5)",
+      "net": "ADC_VDD_055_VTRIP/0",
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-source-sheet-01\\source-gc-assets\\0253-b7f8d21325bdcb1a.spdgeom.zlib",
+      "sha256": "b7f8d21325bdcb1a27bb4aaa6c3a355322ad23d03c25cacc5acf72c48521bb8d",
+      "size_bytes": 26384,
+      "source_island_count": 1
+    },
+    {
+      "layer": "Signal$L24(DGND)",
+      "net": "DGND",
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-source-sheet-01\\source-gc-assets\\0244-6b70d5635899822f.spdgeom.zlib",
+      "sha256": "6b70d5635899822f888040f33828ec2e19cc12eaa67e5e0840f3a032261b9519",
+      "size_bytes": 27965,
+      "source_island_count": 1
+    },
+    {
+      "layer": "Signal$L26(MAIN_POWER5)",
+      "net": "ADC_VDD_050_VDDQ_DDRL/0",
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-source-sheet-01\\source-gc-assets\\0251-d7b85bc9e38dfe9a.spdgeom.zlib",
+      "sha256": "d7b85bc9e38dfe9adddd12e693e8a664f17c43bd85225aef2aba6c06420ff19d",
+      "size_bytes": 10106,
+      "source_island_count": 1
+    },
+    {
+      "layer": "Signal$L26(MAIN_POWER5)",
+      "net": "ADC_VDD_050_VDDQ_DDRH/0",
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-source-sheet-01\\source-gc-assets\\0249-16fccda39197cd97.spdgeom.zlib",
+      "sha256": "16fccda39197cd97ee5aefe7ca10d7b9ca1b7337e578e773417c2b8f7ebca28b",
+      "size_bytes": 10943,
+      "source_island_count": 1
+    }
+  ],
+  "status": "COMPLETED_SOURCE_EXACT_L25_GC_P1_MASS_SHADOW",
+  "version": "0.23.1"
+}

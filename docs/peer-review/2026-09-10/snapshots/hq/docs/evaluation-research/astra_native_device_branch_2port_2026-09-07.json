@@ -1,0 +1,331 @@
+{
+  "bundle": {
+    "attachment_count": 379,
+    "design_fingerprint": "73a0167ef13cadc885b0f97bcab00de4322095b1a25d9bfd014f32bb39b40dab",
+    "load_validated_all_declared_member_hashes": true,
+    "manifest_sha256": "7ceb7f1a94a7140c5f0c82a6a1252e2f96ba5f8543d75e9e9edae6ab12a5a82b",
+    "path": "D:\\SPD-Decap-PI-Evaluator-W7\\e2f219e71d8c8a397009f72242cce10d78cfc7ab\\260902-d115b-source-plane-ownership-materialization-04\\source_plane_ownership_candidate.spdpi",
+    "scenario_sha256": "2f5ae107221857f7f093ab8d6cbcff4c286a0c6cee5b6a9994de1c384cf39c83",
+    "size_bytes": 925278361,
+    "source_sha256": "40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2"
+  },
+  "frequency_hz": 1000000.0,
+  "identities": {
+    "base_substrate_identity_sha256": "ded5a0de451b0f195214f9f175c51ccb61af1b60f97f5a4b1052570125a84abc",
+    "driver_code_sha256": "5f73464f9bd8aea1eac54bae7c7840134fbf19a63d62b28e1edb57e76ec844eb",
+    "loaded_scenario_identity_sha256": "a3ffcfffc90b18f552c8e887185042478c21cedd9aa01e0a1008a21d3148c844",
+    "probe_port_manifest_sha256": "0caff3d9d91d96399a27e35b368373905c3f1d516846b17376a35b6a9f65158a",
+    "solver_profile": "layerwise_admittance_v1",
+    "source_model_evidence_sha256": "2aae9ea0a26d8b4b7a6fbd6c0b7d21cad8ed75e5ad1684db97831cc75fa62aac",
+    "termination_manifest_sha256": "c753669eacf83d3bfcf5c657e14e343a8c9ab5a0a2464039069a9053a293af75"
+  },
+  "limitations": [
+    "The two states are native base versus the saved source-mounted Scenario; they are not a W6 same-rail bare/loaded stratum contract.",
+    "The current layerwise model is uniform-potential per certified artwork equivalence component and has no finite Trace R/L stamp.",
+    "Via336274 remains in the native network; this run measures an open endpoint transfer and performs no replacement.",
+    "Cross terms are recovered by subtraction; interpret the recorded cancellation ratio with the solver pivot and residual diagnostics.",
+    "No PowerSI parameter, response, or error target enters this computation."
+  ],
+  "ports": {
+    "branch": {
+      "inductance_h": 2.6094379124341013e-11,
+      "link_id": "spd-finite-via-edge:fab23cbe1e898b5ed9b72332",
+      "negative_node_id": "spd-finite-via-vertex:921ff757f2ea39c7c1a13f53",
+      "owner_id": "via:via336274",
+      "positive_node_id": "spd-finite-via-vertex:b9bb8fd2222593d92b1c9511",
+      "resistance_ohm": 0.0006677082693903983
+    },
+    "device": {
+      "negative_node_id": "spd-finite-via-vertex:a0993f5ab9a6ce414dbfe97c",
+      "port_id": "ADC_VDD_180_VQPS_SYS_1_AON/0",
+      "positive_node_id": "spd-finite-via-vertex:aef72c164348031705f8bec6"
+    },
+    "polarization_identity": "Zdb=(Z[a,v]+Z[g,u]-Z[a,u]-Z[g,v])/2; complex reciprocal bilinear identity; cancellation ratio is diagnostic, not an error bound",
+    "probe_port_manifest": [
+      {
+        "negative_node_id": "spd-finite-via-vertex:a0993f5ab9a6ce414dbfe97c",
+        "port_id": "ADC_VDD_180_VQPS_SYS_1_AON/0",
+        "positive_node_id": "spd-finite-via-vertex:aef72c164348031705f8bec6"
+      },
+      {
+        "negative_node_id": "spd-finite-via-vertex:921ff757f2ea39c7c1a13f53",
+        "port_id": "astra-probe:branch",
+        "positive_node_id": "spd-finite-via-vertex:b9bb8fd2222593d92b1c9511"
+      },
+      {
+        "negative_node_id": "spd-finite-via-vertex:921ff757f2ea39c7c1a13f53",
+        "port_id": "astra-probe:a-v",
+        "positive_node_id": "spd-finite-via-vertex:aef72c164348031705f8bec6"
+      },
+      {
+        "negative_node_id": "spd-finite-via-vertex:b9bb8fd2222593d92b1c9511",
+        "port_id": "astra-probe:g-u",
+        "positive_node_id": "spd-finite-via-vertex:a0993f5ab9a6ce414dbfe97c"
+      },
+      {
+        "negative_node_id": "spd-finite-via-vertex:b9bb8fd2222593d92b1c9511",
+        "port_id": "astra-probe:a-u",
+        "positive_node_id": "spd-finite-via-vertex:aef72c164348031705f8bec6"
+      },
+      {
+        "negative_node_id": "spd-finite-via-vertex:921ff757f2ea39c7c1a13f53",
+        "port_id": "astra-probe:g-v",
+        "positive_node_id": "spd-finite-via-vertex:a0993f5ab9a6ce414dbfe97c"
+      }
+    ],
+    "probe_port_manifest_sha256": "0caff3d9d91d96399a27e35b368373905c3f1d516846b17376a35b6a9f65158a"
+  },
+  "program": "SPD Decap PI Evaluator v0.23.1",
+  "rail_id": "ADC_VDD_180_VQPS_SYS_1_AON/0",
+  "resource": {
+    "elapsed_s": 1578.875,
+    "max_rss_bytes": 25769803776,
+    "max_runtime_s": 2400.0,
+    "peak_private_bytes": 14921424896,
+    "peak_working_set_bytes": 11407335424
+  },
+  "scenario_population": {
+    "decap_count": 11050,
+    "enabled_by_rail": {
+      "ADC_VDD_050_VDDQ_DDRH/0": 35,
+      "ADC_VDD_050_VDDQ_DDRH/1": 35,
+      "ADC_VDD_050_VDDQ_DDRL/0": 35,
+      "ADC_VDD_050_VDDQ_DDRL/1": 35,
+      "ADC_VDD_055_VTRIP/0": 3166,
+      "ADC_VDD_055_VTRIP/1": 3166,
+      "ADC_VDD_070_VAON/0": 113,
+      "ADC_VDD_070_VAON/1": 113,
+      "ADC_VDD_070_VDDA_DDRH_REF_CLK/0": 4,
+      "ADC_VDD_070_VDDA_DDRH_REF_CLK/1": 4,
+      "ADC_VDD_070_VDDA_DDRL_REF_CLK/0": 4,
+      "ADC_VDD_070_VDDA_DDRL_REF_CLK/1": 4,
+      "ADC_VDD_070_VINT/0": 1034,
+      "ADC_VDD_070_VINT/1": 1034,
+      "ADC_VDD_070_VPDIG_PHY_PCI/0": 6,
+      "ADC_VDD_070_VPDIG_PHY_PCI/1": 6,
+      "ADC_VDD_070_VP_AON/0": 4,
+      "ADC_VDD_070_VP_AON/1": 4,
+      "ADC_VDD_070_VP_CAM0/0": 4,
+      "ADC_VDD_070_VP_CAM0/1": 4,
+      "ADC_VDD_070_VP_CAM12/0": 4,
+      "ADC_VDD_070_VP_CAM12/1": 4,
+      "ADC_VDD_070_VP_HSIO/0": 4,
+      "ADC_VDD_070_VP_HSIO/1": 4,
+      "ADC_VDD_070_VP_PCI/0": 54,
+      "ADC_VDD_070_VP_PCI/1": 54,
+      "ADC_VDD_075_VAON_SRAM/0": 35,
+      "ADC_VDD_075_VAON_SRAM/1": 35,
+      "ADC_VDD_075_VCPU/0": 293,
+      "ADC_VDD_075_VCPU/1": 293,
+      "ADC_VDD_075_VINT_SRAM/0": 106,
+      "ADC_VDD_075_VINT_SRAM/1": 106,
+      "ADC_VDD_075_VP_UFS/0": 4,
+      "ADC_VDD_075_VP_UFS/1": 4,
+      "ADC_VDD_075_VTRIP_SRAM/0": 421,
+      "ADC_VDD_075_VTRIP_SRAM/1": 421,
+      "ADC_VDD_105_VAA_DDRH/0": 4,
+      "ADC_VDD_105_VAA_DDRH/1": 4,
+      "ADC_VDD_105_VAA_DDRL/0": 4,
+      "ADC_VDD_105_VAA_DDRL/1": 4,
+      "ADC_VDD_105_VDD2H_DDRH/0": 4,
+      "ADC_VDD_105_VDD2H_DDRH/1": 4,
+      "ADC_VDD_105_VDD2H_DDRL/0": 4,
+      "ADC_VDD_105_VDD2H_DDRL/1": 4,
+      "ADC_VDD_120_VDDA_LSIO/0": 4,
+      "ADC_VDD_120_VDDA_LSIO/1": 4,
+      "ADC_VDD_120_VDDA_P_CL1_M/0": 4,
+      "ADC_VDD_120_VDDA_P_CL1_M/1": 4,
+      "ADC_VDD_120_VDDA_P_CL1_P/0": 4,
+      "ADC_VDD_120_VDDA_P_CL1_P/1": 4,
+      "ADC_VDD_120_VDDA_P_CL2_M/0": 4,
+      "ADC_VDD_120_VDDA_P_CL2_M/1": 4,
+      "ADC_VDD_120_VDDA_P_CL2_P/0": 4,
+      "ADC_VDD_120_VDDA_P_CL2_P/1": 4,
+      "ADC_VDD_120_VDDA_P_CL3_M/0": 4,
+      "ADC_VDD_120_VDDA_P_CL3_M/1": 4,
+      "ADC_VDD_120_VDDA_P_CL3_P/0": 4,
+      "ADC_VDD_120_VDDA_P_CL3_P/1": 4,
+      "ADC_VDD_120_VDDA_P_CL4_M/0": 6,
+      "ADC_VDD_120_VDDA_P_CL4_M/1": 6,
+      "ADC_VDD_120_VDDA_P_CL4_P/0": 4,
+      "ADC_VDD_120_VDDA_P_CL4_P/1": 4,
+      "ADC_VDD_120_VDDA_P_CL5_M/0": 4,
+      "ADC_VDD_120_VDDA_P_CL5_M/1": 4,
+      "ADC_VDD_120_VDDA_P_CL5_P/0": 4,
+      "ADC_VDD_120_VDDA_P_CL5_P/1": 4,
+      "ADC_VDD_120_VPH_AON/0": 4,
+      "ADC_VDD_120_VPH_AON/1": 4,
+      "ADC_VDD_120_VPH_CAM/0": 4,
+      "ADC_VDD_120_VPH_CAM/1": 4,
+      "ADC_VDD_120_VPH_HSIO/0": 4,
+      "ADC_VDD_120_VPH_HSIO/1": 4,
+      "ADC_VDD_120_VPH_PCI/0": 54,
+      "ADC_VDD_120_VPH_PCI/1": 54,
+      "ADC_VDD_120_VPH_UFS/0": 4,
+      "ADC_VDD_120_VPH_UFS/1": 4,
+      "ADC_VDD_120_VP_OD_PCI/0": 47,
+      "ADC_VDD_120_VP_OD_PCI/1": 47,
+      "ADC_VDD_180_VIO_AON/0": 11,
+      "ADC_VDD_180_VIO_AON/1": 11,
+      "ADC_VDD_180_VIO_LSIO/0": 9,
+      "ADC_VDD_180_VIO_LSIO/1": 9
+    },
+    "enabled_count": 11050,
+    "source_mounted_count": 11050
+  },
+  "scope": "actual saved source/project/native G-C-R-L network; open Device and Via336274 endpoint ports; no trace replacement and no PowerSI fit",
+  "states": {
+    "global_native_base_without_scenario_terminations": {
+      "diagnostics": {
+        "active_reduced_node_count": 778495,
+        "active_structural_component_count": 1,
+        "active_termination_cluster_count": 0,
+        "active_termination_element_count": 0,
+        "finite_via_link_count": 1692389,
+        "maximum_factor_pivot_ratio": 226671546462.68976,
+        "maximum_port_rhs_batch_size": 4,
+        "maximum_relative_residual": 2.6131932466891815e-21,
+        "maximum_termination_kron_relative_residual": 0.0,
+        "physical_surface_count": 790888,
+        "pruned_portless_node_count": 0,
+        "reduced_node_count": 778495,
+        "solve_identity_sha256": null,
+        "structural_component_count": 1,
+        "termination_manifest_sha256": null,
+        "topology_only_link_count": 13182
+      },
+      "driving_pair_z_ohm": {
+        "a_u": [
+          0.002784494845365245,
+          0.0006860819825516085
+        ],
+        "a_v": [
+          0.0023263986996685283,
+          0.0005737286471796277
+        ],
+        "branch": [
+          0.0006446739799475731,
+          0.00015830961939974908
+        ],
+        "device": [
+          1.2188327436874191,
+          -295.8343303132505
+        ],
+        "g_u": [
+          1.2193692873591226,
+          -295.83419836176523
+        ],
+        "g_v": [
+          1.2193563300596855,
+          -295.83420141122065
+        ]
+      },
+      "minimum_hermitian_eigenvalue_ohm": 0.0006446333153345379,
+      "polarization_cancellation_ratio": 1290853.947893025,
+      "z_ohm": [
+        [
+          [
+            1.2188327436874191,
+            -295.8343303132505
+          ],
+          [
+            -0.00022256942312981476,
+            -5.4651939990435494e-05
+          ]
+        ],
+        [
+          [
+            -0.00022256942312981476,
+            -5.4651939990435494e-05
+          ],
+          [
+            0.0006446739799475731,
+            0.00015830961939974908
+          ]
+        ]
+      ]
+    },
+    "source_mounted_scenario_manifest": {
+      "diagnostics": {
+        "active_reduced_node_count": 756889,
+        "active_structural_component_count": 1,
+        "active_termination_cluster_count": 11050,
+        "active_termination_element_count": 11050,
+        "finite_via_link_count": 1692389,
+        "maximum_factor_pivot_ratio": 9031482.148991613,
+        "maximum_port_rhs_batch_size": 4,
+        "maximum_relative_residual": 2.1583849563396574e-21,
+        "maximum_termination_kron_relative_residual": 0.0,
+        "physical_surface_count": 812988,
+        "pruned_portless_node_count": 0,
+        "reduced_node_count": 756889,
+        "solve_identity_sha256": "eb63b6061ed84d68fcb4d5b0083a37e7dd9cbbedd35d369d3813c7dc3bf7724f",
+        "structural_component_count": 1,
+        "termination_manifest_sha256": "c753669eacf83d3bfcf5c657e14e343a8c9ab5a0a2464039069a9053a293af75",
+        "topology_only_link_count": 56888
+      },
+      "driving_pair_z_ohm": {
+        "a_u": [
+          0.002784494845365244,
+          0.0006860819825516084
+        ],
+        "a_v": [
+          0.0023263986996685283,
+          0.0005737286471796277
+        ],
+        "branch": [
+          0.0006446739799475731,
+          0.00015830961939974908
+        ],
+        "device": [
+          1.218516664300409,
+          -295.7561129768786
+        ],
+        "g_u": [
+          1.2190532079720795,
+          -295.755981025393
+        ],
+        "g_v": [
+          1.2190402506726215,
+          -295.75598407484836
+        ]
+      },
+      "minimum_hermitian_eigenvalue_ohm": 0.0006446333047806863,
+      "polarization_cancellation_ratio": 1290512.654627941,
+      "z_ohm": [
+        [
+          [
+            1.218516664300409,
+            -295.7561129768786
+          ],
+          [
+            -0.00022256942311937866,
+            -5.4651940018857204e-05
+          ]
+        ],
+        [
+          [
+            -0.00022256942311937866,
+            -5.4651940018857204e-05
+          ],
+          [
+            0.0006446739799475731,
+            0.00015830961939974908
+          ]
+        ]
+      ]
+    }
+  },
+  "status": "COMPLETED_ACTUAL_NATIVE_TWO_PORT_DIAGNOSTIC",
+  "trace_via_joint_incidence": {
+    "native_via_link_ids_after_scenario_binding": [
+      "spd-finite-via-edge:f93319751293534b2a596bc2",
+      "spd-finite-via-edge:fab23cbe1e898b5ed9b72332"
+    ],
+    "no_source_mounted_termination_attaches_at_joint": true,
+    "node_id": "spd-finite-via-vertex:b9bb8fd2222593d92b1c9511",
+    "source_mounted_termination_cluster_count": 0,
+    "source_mounted_termination_cluster_ids": []
+  },
+  "version": "0.23.1"
+}

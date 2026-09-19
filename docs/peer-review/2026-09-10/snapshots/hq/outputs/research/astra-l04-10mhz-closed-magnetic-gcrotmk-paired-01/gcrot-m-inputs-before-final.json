@@ -1,0 +1,10 @@
+{
+  "artifact": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-closed-magnetic-gcrotmk-paired-01\\gcrot-m-inputs-before-final.npz",
+    "sha256": "b5bf0f0209d964cdfd12a2c9d71202ecbc933b1657d6953202d33cfd4f5db53f",
+    "size_bytes": 127850869
+  },
+  "input_count": 2,
+  "normalized_gram_error": 3.920878506948879e-14,
+  "gate": true
+}

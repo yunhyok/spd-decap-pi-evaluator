@@ -1,0 +1,182 @@
+{
+  "assembly": {
+    "changed_original_active_finite_indices": [
+      30657,
+      186263,
+      388189,
+      395047,
+      466710,
+      510496,
+      551039,
+      754981,
+      779676,
+      1024973,
+      1235716,
+      1250218,
+      1254243,
+      1336715,
+      1392846,
+      1498455,
+      1521556,
+      1591596,
+      1670923,
+      1690188
+    ],
+    "changed_stamp_control": {
+      "difference_nnz": 10,
+      "maximum_abs_difference_s": 9.803010487024678e-09,
+      "reference_maximum_abs_s": 37987.52643139771,
+      "relative_maximum_difference": 2.5805866840864446e-13
+    },
+    "corrected_finite_count": 1692409,
+    "elapsed_s": 1.797000000020489,
+    "gauge_active_index": 0,
+    "independent_positive_branch_rebuild_control": {
+      "difference_nnz": 9,
+      "maximum_abs_difference_s": 2.0095696538821545e-05,
+      "reference_maximum_abs_s": 147137575.4946651,
+      "relative_maximum_difference": 1.3657759733542826e-13
+    },
+    "negative_active_index": 2656,
+    "new_ideal_l02_junction_count": 20,
+    "original_csc_residual_a": 4.320051495360396e-11,
+    "original_finite_count": 1692389,
+    "original_source_current_residual_a": 4.2912371090194206e-11,
+    "original_zdd_ohm": [
+      0.00010031137009881143,
+      -0.0006057593380320585
+    ],
+    "positive_active_index": 2699,
+    "series_elimination_max_relative_difference": 1.3164446326994732e-15,
+    "source_via_owner_count": 93
+  },
+  "elapsed_s": 11.53100000001723,
+  "frequency_hz": 1000000.0,
+  "inputs": {
+    "baseline_reconstruction": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_native_loaded_field_reconstruction_2026-09-07.json",
+      "sha256": "a46dfe30d8c48f1509d5010d93a4169a04a67028d482f7cbd9e55fbd76e092d5"
+    },
+    "contact_review": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-source-contact-overlaps-01\\independent-review.json",
+      "sha256": "10ae993144dcda1e01503cf70287ada4e02b5b5e541189bbeec0c792496cf811"
+    },
+    "contacts": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-source-contact-overlaps-01\\result.json",
+      "sha256": "5431d8f042b3c4ac3d53c28441f0301fad6a7a350a87add98aa6f9466e6b272f"
+    },
+    "current_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\run_astra_two_sheet_frequency_shadow.py",
+      "sha256": "7e42bbb02679aa974451776e7f9577a68ba832f003884958afc744091f45da5c"
+    },
+    "derived": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\derived-field-observation.npz",
+      "sha256": "be5a83dff88db545de4625414e46dcc360364eb0a29077c91848a6ac805cb6c0"
+    },
+    "excluded_domain": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-excluded-via-flat-domain-01\\result.json",
+      "sha256": "5e18de3bba96b07870175058852aacd5ac2c937c8ffe946bd95518899e337587"
+    },
+    "excluded_review": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-excluded-via-flat-domain-01\\independent-review.json",
+      "sha256": "707ed47c3380ab6af1b0e79e38327337b74afa0bc50364165218dcb4e3702a7c"
+    },
+    "flat_domain": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-flat-conductor-domain-01\\result.json",
+      "sha256": "c2757aa69aca3186852b8332c2ccf6cc84ec170f1a34fdb0098a09a74e8050d4"
+    },
+    "paths": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-composite-source-paths-03\\result.json",
+      "sha256": "e534da4f465ecb081ae3ec0bcdf96a1ba5329bd4f5c1353b6dfa262ef4f858ff"
+    },
+    "paths_review": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-composite-source-paths-03\\independent-review.json",
+      "sha256": "3ae31ad5e917cd6d207e90fdf654918fc8dfb51f31f1c20113529df4ed4c98be"
+    },
+    "persistence_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\project_astra_l14_gc_mass.py",
+      "sha256": "f2c668fd090db5c4606eec27558c9bdbbdde6552d2f82c3b64b8837bd7350dc3"
+    },
+    "raw": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\raw-field-snapshot.npz",
+      "sha256": "6eac098738598a78b2068ce4f80e46fd70e17010a89bfb5949ec8a68124df4a7"
+    },
+    "reconstructor": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\reconstruct_astra_native_loaded_field.py",
+      "sha256": "354d9e004b189cf8193c2922c8fa4dc1903b407bebb295a4576673200ce6b213"
+    },
+    "solver_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\run_astra_l14_sheet_r_shadow.py",
+      "sha256": "ff234c89be9bb6828f4efa3e559116c903d62b463f9f9fec6893abf71a369803"
+    },
+    "trace_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\run_astra_l14_trace_r_shadow.py",
+      "sha256": "52b5e319e071827bb1854f1ea79f066f2fd9e856f410a23534832ad22edb40c4"
+    }
+  },
+  "point": {
+    "csc_matvec_residual_max_abs_a": 5.1520030153126646e-11,
+    "current_corrections": [
+      {
+        "gauge_residual_abs_a": 5.152003015312665e-11,
+        "iteration": 0,
+        "physical_residual_max_abs_a": 5.471838585509797e-11,
+        "retained_residual_max_abs_a": 5.471838585509797e-11,
+        "zdd_ohm": [
+          0.00010031135440792408,
+          -0.0006057593419368344
+        ]
+      }
+    ],
+    "delta_from_collapsed_baseline_ohm": [
+      -1.569088735082092e-11,
+      -3.904775916670211e-12
+    ],
+    "epsilon_sheet_resistance_scale": 1.0,
+    "factor_elapsed_s": 8.53100000001723,
+    "field": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-ideal-junction-board-1mhz-01\\epsilon-1-field.npz",
+      "sha256": "ab584c9a56403a1cfb42e70a2aa6d86ff03c36b38aabb191724e1a783c1d0854",
+      "size_bytes": 3318273
+    },
+    "matrix": {
+      "matrix_nnz": 2904015,
+      "maximum_abs_entry_s": 147137575.49466512,
+      "product_relative_gate_tolerance_s": 0.014713757549466511,
+      "row_sum_max_abs_s": 7.158597783408069e-05,
+      "symmetry_max_abs_s": 2.399963341663627e-10
+    },
+    "normalized_backward_residual": 5.035980981411251e-19,
+    "physical_residual_max_abs_a": 5.471838585509797e-11,
+    "physical_residual_method": "source branch currents with fixed-LU correction; unchanged1e-7A gate",
+    "pivot_abs_ratio": 9031482.139898723,
+    "power_closure_error_ohm": 3.171676976312036e-14,
+    "power_contributions_ohm": {
+      "finite_via": [
+        3.240778590451047e-05,
+        1.3186464873658501e-05
+      ],
+      "original_gc": [
+        6.445060868152471e-11,
+        -1.1584162950361855e-08
+      ],
+      "sheet_dc": [
+        0.0,
+        -0.0
+      ],
+      "termination": [
+        6.790350408427815e-05,
+        -0.0006189342226514655
+      ]
+    },
+    "zdd_ohm": [
+      0.00010031135440792408,
+      -0.0006057593419368344
+    ]
+  },
+  "program": "SPD Decap PI Evaluator",
+  "scope": "20 recovered original series paths are split at their source L02 nodes and tied to the original ideal L02 quotient, conditional on flat trace bodies and source circular pad contact. All93 source via R/L contributions remain exactly once. Original G/C, terminations, other native branches and two excluded leaves stay unchanged. Free-midpoint elimination reproduces each original branch; the tied circuit is deliberately a topology correction, not original-Y recollapse. No finite L02 sheet, pad equipotential-radius selection, new trace R, magnetic coupling or PowerSI fitting. Reused epsilon-1 labels are storage conventions; the sheet matrix is zero.",
+  "script_sha256": "213183fe06b9688a21e2851db67f9e4b32a785773d8b0a44e26a662450cbc2d0",
+  "status": "COMPLETED_CONDITIONAL_L02_IDEAL_JUNCTION_SHADOW",
+  "version": "0.23.1"
+}

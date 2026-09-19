@@ -1,0 +1,57 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "ACCEPT_EXISTING_LOADED_DEVELOPMENT_REFERENCE_POINTS_ONLY",
+  "selection_sha256": "99d0f77fcceb9d07b97aa65953dd42b8d106b7f2485f42f11ee643134d64b8f9",
+  "rail_id": "ADC_VDD_075_VTRIP_SRAM/0",
+  "port_one_based": 18,
+  "port_header": "2nd_SITE0-ADC_VDD_075_VTRIP_SRAM/0",
+  "source_path": "D:\\S4LB002-2Para_260729_1_injected_073026_100913_33216_S.s92p",
+  "reference_touchstone_sha256": "c5fca21da6f3b1f1e097ac6fc4c2c4f40a44201617502a9e5bf864e2a5fe7a11",
+  "full_matrix_ports": 92,
+  "reference_ohm": 1.0,
+  "points": [
+    {
+      "frequency_hz": 1000000.0,
+      "source_frequency_index": 175,
+      "reference_zdd_ohm": [
+        0.0006915479466520245,
+        -0.0004257504501139287
+      ],
+      "s_to_z_condition": 372.7702551246192,
+      "s_to_z_relative_residual": 3.591201994947023e-16
+    },
+    {
+      "frequency_hz": 10000000.0,
+      "source_frequency_index": 200,
+      "reference_zdd_ohm": [
+        0.0013351332705258876,
+        0.0008761129830389292
+      ],
+      "s_to_z_condition": 37.239753455080745,
+      "s_to_z_relative_residual": 2.9436779916631783e-16
+    },
+    {
+      "frequency_hz": 100000000.0,
+      "source_frequency_index": 325,
+      "reference_zdd_ohm": [
+        0.001779666643964065,
+        0.010512997908483828
+      ],
+      "s_to_z_condition": 3.4193209411281216,
+      "s_to_z_relative_residual": 4.4370662757075913e-16
+    },
+    {
+      "frequency_hz": 1000000000.0,
+      "source_frequency_index": 625,
+      "reference_zdd_ohm": [
+        0.0180428754633343,
+        0.10995723900122274
+      ],
+      "s_to_z_condition": 8.209026027319247,
+      "s_to_z_relative_residual": 4.338163355616256e-16
+    }
+  ],
+  "elapsed_s": 18.26600000000326,
+  "scope": "Existing source-mounted reference at four exact frequencies, after source-only rail selection. No interpolation, fitting, native solve or holdout-score inspection."
+}

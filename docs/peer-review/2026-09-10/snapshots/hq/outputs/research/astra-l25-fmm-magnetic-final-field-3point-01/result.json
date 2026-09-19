@@ -1,0 +1,84 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "COMPLETED_DIAGNOSTIC_L25_FINAL_FIELD_3POINT",
+  "field": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-fmm-magnetic-board-1mhz-03\\field.npz",
+    "sha256": "e095cb5743f69d2b8af744507ff8cdfd5cf5237be308fcf3480a9aab82f6890c",
+    "accepted_result": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-fmm-magnetic-board-1mhz-03\\result.json",
+    "accepted_result_sha256": "40a0f959f2b5ada9251a175cb14460e86bca0c04e6afd9e7d0b7a3c03aeb92d8"
+  },
+  "runtime": {
+    "version": "2.1.0",
+    "status": "ACCEPT_FMM3D_POINT_KERNEL_ONLY"
+  },
+  "operator_sha256": "2c880f428b18f40ee9fabca98154be9f7c7c6f6b91a6dfc74a2bb09810a8daa2",
+  "counts": {
+    "triangles": 579177,
+    "quadrature_points": 1737531,
+    "rt0_unknowns": 604031,
+    "selected_unordered_shared_edges": 601143
+  },
+  "metrics": {
+    "l3q_vs_saved_centroid_near_relative": 0.015945639699249007,
+    "l3q_minus_saved_norm_wb": 4.449189476363081e-12,
+    "jw_difference_max_abs_v": 4.9971569212415485e-06,
+    "jw_difference_norm_v": 2.795508194674259e-05,
+    "saved_centroid_near_bilinear_j": [
+      -3.3015141289693777e-12,
+      -1.011203381399311e-12
+    ],
+    "three_point_bilinear_j": [
+      -3.2751599462886174e-12,
+      -9.985688202725325e-13
+    ],
+    "bilinear_difference_j": [
+      2.6354182680760305e-14,
+      1.2634561126778528e-14
+    ],
+    "saved_centroid_near_hermitian_j": [
+      3.5183805957553588e-12,
+      -9.171385236520868e-24
+    ],
+    "three_point_hermitian_j": [
+      3.4858813917637e-12,
+      6.227078659197414e-24
+    ],
+    "hermitian_difference_j": [
+      -3.249920399165865e-14,
+      1.5398463895718282e-23
+    ]
+  },
+  "fmm": {
+    "triangles": 579177,
+    "points": 1737531,
+    "branches": 604031,
+    "real_nd1_channels": 4,
+    "channel_elapsed_s": [
+      62.164598100003786,
+      63.18360270000994,
+      61.62719739996828,
+      56.71031300001778
+    ],
+    "selected_unordered_pairs": 601143,
+    "eps": 1e-05,
+    "exact_self_replacement": "subtract six ordered finite within-triangle point interactions; add exact Lself; no singular point-diagonal term created or subtracted"
+  },
+  "action_checkpoint": {
+    "path": "three-point-action.npz",
+    "bytes": 19329642,
+    "sha256": "f7387c2dba76c8a13012e69465ef9d5de5369db44d3789378c833256156d4d4e"
+  },
+  "gates": {
+    "finite_three_point_action": true,
+    "saved_field_action_matches_receipt": true,
+    "all_rt0_unknowns_retained": true,
+    "four_sequential_real_nd1_channels": true,
+    "all_shared_edge_pairs_replaced": true,
+    "no_singular_point_diagonal_subtraction": true,
+    "spectral_clipping_not_applied": true
+  },
+  "elapsed_s": 247.02518240001518,
+  "scope": "Read-only final-field diagnostic at three interior barycentric points. Exact self replaces six ordered finite same-triangle point interactions; FMM-omitted singular point diagonals are never formed or subtracted. Every saved unordered shared-edge selected block replaces both directed three-point cross blocks. Reported differences are diagnostics, not a fixed-q affine bound, convergence certificate, physics promotion, PSD proof, return model, or accuracy/PowerSI claim. No LU or board solve.",
+  "script_sha256": "52b712e24f113842f3a7b436bf845591bdc1d010cbde5510e651e754112b1cd2"
+}

@@ -1,0 +1,29 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "SAVED_CONVEX_FULL_CLOSED_TRADEOFF",
+  "result_sha256": "3239c406102b43a1ae413190cf40e375b54c27083a66b1e135a0ff9882fbc306",
+  "artifact_sha256": "1ca4ee00d75da9fdd0dafb90d0de524a4a70ca81bf65734bc2b3e275758570ac",
+  "lagrange_weight": 46.74742097457316,
+  "coefficients": [
+    [
+      -0.00036928598601802267,
+      -0.005139567948036122
+    ],
+    [
+      -0.0006746132228864238,
+      -0.00024550074805396063
+    ]
+  ],
+  "full_cap": 2.666077993240355,
+  "closed_cap": 0.003854035501174984,
+  "constrained_full_norm": 11.28042408214729,
+  "constrained_closed_norm": 0.003854035501174978,
+  "full_objective_normalized_squared": 17.902148442797895,
+  "dual_lower_bound_normalized_squared": 17.902148442798016,
+  "primal_dual_gap": -1.2079226507921703e-13,
+  "stationarity_relative": 6.8242717263694045e-18,
+  "excludes_simultaneous_full_closed_caps_with_numerical_margin": true,
+  "elapsed_s": 1.4424476999993203,
+  "scope": "Floating-point convex dual certificate within the two saved columns only. A necessary pair of original caps; no relaxed gate, new FMM, candidate acceptance, or omitted-physics attribution."
+}

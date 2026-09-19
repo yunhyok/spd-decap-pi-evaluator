@@ -1,0 +1,60 @@
+{
+  "complex_relative_error_reduction_percentage_points": 0.22598382906167114,
+  "conditional_operator_change_abs_ohm": 2.4564528000627465e-06,
+  "device_active_indices": [
+    2699,
+    2656
+  ],
+  "driver_sha256": "08f6f671d2419ce57816ba278bc71d40ea60bd3b4e875a63ff9cd844a5286c25",
+  "errors": {
+    "l02_l14_l25_r_gc": {
+      "complex_gap_ohm": 0.0002130945694795436,
+      "complex_relative_error": 0.26240029627641415,
+      "magnitude_error_db": -0.04205304508384554,
+      "phase_error_deg": -15.112081478537801
+    },
+    "l14_l25_r_gc": {
+      "complex_gap_ohm": 0.00021492977803100452,
+      "complex_relative_error": 0.26466013456703086,
+      "magnitude_error_db": -0.057321571224598834,
+      "phase_error_deg": -15.254341292751285
+    }
+  },
+  "field": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-block-lgmres-02\\field.npz",
+    "sha256": "c7360f92732f956c6c63c3e564cd97315b26a09a9a79414446bdcd4a6fce76f3",
+    "size_bytes": 30741111
+  },
+  "frequency_hz": 1000000.0,
+  "inputs": {
+    "control": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_rt0_board_1mhz_comparison_2026-09-07.json",
+      "sha256": "b3441baaa1549cff6d0b7eb9aa39f3a048ed6ca7efff71954e76481d41ca814f"
+    },
+    "result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-block-lgmres-02\\result.json",
+      "sha256": "832841f9277bc47a9be5ef87b1cee940bff176405698f48ea4fb08ed26e9c097"
+    }
+  },
+  "program": "SPD Decap PI Evaluator",
+  "rail_id": "ADC_VDD_075_VTRIP_SRAM/0",
+  "reference_port_one_based": 18,
+  "remaining_reference_gap_reduction_fraction": 0.008538642566299881,
+  "scope": "Post-freeze comparison at one previously used development point. Adds the existing L02 P1 distributed R/G/C and its once-owned finite rewiring to L14 P1/L25 RT0. No fitted coefficient, new magnetic operator, independent holdout, mesh convergence or broadband acceptance. The earlier 23.7629% magnetic candidate is a different model, not the direct control.",
+  "status": "COMPLETED_CONDITIONAL_COMBINED_R_GC_1MHZ_COMPARISON",
+  "version": "0.23.1",
+  "zdd_ohm": {
+    "l02_l14_l25_r_gc": [
+      0.0005539475696674413,
+      -0.0005884631779362248
+    ],
+    "l14_l25_r_gc": [
+      0.0005515144327164612,
+      -0.0005888008241071069
+    ],
+    "reference": [
+      0.0006915479466520245,
+      -0.0004257504501139287
+    ]
+  }
+}

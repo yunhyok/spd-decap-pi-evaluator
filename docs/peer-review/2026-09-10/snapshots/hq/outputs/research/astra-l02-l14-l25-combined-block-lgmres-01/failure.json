@@ -1,0 +1,21 @@
+{
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-block-lgmres-01\\driver-at-run.py",
+    "sha256": "853f193fd51d3c204668019f7957cc74ea295a0e47206aae338076dfa796c692",
+    "size_bytes": 45742
+  },
+  "error": "ValueError: LGMRES did not converge: info=12",
+  "latest_unvalidated_outer_field": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-block-lgmres-01\\latest-unvalidated-outer-field.npz",
+    "sha256": "52eea1b38d007d18a226442195fab8b690bac318ca1182592308c66be46f383a",
+    "size_bytes": 30997840
+  },
+  "program": "SPD Decap PI Evaluator",
+  "status": "STOP_CONDITIONAL_L02_L14_L25_BLOCK_LGMRES_1MHZ",
+  "unvalidated_field": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-block-lgmres-01\\unvalidated-field.npz",
+    "sha256": "a67921f72714411ca233e63b33ec77595fe77e1359e10e90e83489c773480a44",
+    "size_bytes": 30837104
+  },
+  "version": "0.23.1"
+}

@@ -1,0 +1,88 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "review_status": "ACCEPT_CONDITIONAL_L02_ARTWORK_FLAT_TRACE_DOMAIN",
+  "review_method": "Read-only pinned receipt, saved WKB and NPZ audit; all 491 source islands were differenced only against the saved final domain and six flat trace bodies were sampled. No union replay, repair, snap, mesh, operator or solve.",
+  "reviewed_artifacts": {
+    "result": {"path": "result.json", "sha256": "c2757aa69aca3186852b8332c2ccf6cc84ec170f1a34fdb0098a09a74e8050d4"},
+    "domain_wkb": {"path": "l02-artwork-flat-trace-domain.wkb", "sha256": "b99d76360170a0e3c80dde1a84982fd5d6c5658e2bdc9cc0c261123c8bdb0e26", "bytes": 13677909},
+    "component_map": {"path": "source-island-component-map.npz", "sha256": "9300fc51682c88c13ef8223a0968771ca4315b36ed86f24aa3949fad9dcff94f", "bytes": 68992},
+    "source_script": {"path": "../../../tools/research/prepare_astra_l02_flat_conductor_domain.py", "sha256": "d7d5674cebfeb77d12adfaa5da7c9c9d890d95f9f47306a7885662412e7f7b3c"},
+    "frozen_driver": {"path": "driver-at-run.py", "sha256": "d7d5674cebfeb77d12adfaa5da7c9c9d890d95f9f47306a7885662412e7f7b3c"},
+    "external_guard": {"path": "../astra-l02-flat-conductor-domain-01-guard/external-budget.json", "sha256": "cab8e7716396b473c792e749b6fd6db9bd1d326ad4739d7c871cf2f4339217fe"},
+    "trace_inputs": {"path": "../astra-l02-trace-inputs-01/source-trace-inputs.npz", "sha256": "d1f7c1ed9cb1b1c404c704417b260d596109827e344ae831229b95f2078a6cf5"},
+    "contact_inputs": {"path": "../astra-l02-source-contact-inputs-01/contact-ledger-inputs.npz", "sha256": "c5c0dab9ac22d750aeecf3a4290c2b9ef9285bcf7ed33a5d8a7a2775c8430984"},
+    "coverage_receipt": {"path": "../astra-l02-trace-artwork-coverage-01/result.json", "sha256": "d0e1988ba890b64fd9da7ba91ba087ebc784e62e8141be78e61f1992fcb92121"}
+  },
+  "checks": {
+    "all_pins_and_receipt_links_exact": true,
+    "domain": {
+      "valid": true,
+      "geometry_type": "Polygon",
+      "component_count": 1,
+      "area_um2": 9360660762.133333,
+      "hole_count": 33166,
+      "coordinate_count": 846577,
+      "source_artwork_area_sum_um2": 9303654565.988352,
+      "added_union_area_um2": 57006196.144981384,
+      "source_saved_area_max_abs_delta_um2": 6.402842700481415e-10
+    },
+    "component_map_npz": {
+      "zip_crc_pass": true,
+      "allow_pickle_false_load": true,
+      "array_hash_method": "SHA-256 of C-contiguous array data bytes",
+      "arrays": {
+        "source_island_component_index": {"shape": [491], "dtype": "int32", "count": 491, "data_sha256": "75169c20b941c15d3cce087439696ffa488b43f3f57757b06452385c3bf9943b", "all_zero": true},
+        "strict_island_coverage": {"shape": [491], "dtype": "bool", "count": 491, "data_sha256": "49a84feb40a7d5293a863a788939cc8c70058052f48721b3799d3070e41833d8", "all_false": true},
+        "source_trace_ordinal": {"shape": [38662], "dtype": "int64", "count": 38662, "data_sha256": "57df5aa78a81ac9d97dd5a6e12aff6a25de22ea0af9db6009a8fc1e7ca235e90"},
+        "island_ids_json_utf8": {"shape": [22587], "dtype": "uint8", "count": 22587, "data_sha256": "c3a2918a5285976f60d44a5cd255a97c0ebd6a7f205f414f40cc472a92734008"}
+      },
+      "source_island_ids_equal_pinned_input": true,
+      "source_trace_ordinals_equal_pinned_input": true,
+      "all_491_representative_points_in_component_0": true
+    },
+    "source_island_residues_against_saved_domain": {
+      "row_count": 491,
+      "ordered_indices_exact": true,
+      "receipt_area_max_abs_delta_um2": 0.0,
+      "all_491_recomputed_strict_covers_false": true,
+      "positive_area_count": 17,
+      "nonempty_geometry_count": 17,
+      "total_area_um2": 3.7424007474681006e-10,
+      "max_area_um2": 3.2911788129410526e-10,
+      "max_area_source_island_index": 43,
+      "total_relative_to_source_artwork_area": 4.0225061247967086e-20,
+      "total_relative_to_domain_area": 3.9980091604293886e-20,
+      "max_relative_to_source_artwork_area": 3.5375118342986567e-20,
+      "max_relative_to_domain_area": 3.5159684733527074e-20,
+      "max_relative_to_own_island_area": 2.271880723166742e-16,
+      "assessment": "Exact covers remains false while constructive differences are empty or machine-scale; retain the producer's conditional non-strict status."
+    },
+    "flat_trace_samples_against_saved_domain": {
+      "rows": [
+        {"category": "prior_zero_contact", "trace_index": 8672, "source_trace_ordinal": 1198773, "strict_cover": false, "outside_area_um2": 3.976855254683504e-12, "outside_relative": 2.1198121227130394e-15},
+        {"category": "prior_zero_contact", "trace_index": 10924, "source_trace_ordinal": 1201276, "strict_cover": true, "outside_area_um2": 0.0, "outside_relative": 0.0},
+        {"category": "prior_multi_contact", "trace_index": 5123, "source_trace_ordinal": 1194829, "strict_cover": true, "outside_area_um2": 0.0, "outside_relative": 0.0},
+        {"category": "prior_multi_contact", "trace_index": 7989, "source_trace_ordinal": 1198014, "strict_cover": true, "outside_area_um2": 0.0, "outside_relative": 0.0},
+        {"category": "prior_noncovered_single_contact", "trace_index": 19390, "source_trace_ordinal": 1210682, "strict_cover": true, "outside_area_um2": 0.0, "outside_relative": 0.0},
+        {"category": "prior_square_covered", "trace_index": 34636, "source_trace_ordinal": 1252109, "strict_cover": true, "outside_area_um2": 0.0, "outside_relative": 0.0}
+      ],
+      "max_outside_area_um2": 3.976855254683504e-12,
+      "max_outside_relative": 2.1198121227130394e-15,
+      "machine_scale_only": true
+    },
+    "external_guard": {
+      "status": "COMPLETED_NATIVE_WORKER",
+      "exit_code": 0,
+      "elapsed_s": 29.54700000002049,
+      "max_runtime_s": 200.0,
+      "sampled_peak_private_bytes": 1395724288,
+      "max_memory_bytes": 25769803776,
+      "within_limits": true
+    },
+    "repair_or_snap_applied": false,
+    "strict_coverage_or_topology_promoted": false
+  },
+  "findings": {"p1": [], "p2": []},
+  "scope": "Acceptance covers the frozen single Polygon, its component map, exact input ordering and non-strict flat-body/source-artwork containment evidence. It does not certify strict GEOS coverage, repair or snapping, round/square endcaps, pad union, excluded-via policy, connectivity, topology replacement, electrode semantics, mesh, G/C, R/L, a finite solve or PowerSI accuracy."
+}

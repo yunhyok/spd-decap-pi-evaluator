@@ -1,0 +1,73 @@
+{
+  "artifact": {
+    "bytes": 90245,
+    "path": "order128-checkpoint.npz",
+    "sha256": "0914453542b02692bcc2259576eaea85c992bb269c1f21ecdb074933df11891b"
+  },
+  "checkpoint": {
+    "bytes": 2124,
+    "path": "checkpoint.json",
+    "sha256": "550b0c7066c7054251a8d945f1aaa58119d41114e6a7c8563934ac6540447830"
+  },
+  "elapsed_s": 5.902270599966869,
+  "inputs": {
+    "accepted_frozen_driver": {
+      "bytes": 9046,
+      "path": "outputs\\research\\astra-l25-shared-edge-magnetic-01\\driver-at-run.py",
+      "sha256": "b6f1c0a6b7a2414112aa47181f62a8138d94c0c8c7f2ab8edafbe6b17b01ad87"
+    },
+    "accepted_local_corrections": {
+      "bytes": 21214089,
+      "path": "outputs\\research\\astra-l25-shared-edge-magnetic-01\\local-corrections.npz",
+      "sha256": "55aec2b70ce99ed7d0f68165aa9b390de33c0cfe896fc5733694550837107421"
+    },
+    "accepted_result": {
+      "bytes": 2955,
+      "path": "outputs\\research\\astra-l25-shared-edge-magnetic-01\\result.json",
+      "sha256": "6b4df2af404ec46fdd983efc5fc6e00a3fed4c8babf05a3eaa30cf239261f174"
+    },
+    "current_shared_edge_assembler": {
+      "bytes": 9046,
+      "path": "tools\\research\\assemble_astra_l25_shared_edge_magnetic.py",
+      "sha256": "b6f1c0a6b7a2414112aa47181f62a8138d94c0c8c7f2ab8edafbe6b17b01ad87"
+    },
+    "mesh": {
+      "bytes": 6565241,
+      "path": "outputs\\research\\astra-l25-adaptive-longest-pair-01\\step-06\\mesh.npz",
+      "sha256": "20b52d26783bf98197524c56f22d9872aee3b67b7e526ff20a02e396f39e89cb"
+    },
+    "topology": {
+      "bytes": 7985409,
+      "path": "outputs\\research\\astra-l25-adaptive-longest-pair-01\\step-06\\topology.npz",
+      "sha256": "d70ceb1b38cede682247967495c6ef83d08ef2b0ef63e3543df908ba13412a4d"
+    },
+    "vectorized_pair_integrator": {
+      "bytes": 7811,
+      "path": "tools\\research\\probe_astra_rt0_near_batch.py",
+      "sha256": "283711e7f8037c12ef54baa3748e684c0135f9700aab5f1bca6de1b5abfeeaa7"
+    }
+  },
+  "limits": {
+    "target_rss_bytes": 1073741824,
+    "target_runtime_s": 120.0
+  },
+  "order128_vs_order64_relative_quantiles": [
+    1.001565536014009e-05,
+    0.00022491436616373957,
+    0.000591591204823882,
+    0.0025577616062981714,
+    0.005817666582098359
+  ],
+  "pairs_still_over_1e_3_at_order128_vs_order64": 16,
+  "program": "SPD Decap PI Evaluator",
+  "scope": "The exact frozen 415 saved order64 tails only: one fresh directed order128 block per pair, with the identical centroid block subtracted. Per-pair local blocks and source/free/local branch provenance are saved; no sparse operator, source geometry regeneration, FMM, LU, field solve, order256 pass, PSD or PowerSI claim.",
+  "script_sha256": "41f25af075d1a14dc55aa135672284c1e2eaba7e4ca77a6f0bed3e80da563e6b",
+  "selection": {
+    "fresh_order": 128,
+    "pairs": 415,
+    "predicate": "saved last_refinement_relative > 1e-3",
+    "saved_order": 64
+  },
+  "status": "COMPLETED_FROZEN_415_SHARED_EDGE_ORDER128_TAIL",
+  "version": "0.23.1"
+}

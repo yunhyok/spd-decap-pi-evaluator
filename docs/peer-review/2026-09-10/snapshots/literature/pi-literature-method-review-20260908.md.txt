@@ -1,0 +1,210 @@
+# SPD Decap PI Evaluator v0.23.1 — PI 계산 모델 문헌 비교
+
+문서 버전: 0.2.0 · 조사일: 2026-09-08 KST · 대상: HQ 구현·수치 검증 담당
+
+상태: 제한된 1차 문헌 조사 완료. 모델 비교·실행 전략·원문 접근 수준·판별 실험을 기록했다. 제품 구현·보드 재계산·PowerSI 재분석은 수행하지 않았다.
+
+## 1. 지금 선택할 방향
+
+**공통 Maxwell 기준 문제를 유지하면서, 전류·전하 체적 적분의 기저를 먼저 개선하고 유한 도전율 내부 경계 연산자를 소형 대조 후보로 평가하는 순서가 가장 타당하다.** PEEC/VIE라는 이름 자체, 표면 미지수 사용 자체, 작은 대수 잔차 자체는 정확도 보증이 아니다. 1 kHz–100 MHz의 복소 포트 응답이 본업이며 1 GHz는 보조 검증이다. 기준 모델이 검증된 뒤에 물리 축약을 판단한다.
+
+이번 조사에서 기존 HQ 기록에 더하는 핵심은 다음과 같다.
+
+1. **저주파와 고대비 안정성은 조건수만의 문제가 아니다.** Henry 등의 D-VIE 연구는 작은 해 성분의 유효숫자 보존과 재료 가중 quasi-Helmholtz 분해를 함께 다룬다. 현재 HQ의 상쇄 오차 진단을 설명하는 참고 근거이나, 그 논문의 생체조직 예제가 구리 접점 보드를 검증한 것은 아니다. [Henry 원문](https://iris.polito.it/retrieve/handle/11583/2980680/660371)
+2. **DC까지 가능한 일반 경계 해석이 실제로 존재한다.** Sharma–Triverio의 전위 기반 BEM은 유한 도전율·포트·전하 중성 조건을 함께 구성했다. 다만 자유공간 도체 문제이며 적층 기판은 제외했고, 패키지 검증에서는 큰 PWR/GND 평면을 제거했다. 따라서 특정 S-PEEC의 저주파 실패를 모든 표면법에 일반화해서도, 이 BEM을 완성된 보드 해법으로 간주해서도 안 된다. [2022 저자 최종본](https://www.waves.utoronto.ca/triverio/papers/jnl-2022-mtt-vpie-ports.pdf)
+3. **두 재료의 접점을 내부 연산자 수준에서 제거하는 최근 DSA가 있다.** Pattyn 등의 2025 논문은 접선 E/H 연속 조건으로 내부 경계를 Schur 제거하고, 배경으로 치환한 연산자를 빼는 구성을 보인다. 구리–유전체 접점과 고차 전체영역 기저를 함께 시험할 유력 후보다. 직육면체/직교 다면체 제한과 미검증 저주파 복합재료 포트 범위를 반드시 남겨야 한다. [2025 저자 공개본](https://imec-publications.be/bitstreams/ede8b463-ac81-4368-9cbe-7c0dc23b3825/download)
+
+권고 순위는 완성된 솔버의 절대 우열이 아니라 **현재 HQ에서 다음 증거를 가장 적은 새 작업으로 얻는 순서**이다. HQ의 후속 계획에 맞춰 기존 적분과 고차 체적 기저의 유한 주파수 검증을 우선한다. DSA는 문헌상 대조 후보로 보존하며 즉시 새 구현을 시작하라는 권고가 아니다.
+
+| 순서 | 접근 | 방정식과 물리 범위 | 주요 조건·위험 | 현재 구현과의 차이 / 판정 |
+|---|---|---|---|---|
+| 1 | Full-wave 전류·전하 VIE / volume PEEC 계열 | 체적 재료법칙, 지연 Green 연산자, 체적·계면 전하를 한 문제로 계산. 체적 전류가 충분히 해상되면 표피·근접 효과와 내·외부 자기장이 함께 포함됨 | 도전율·주파수 대비, 약한 전하/유도 응답 보존, 자기/근접 적분, 기저 완전성, 포트 및 실제 재료 경계가 필요 | HQ의 작은 Fourier/3D 대조를 가장 많이 재사용. 균일 저차 tetra 확대를 최종 제품 전략으로 고정하지 말고 기저 완전성·방향별 고차를 먼저 판별 |
+| 2 | 내부 DtN/DSA 및 전위 기반 SIE/BEM | 유한 도전율 내부 Maxwell 문제를 경계 E/H 또는 A/φ 관계로 표현하고 외부 문제와 결합. 국소 고주파 표면 임피던스와 구분 | DSA의 모드 절단·기하 제한, 서로 다른 재료의 접점, 배경 치환 차분의 cancellation. 2022 전위 BEM에서는 gauge 및 연결 집합별 저주파 전하 조건 | 2025 DSA는 소형 직교 접점 후보, 2022 전위 BEM은 자유공간 도체의 DC 대조 후보. 두 논문의 수식을 바로 섞은 모델은 검증된 모델이 아님 |
+| 3 | 저주파 안정화 3D FEM | curl μ⁻¹ curl E + jωσE − ω²εE = −jωJimp를 도체·유전체에서 풀며 H(curl) 및 scalar 공간을 안정화 | 유한 외부 경계/개방 경계, 얇은 도체, 저주파 nullspace와 포트 전압 정의. 저차 등방 전체 메시만이 FEM은 아님 | 독립 기준 후보. Stysch 논문은 full-wave·Darwin·MQS를 구분하며, 와이어 고주파 R 포화가 피부 깊이 해상도 부족임을 명시 |
+| 4 | 적층 MFEM/MFDM/plane modal 계열 | 각 평면 쌍의 2D Helmholtz 전압 문제와 층 결합. 작은 두께 방향 변화를 제한하고 개구를 통한 결합을 조립 | 층 내부 장 관통, 외부/common mode, 비인접·fringing, pad/via 접점은 해당 유도에 포함됐는지 따로 확인 | 기존 layerwise와 가깝지만 공통 기준 모델의 대체로 선승인하지 않음. 검증 후 허용된 부분의 축약 후보 |
+| 5 | MQS RL 추출: XRL/FastHenry형 | 전도 전류와 자기 결합으로 R(f), L(f) 및 근접 효과 계산. XRL은 내부 equivalent surface impedance와 외부 정적 연산자를 결합 | 변위전류·정전용량·전파를 포함한 완전한 PI Z가 아님. 별도 C를 임의로 덧붙이면 하나의 경계 문제라는 보장이 사라짐 | RL 부문 대조 및 후속 축약 후보. XRL의 Q3D 대비 속도는 PowerSI 대비 복소 PDN 성능 약속이 아님 |
+
+위 표의 원문 근거: [Henry](https://arxiv.org/pdf/2108.10690), [Sharma–Triverio](https://www.waves.utoronto.ca/triverio/papers/jnl-2022-mtt-vpie-ports.pdf), [Pattyn 등](https://imec-publications.be/bitstreams/ede8b463-ac81-4368-9cbe-7c0dc23b3825/download), [Stysch 등](https://arxiv.org/pdf/2009.08232), [Bharath–Choi–Swaminathan MFEM](https://epsilon.ece.gatech.edu/publications/2009/jaeyoung_ectc.pdf), [Wang 등 XRL](https://arxiv.org/pdf/2409.12375). 순위와 구현 연결은 본 조사 판단이다.
+
+## 2. 공통 물리 계약과 섞으면 안 되는 항
+
+이 절은 특정 논문의 공식을 조합한 새 해법이 아니라 후보들을 같은 문제로 비교하기 위한 Maxwell 표기이다. 시간 convention은 exp(+jωt), 비자성 기준은 μ=μ₀로 둔다. 실제 재료의 μ·도전율·유전손실을 입력과 대조해야 하며, 손실을 복소 ε와 σ에 중복 입력하지 않는다.
+
+배경 εb에서, 도체 및 유전체의 contrast current를 다음처럼 정의할 수 있다.
+
+\[
+J_c=[\sigma+j\omega(\epsilon-\epsilon_b)]E,
+\quad J_{tot}=(\sigma+j\omega\epsilon)E,
+\quad G_b=\frac{e^{-jk_b|r-r'|}}{4\pi|r-r'|}.
+\]
+
+\[
+A=\mu_b\int G_bJ_c\,dV',\quad
+\phi=\epsilon_b^{-1}\int G_b\rho_c\,dV',\quad
+E=E_{imp}-j\omega A-\nabla\phi.
+\]
+
+여기서 ρc는 **contrast current에 대응하는 등가 전하**이며 실제 자유전하 또는 분극전하 단독과 동일한 정의가 아니다. 전하 적분은 체적 전하뿐 아니라 계면의 표면 분포를 포함한다. source-free 재료 내부와 계면에서는 분포 의미의 div Jc+jωρc=0을 적용한다. 포트가 전하/전류를 주입하면 그 source convention을 따로 정하고, incident RHS와 연속식 양쪽에서 같은 소스를 두 번 넣지 않는다. 외부 균일 배경의 전파를 Green 함수가 이미 소유한다. 일반 μ 변화가 필요하면 이 전기 contrast 식만으로는 충분하지 않다.
+
+**계면의 핵심:** source-free 계면의 전체 전류 법선은 연속이지만 contrast current 법선은 재료에 따라 점프할 수 있다. 그 점프는 계면 전하와 연결된다. 서로 다른 σ/ε 영역에서 contrast J 자체를 무조건 법선 연속으로 묶으면 필요한 전하를 없앤다. Henry 논문의 D는 복소 ε를 포함한 전속이며, Jc와 동일한 미지수라고 간주하면 안 된다. HQ의 total-current material basis와 비교할 때도 이 변환을 먼저 적는다. [Henry, 식 (1)–(12), 본문 pp.2–3](https://arxiv.org/pdf/2108.10690)
+
+| 항의 주인 | 함께 붙여도 되는 것 | 중복 또는 누락 위험 |
+|---|---|---|
+| 도체 체적 전류의 full Green 문제 + 체적 Ohmic law | 같은 방정식의 적분 정밀화·빠른 matvec·정확한 condensation | 같은 지지영역의 slab/cylinder internal impedance를 또 더하면 내부 자기장/손실 중복 |
+| 내부 DtN/DSA + 이에 맞는 외부 경계 문제 | 동일 trace와 방향 convention의 인터페이스 제거 | 내부 response를 제거하지 않은 기존 volume operator, gap jωμd, heuristic via L의 추가 |
+| global electric charge/dielectric operator | 명확히 별도 소유인 외부 lumped component | 이미 포함된 plane C·fringing C를 추가하거나 누락된 signal artwork를 zero coupling으로 취급 |
+| plane/via/pad 접점 | 유한 단면의 일관된 current/field 연결과 실제 귀환 도체 | 점 노드만 연결해 current spreading·접촉 면·귀환 모드를 재현했다고 판단 |
+
+상반성은 같은 포트 normalization에서 Z≈Zᵀ인 **bilinear** 성질이고, 수동성은 모든 복소 포트 전류 a에 대해 Re(aᴴZa)≥0인 **sesquilinear** 성질이다. 복소 재료 의존 좌표변환 C를 쓰면 CᵀAC와 CᴴAC를 같은 검증으로 취급하지 않는다. 연속체의 시험 형식과 좌표변환을 각각 적고 실제 장으로 전력을 확인한다. 대칭화된 quadrature는 상반성 위반을 제거할 수 있어도 적분 정확도나 수동성을 증명하지 않는다.
+
+## 3. 최소 판별 실험: 새 보드 계산 전에
+
+| 우선 | 실험 | 최소 변경과 독립 판정 | 무엇을 결정하는가 |
+|---|---|---|---|
+| A | 기존 구리 상자의 기저 완전성 | 이미 만든 ω→0 Poisson 정확급수와 각 H 방향을 재사용. 동일 형상에서 고차/계층 또는 boundary-satisfying 전류 공간과 RT0를 비교. loss 계수·장 projection·off-axis 응답을 함께 기록 | 장 오차가 방정식/적분인지 미지수 공간 부족인지. 고차의 작은 오차를 100 MHz까지 자동 확대하지 않음 |
+| B | 유한 도전율 두 면·두 재료의 작은 접점 | 먼저 기존 고차 체적 기저를 1 kHz, 전이점, 100 MHz에 연결. 이어 25/30/20 μm TM 조건과 유한 box/직교 junction을 같은 경계로 대조. 전하를 같은 정의로 변환한 뒤 복소 전압·전하·접선 E/H·총 전력을 검사 | 체적 기준의 broadband·재료 경계 적합성. 내부 DSA는 그 후 필요할 때 비교하며, σ/ε 같음·거의 같음도 넣어 cancellation 및 불필요한 contrast 분모를 검사 |
+| C | port가 달린 최소 PWR–via–pad–GND 구조 | 포트 footprint와 return을 고정. 등면적 다른 접점 형상, via 한 개/두 개, GND 위치 이동을 별도 holdout으로 사용. material operator와 외부 결합의 두 가지 정확 표현을 비교 | 실제 접점·귀환과 내부/외부 자기장 소유권. 단순 R/L 추가로 맞춘 것이 아닌지 |
+| D | 고차/국소 적응의 포트 오차 추정 | 같은 공간의 dual solve 대신 enriched adjoint를 쓰고, 실제 더 정확한 소형 해와 estimator effectivity를 대조. Re/Im Zii 및 작지만 중요한 Zij를 각각 포함 | 제품이 1~2회 보정 뒤 멈춰도 되는 조건. 추정기가 틀리면 추가 계산 또는 미수렴 표시 |
+
+Harmon 등의 원문에서 같은 Galerkin 공간의 adjoint는 오차 추정치를 0으로 만들어 쓸 수 없고, p+1 enrichment와 요소·기저·방향별 residual 기여를 사용한다. 원문 식 (21)–(24), pp.4–5의 핵심은 `QoI error = residual weighted by adjoint`이다. 다만 논문의 실제 검증은 유전체 구체 산란이며, 그 estimator를 구리 고대비 H(div) VIE에 그대로 이식한 검증은 아니다. [Harmon 등, 2021](https://www.engr.colostate.edu/~notaros/Papers/TAP_Adjoints_AMR_3D_FEM.pdf)
+
+## 4. 현재 HQ 증거의 사용 범위
+
+읽기 전용으로 확인한 최신 원본은 HQ worktree의 다음 파일이다.
+
+- `C:\Users\User\.codex\worktrees\5950\SPD Decap PI Evaluator\docs\EVALUATION_SOLVER_DEEP_RESEARCH_2026-08-04.md` 상단 checkpoint 및 기존 문헌 목록.
+- 같은 위치의 `docs\EVALUATION_SOLVER_IMPLEMENTATION_PLAN_2026-08-04.md` 상단. 두 문서는 v0.23.1 연구 상태이며 이 worktree 기본 브랜치 문서보다 우선한다.
+- `outputs\research\astra-box-eddy-poisson-limit-01\result.json`, SHA-256 `1081ca3f6147e8435fd439f53ce00b02c07fc05ce4d9ddd7d3543f8f5792646c`. ω→0 loss deficit 6/48/384 tetra = 85.6118%/43.8374%/15.6623%; 384의 정확 projection field L2 error = 39.5756%. 6 tetra closed-current coordinate는 1개이며 한 transverse 조합을 완전히 놓친다.
+- `outputs\research\astra-constant-current-384-field-01\result.json` 상단 및 HQ 전달. 방정식·상반성·전력·복사 gate 통과와 큰 메시 변화는 양립한다. 48→384의 장 차이 58–69%는 HQ 전달값이다.
+
+이후 HQ가 저장한 `outputs\research\astra-box-eddy-polynomial-basis-01\result.json`도 읽기 전용으로 확인했다. SHA-256은 `85252d666b3f2fd0fee9ae54341da11ea790882cde10abe75f547f3cbd40eda5`다. transverse 방향 Legendre bubble 16모드의 loss deficit **3.02098766e-5**, field projection L2 **0.00549635**를 확인했다. 이는 ω→0 축별 기저 진단이며, 저장 결과 확인과 독립 수치 구현 검증은 다르다. HQ의 독립 검토는 전달 시점에 진행 중이고, 혼합축·100 MHz·포트·full 3D 보드의 완료 증거는 아니다.
+
+마지막 보드 비교는 L25 intra-layer 자기결합을 포함한 조건부 1 MHz 복소 오차 23.7629%다. self-only의 11.1606%가 더 작다는 이유로 생략한 물리를 정답으로 택할 수 없다. G/C 소스 감사상 누락 artwork·gap 및 global magnetic coverage 문제가 남아 있어 내부 수렴과 PowerSI 불일치를 따로 다뤄야 한다. 이 조사에서 원본 SPD, scenario 또는 제품 코드를 새로 실행하지 않았다.
+
+## 5. 후보별 원문 조건: 구현 전에 확인할 차이
+
+### VIE/PEEC: 같은 이름 안에서도 미지수와 정칙화가 다르다
+
+Henry 등의 2023 저자 accepted manuscript와 2021 arXiv를 대조했다. 비자성·등방 복소 ε의 simply connected 물체에서 D와 contrast J를 연결하며, 재료 가중 oblique quasi-Helmholtz projector와 왼쪽 정칙화를 사용한다. arXiv 식 (69)–(70), (107)–(111)은 각각 Gram 기반과 대각 근사 구현이다. 고대비 조건수의 이론적 bound에는 별도 조건이 있으며, 뇌/두개골/피부 모델의 수치 성공은 구리·무손실 유전체·다중 연결 접점에 대한 동일 bound의 증명이 아니다. 작은 전하·유도 성분과 dense-mesh conditioning을 같이 확인하는 실험 설계에 활용한다. [원문 및 DOI 10.1109/TAP.2022.3161390](https://iris.polito.it/retrieve/handle/11583/2980680/660371)
+
+Gope–Ruehli–Jandhyala의 2007 PEEC 논문은 전류/전하 분리와 실제 R/G의 역할을 다룬다. 이번 조사에서는 IBM 공식 초록만 확인했으므로 세부 식이나 임의 재료의 DC 안정성 증명으로 인용하지 않는다. Torchio의 2019 Cell Method PEEC도 전도체·유전체·자성체와 divergence 조건을 함께 다루는 중요한 선행 연구이나, 이번 접근은 대학 repository의 초록/서지까지다. [Gope 공식 초록](https://research.ibm.com/publications/solving-low-frequency-em-ckt-problems-using-the-peec-method), [Torchio 공식 초록](https://www.research.unipd.it/handle/11577/3317795)
+
+Siau 등의 COMPUMAG 2015 **2쪽 원문**은 `Jtot=(σ+jωε)E`, 식 (5), facet 기반 재료 연결을 보여준다. 그러나 전파를 생략한 적용이고, 식 (8)만으로 capacitive circuit이 완성되지 않아 외부 경계 항을 더한다는 점을 명시한다. 35 μm 구리/1.47 mm FR4 측정 비교에서는 공진 위치와 진폭의 일치 수준이 다르다. 이 짧은 논문의 식을 HQ의 retarded contrast-current 문제에 그대로 더하는 근거로 쓰지 않는다. [원문, pp.1–2 식 (5)–(12)](https://www.compumag.org/Proceedings/2015_Montreal/papers/PA1-3.pdf)
+
+### 경계 표현: 내부 장을 없애는 것이 아니라 경계 관계로 풀어내는 방법
+
+2022 전위 BEM은 내부/외부 Helmholtz Green 문제, 수정 gauge, 약한 continuity와 terminal KVL을 함께 구성한다. 최종 저자본 **p.4 식 (19)–(21), p.5 식 (33),(35),(36),(41), p.7 식 (48)**을 확인했다. 전하 중성은 연결된 물체 집합별로 처리하며 구조/집합의 전기적 크기에 따른 적용 조건이 있다. 논문의 평균 전위 조건을 다른 formulation의 일반적인 중성 조건으로 복사하면 안 된다. 비대칭 크기의 연결 도체와 각 물체의 전하 수지를 독립 검사할 필요가 있다. [Sharma–Triverio 최종본](https://www.waves.utoronto.ca/triverio/papers/jnl-2022-mtt-vpie-ports.pdf)
+
+2025 DSA의 **p.4 식 (14)–(22)**은 같은 interface basis의 접선 연속 → 내부 trace 제거 → 실제/배경 내부 연산자 차분 순서다. 부분 접촉 면의 크기가 다르면 pp.4–6의 basis 변환이 필요하다. **Cu/W bend 10 Hz–1 GHz**, **Cu–유전체 2 GHz 산란**, **MIM 10 MHz–100 GHz**는 별개의 검증이다. MIM의 CST 해석은 실패했고, 평행판 C 및 자체 shorted-loop 대조만 제공한다. 일반적인 초기 모드 수 선택 heuristic은 아직 없다고 p.8에 명시한다. [Pattyn 등 원문](https://imec-publications.be/bitstreams/ede8b463-ac81-4368-9cbe-7c0dc23b3825/download)
+
+따라서 실험 B의 첫 단계로 **동일 구리 상자를 인공 경계로 둘로 나눠도 복소 응답과 전력이 보존되는지** 검사한다. 내부 모드 차수, 외부 표면 h/p, 적분 오차를 한 번에 바꾸지 않는다. 두 경계 논문에서 최종 이산 전체 시스템의 수동성을 보장하는 명시적 정리는 이번 원문 검토에서 확인하지 못했다.
+
+### 3D FEM과 적층 FEM의 차이
+
+Stysch 등의 원문은 full-wave E-field 식 (11), H(curl) 공간의 세 부분 분리 식 (35)–(37), 고차 계층 공간을 기술한다. 그러나 그 논문의 scalar-potential 전압에는 **excitation return의 유도 성분을 제거한 partial-impedance convention**이 있다(pp.1–4, 식 (1)–(9), §3.3). 실제 PWR/GND return이 포함된 PowerSI 포트 전압과 바로 동일시하지 않는다. 와이어 수치 R은 10 MHz 이상에서 내부 메시가 표피 깊이를 해상하지 못해 포화했다(p.7). 논문의 광대역 유도와 그 메시의 정확한 주파수 범위를 구분한다. [Stysch 원문](https://arxiv.org/pdf/2009.08232)
+
+MFEM은 p.2 식 (1)의 2D Helmholtz 전압, 두께 방향 불변장 가정, 자기벽 경계를 사용한다. 두께가 파장보다 작다는 조건만으로 도체 두께 방향 확산장·양면 결합까지 사라지지는 않는다. 논문의 p.5 식 (25), 30 μm 구리와 100 MHz 이상의 개구 결합 예제는 1 kHz 장 관통 검증을 대신하지 않는다. 이는 현재 양면 slab 연산자를 common mode 하나로 줄일지 판단할 때 특히 중요하다. [MFEM 원문](https://epsilon.ece.gatech.edu/publications/2009/jaeyoung_ectc.pdf)
+
+## 6. 제품 실행: 좋은 초기 해상도와 적은 국소 보정
+
+다음은 문헌의 보장된 성능 수치가 아니라, 검증할 **프로젝트 실행 제안**이다. 연구에서 정밀한 수렴 자료를 한 번 확보하는 일과 제품이 매번 전체 보드를 균일하게 세분하는 일은 분리한다.
+
+### 6.1 초기 h/p를 물리와 형상에서 시작한다
+
+비자성 좋은 도체의 표피 깊이는 `δ=1/sqrt(π f μ σ)`다. HQ 재료값 σ=59.59 MS/m, μ=μ₀를 대입한 단순 계산은 1 kHz/1 MHz/100 MHz에서 약 **2062/65.20/6.520 μm**, δ=25 μm 전이는 약 **6.80 MHz**다. 이 숫자는 추가 보드 계산이 아니라 길이 척도 산술이며, 복잡한 접점의 mesh certificate가 아니다.
+
+| 필요한 척도 | 초기 해상도에 반영할 내용 | 남는 검사 |
+|---|---|---|
+| δ(f), 도체 두께 t | 도체 법선 방향 해상도 또는 내부 고차/모드 수. 두 면의 결합을 유지 | 1 kHz의 관통장과 100 MHz의 경계층을 둘 다 검사 |
+| 층간 gap, via 도금/반경, pad/contact 크기 | 접점·유전체 틈·current spreading 및 공통 면 trace의 형상 해상도 | 유한 접촉면, 도금/채움 가정, partial overlap 처리 |
+| 모서리·곡률·좁은 귀환 경로 | singular/급변 영역은 국소 h, 매끄러운 영역은 p 후보 | 곡선 geometry 자체의 오차와 장 기저 오차 분리 |
+| 배경/재료의 전파 길이 | 전파/공진을 해상할 tangential h/p와 대표 주파수 | 파장만 맞춘 메시가 저주파 구리 확산장을 해결하지는 않음 |
+
+Ansys의 **HFSS Skin Depth Seeding 2024 R2**도 표면에 평행하게 길고 법선으로 얇은 요소, Solve Inside 및 형상 조건을 다룬다. 설정된 층 구조와 실제 해 정확도는 별개이고, 그 기능에는 후속 adaptive refinement에서 seeding 영역/인접 영역을 제외하는 제품별 제약이 있다. 특정 프로그램의 seeding 옵션을 일반적인 최적 메시 정리로 옮기지 않는다. [공식 문서, §§1-7, 1-12–1-15](https://ansyshelp.ansys.com/public/Views/Secured/Electronics/v242/en/PDFs/HFSS%20Skin%20Depth%20Seeding.pdf)
+
+제품 규칙은 형상군에서 확인한 길이 척도→초기 h/p의 작은 결정 규칙으로 시작한다. 현재 한 SPD에서 가장 잘 맞은 coarse mesh를 학습 정답으로 사용하지 않는다. 새 ML 초기 메시 모델이나 일반 가속 프레임워크는 이번 단계의 필수 작업이 아니다.
+
+### 6.2 포트 중심으로 보정하고, 모드 누락을 먼저 잡는다
+
+선형 대수 문제 `Ax=b`, 관심량 `q=lᴴx`에서 `Aᴴz=l`인 adjoint를 쓰면 `q−q_h=zᴴ(b−Ax_h)`다. 이는 해당 **이산 행렬**에 대한 정확한 항등식이며, 잘못된 물리·geometry·kernel assembly의 오차까지 알아내는 식은 아니다. 공간 오차에는 enriched 공간에서의 residual/adjoint가 필요하다. 복소 Z의 실수·허수, 주요 transfer Z를 별도 관심량으로 다룬다. loss처럼 이차 functional에는 선형화 나머지 검증을 추가한다.
+
+Harmon 원문의 p+1 adjoint, 방향별 기여와 차수 변경 heuristic을 출발점으로 삼는다. 실제 구체 산란 실험은 local tolerance 방식 **3–4회**, global tolerance 방식 **4–5회**였으므로 1–2회 종료의 일반 보장이 아니다. [원문 pp.4–6, 식 (21)–(30)](https://www.engr.colostate.edu/~notaros/Papers/TAP_Adjoints_AMR_3D_FEM.pdf)
+
+Gomez-Revuelto 등의 **S21 functional 식 (12)**과 **h/p 후보의 primal×dual 오차 감소/추가 DOF 비교 식 (24)**는 제품 의사결정에 직접 관련된다. 다만 pp.468–471의 practical estimate는 projection–Galerkin 항에 대한 conjecture와 충분히 정확한 enriched 해에 의존한다. 원문은 2D TM/TE H¹ 및 실수 ε/μ norm 조건이다. 3D lossy H(div) VIE의 엄밀 상계라고 부르지 않는다. [PIER 2012 원문](https://www.jpier.org/ac_api/download.php?id=11121606)
+
+제품 종료 절차 제안:
+
+1. 모드 완전성/접촉/재료 검사를 통과한 초기 h/p로 계산한다.
+2. 대표 주파수와 주요 포트에서 enriched adjoint로 민감한 영역·방향을 찾는다. 같은 DOF에서 효과가 큰 h 또는 p 후보를 고른다.
+3. 1–2회 국소 보정 뒤 내부 허용오차를 만족하면 종료한다. 만족하지 못하면 추가 보정하거나 미수렴으로 표시한다. 횟수 제한을 정확도 인증으로 바꾸지 않는다.
+4. 개발 단계에는 더 정확한 독립 해로 `추정 오차 / 실제 오차`를 측정한다. 특이점·고대비·near-zero Zij에서도 estimator가 과소평가하지 않는지 확인한다.
+
+### 6.3 주파수·다중 포트·Decap 재종단을 재사용한다
+
+대표 주파수는 1 kHz와 100 MHz, δ≈t 전이점, 가능한 공진 부근에서 시작한다. 보간점과 별도의 검증 주파수를 사용하고, loaded rail에 새로 생기는 반공진도 검사한다. 최고 주파수 하나에서 좋은 메시가 모든 저주파 전류 모드와 포트 응답을 보장한다고 가정하지 않는다.
+
+Ansys **2025 R1 Interpolating Sweep**은 끝점/중점으로 초기 subrange를 구성하고, 보간 수렴 후 샘플 주파수에서 수동성을 검사하여 가장 큰 위반점의 실제 해를 추가한다. Driven terminal은 S와 port impedance를 수렴 대상으로 삼는다. 이 공개 설명은 지정 샘플·50 Ω 재정규화에 대한 검사이며 연속 전 대역의 수동성 증명도 PowerSI 내부 구현 공개도 아니다. [공식 문서](https://ansyshelp.ansys.com/public/Views/Secured/Electronics/v251/en/Subsystems/HFSS/Content/HFSS/SetupInterpolatingSweepAdvancedOptions.htm)
+
+동일 형상·메시·주파수에서 primal/port/adjoint RHS는 factorization을 재사용할 수 있다. 주파수가 바뀌면 같은 LU를 그대로 사용하는 것은 일반적으로 불가능하지만, topology/ordering/정적 적분 및 적합한 initial guess는 재사용 후보이다. `G_k=G_0+(G_k−G_0)` 분해를 쓰더라도 remainder를 버리지 않아야 같은 full-wave 방정식이다. 주파수별 재료와 retarded 부분은 그 의존성을 유지한다.
+
+정확한 base multiport의 외부 포트 a, 종단 포트 b를 분리하고 b에 ZL을 연결하면, 포트 전류 방향이 base network 안쪽을 향하고 역행렬이 존재하는 조건에서 다음 블록 소거가 가능하다.
+
+\[
+Z_{loaded}=Z_{aa}-Z_{ab}(Z_{bb}+Z_L)^{-1}Z_{ba}.
+\]
+
+이 식은 블록 대수의 결과이며 새 전자장 근사가 아니다. base multiport에 Decap 접점·귀환 경로가 존재해야 하고, pad/배선/도체 형상을 바꾼 경우에는 같은 base 행렬을 무조건 재사용할 수 없다. PRIMA/VF 등 축약·보간은 정확한 base와 loaded 응답의 허용오차를 확인한 다음 적용한다. 각 요소의 좋은 fit만으로 전체 연결의 안정성·수동성이 자동 보장되는 것은 아니다.
+
+### 6.4 CPU/GPU는 같은 방정식의 실제 병목에 적용한다
+
+512 GB RAM/Threadripper가 목표이며 노트북 메모리 제한은 후보 물리를 제거하는 근거가 아니다. 우선 시간을 geometry/mesh, self-near 적분, far operator, preconditioner/factorization, 각 주파수·포트 solve, 후처리로 분해한다. CPU에서는 주파수 병렬과 BLAS 내부 병렬의 중복을 피하고, 충분한 RHS block과 메모리 대역폭을 고려한다. GPU 존재·VRAM·FP64 성능은 아직 확인되지 않았다.
+
+| 속도 근거 | 실제 문제·하드웨어·측정 범위 | 이 프로젝트로 옮길 수 있는 결론 |
+|---|---|---|
+| XRL, §III 및 Table III | 32 threads Xeon Gold 6252 2.1 GHz, 1 TB RAM. BGA 25 signal nets, 50 source/25 sink ports, **1.6 GHz RL**. 0.155 h vs Q3D 0.1% adaptation 14.45 h, 3.84 vs 54.7 GB. 전체 CAD/mesh 전처리 포함 여부는 확인 범위에서 명확하지 않음 | 약 93배는 이 예제의 Q3D 대비 수치. 1 kHz–100 MHz 복소 PDN/PowerSI 대비 속도 주장은 불가. 여러 RHS와 적분 재사용의 적용 조건은 참고 가능 |
+| MFEM, Table I | Core2 Duo 2.2 GHz/2 GB. MFEM 1,439 unknowns, MATLAB 0.250 s/frequency; MFDM 250,000 unknowns, C++ 10 s/frequency | 40배에는 메시 unknown 수 차이가 포함된다. 전체 런타임·동일 공통 물리 정확도·PowerSI 비교로 확대하지 않음 |
+| Vater–Betcke–Dilba GPU BEM, §6 | **1 kHz 음향** 산란, 115k unknowns. 20-core Xeon E5-2670 v2/~200 GB와 TITAN Black 두 대. 조립 1.9배, 전체 1.4배; grid read 제외, 조립·반복해·후처리 포함. 0.0081%는 CPU/GPU **진폭** 차이 | 충분한 적분 batch가 병목이면 GPU 후보. FP32 hypersingular 직접 조립은 불충분했던 원문 결과를 함께 봐야 함. PI 복소 정확도·현재 GPU 성능의 근거는 아님 |
+
+근거: [XRL 원문 pp.5–7](https://arxiv.org/pdf/2409.12375), [MFEM p.5](https://epsilon.ece.gatech.edu/publications/2009/jaeyoung_ectc.pdf), [GPU BEM pp.11–13](https://arxiv.org/pdf/1711.01897). 실제 제품 시간은 같은 정확도·포트 수·대역과 전처리를 포함해 목표 장비에서 측정해야 한다. 작은 box의 초 단위 계산을 보드 실행시간으로 외삽하지 않는다.
+
+## 7. 내부 수렴과 외부 PowerSI 검증을 분리하는 자료 구성
+
+내부 gate는 geometry/contact 적합성, material/charge 보존, self-near 및 far 적분 정확도, trial/test 공간 수렴, 선형해 오차, 주파수 보간 오차로 나눈다. 포트 상반성·수동성·전력 수지는 그중 필요한 검사이며 생략한 물리의 정확도 검사와 동의어가 아니다. `Zij`가 0에 가까운 곳에서는 상대오차 분모가 불안정하므로, 사전에 정한 절대 오차 floor와 상대 허용오차를 같이 사용한다. 허용오차 수치는 HQ가 제품 설계 판단의 필요 정확도에서 정해야 한다.
+
+외부 gate에서는 동일 SPD geometry/material, via plating/fill, 포트 footprint·순서·기준 임피던스·return, decap 종단, reference version/settings와 대역을 먼저 대응시킨다. 그 뒤 복소 Zii/Zij의 대역별 오차, 저주파 offset, 공진 위치/진폭, bare/loaded rail을 비교한다. 내부 오차가 줄어도 PowerSI 차이가 커질 수 있으며, 이 경우 모델/소스 설정 차이를 조사한다. coarse mesh가 누락된 물리와 우연히 상쇄한 오차를 최적화 목표로 삼지 않는다.
+
+**이미 알려진 평가 후보를 먼저 활용한다.** 아래는 모바일 task `01a07696-742c-7020-bf48-8b9ae43ce684`가 2026-09-08 전달한 읽기 전용 inventory/헤더 확인 결과이며, 이 문헌 task가 파일 전체나 해시를 재검증한 것은 아니다.
+
+| 후보 SPD / Touchstone | 용도와 주의 |
+|---|---|
+| `D:\S4LB002-2Para_260729_1_injected.spd` / `D:\S4LB002-2Para_260729_1_injected_073026_100913_33216_S.s92p` | 개발 또는 계열 내부 검증 후보 |
+| `D:\S4LB002-2Para_260804_1_injected.spd` / `D:\S4LB002-2Para_260804_1_injected_080526_104445_27112_S.s92p` | 위와 같은 S4LB 계열 변형일 수 있어 완전 독립 설계라고 단정하지 않음 |
+| `D:\Downloads\PC-2576_S4LQ015A_B0_1P-L01_251017_V2_PI_DATA_VDD075_NE_VDD.spd` / `D:\Downloads\PC-2576_S4LQ015A_B0_1P-L01_251017_V2_PI_DATA_VDD075_NE_VDD_101925_172246_41448_S.s4p` | 다른 설계 holdout 후보. 전달된 option line은 **`# Hz S RI R 1`**. 현재 배열 1–4와 원래 Port31/38/45/52 mapping을 구분하고 50 Ω를 가정하지 않음 |
+| `D:\Downloads\s5m6585_32p_260414_length3_1.spd` / `D:\Downloads\s5m6585_32p_260414_length3_1_041426_171904_99744_S.s160p` | 다른 설계·많은 포트 holdout 후보. 제목만으로 물리 조건이 같다고 보지 않음 |
+
+이름 규칙과 `Generated from:` basename 일치는 대응 후보를 찾는 근거다. 최종 평가 적합성은 포트/재료/종단을 확인한 뒤 결정한다. 이 문서는 **S4LB를 개발 자료로, PC-2576와 s5m6585를 사전 보류 평가 후보로 두는 방안**을 제안한다. 실제 적용 대역과 소스 대응 확인 전에는 평가 성적이나 독립성 확정으로 표시하지 않는다. 모델·초기 h/p 규칙을 고정한 뒤 holdout을 열고, 성적을 보고 다시 튜닝했다면 그 자료를 더 이상 untouched holdout이라고 부르지 않는다.
+
+## 8. 출처와 접근 수준
+
+식/쪽은 아래 링크의 판본을 기준으로 한다. 인용은 사실·가정·검증 범위의 근거이며, 본 프로젝트 성능의 인증이 아니다. **전문 확인**은 관련 유도와 검증 절을 직접 읽었다는 뜻으로 논문 모든 식을 재증명하거나 실행했다는 뜻은 아니다.
+
+| 출처 | 서지·원문 위치 | 이번 확인 수준 |
+|---|---|---|
+| Henry, Merlini, Rahmouni, Andriulli, *On a Low-Frequency and Contrast Stabilized Full-Wave Volume Integral Equation Solver for Lossy Media* | IEEE TAP 71(3), 2571–2586, 2023. [DOI](https://doi.org/10.1109/TAP.2022.3161390), [accepted manuscript](https://iris.polito.it/retrieve/handle/11583/2980680/660371), [2021 preprint](https://arxiv.org/pdf/2108.10690). 식 (1)–(12), (69)–(70), (107)–(111), §§VI–VIII | 두 판본 관련 전문 확인. preprint 쪽 번호와 repository 표지 offset을 구분 |
+| Sharma, Triverio, *Electromagnetic Modeling of Lossy Interconnects From DC to High Frequencies With a Potential-Based Boundary Element Formulation* | IEEE TMTT, 2022. [DOI](https://doi.org/10.1109/TMTT.2022.3180390), [최종 저자본 15쪽](https://www.waves.utoronto.ca/triverio/papers/jnl-2022-mtt-vpie-ports.pdf). pp.2,4–7,10–11 | root와 독립 lane의 전문 확인. web fetch timeout 후 PDF를 메모리에서 읽음. arXiv 초기판 식 번호를 혼용하지 않음 |
+| Pattyn, Sun, Beyne, De Zutter, Huynen, Vande Ginste, *Broadband Electromagnetic Modeling of On-Chip Passives Using a Differential Surface Admittance Operator for 3-D Piecewise Homogeneous Structures* | IEEE TMTT, 2025. [DOI](https://doi.org/10.1109/TMTT.2025.3600958), [저자 공개본 15쪽](https://imec-publications.be/bitstreams/ede8b463-ac81-4368-9cbe-7c0dc23b3825/download). pp.4–8,9–12 | root와 독립 lane 전문 확인. API open 실패 후 PDF 메모리 추출. MIM 독립 reference 부재를 보존 |
+| Stysch, Klaedtke, De Gersem, *Broadband Finite-Element Impedance Computation for Parasitic Extraction* | Electrical Engineering 104, 855–867, 2022. [DOI](https://doi.org/10.1007/s00202-021-01348-9), [저자 preprint](https://arxiv.org/pdf/2009.08232). §§2–3.7,4.1 | 식은 공개 preprint 기준. 출판 후 추가 사례를 preprint에서 확인한 것처럼 쓰지 않음 |
+| Bharath, Choi, Swaminathan, *Use of the Finite Element Method for the Modeling of Multi-Layered Power/Ground Planes with Small Features* | ECTC 2009, 1630–1635. [DOI](https://doi.org/10.1109/ECTC.2009.5074233), [Georgia Tech 원문](https://epsilon.ece.gatech.edu/publications/2009/jaeyoung_ectc.pdf) | 전문 관련 절·Table I 확인. HQ의 기존 인용을 재검토 |
+| Wang, Liu, Gu, Jia, Yucel, *XRL: An FMM-Accelerated SIE Simulator for Resistance and Inductance Extraction of Complicated 3-D Geometries* | 2024 저자 preprint. [arXiv/DOI](https://doi.org/10.48550/arXiv.2409.12375), [원문](https://arxiv.org/pdf/2409.12375). §§II–III, Tables II–V | MQS 범위, 하드웨어, 포트, 주파수, runtime 표 확인. 최종 출판판과 동일하다는 주장은 하지 않음 |
+| J. J. Harmon, C. Key, D. Estep, T. Butler, B. M. Notaroš, *Adjoint-Based Accelerated Adaptive Refinement in Frequency Domain 3-D Finite Element Method Scattering Problems* | IEEE TAP 69(2), 940–949, 2021. [DOI](https://doi.org/10.1109/TAP.2020.3016162), [저자 원문](https://www.engr.colostate.edu/~notaros/Papers/TAP_Adjoints_AMR_3D_FEM.pdf). 식 (15)–(30), pp.3–6 | root와 독립 lane에서 유도·실험 전문 확인. H(curl) 유전체 산란 검증 |
+| Ignacio Gomez-Revuelto, Luis E. Garcia-Castillo, Magdalena Salazar-Palma, *Goal-Oriented Self-Adaptive Hp-Strategies for Finite Element Analysis of Electromagnetic Scattering and Radiation Problems* | PIER 125, 459–482, 2012. [DOI](https://doi.org/10.2528/PIER11121606), [출판사 원문](https://www.jpier.org/ac_api/download.php?id=11121606). 식 (12),(18)–(24), pp.464,468–471 | 독립 조사 lane 전문 확인. root 원문 재요청은 timeout; 이 한계를 보존 |
+| Ansys, *HFSS Skin Depth Seeding* | 2024 R2, [공식 PDF](https://ansyshelp.ansys.com/public/Views/Secured/Electronics/v242/en/PDFs/HFSS%20Skin%20Depth%20Seeding.pdf), §§1-7,1-12–1-15 | 독립 lane 관련 문서 확인; root는 PDF 접근 확인. 현재 모든 버전에 대한 주장 아님 |
+| Ansys, *Set up Interpolating Sweep Advanced Options* | 2025 R1, [공식 문서](https://ansyshelp.ansys.com/public/Views/Secured/Electronics/v251/en/Subsystems/HFSS/Content/HFSS/SetupInterpolatingSweepAdvancedOptions.htm) | root와 독립 lane 전문 확인. 공개된 HFSS 옵션의 설명 범위 |
+| Vater, Betcke, Dilba, *Simple and Efficient GPU Parallelization of Existing H-Matrix Accelerated BEM Code* | 2017 preprint. [DOI](https://doi.org/10.48550/arXiv.1711.01897), [원문](https://arxiv.org/pdf/1711.01897), §§5–6 | root와 독립 lane에서 hardware/precision/error denominator/전체 시간 확인. 음향 benchmark |
+| Gope, Ruehli, Jandhyala, *Solving Low-Frequency EM-CKT Problems Using the PEEC Method* | IEEE Trans. Advanced Packaging 30(2), 313–320, 2007. [DOI](https://doi.org/10.1109/TADVP.2007.896000), [IBM](https://research.ibm.com/publications/solving-low-frequency-em-ckt-problems-using-the-peec-method) | **공식 초록만**. 세부 식·증명 미확인 |
+| Torchio, *A Volume PEEC Formulation Based on the Cell Method for Electromagnetic Problems From Low to High Frequency* | IEEE TAP 67(12), 7452–7465, 2019. [DOI](https://doi.org/10.1109/TAP.2019.2927789), [대학 repository](https://www.research.unipd.it/handle/11577/3317795) | **공식 초록/서지만**. 후속 코드의 존재가 이 논문 전체 물리의 구현 증거는 아님 |
+| Siau, Meunier, Chadebec, Guichon, Perrin-Bit, *Volume Integral Formulation Using Facet Elements for Electromagnetic Problem Considering Conductors and Dielectrics* | COMPUMAG 2015, PA1-3. [학회 공개 원문](https://www.compumag.org/Proceedings/2015_Montreal/papers/PA1-3.pdf), pp.1–2 | 공개 2쪽 전문. 후속 full paper의 상세 검증까지 확인했다고 하지 않음 |
+
+조사는 기존 HQ 문헌의 공백인 저주파/고대비 작은 응답, finite-conductivity 내부 경계·재료 접점, 고차/goal-oriented 적응을 세 갈래로 나누어 진행했다. 넓은 검색 뒤 위 원문의 조건과 반례에 집중했고, 동일 주장을 반복하는 추가 목록 수집은 종료했다. 상용 해석기 비교는 공개 사례의 범위에 한정했으며 **비공개 PowerSI 알고리즘은 추정하지 않았다**.
+
+남은 핵심 공백은 소수다: 실제 소스의 도금/접촉/유전체 경계·포트 조건, 1 kHz 구리–유전체 3D 접점의 독립 복소 검증, 100 MHz 고차/내부 경계 표현 수렴, holdout 초기 h/p 규칙의 성공률과 전체 실행시간. 추가 논문 수를 늘리기보다 §3의 A→B→C 판별로 이 공백을 줄이는 것이 다음 행동이다.

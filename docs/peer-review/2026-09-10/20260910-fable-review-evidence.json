@@ -1,0 +1,175 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "reviewed_kst": "2026-09-10T17:09:05+09:00",
+  "review_commit": "3929d312a69778bee8e895fcda0a7dd09bdcab20",
+  "packet_base": "215d7f5a69e3fec285c31778492f360e08e34851",
+  "changed_paths": [
+    "docs/peer-review/2026-09-10/README.md",
+    "docs/peer-review/2026-09-10/REVIEW_CLAUDE_FABLE_2026-09-10.md"
+  ],
+  "scope": "Document/source/saved JSON reads and stdlib scalar arithmetic only; no solver, FMM, raw SPD, PowerSI, implementation, delegation, publication or message sending. Existing stop unchanged.",
+  "source_blobs": {
+    "docs/peer-review/2026-09-10/snapshots/hq/docs/evaluation-research/astra_primary_band_comparison_2026-09-07.json": {
+      "sha256": "ac08d7ea36a09989fb83e9113af399db41f698bf68e061e3c75020f4c41a5f8d",
+      "bytes": 8697
+    },
+    "docs/peer-review/2026-09-10/snapshots/hq/outputs/research/astra-l04-10mhz-three-direction-complete-current-01/result.json": {
+      "sha256": "3e5704ef3bf96592fd52b62de2c198fcc960da4dbbde1e98f2f505d8af1de590",
+      "bytes": 7803
+    },
+    "docs/peer-review/2026-09-10/snapshots/hq/outputs/research/astra-l04-10mhz-complete-current-gcrotmk-01/result.json": {
+      "sha256": "17eec05e5f710020703a40ec62916d3a01c563fa895d3cde1463979e1a2c4f25",
+      "bytes": 42353
+    },
+    "docs/peer-review/2026-09-10/snapshots/hq/outputs/research/astra-l04-10mhz-closed-magnetic-gcrotmk-paired-01/result.json": {
+      "sha256": "ef23ddf9c0a81f5ef0e234932592ea6403685f022c7e3dc1c04bd4517c488f03",
+      "bytes": 44540
+    },
+    "docs/peer-review/2026-09-10/snapshots/hq/outputs/research/astra-l04-10mhz-forward-closed-gcrotmk-01/result.json": {
+      "sha256": "30045d8ac4540b096f9b26c75238c5d9e98e1375efc3fb1c5f4b888141fd2128",
+      "bytes": 46567
+    },
+    "docs/EVALUATION_ACCURACY.md": {
+      "sha256": "beff38fde27ebde04dc6902ae4cebd9954d3dd3e699f3f2b34e3ebaccb4fd9a9",
+      "bytes": 62559
+    },
+    "docs/peer-review/2026-09-10/REVIEW_CLAUDE_FABLE_2026-09-10.md": {
+      "sha256": "cd8e3acedd7c6c9b263adfdc4c91136fcc3e80bf51f0b94c82039ad85448adef",
+      "bytes": 38714
+    },
+    "docs/peer-review/2026-09-10/snapshots/hq/tools/research/probe_astra_l04_10mhz_two_direction_complete_current.py": {
+      "sha256": "6e7466c04d38c4db2d49bfbe6a73e07edb4e418fa582f58b3b192c47aa5c42b0",
+      "bytes": 30473
+    },
+    "docs/peer-review/2026-09-10/snapshots/hq/tools/research/probe_astra_l25_l04_joint_magnetic_action.py": {
+      "sha256": "caf5ba8fd0a1a156f987069be4d14e12d5ae8268e613716d120fb6edf2ab6a5e",
+      "bytes": 18767
+    },
+    "docs/peer-review/2026-09-10/snapshots/hq/outputs/research/astra-l04-10mhz-forward-closed-gcrotmk-01/driver-at-run.py": {
+      "sha256": "466cd9ef7e10d1d39b3821040c79899690170e5bc17e7d217023565e4683a087",
+      "bytes": 33201
+    },
+    "docs/peer-review/2026-09-10/snapshots/hq/outputs/research/astra-all-finite-current-l-ownership-01/result.json": {
+      "sha256": "b9641892dd80cbbecd48ea1a30e58b7afee9ab589878ed613f797e863cb75e7f",
+      "bytes": 13528
+    },
+    "src/spd_decap_pi/_core/solver/mfdm.py": {
+      "sha256": "bab610946c587842c11b8f0d0de41eae46e34fb6790b4ec90eddc81b16c8a27c",
+      "bytes": 72198
+    },
+    "src/spd_decap_pi/_core/solver/modal.py": {
+      "sha256": "e743f6b1126bbcb42cc8314e51f769c0ed9cf345d5ea711622b7a38cf560cd00",
+      "bytes": 98074
+    },
+    "src/spd_decap_pi/_core/solver/via_peec.py": {
+      "sha256": "52cb3e58d25db545a75f96d475e072f503616094c6672358c75640ea796533c3",
+      "bytes": 30778
+    }
+  },
+  "reference_z_10mhz_ohm": [
+    0.0013351332705258876,
+    0.0008761129830389292
+  ],
+  "third_warm_z_ohm": [
+    0.0008425899016622036,
+    0.00015674764355620536
+  ],
+  "third_unvalidated_reference_gap_percent": 54.594380242518405,
+  "trials": {
+    "real_h": {
+      "source": "docs/peer-review/2026-09-10/snapshots/hq/outputs/research/astra-l04-10mhz-complete-current-gcrotmk-01/result.json",
+      "raw_z_ohm": [
+        0.0008425187012130073,
+        0.00015677202667810835
+      ],
+      "warm_delta_magnitude_nohm": 75.259820618284,
+      "unvalidated_reference_gap_percent": 54.595639475905166,
+      "warm_gap_change_percentage_points": 0.0012592333867615935,
+      "contact_residual_norm_reduction_percent": 29.168578047338666,
+      "final_relative_residual_original_rhs": 988.007830580013
+    },
+    "diagonal_homega": {
+      "source": "docs/peer-review/2026-09-10/snapshots/hq/outputs/research/astra-l04-10mhz-closed-magnetic-gcrotmk-paired-01/result.json",
+      "raw_z_ohm": [
+        0.0008425135764462607,
+        0.00015682342494613286
+      ],
+      "warm_delta_magnitude_nohm": 107.55629989953768,
+      "unvalidated_reference_gap_percent": 54.593165264094736,
+      "warm_gap_change_percentage_points": -0.0012149784236683558,
+      "contact_residual_norm_reduction_percent": 50.607424065417085,
+      "final_relative_residual_original_rhs": 689.0729320236888
+    },
+    "forward_homega": {
+      "source": "docs/peer-review/2026-09-10/snapshots/hq/outputs/research/astra-l04-10mhz-forward-closed-gcrotmk-01/result.json",
+      "raw_z_ohm": [
+        0.0008425134786822031,
+        0.00015682376349129848
+      ],
+      "warm_delta_magnitude_nohm": 107.86434253608014,
+      "unvalidated_reference_gap_percent": 54.59315123234427,
+      "warm_gap_change_percentage_points": -0.0012290101741356807,
+      "contact_residual_norm_reduction_percent": 49.06994539503472,
+      "final_relative_residual_original_rhs": 710.5207739477488
+    }
+  },
+  "diagonal_forward_delta_nohm": 0.35237854662050083,
+  "two_point_series_lc_fit": {
+    "C_microfarads": 262.80899576722265,
+    "L_nanohenry": -16.111067239749005,
+    "meaning": "Two-point algebraic diagnostic; negative fitted L prevents treating this as a validated physical single-series LC decomposition."
+  },
+  "effective_terminal_l_picohenry": {
+    "10000000": 14.907600300495169,
+    "100000000": 16.741594129546904,
+    "1000000000": 17.500334498692013
+  },
+  "latest_effective_l_picohenry": 3.45975682012347,
+  "reference_minus_forward_milliohm": [
+    0.4926197918436845,
+    0.7192892195476307
+  ],
+  "reference_forward_gap_milliohm": 0.8718091767546122,
+  "dense_array_bytes_only": {
+    "40000_real64": 12800000000,
+    "40000_complex128": 25600000000,
+    "100000_complex128": 160000000000,
+    "excludes": "LU factors, pivots, workspace, copies, other blocks; sparse fill not predicted."
+  },
+  "primary_literature": {
+    "url": "https://www.rle.mit.edu/cpg/publications/pub116.pdf",
+    "title": "Preconditioning for Multipole-Accelerated 3-D Inductance Extraction",
+    "verification": "Direct web open timed out; directly inspected coordinator-provided original p192 rendering, Figures 5 and 6 and conclusions. Other Fable bibliography not independently verified.",
+    "pdf_sha256": "9eaae68570bacdcd29de1e9a46df8eddb63dc1f4ef93b4a97bd738de18ade94f",
+    "page_render_sha256": "e8dd63dada385cb9b845f12a62e2662a564698d758050366614647989913e0d2",
+    "finding": "Local inversion is faster for packaging example; inverse-R is faster for ground-plane example. Best preconditioner is problem-dependent."
+  },
+  "document_validation": {
+    "utf8_readback": true,
+    "tables": [
+      {
+        "first_line": 13,
+        "rows": 8,
+        "columns": 2
+      },
+      {
+        "first_line": 28,
+        "rows": 18,
+        "columns": 4
+      },
+      {
+        "first_line": 51,
+        "rows": 5,
+        "columns": 4
+      },
+      {
+        "first_line": 121,
+        "rows": 18,
+        "columns": 2
+      }
+    ],
+    "scalar_assertions_passed": true,
+    "report_sha256": "f404d7c56cb7bc84900cd9f9f06690770f0b9cbd60ac94edc2f7cd1048166a0a"
+  }
+}

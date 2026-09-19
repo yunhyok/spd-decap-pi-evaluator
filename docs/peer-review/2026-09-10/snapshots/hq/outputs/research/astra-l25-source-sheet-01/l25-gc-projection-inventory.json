@@ -1,0 +1,433 @@
+{
+  "direct_saved_touch_counts": {
+    "device_port_global_reduced_touch_count": 0,
+    "finite_active_touch_count": 350,
+    "finite_contact_model_from_pinned_receipt": {
+      "HOLLOW_PLATED_BARREL": 350
+    },
+    "finite_first_active_touch_count": 59,
+    "finite_second_active_touch_count": 291,
+    "source_trace_count_from_pinned_receipt": 0,
+    "termination_negative_active_touch_count": 0,
+    "termination_positive_active_touch_count": 0
+  },
+  "elapsed_s": 1.7398700000485405,
+  "frequency_hz": 1000000.0,
+  "inputs": {
+    "audit_astra_l14_gc_projection.py": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\audit_astra_l14_gc_projection.py",
+      "role": "method-only; no L14 owner or data input is read",
+      "sha256": "20b33f0c5ce216bd13a2714beaf8e28abf8e612e23ded4b446e5d984e5250320",
+      "size_bytes": 21947
+    },
+    "compiled-topology.sqlite": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-step4-basis-01\\indexes\\compiled-topology.sqlite",
+      "sha256": "5a4fd917e0c415a50d75e1e52be22580d0c9c88423e6e93c5eb69f62f0aa849b",
+      "size_bytes": 461893632
+    },
+    "derived-field-observation.npz": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\derived-field-observation.npz",
+      "sha256": "be5a83dff88db545de4625414e46dcc360364eb0a29077c91848a6ac805cb6c0",
+      "size_bytes": 22990365
+    },
+    "raw-field-snapshot.npz": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\raw-field-snapshot.npz",
+      "sha256": "6eac098738598a78b2068ce4f80e46fd70e17010a89bfb5949ec8a68124df4a7",
+      "size_bytes": 145099492
+    },
+    "receipt.json": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-source-sheet-01\\receipt.json",
+      "sha256": "a45f6601bae33dc72f9c56190cd85a42037c4046c460bedbdd7cecbc9e85851b",
+      "size_bytes": 774113
+    }
+  },
+  "limitations": [
+    "The source receipt's HOLLOW_PLATED_BARREL classification is preserved; this inventory makes no filled-via, electrode, or current-sharing claim.",
+    "No geometry was decoded and no tri_fem_gap, mesh, native compilation, LU solve, or PowerSI fit was run.",
+    "This records original G/C owner candidates and retained nonincident edge counts only; it does not establish a replacement boundary or physical promotion."
+  ],
+  "original_gc": {
+    "external_surface_reduced_active_terminals": [
+      {
+        "actual_1mhz_admittance_total_s": [
+          3.652474029400855e-05,
+          0.0036524740294008535
+        ],
+        "external_active_index": 126094,
+        "external_component_id": "spd-surface-equivalence-component:ed416555d2d2d06632341a4c",
+        "external_global_reduced_index": 126094,
+        "external_island_id": "spd-surface-island:44241f41cf5c8c1bdde7e497",
+        "external_layer": "Signal$L26(MAIN_POWER5)",
+        "external_net": "adc_vdd_055_vtrip/0",
+        "external_reduced_node_id": "spd-finite-via-vertex:29e30fdb86137cce26b6bbdd = spd-surface-island:44241f41cf5c8c1bdde7e497",
+        "external_surface_index": 808511,
+        "nominal_capacitance_total_f": 5.318361646944361e-10,
+        "partial_ordinals": [
+          14
+        ],
+        "source_owner_edge_count": 1
+      },
+      {
+        "actual_1mhz_admittance_total_s": [
+          3.8787077146108085e-05,
+          0.0038787077146108084
+        ],
+        "external_active_index": 725157,
+        "external_component_id": "spd-surface-equivalence-component:30400bc56e82e66e5894a22a",
+        "external_global_reduced_index": 725157,
+        "external_island_id": "spd-surface-island:4f23b7e65a7e9bd8ae00819d",
+        "external_layer": "Signal$L24(DGND)",
+        "external_net": "dgnd",
+        "external_reduced_node_id": "spd-finite-via-vertex:f5441ddab8a62964c8074f35 = spd-surface-island:4f23b7e65a7e9bd8ae00819d",
+        "external_surface_index": 808795,
+        "nominal_capacitance_total_f": 5.647780157516188e-10,
+        "partial_ordinals": [
+          13
+        ],
+        "source_owner_edge_count": 1
+      },
+      {
+        "actual_1mhz_admittance_total_s": [
+          1.8118594609075294e-07,
+          1.8118594609075287e-05
+        ],
+        "external_active_index": 744014,
+        "external_component_id": "spd-surface-equivalence-component:a66a22d5fe1731fe40932d15",
+        "external_global_reduced_index": 744014,
+        "external_island_id": "spd-surface-island:a2c304cddf22d1d3c73478bf",
+        "external_layer": "Signal$L26(MAIN_POWER5)",
+        "external_net": "adc_vdd_050_vddq_ddrl/0",
+        "external_reduced_node_id": "spd-finite-via-vertex:fba57bdf3dcbf4b5b045011f = spd-surface-island:a2c304cddf22d1d3c73478bf",
+        "external_surface_index": 810725,
+        "nominal_capacitance_total_f": 2.6382456901752656e-12,
+        "partial_ordinals": [
+          14
+        ],
+        "source_owner_edge_count": 1
+      },
+      {
+        "actual_1mhz_admittance_total_s": [
+          1.8893546633608646e-07,
+          1.8893546633608638e-05
+        ],
+        "external_active_index": 163769,
+        "external_component_id": "spd-surface-equivalence-component:139097fe0640b104fb11eaa8",
+        "external_global_reduced_index": 163769,
+        "external_island_id": "spd-surface-island:eb8cda32904cb6ff17fbad49",
+        "external_layer": "Signal$L26(MAIN_POWER5)",
+        "external_net": "adc_vdd_050_vddq_ddrh/0",
+        "external_reduced_node_id": "spd-finite-via-vertex:36b38fd3ac98f26949bdd88a = spd-surface-island:eb8cda32904cb6ff17fbad49",
+        "external_surface_index": 812458,
+        "nominal_capacitance_total_f": 2.751086331678092e-12,
+        "partial_ordinals": [
+          14
+        ],
+        "source_owner_edge_count": 1
+      }
+    ],
+    "incident_actual_1mhz_admittance_total_s": [
+      7.568193885254347e-05,
+      0.0075681938852543455
+    ],
+    "incident_nominal_capacitance_total_f": 1.1020035124679083e-09,
+    "partial_ordinals": [
+      13,
+      14
+    ],
+    "partials": [
+      {
+        "actual_1mhz_dispersion_admittance_scale_s_per_f": [
+          68676.67661335826,
+          6867667.661335826
+        ],
+        "external_terminals": [
+          {
+            "actual_1mhz_admittance_total_s": [
+              3.8787077146108085e-05,
+              0.0038787077146108084
+            ],
+            "external_active_index": 725157,
+            "external_component_id": "spd-surface-equivalence-component:30400bc56e82e66e5894a22a",
+            "external_global_reduced_index": 725157,
+            "external_island_id": "spd-surface-island:4f23b7e65a7e9bd8ae00819d",
+            "external_layer": "Signal$L24(DGND)",
+            "external_net": "dgnd",
+            "external_reduced_node_id": "spd-finite-via-vertex:f5441ddab8a62964c8074f35 = spd-surface-island:4f23b7e65a7e9bd8ae00819d",
+            "external_surface_index": 808795,
+            "nominal_capacitance_total_f": 5.647780157516188e-10,
+            "source_owner_edge_count": 1
+          }
+        ],
+        "incident_actual_1mhz_admittance_total_s": [
+          3.8787077146108085e-05,
+          0.0038787077146108084
+        ],
+        "incident_nominal_capacitance_total_f": 5.647780157516188e-10,
+        "lower_layer": "Signal$L25(MAIN_POWER4)",
+        "matrix_checks": {
+          "diagonal_from_edges_max_abs_f": 0.0,
+          "edge_count": 4,
+          "nnz": 13,
+          "offdiagonal_nonpositive": true,
+          "shape": [
+            5,
+            5
+          ]
+        },
+        "nominal_relative_permittivity": 4.3,
+        "npz_prefix": "partial_13",
+        "ordinal": 13,
+        "owners": [
+          {
+            "actual_1mhz_branch_admittance_s": [
+              3.8787077146108085e-05,
+              0.0038787077146108084
+            ],
+            "external_active_index": 725157,
+            "external_component_id": "spd-surface-equivalence-component:30400bc56e82e66e5894a22a",
+            "external_global_reduced_index": 725157,
+            "external_island_id": "spd-surface-island:4f23b7e65a7e9bd8ae00819d",
+            "external_layer": "Signal$L24(DGND)",
+            "external_net": "dgnd",
+            "external_reduced_node_id": "spd-finite-via-vertex:f5441ddab8a62964c8074f35 = spd-surface-island:4f23b7e65a7e9bd8ae00819d",
+            "external_surface_index": 808795,
+            "fingerprint": "924e8e16018d8ec9d77f29498aa8426818730a5ce3de08ecce1c146895dfc273",
+            "lower_layer": "Signal$L25(MAIN_POWER4)",
+            "nominal_capacitance_f_hex": "0x1.367d707d8388ep-31",
+            "partial_ordinal": 13,
+            "source_sha256": "40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2",
+            "target_island_id": "spd-surface-island:279609d3a8c5969250977818",
+            "upper_layer": "Signal$L24(DGND)"
+          }
+        ],
+        "retained_nonincident_source_edge_count": 3,
+        "separation_m": 9.999999999999999e-05,
+        "source_owner_edge_count": 1,
+        "upper_layer": "Signal$L24(DGND)"
+      },
+      {
+        "actual_1mhz_dispersion_admittance_scale_s_per_f": [
+          68676.67661335829,
+          6867667.661335826
+        ],
+        "external_terminals": [
+          {
+            "actual_1mhz_admittance_total_s": [
+              3.652474029400855e-05,
+              0.0036524740294008535
+            ],
+            "external_active_index": 126094,
+            "external_component_id": "spd-surface-equivalence-component:ed416555d2d2d06632341a4c",
+            "external_global_reduced_index": 126094,
+            "external_island_id": "spd-surface-island:44241f41cf5c8c1bdde7e497",
+            "external_layer": "Signal$L26(MAIN_POWER5)",
+            "external_net": "adc_vdd_055_vtrip/0",
+            "external_reduced_node_id": "spd-finite-via-vertex:29e30fdb86137cce26b6bbdd = spd-surface-island:44241f41cf5c8c1bdde7e497",
+            "external_surface_index": 808511,
+            "nominal_capacitance_total_f": 5.318361646944361e-10,
+            "source_owner_edge_count": 1
+          },
+          {
+            "actual_1mhz_admittance_total_s": [
+              1.8118594609075294e-07,
+              1.8118594609075287e-05
+            ],
+            "external_active_index": 744014,
+            "external_component_id": "spd-surface-equivalence-component:a66a22d5fe1731fe40932d15",
+            "external_global_reduced_index": 744014,
+            "external_island_id": "spd-surface-island:a2c304cddf22d1d3c73478bf",
+            "external_layer": "Signal$L26(MAIN_POWER5)",
+            "external_net": "adc_vdd_050_vddq_ddrl/0",
+            "external_reduced_node_id": "spd-finite-via-vertex:fba57bdf3dcbf4b5b045011f = spd-surface-island:a2c304cddf22d1d3c73478bf",
+            "external_surface_index": 810725,
+            "nominal_capacitance_total_f": 2.6382456901752656e-12,
+            "source_owner_edge_count": 1
+          },
+          {
+            "actual_1mhz_admittance_total_s": [
+              1.8893546633608646e-07,
+              1.8893546633608638e-05
+            ],
+            "external_active_index": 163769,
+            "external_component_id": "spd-surface-equivalence-component:139097fe0640b104fb11eaa8",
+            "external_global_reduced_index": 163769,
+            "external_island_id": "spd-surface-island:eb8cda32904cb6ff17fbad49",
+            "external_layer": "Signal$L26(MAIN_POWER5)",
+            "external_net": "adc_vdd_050_vddq_ddrh/0",
+            "external_reduced_node_id": "spd-finite-via-vertex:36b38fd3ac98f26949bdd88a = spd-surface-island:eb8cda32904cb6ff17fbad49",
+            "external_surface_index": 812458,
+            "nominal_capacitance_total_f": 2.751086331678092e-12,
+            "source_owner_edge_count": 1
+          }
+        ],
+        "incident_actual_1mhz_admittance_total_s": [
+          3.689486170643538e-05,
+          0.003689486170643537
+        ],
+        "incident_nominal_capacitance_total_f": 5.372254967162895e-10,
+        "lower_layer": "Signal$L26(MAIN_POWER5)",
+        "matrix_checks": {
+          "diagonal_from_edges_max_abs_f": 0.0,
+          "edge_count": 14,
+          "nnz": 40,
+          "offdiagonal_nonpositive": true,
+          "shape": [
+            12,
+            12
+          ]
+        },
+        "nominal_relative_permittivity": 4.3,
+        "npz_prefix": "partial_14",
+        "ordinal": 14,
+        "owners": [
+          {
+            "actual_1mhz_branch_admittance_s": [
+              3.652474029400855e-05,
+              0.0036524740294008535
+            ],
+            "external_active_index": 126094,
+            "external_component_id": "spd-surface-equivalence-component:ed416555d2d2d06632341a4c",
+            "external_global_reduced_index": 126094,
+            "external_island_id": "spd-surface-island:44241f41cf5c8c1bdde7e497",
+            "external_layer": "Signal$L26(MAIN_POWER5)",
+            "external_net": "adc_vdd_055_vtrip/0",
+            "external_reduced_node_id": "spd-finite-via-vertex:29e30fdb86137cce26b6bbdd = spd-surface-island:44241f41cf5c8c1bdde7e497",
+            "external_surface_index": 808511,
+            "fingerprint": "5776b2c1a763d33b89bc512c109cbd08726cf0a1c343959573bbeb6a84fbf59b",
+            "lower_layer": "Signal$L26(MAIN_POWER5)",
+            "nominal_capacitance_f_hex": "0x1.24614939a1791p-31",
+            "partial_ordinal": 14,
+            "source_sha256": "40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2",
+            "target_island_id": "spd-surface-island:279609d3a8c5969250977818",
+            "upper_layer": "Signal$L25(MAIN_POWER4)"
+          },
+          {
+            "actual_1mhz_branch_admittance_s": [
+              1.8893546633608646e-07,
+              1.8893546633608638e-05
+            ],
+            "external_active_index": 163769,
+            "external_component_id": "spd-surface-equivalence-component:139097fe0640b104fb11eaa8",
+            "external_global_reduced_index": 163769,
+            "external_island_id": "spd-surface-island:eb8cda32904cb6ff17fbad49",
+            "external_layer": "Signal$L26(MAIN_POWER5)",
+            "external_net": "adc_vdd_050_vddq_ddrh/0",
+            "external_reduced_node_id": "spd-finite-via-vertex:36b38fd3ac98f26949bdd88a = spd-surface-island:eb8cda32904cb6ff17fbad49",
+            "external_surface_index": 812458,
+            "fingerprint": "6ea83bab6eb091d1207ebd49a72ceddb37cf3edb72ec0338fdbf3c1c255cb278",
+            "lower_layer": "Signal$L26(MAIN_POWER5)",
+            "nominal_capacitance_f_hex": "0x1.832e54be19454p-39",
+            "partial_ordinal": 14,
+            "source_sha256": "40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2",
+            "target_island_id": "spd-surface-island:279609d3a8c5969250977818",
+            "upper_layer": "Signal$L25(MAIN_POWER4)"
+          },
+          {
+            "actual_1mhz_branch_admittance_s": [
+              1.8118594609075294e-07,
+              1.8118594609075287e-05
+            ],
+            "external_active_index": 744014,
+            "external_component_id": "spd-surface-equivalence-component:a66a22d5fe1731fe40932d15",
+            "external_global_reduced_index": 744014,
+            "external_island_id": "spd-surface-island:a2c304cddf22d1d3c73478bf",
+            "external_layer": "Signal$L26(MAIN_POWER5)",
+            "external_net": "adc_vdd_050_vddq_ddrl/0",
+            "external_reduced_node_id": "spd-finite-via-vertex:fba57bdf3dcbf4b5b045011f = spd-surface-island:a2c304cddf22d1d3c73478bf",
+            "external_surface_index": 810725,
+            "fingerprint": "c954833ee80a07df419f342a5543c5a02b1d144cfbc0b496ae8b2d17962a0645",
+            "lower_layer": "Signal$L26(MAIN_POWER5)",
+            "nominal_capacitance_f_hex": "0x1.734cd1866df2bp-39",
+            "partial_ordinal": 14,
+            "source_sha256": "40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2",
+            "target_island_id": "spd-surface-island:279609d3a8c5969250977818",
+            "upper_layer": "Signal$L25(MAIN_POWER4)"
+          }
+        ],
+        "retained_nonincident_source_edge_count": 11,
+        "separation_m": 0.00010499999999999999,
+        "source_owner_edge_count": 3,
+        "upper_layer": "Signal$L25(MAIN_POWER4)"
+      }
+    ],
+    "source_island_ids": [
+      "spd-surface-island:279609d3a8c5969250977818"
+    ],
+    "source_owner_count": 4,
+    "source_owner_fingerprint_set_sha256": "be7097076babc8ccbb46920a4d39f0dc78981962d99767947f22a60b54de2986"
+  },
+  "ownership_ir_target_coverage": {
+    "result": "ABSENT_IN_CURRENT_L25_SCOPE; no L14 owner was read or reused",
+    "target_contact_boundary_rows": 0,
+    "target_island_rows": 0,
+    "target_plane_owner_scope_rows": 0,
+    "target_surface_rows": 0,
+    "target_terminal_binding_rows": 0
+  },
+  "program": "SPD Decap PI Evaluator",
+  "rail_id": "ADC_VDD_075_VTRIP_SRAM/0",
+  "same_basis": {
+    "compiled_topology_meta": {
+      "logical_rows_sha256": "a5e1832f08855218c2b134ac228547515a228b7dd6760fb044f59e3eda3ae548",
+      "payload_schema": "spd-layerwise-compiled-topology-sqlite-v1",
+      "source_sha256": "40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2",
+      "topology_identity_sha256": "0e242c069a55707b554eb632ea7a0747a29b6ad1451453c6496e8dd4cc1ac8cf"
+    },
+    "ownership_meta": {
+      "compiled_topology_identity_sha256": "0e242c069a55707b554eb632ea7a0747a29b6ad1451453c6496e8dd4cc1ac8cf",
+      "payload_schema": "source-plane-ownership-sqlite-v2",
+      "raw_geometry_identity_sha256": "1593dcbe3e59c1eac48173a348a9b893862e99bcd3e66b14e69057197660cb4e",
+      "raw_logical_rows_sha256": "a49f447e34a48b220bfa5107ac8a520a5a4906745f1b715c91d584c0752b09bf",
+      "source_sha256": "40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2"
+    },
+    "raw_spatial_meta": {
+      "compiled_topology_identity_sha256": "0e242c069a55707b554eb632ea7a0747a29b6ad1451453c6496e8dd4cc1ac8cf",
+      "geometry_identity_sha256": "1593dcbe3e59c1eac48173a348a9b893862e99bcd3e66b14e69057197660cb4e",
+      "logical_rows_sha256": "a49f447e34a48b220bfa5107ac8a520a5a4906745f1b715c91d584c0752b09bf",
+      "payload_schema": "spd-raw-spatial-contact-sqlite-v3",
+      "source_sha256": "40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2"
+    }
+  },
+  "script_sha256": "0c6f2beeea2c1359786eea5bb288b9eff2573a99941b81afc7cac9f79de046af",
+  "source_sha256": "40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2",
+  "status": "COMPLETED_L25_SOURCE_GC_INVENTORY_OWNER_LEDGER_PENDING",
+  "target_mapping": {
+    "active_index": 258027,
+    "global_reduced_index": 258027,
+    "raw_surface_identity": {
+      "artwork_asset_sha256": "c80867ceb7f82d7ba4f886c63c68dbdc88c55fc3c1d9cc703d8fdea4a25ca711",
+      "island_manifest_sha256": "348862836e72b3089baa56fa4f20f378fe97c410344d7a560f54e368a4d69a77",
+      "layer_id": "Signal$L25(MAIN_POWER4)",
+      "net_name": "ADC_VDD_075_VTRIP_SRAM/0",
+      "source_record_sha256": "72b08e6d55f34469b3158d3e4963105a2061d59fff013b2eef54da351572456e",
+      "surface_id": "surface:6110b85de29373f5ee587bd963132b64cb44da980747573e0c33a37e0ec022f2"
+    },
+    "reduced_node_id": "spd-finite-via-vertex:56c65b8bc616f0d5a4cfecf9 = spd-surface-island:279609d3a8c5969250977818",
+    "source_component": {
+      "component_evidence_sha256": "bac83a28024314b3236e570a01e2ef63a9c86099221828337870aafad7f3d975",
+      "component_id": "spd-surface-equivalence-component:bac83a28024314b3236e570a",
+      "contact_status": "complete",
+      "island_ids": [
+        "spd-surface-island:279609d3a8c5969250977818"
+      ],
+      "layer": "Signal$L25(MAIN_POWER4)",
+      "net": "adc_vdd_075_vtrip_sram/0",
+      "representative_island_id": "spd-surface-island:279609d3a8c5969250977818"
+    },
+    "source_geometry_asset": {
+      "asset": "geometry/0247-c80867ceb7f82d7b.spdgeom.zlib",
+      "asset_sha256": "c80867ceb7f82d7ba4f886c63c68dbdc88c55fc3c1d9cc703d8fdea4a25ca711",
+      "island_ids": [
+        "spd-surface-island:279609d3a8c5969250977818"
+      ],
+      "layer": "Signal$L25(MAIN_POWER4)",
+      "net": "ADC_VDD_075_VTRIP_SRAM/0"
+    },
+    "source_receipt_sha256": "a45f6601bae33dc72f9c56190cd85a42037c4046c460bedbdd7cecbc9e85851b",
+    "surface_aliases": [
+      "spd-finite-via-vertex:56c65b8bc616f0d5a4cfecf9",
+      "spd-surface-island:279609d3a8c5969250977818"
+    ]
+  },
+  "version": "0.23.1"
+}

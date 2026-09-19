@@ -1,0 +1,108 @@
+{
+  "assertions": {
+    "all_exterior_ports_retained": true,
+    "circuit_binding_20_composites_to_40_verified_positive_RL_legs": true,
+    "circuit_binding_two_shared_native_leaves_retained": true,
+    "contact_ordinal_zero_is_target_no_duplicates": true,
+    "finite_once_owned_retired_l02_free": true,
+    "full_face_occurrence_identity": true,
+    "full_face_terminal_map_no_negative": true,
+    "hybrid_owner_max_exactly_4": true,
+    "no_q0_or_solve": true,
+    "non_l02_categories_retired_l02_free": true,
+    "p0_gc_uses_area_density_frequency_scale": true
+  },
+  "counts": {
+    "contact_count": 38856,
+    "contact_gc_stamps": 281344,
+    "electrode_rim_occurrences": 621696,
+    "exterior_boundary_ports": 817918,
+    "finite_rows": 1692409,
+    "free_cell_owner_histogram": [
+      981692,
+      447201,
+      152160,
+      2672,
+      115
+    ],
+    "free_cells": 1583840,
+    "l25_current_count": 604031,
+    "mixed_count": 4600053,
+    "nonrim_trace_potentials": 2473871,
+    "potential_count": 3996022,
+    "retained_shared_native_leaves": 2,
+    "split_composite_legs": 40
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-full-face-hybrid-operator-06\\driver-at-run.py",
+    "sha256": "d87a757c6edfc56b0f2f7329528e1ddee4fd9829efcd6e52c00e8191d7afaa3a",
+    "size_bytes": 13506
+  },
+  "elapsed_s": 15.634374199958984,
+  "inputs": {
+    "boundary": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-rt0-boundary-continuations-04\\boundary-continuation-map.npz",
+      "sha256": "bee3df63c4178620aa330c19e06c4d8351d7bd2531a7d724f33abdddeb0cb24e",
+      "size_bytes": 17611053
+    },
+    "boundary_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-rt0-boundary-continuations-04\\result.json",
+      "sha256": "1143d87c7423c74cfb422a6280e93590ef3e87f11e0028ebb5eb2984b952ce80",
+      "size_bytes": 2870
+    },
+    "categories": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-combined-source-categories-01\\combined-source-categories.npz",
+      "sha256": "f9253786da9eb88367c6bde51e78c64b647528e2856358b1fdd204ade1db6e9f",
+      "size_bytes": 63449271
+    },
+    "circuit": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-circuit-contact-binding-01\\circuit-contact-binding.npz",
+      "sha256": "61ed51f68ae0cc39cdd5ee07e919e105fd15aee5a6b4c8374b063f7d72221020",
+      "size_bytes": 2182451
+    },
+    "circuit_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-circuit-contact-binding-01\\result.json",
+      "sha256": "1ef00f9c88553faf71f6cd87b4899c23d4a1be598a18a08c19b8776148690efc",
+      "size_bytes": 155267
+    },
+    "gc": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-cell-gc-loads-01\\l02-cell-gc-loads.npz",
+      "sha256": "12ab38f5d692c442a18d6ec7df913c6d96108be73850f27c7014f6f26c9c2459",
+      "size_bytes": 172736695
+    },
+    "hybrid": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-hybrid-cell-geometry-02\\hybrid-cell-geometry.npz",
+      "sha256": "15f1f6f6ad0ffd45ada9a74bde80d0e79ce82517a3ab485095d57898fbd06834",
+      "size_bytes": 41312778
+    },
+    "hybrid_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-hybrid-cell-geometry-02\\result.json",
+      "sha256": "2f1a30f604f86d04791270b627e4009b5024781b1d95ba2ee7711e23e4896799",
+      "size_bytes": 2744
+    },
+    "map": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-assembly-map-02\\combined-assembly-map.npz",
+      "sha256": "a6ccff514fe788396eb9d7620ebc828f966efbea3f7899e7a73991c17f8a2469",
+      "size_bytes": 16919703
+    },
+    "operator": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-operator-02\\combined-operator.npz",
+      "sha256": "45cc79706849631e9c33dc2f0d0e3c7910fe7dcce817585c728f6f1e3c30a1e8",
+      "size_bytes": 77455200
+    },
+    "space": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-full-rt0-current-space-01\\l02-rt0-current-space.npz",
+      "sha256": "7cd77ee8b03fd0226596748a1913ee5a913381617498c9927ef12d8b080bc98f",
+      "size_bytes": 116643248
+    }
+  },
+  "output": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-full-face-hybrid-operator-06\\hybrid-operator-pack.npz",
+    "sha256": "01ff4236af30621ca6cc4b87c4688c28ee23c22ed99b15aadd047f91a25c0b2c",
+    "size_bytes": 101366745
+  },
+  "program": "SPD Decap PI Evaluator",
+  "scope": "Lossless no-solve component pack. Every full-face facet maps to a terminal coordinate: nonrim facets to retained trace potentials and rim facets to declared contact potentials. P0 G/C, cell H/rho/w, L25 R/B, and five non-L02 categories are retained. The pinned circuit binding keeps two shared-native excluded leaves without new branches and replaces 40 excluded owners by 20 composites split into 40 verified positive-RL legs. No global Y/KCL closure, q=0 condition, factorization, Green/FMM or solvability claim.",
+  "status": "PASS_NO_SOLVE_L02_FULL_FACE_HYBRID_OPERATOR_PACK",
+  "version": "0.23.1"
+}

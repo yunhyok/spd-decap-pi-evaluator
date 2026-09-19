@@ -1,0 +1,59 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "review_status": "ACCEPT_L02_GC_SOURCE_OVERLAPS",
+  "review_method": "read-only source, receipt, saved WKB/owner arrays, exact member hashes and resource guard; no geometry intersection replay, mesh, mass, operator, LU, or FMM",
+  "reviewed_artifacts": {
+    "result": {
+      "path": "result.json",
+      "sha256": "3ee62248ceae6d54a2d182a615c882b2e270d8752b166408fcc1441a9549fb46"
+    },
+    "overlap_polygons": {
+      "path": "source-overlap-polygons.npz",
+      "sha256": "7ce1575f8b03380aff3a549f347bbafe9bc0fd85d47fe4039383de9bcaa6d920"
+    },
+    "driver": {
+      "path": "driver-at-run.py",
+      "sha256": "535e57dfdf656b4000a9e0703ab4d4aa3b8ea5f0d86b0b60f8d1a8aa4c7b86d1"
+    },
+    "owner_ledger": {
+      "path": "../astra-l02-gc-owner-ledger-01/result.json",
+      "sha256": "69fb96a75b7bbe8a73d6704b237043272b7b1ca2da8c35880894205f606982b8"
+    },
+    "external_guard": {
+      "path": "../astra-l02-gc-source-overlaps-01-guard/external-budget.json",
+      "sha256": "af43c0b3fafe8f9f092a23e8d277d18aff046b7e82a19423801ae77a37ea33aa"
+    }
+  },
+  "checks": {
+    "target_island_id": "spd-surface-island:150e4b6ef515db4afd92fc34",
+    "target_hole_count": 7018,
+    "target_coordinate_count": 763687,
+    "source_asset_count": 26,
+    "source_asset_hashes_exact": true,
+    "owner_count": 2064,
+    "owner_order_and_fingerprints_exact": true,
+    "nominal_capacitance_arrays_exact": true,
+    "nominal_capacitance_total_f": 5.909971854073682e-09,
+    "nominal_capacitance_total_abs_error_f": 0.0,
+    "all_saved_geometries_valid_nonempty_positive_area": true,
+    "saved_wkb_area_max_abs_delta_um2": 0.0,
+    "density_times_area_max_abs_delta_f": 4.0389678347315804e-28,
+    "direct_whole_polygon_control_indices": [
+      0,
+      1,
+      517,
+      1031,
+      1547,
+      2063
+    ],
+    "direct_whole_polygon_max_symmetric_difference_relative_area": 0.0,
+    "elapsed_s": 24.04699999996228,
+    "peak_private_bytes": 455475200
+  },
+  "findings": {
+    "p1": [],
+    "p2": []
+  },
+  "scope": "Acceptance covers the 2064 frozen partial-0 source-owner overlap polygons, their exact order/C values/assets, the saved polygon bytes and the six producer-side whole-polygon controls. It does not independently repeat the 2064 geometry intersections and does not establish triangle mass, a G/C operator, L02 contact ownership, mesh feasibility, finite response, closed return, or PowerSI accuracy."
+}

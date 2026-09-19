@@ -1,0 +1,73 @@
+{
+  "checks": {
+    "artifact_and_input_pins": {
+      "artifact_and_producer_hash_count": 4,
+      "all_match": true,
+      "transitive_input_hash_count": 9
+    },
+    "external_guard": {
+      "exit_code": 0,
+      "status": "COMPLETED_NATIVE_WORKER"
+    },
+    "junction_binding": {
+      "active_index_sets_disjoint": true,
+      "all_owner_rl_positive": true,
+      "junction_count": 20,
+      "junction_supports_disjoint_from_native": true,
+      "leg_rl_sums_match_ordered_owners": true,
+      "ordered_unique_rl_owner_count": 93,
+      "unique_junction_support_count": 20,
+      "unique_replaced_active_index_count": 20
+    },
+    "leaf_policy": {
+      "all_share_native_support": true,
+      "all_supports_disjoint_from_junction_supports": true,
+      "ids": [
+        "via1312784",
+        "via1612214"
+      ],
+      "policy": "retain original excluded leaf; add no circuit branch"
+    },
+    "native_binding": {
+      "endpoint_start_node_via_xy_rl_arrays_equal_pinned_contact_ledger": true,
+      "native_contact_count": 38836,
+      "native_row_count": 76139,
+      "support_xy_matches_native_row_xy": true,
+      "target_endpoint_orientation_matches": true
+    },
+    "npz": {
+      "all_arrays_non_object": true,
+      "contact_support_count": 38856,
+      "contact_supports_sorted_strictly_increasing": true,
+      "key_count": 18,
+      "native_contact_ordinals_match_sorted_supports": true,
+      "schema_exact": true
+    }
+  },
+  "findings": {
+    "p1": [],
+    "p2": []
+  },
+  "program": "SPD Decap PI Evaluator",
+  "reviewed": {
+    "binding_npz": {
+      "path": "outputs/research/astra-l02-circuit-contact-binding-01/circuit-contact-binding.npz",
+      "sha256": "61ed51f68ae0cc39cdd5ee07e919e105fd15aee5a6b4c8374b063f7d72221020"
+    },
+    "external_guard": {
+      "path": "outputs/research/astra-l02-circuit-contact-binding-01-guard/external-budget.json",
+      "sha256": "5bf0b761af51fc1bf20052a5cdc68ed0ffcd4c86dac2c59db06249264eb1a32b"
+    },
+    "producer": {
+      "path": "tools/research/prepare_astra_l02_circuit_contact_binding.py",
+      "sha256": "16d52f45cc5e4659d1e5bc6a14be6211ea71a103a81cc772a9c02c62c0ec89d9"
+    },
+    "result": {
+      "path": "outputs/research/astra-l02-circuit-contact-binding-01/result.json",
+      "sha256": "1ef00f9c88553faf71f6cd87b4899c23d4a1be598a18a08c19b8776148690efc"
+    }
+  },
+  "scope": "Independent replay of saved circuit-contact binding arrays and JSON against pinned inputs. No geometry, raw field, mesh, circuit assembly, solve, LU, magnetic-model, or accuracy claim.",
+  "status": "ACCEPT_L02_CIRCUIT_CONTACT_BINDING_INDEPENDENT_REVIEW",
+  "version": "0.23.1"
+}

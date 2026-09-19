@@ -1,0 +1,431 @@
+{
+  "coarse": {
+    "coarse_condition_2": 10287.470629551135,
+    "coarse_matrix": [
+      [
+        [
+          3.938943713940171e-06,
+          -3.5527911153888345e-06
+        ],
+        [
+          -4.556977146841663e-05,
+          4.2955813071016586e-05
+        ],
+        [
+          -8.639090246941138e-09,
+          -5.747959329329339e-08
+        ]
+      ],
+      [
+        [
+          -4.556977146841653e-05,
+          4.295581307101649e-05
+        ],
+        [
+          0.0005300362703357084,
+          -0.0004996324117013004
+        ],
+        [
+          -3.873554555044917e-14,
+          -3.155113810356075e-12
+        ]
+      ],
+      [
+        [
+          -8.639090246941085e-09,
+          -5.7479593293293504e-08
+        ],
+        [
+          -3.873554540800918e-14,
+          -3.1551138103916023e-12
+        ],
+        [
+          8.007688678948523e-08,
+          -1.2954132986447879e-08
+        ]
+      ]
+    ],
+    "coarse_matrix_transpose_symmetry_relative": 1.908796307984307e-16,
+    "coarse_singular_values": [
+      0.0007337865659712487,
+      1.674583344164929e-07,
+      7.132818089058937e-08
+    ],
+    "mode_names": [
+      "l14_whole_sheet_constant",
+      "l25_whole_sheet_constant",
+      "l02_whole_sheet_constant"
+    ],
+    "native_harmonic_relative_denominator": "norm(native action from whole-sheet constant)+norm(native action from native correction)",
+    "native_harmonic_residual_l2_absolute": {
+      "l02": 2.8584802976763816e-08,
+      "l14": 1.3048130584625672e-11,
+      "l25": 8.394336527245391e-13
+    },
+    "native_harmonic_residual_relative": {
+      "l02": 1.945674272346212e-12,
+      "l14": 6.703678139839052e-15,
+      "l25": 2.762807446926547e-15
+    },
+    "preconditioner_coarse_mode_error": 1.1724997373304333e-11,
+    "sampled_preconditioner_transpose_symmetry_relative": 2.3259810288693365e-15
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-block-lgmres-01\\driver-at-run.py",
+    "sha256": "853f193fd51d3c204668019f7957cc74ea295a0e47206aae338076dfa796c692",
+    "size_bytes": 45742
+  },
+  "elapsed_s": 338.18781269999454,
+  "factor": {
+    "l02": {
+      "L_nnz": 22816848,
+      "U_nnz": 29992292,
+      "factor_elapsed_s": 49.63618079997832,
+      "nnz": 4548928,
+      "pivot_max": 0.6784185080190533,
+      "pivot_min": 0.0009394913518000886,
+      "pivot_ratio": 722.1125630578575,
+      "probe_solve_relative_residual": 1.8204852197172926e-14,
+      "size": 856774
+    },
+    "l14": {
+      "L_nnz": 3089280,
+      "U_nnz": 3960848,
+      "factor_elapsed_s": 3.016935400024522,
+      "nnz": 783495,
+      "pivot_max": 0.6014764875953702,
+      "pivot_min": 0.00037070312558150386,
+      "pivot_ratio": 1622.5287732653007,
+      "probe_solve_relative_residual": 2.8165064517328923e-13,
+      "size": 147057
+    },
+    "l25_current": {
+      "L_nnz": 5167934,
+      "U_nnz": 7128948,
+      "factor_elapsed_s": 0.9122824999503791,
+      "nnz": 4930001,
+      "pivot_max": 4.018760513959803,
+      "pivot_min": 0.0002589860868118936,
+      "pivot_ratio": 15517.283431826603,
+      "probe_solve_relative_residual": 7.570359189669725e-13,
+      "size": 1183383
+    },
+    "native": {
+      "L_nnz": 11821563,
+      "U_nnz": 11814647,
+      "factor_elapsed_s": 44.54340460000094,
+      "nnz": 2833787,
+      "pivot_max": 0.5000000000000028,
+      "pivot_min": 5.5361898772516114e-08,
+      "pivot_ratio": 9031482.139991611,
+      "probe_solve_relative_residual": 1.0996495180200813e-10,
+      "size": 756885
+    }
+  },
+  "field": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-block-lgmres-01\\unvalidated-field.npz",
+    "sha256": "a67921f72714411ca233e63b33ec77595fe77e1359e10e90e83489c773480a44",
+    "size_bytes": 30837104
+  },
+  "inputs": {
+    "assembly_map": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-assembly-map-02\\combined-assembly-map.npz",
+      "sha256": "a6ccff514fe788396eb9d7620ebc828f966efbea3f7899e7a73991c17f8a2469",
+      "size_bytes": 16919703
+    },
+    "assembly_review": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-assembly-map-review-01\\independent-review.json",
+      "sha256": "5f0436c3f574e5eafd7f9d957d5aca56d283ef562fe1105132356008da36eaad",
+      "size_bytes": 3790
+    },
+    "operator": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-operator-02\\combined-operator.npz",
+      "sha256": "45cc79706849631e9c33dc2f0d0e3c7910fe7dcce817585c728f6f1e3c30a1e8",
+      "size_bytes": 77455200
+    },
+    "operator_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-operator-02\\result.json",
+      "sha256": "13594d0429fe2fc9cc08da9e3e7fe2b1115c08e43fecb084c5f9a390e8d076df",
+      "size_bytes": 5167
+    },
+    "roundoff_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-combined-roundoff-02\\driver-at-run.py",
+      "sha256": "059bcb66624be60e9a0e7670ba3783f1056e17022a47ffab78f62d30bd087d56",
+      "size_bytes": 7499
+    },
+    "roundoff_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-combined-roundoff-02\\result.json",
+      "sha256": "d6703eb7749c75ec513ef1652f9013db224a8983ad0fe14760052fdd3b71916a",
+      "size_bytes": 4945
+    },
+    "source_categories": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-combined-source-categories-01\\combined-source-categories.npz",
+      "sha256": "f9253786da9eb88367c6bde51e78c64b647528e2856358b1fdd204ade1db6e9f",
+      "size_bytes": 63449271
+    },
+    "source_category_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-combined-source-categories-01\\driver-at-run.py",
+      "sha256": "739759114e7f459fe09293147c66f176f1313d5d2e96b4dda96f7042eadac196",
+      "size_bytes": 5345
+    },
+    "source_category_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-combined-source-categories-01\\result.json",
+      "sha256": "0715454b06165aa3b6526039363db9613c5eeb856af99e515766484654e7486a",
+      "size_bytes": 3759
+    },
+    "warm_combined_diagnostic": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-block-gmres-02\\unvalidated-diagnostic.json",
+      "sha256": "42d8ecfafccd42b619a21c5f51de5529fa773dee2b19153429886d38ed1b93b0",
+      "size_bytes": 13416
+    },
+    "warm_combined_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-block-gmres-02\\driver-at-run.py",
+      "sha256": "a25ad79351a0245d6fdcdee5336bd7ce35314109affbc4a0fd92711cf990836d",
+      "size_bytes": 38204
+    },
+    "warm_combined_external": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-block-gmres-02\\external-budget.json",
+      "sha256": "e909629f96f93cc6145d5a4e767c8cc7d00ac6e3457272cd029494b37b298f36",
+      "size_bytes": 782
+    },
+    "warm_combined_failure": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-block-gmres-02\\failure.json",
+      "sha256": "e288e5a5306c77a19066ec2dfb893882ccc1cc96dafaa2f18d28cdb643f61071",
+      "size_bytes": 772
+    },
+    "warm_combined_field": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-block-gmres-02\\unvalidated-field.npz",
+      "sha256": "2d1ac88c8465f9c5162bca2daa5212cdb0dd6270f4c9ef38ad912be81ec8c61b",
+      "size_bytes": 31396577
+    }
+  },
+  "lgmres": {
+    "callback_semantics": "x_k at the start of each outer cycle",
+    "elapsed_s": 224.9287496000179,
+    "final_scaled_residual_relative": 3.965723082426498e-09,
+    "info": 12,
+    "initial_scaled_residual_relative": 2.5475864677782526e-05,
+    "inner_m": 20,
+    "max_outer_iterations": 12,
+    "outer_callbacks": 12,
+    "outer_history": [
+      {
+        "callback_index": 0,
+        "completed_outer_cycles": 0,
+        "operator_matvec_count": 1,
+        "preconditioner_matvec_count": 0,
+        "scaled_residual_l2": 1.5776022545522655e-08,
+        "scaled_residual_relative": 2.5475864677782526e-05
+      },
+      {
+        "callback_index": 1,
+        "completed_outer_cycles": 1,
+        "operator_matvec_count": 22,
+        "preconditioner_matvec_count": 21,
+        "scaled_residual_l2": 8.825673731970953e-09,
+        "scaled_residual_relative": 1.4252113866924179e-05
+      },
+      {
+        "callback_index": 2,
+        "completed_outer_cycles": 2,
+        "operator_matvec_count": 43,
+        "preconditioner_matvec_count": 42,
+        "scaled_residual_l2": 9.783255966003303e-09,
+        "scaled_residual_relative": 1.579846278609331e-05
+      },
+      {
+        "callback_index": 3,
+        "completed_outer_cycles": 3,
+        "operator_matvec_count": 64,
+        "preconditioner_matvec_count": 63,
+        "scaled_residual_l2": 2.5953015337646813e-09,
+        "scaled_residual_relative": 4.191015224619787e-06
+      },
+      {
+        "callback_index": 4,
+        "completed_outer_cycles": 4,
+        "operator_matvec_count": 85,
+        "preconditioner_matvec_count": 84,
+        "scaled_residual_l2": 6.888436344615081e-10,
+        "scaled_residual_relative": 1.1123771638291536e-06
+      },
+      {
+        "callback_index": 5,
+        "completed_outer_cycles": 5,
+        "operator_matvec_count": 106,
+        "preconditioner_matvec_count": 105,
+        "scaled_residual_l2": 2.2503003822569306e-10,
+        "scaled_residual_relative": 3.633891106412626e-07
+      },
+      {
+        "callback_index": 6,
+        "completed_outer_cycles": 6,
+        "operator_matvec_count": 127,
+        "preconditioner_matvec_count": 126,
+        "scaled_residual_l2": 1.0008027254122118e-10,
+        "scaled_residual_relative": 1.6161434054867956e-07
+      },
+      {
+        "callback_index": 7,
+        "completed_outer_cycles": 7,
+        "operator_matvec_count": 148,
+        "preconditioner_matvec_count": 147,
+        "scaled_residual_l2": 6.178333584658414e-11,
+        "scaled_residual_relative": 9.97706423674119e-08
+      },
+      {
+        "callback_index": 8,
+        "completed_outer_cycles": 8,
+        "operator_matvec_count": 169,
+        "preconditioner_matvec_count": 168,
+        "scaled_residual_l2": 5.979377855518169e-11,
+        "scaled_residual_relative": 9.655781149206243e-08
+      },
+      {
+        "callback_index": 9,
+        "completed_outer_cycles": 9,
+        "operator_matvec_count": 190,
+        "preconditioner_matvec_count": 189,
+        "scaled_residual_l2": 2.8721862788741152e-11,
+        "scaled_residual_relative": 4.6381417596761275e-08
+      },
+      {
+        "callback_index": 10,
+        "completed_outer_cycles": 10,
+        "operator_matvec_count": 211,
+        "preconditioner_matvec_count": 210,
+        "scaled_residual_l2": 1.594534119534536e-11,
+        "scaled_residual_relative": 2.574928841293891e-08
+      },
+      {
+        "callback_index": 11,
+        "completed_outer_cycles": 11,
+        "operator_matvec_count": 232,
+        "preconditioner_matvec_count": 231,
+        "scaled_residual_l2": 7.651207997753475e-12,
+        "scaled_residual_relative": 1.2355531250660827e-08
+      }
+    ],
+    "outer_k": 3,
+    "retained_outer_vector_count": 3,
+    "solver_matvec_counts": {
+      "callback_diagnostic_operator_matvec": 12,
+      "operator_matvec": 252,
+      "post_return_diagnostic_operator_matvec": 1,
+      "preconditioner_matvec": 252
+    }
+  },
+  "partition": {
+    "current_count": 604031,
+    "l02_b_nnz": 0,
+    "l02_potential_count": 856774,
+    "l02_y_nnz": 4548928,
+    "l14_b_nnz": 0,
+    "l14_potential_count": 147057,
+    "l14_y_nnz": 783495,
+    "l25_b_nnz": 1208062,
+    "l25_potential_count": 579352,
+    "l25_y_nnz": 564482,
+    "lgmres_memory_estimate": {
+      "bytes_per_complex_vector": 47105584,
+      "estimate_scope": "Static retained-vector increment over the measured whole-sheet GMRES(25) private peak; the external sampler remains authoritative.",
+      "estimated_headroom_bytes": 1744585024,
+      "external_memory_limit_bytes": 25769803776,
+      "lgmres_live_vector_count_upper_estimate": 62,
+      "lgmres_peak_private_bytes_estimate": 24025218752,
+      "prior_gmres_arnoldi_vector_count_assumption": 26,
+      "prior_gmres_sampled_peak_private_bytes": 22329417728,
+      "scipy_version": "1.18.1"
+    },
+    "native_b_nnz": 0,
+    "native_potential_count": 756885,
+    "native_y_nnz": 2833787,
+    "sheet_target_active_indices": [
+      718402,
+      258027,
+      349710
+    ],
+    "total_kept_count": 2944099
+  },
+  "physical": {
+    "category_passivity": {
+      "finite_branches": true,
+      "l02_distributed_gc": true,
+      "l02_sheet_dc": true,
+      "l14_distributed_gc": true,
+      "l14_sheet_dc": true,
+      "l25_distributed_gc": true,
+      "l25_rt0_resistance": true,
+      "retained_gc": true,
+      "termination": true
+    },
+    "constitutive_max_abs_v": 5.187272922672512e-19,
+    "csc_kcl_max_abs_a": 9.669031304224934e-10,
+    "explicit_branch_kcl_max_abs_a": 9.67444790512134e-10,
+    "finite_branch_action_max_error_to_forward_bound": 0.0022635112846570264,
+    "finite_branch_action_max_forward_bound_a": 3.056305119629251e-08,
+    "finite_branch_action_relative_error": 2.428737789686462e-12,
+    "normalized_backward_residual": 4.466003618650131e-19,
+    "power_closure_error_ohm": 3.087104567957462e-13,
+    "power_contributions_ohm": {
+      "finite_branches": [
+        7.528457131467816e-05,
+        4.132186007058128e-05
+      ],
+      "l02_distributed_gc": [
+        1.1558765725472587e-18,
+        -2.819211152555478e-16
+      ],
+      "l02_sheet_dc": [
+        4.939167599381108e-07,
+        -8.079856270898652e-23
+      ],
+      "l14_distributed_gc": [
+        3.794736035946273e-11,
+        -9.255453746210465e-09
+      ],
+      "l14_sheet_dc": [
+        0.00025876888480773363,
+        -3.6981390648312523e-17
+      ],
+      "l25_distributed_gc": [
+        3.197330145129498e-11,
+        -3.1973301451294892e-09
+      ],
+      "l25_rt0_resistance": [
+        0.0001516762418159611,
+        -9.749357494703122e-22
+      ],
+      "retained_gc": [
+        3.3832207880648914e-13,
+        -4.998196664198365e-11
+      ],
+      "termination": [
+        6.772388484794244e-05,
+        -0.0006297725349835524
+      ]
+    },
+    "source_category_action_max_error_to_forward_bound": 0.0011087473630728999,
+    "source_category_action_max_forward_bound_a": 6.889505287485366e-08,
+    "source_category_action_relative_error": 4.162122950960087e-12,
+    "source_category_matrix_difference_max_abs_s": 3.637978807091713e-12,
+    "source_category_matrix_difference_nnz": 682,
+    "source_category_nnz": {
+      "l02_distributed_gc": 2003377,
+      "l02_sheet_dc": 4512062,
+      "l14_distributed_gc": 1196872,
+      "l14_sheet_dc": 773755,
+      "l25_distributed_gc": 2821635,
+      "retained_gc": 5437,
+      "termination": 5312
+    },
+    "source_category_power_relative_error": 1.196909382494066e-11,
+    "zdd_ohm": [
+      0.0005539475696814701,
+      -0.0005884631779619616
+    ]
+  },
+  "program": "SPD Decap PI Evaluator",
+  "status": "UNVALIDATED_COMBINED_BLOCK_LGMRES_FIELD_BEFORE_GATES",
+  "version": "0.23.1"
+}

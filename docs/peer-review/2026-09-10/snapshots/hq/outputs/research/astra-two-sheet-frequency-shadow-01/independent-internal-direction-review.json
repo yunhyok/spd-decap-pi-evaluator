@@ -1,0 +1,291 @@
+{
+  "alpha_one_assessment": {
+    "finite_alpha1_value": "A finite alpha=1 solve would quantify only that imposed direction's nonlinear response; it cannot identify the physical face/current basis.",
+    "priority": "External magnetic/current-basis evidence should precede interpreting or promoting any alpha=1 result.",
+    "reason": "q_abs exceeds one at 100MHz and 1GHz (maximum stated below), so alpha=1 is a nonlinear endpoint for the imposed symmetric internal-sheet direction.",
+    "status": "NOT_PREDICTIVE_FROM_FIRST_DERIVATIVE"
+  },
+  "formula_review": {
+    "dc_limit": "Zcommon(0)=1/(sigma*t) in ohm/square; q=Zcommon/Rdc-1 is dimensionless; v.T Gdc v is ohm for the saved 1 A drive; q*v.T Gdc v is ohm/alpha.",
+    "derivative_sign": "For Y(alpha)=Yrest+Gdc/(1+alpha*q), dY/dalpha|0=-qGdc and dZdd/dalpha|0=-v.T(dY/dalpha)v=q*v.TGdcv. Transpose is required for reciprocal complex sensitivity; Hermitian form is Joule power only.",
+    "toy_transpose_finite_difference_error_ohm": 2.1920664579459914e-12
+  },
+  "gauge_review": {
+    "largest_direction_ambiguity_ohm_per_alpha": 3.6995945032271693e-10,
+    "largest_relative_shift_over_joule": 1.649366571113105e-05,
+    "reason": "Frozen-circuit gauge is used and the nonzero row-sum effect is disclosed. Largest stored/recomputed relative shift is bounded below.",
+    "status": "ACCEPT"
+  },
+  "inputs": {
+    "driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_two_sheet_internal_direction.py",
+      "sha256": "7c6ba78a386e577c35e7efc62215fe0504b93fd59db18027c0f9fe829aa753cc"
+    },
+    "higher_frequency_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-two-sheet-frequency-shadow-01\\result.json",
+      "sha256": "f580a47697385efdd234f6c8738119285bc3cac94a4ad1827ffd5e7b449f4372"
+    },
+    "one_mhz_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-l25-sheet-r-shadow-01\\result.json",
+      "sha256": "d5a9873fb81c21773dbca79b96a83496078bdbfaa3b345478d0d21a4448e0530"
+    },
+    "receipt": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-two-sheet-frequency-shadow-01\\internal-sheet-direction.json",
+      "sha256": "4aca31f3978587075179ee20222c5a86fc5ea849edecaea47c524683cbd7a842"
+    }
+  },
+  "limitations": [
+    "No geometry, global LU, PowerSI, source scenario, or external magnetic operator was read or rerun.",
+    "Conditional symmetric two-face internal impedance has no source-certified equal-face-current basis."
+  ],
+  "maxima": {
+    "bilinear_absolute_mismatch_ohm": 1.463923884067366e-18,
+    "direction_absolute_mismatch_ohm_per_alpha": 6.831798727737574e-18,
+    "gauge_direction_ambiguity_ohm_per_alpha": 3.6995945032271693e-10,
+    "gauge_shift_over_joule": 1.649366571113105e-05,
+    "joule_absolute_mismatch_ohm": 2.2154318534905382e-13,
+    "q_absolute": 10.292132885383275
+  },
+  "p1_findings": [],
+  "p2_findings": [],
+  "points": [
+    {
+      "combined_direction_ohm_per_alpha": [
+        3.16814488792406e-07,
+        9.313105237564028e-06
+      ],
+      "frequency_hz": 1000000.0,
+      "sheets": {
+        "l14": {
+          "bilinear_ohm": [
+            0.000215120650277409,
+            1.314281568177677e-05
+          ],
+          "dc_ohm_per_square": 0.0008390669575432118,
+          "direction_ohm_per_alpha": [
+            -1.9553945781295803e-07,
+            3.3744350941992534e-06
+          ],
+          "gauge_shift_abs_ohm": 1.4855760496089492e-14,
+          "internal_ohm_per_square": [
+            0.0008391082338835331,
+            1.3159287576220335e-05
+          ],
+          "joule_ohm": [
+            0.00021928448663346512,
+            -1.3000495696262002e-15
+          ],
+          "q": [
+            4.919314239493211e-05,
+            0.015683238933339397
+          ],
+          "q_abs": 0.01568331608447242
+        },
+        "l25": {
+          "bilinear_ohm": [
+            0.00014801990689187276,
+            -1.1573744760081559e-05
+          ],
+          "dc_ohm_per_square": 0.0005244168484645075,
+          "direction_ohm_per_alpha": [
+            5.12353946605364e-07,
+            5.938670143364774e-06
+          ],
+          "gauge_shift_abs_ohm": 1.8723068521147245e-13,
+          "internal_ohm_per_square": [
+            0.0005245858965616484,
+            2.1053216865340498e-05
+          ],
+          "joule_ohm": [
+            0.00015494409755655608,
+            -4.9497016788900006e-15
+          ],
+          "q": [
+            0.0003223544354760133,
+            0.04014595817618049
+          ],
+          "q_abs": 0.04014725233768438
+        }
+      }
+    },
+    {
+      "combined_direction_ohm_per_alpha": [
+        1.8378977376697217e-05,
+        9.401946324155607e-05
+      ],
+      "frequency_hz": 10000000.0,
+      "sheets": {
+        "l14": {
+          "bilinear_ohm": [
+            0.0002689349748833197,
+            4.439245410050078e-05
+          ],
+          "dc_ohm_per_square": 0.0008390669575432118,
+          "direction_ohm_per_alpha": [
+            -5.632287998132815e-06,
+            4.233708178771199e-05
+          ],
+          "gauge_shift_abs_ohm": 2.4222121500715743e-16,
+          "internal_ohm_per_square": [
+            0.0008431859956914694,
+            0.0001314101753045392
+          ],
+          "joule_ohm": [
+            0.0003178504678197127,
+            1.1987482908272756e-16
+          ],
+          "q": [
+            0.004909069665093302,
+            0.15661464692794985
+          ],
+          "q_abs": 0.15669156517612276
+        },
+        "l25": {
+          "bilinear_ohm": [
+            0.000133872401680343,
+            -4.965166716421994e-05
+          ],
+          "dc_ohm_per_square": 0.0005244168484645075,
+          "direction_ohm_per_alpha": [
+            2.4011265374830032e-05,
+            5.1682381453844075e-05
+          ],
+          "gauge_shift_abs_ohm": 1.1551241921692937e-14,
+          "internal_ohm_per_square": [
+            0.0005410938013940666,
+            0.00020864009137619357
+          ],
+          "joule_ohm": [
+            0.00016013651271246565,
+            6.548656764894525e-17
+          ],
+          "q": [
+            0.03180094800231781,
+            0.39785161744343595
+          ],
+          "q_abs": 0.3991205454448621
+        }
+      }
+    },
+    {
+      "combined_direction_ohm_per_alpha": [
+        -0.0001506910042020245,
+        0.0006501973091495563
+      ],
+      "frequency_hz": 100000000.0,
+      "sheets": {
+        "l14": {
+          "bilinear_ohm": [
+            0.00041409014718640926,
+            0.00031871892086008193
+          ],
+          "dc_ohm_per_square": 0.0008390669575432118,
+          "direction_ohm_per_alpha": [
+            -0.00027372428925308604,
+            0.0007046231805681616
+          ],
+          "gauge_shift_abs_ohm": 2.5796647622497252e-14,
+          "internal_ohm_per_square": [
+            0.0011808679908135436,
+            0.0011646922177162018
+          ],
+          "joule_ohm": [
+            0.000659636600434423,
+            3.2523572780117837e-15
+          ],
+          "q": [
+            0.40735847145158144,
+            1.3880801850741695
+          ],
+          "q_abs": 1.4466193433170005
+        },
+        "l25": {
+          "bilinear_ohm": [
+            4.77648034723914e-06,
+            -4.6554917481086305e-05
+          ],
+          "dc_ohm_per_square": 0.0005244168484645075,
+          "direction_ohm_per_alpha": [
+            0.00012303328505106154,
+            -5.442587141860536e-05
+          ],
+          "gauge_shift_abs_ohm": 4.390804782871537e-13,
+          "internal_ohm_per_square": [
+            0.001271820639732752,
+            0.0013092229861008894
+          ],
+          "joule_ohm": [
+            4.70916431263847e-05,
+            1.258171055429077e-14
+          ],
+          "q": [
+            1.42520934149359,
+            2.496531127736064
+          ],
+          "q_abs": 2.87469813003656
+        }
+      }
+    },
+    {
+      "combined_direction_ohm_per_alpha": [
+        0.0035792504581820205,
+        0.008200819286974255
+      ],
+      "frequency_hz": 1000000000.0,
+      "sheets": {
+        "l14": {
+          "bilinear_ohm": [
+            0.001398109212390372,
+            0.0003697035614754247
+          ],
+          "dc_ohm_per_square": 0.0008390669575432118,
+          "direction_ohm_per_alpha": [
+            0.0035890693998719384,
+            0.008203834204273359
+          ],
+          "gauge_shift_abs_ohm": 1.9129115092704686e-12,
+          "internal_ohm_per_square": [
+            0.004069091941084983,
+            0.004069363405574946
+          ],
+          "joule_ohm": [
+            0.0014767766626616464,
+            -5.884404291958689e-14
+          ],
+          "q": [
+            3.849543775385083,
+            4.849867306764222
+          ],
+          "q_abs": 6.191946396071795
+        },
+        "l25": {
+          "bilinear_ohm": [
+            -8.475328996542584e-07,
+            5.269347029105789e-07
+          ],
+          "dc_ohm_per_square": 0.0005244168484645075,
+          "direction_ohm_per_alpha": [
+            -9.818941689917931e-06,
+            -3.0149172991032e-06
+          ],
+          "gauge_shift_abs_ohm": 3.5945848585780265e-11,
+          "internal_ohm_per_square": [
+            0.004069706166909715,
+            0.004069705616774129
+          ],
+          "joule_ohm": [
+            2.1793729311199483e-06,
+            1.1077120801563159e-13
+          ],
+          "q": [
+            6.760441295556798,
+            7.760440246514251
+          ],
+          "q_abs": 10.292132885383275
+        }
+      }
+    }
+  ],
+  "program": "SPD Decap PI Evaluator",
+  "status": "ACCEPT_CONDITIONAL_INTERNAL_DIRECTION"
+}

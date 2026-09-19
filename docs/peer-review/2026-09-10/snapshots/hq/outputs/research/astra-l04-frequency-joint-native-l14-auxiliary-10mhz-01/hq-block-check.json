@@ -1,0 +1,13 @@
+{
+  "status": "PASS_SAVED_JOINT_FOUR_BLOCKS_AND_OFFBLOCK_SOURCE_IDENTITY_NO_FACTOR",
+  "driver_sha256": "1e15c3d4dd873c0179143c4926cc8c11fc3a9fecd8f0fa7d745e29793ec2b166",
+  "artifact_sha256": "babe65c41ad7e33eb6752e96f5209994adb348105c6d7552793abbe88d26c4b6",
+  "checks_max_abs": {
+    "top_left": 0.0,
+    "upper": 0.0,
+    "lower": 0.0,
+    "robin": 0.0
+  },
+  "offblock_count": 20,
+  "elapsed_s": 3.280999999959022
+}

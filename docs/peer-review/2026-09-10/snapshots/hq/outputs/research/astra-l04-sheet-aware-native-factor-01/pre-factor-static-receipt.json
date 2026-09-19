@@ -1,0 +1,84 @@
+{
+  "budget": {
+    "elapsed_s": 1.297000000020489,
+    "max_rss_bytes": 25769803776,
+    "max_runtime_s": 210.0,
+    "peak_rss_bytes": 0
+  },
+  "dimensions": {
+    "contact_count": 38277,
+    "l02_offblock": 20,
+    "l04_gauged_graph": 1628104,
+    "native": 756885,
+    "size": 2384989
+  },
+  "factor_driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-factor-01\\driver-at-run.py",
+    "sha256": "8ded2b0fdde86f32bb44c955abcb81942f237079a2d9b227131d942e122fcf7a",
+    "size_bytes": 12882
+  },
+  "inputs": {
+    "base_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l02_conditional_hybrid_block_lgmres.py",
+      "sha256": "ae0fb71ea00d02381abf28bf440d9407191e45f1c43d774cae31da6e0fb8da5e",
+      "size_bytes": 35889
+    },
+    "budget": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\reconstruct_astra_native_loaded_field.py",
+      "sha256": "354d9e004b189cf8193c2922c8fa4dc1903b407bebb295a4576673200ce6b213",
+      "size_bytes": 33457
+    },
+    "guard": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_fmm3d_runtime.py",
+      "sha256": "2961d1606ec2d4583c37d990d238a6abc87a54d8e0b93f9d83397f3851536a25",
+      "size_bytes": 16465
+    },
+    "static_artifact": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-block-01\\native-l04-auxiliary-block.npz",
+      "sha256": "c9ddef8e180a337f9a8ac5b509a060776fed5e7e5e3d1a13380ec847c76126ad",
+      "size_bytes": 52261901
+    },
+    "static_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-block-01\\driver-at-run.py",
+      "sha256": "5836ba78aa01a818675a4bb4ce3175219a32f2a39b896d8aa2a47314a8d4ffde",
+      "size_bytes": 10283
+    },
+    "static_external": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-block-01\\external-budget.json",
+      "sha256": "94e12ebc2562da027d3421ba4b87ffa25b29bb13f8c1473b2b8dd0e24150796d",
+      "size_bytes": 1018
+    },
+    "static_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-block-01\\result.json",
+      "sha256": "ae45f21634d9bdc688639d37cdeaa5cc1752c6ca7df1a4a13a1d541a9be579de",
+      "size_bytes": 6050
+    }
+  },
+  "policy": {
+    "SymmetricMode": true,
+    "diag_pivot_thresh": 0.0,
+    "permc_spec": "MMD_AT_PLUS_A"
+  },
+  "program": "SPD Decap PI Evaluator",
+  "scope": "One scaled complex-symmetric passive gauged auxiliary factor only. No base factors, NtD action, restart field, global solve, or residual-reduction claim.",
+  "sparse": {
+    "scaled_csc_storage_bytes": 194432100,
+    "scaled_nnz": 9244607,
+    "scaled_symmetry_relative": 1.1102230246251563e-16,
+    "unscaled_csc_storage_bytes": 194432100,
+    "unscaled_nnz": 9244607,
+    "unscaled_symmetry_relative": 1.630959364830643e-18
+  },
+  "static_artifact": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-block-01\\native-l04-auxiliary-block.npz",
+    "sha256": "c9ddef8e180a337f9a8ac5b509a060776fed5e7e5e3d1a13380ec847c76126ad",
+    "size_bytes": 52261901
+  },
+  "static_result": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-block-01\\result.json",
+    "sha256": "ae45f21634d9bdc688639d37cdeaa5cc1752c6ca7df1a4a13a1d541a9be579de",
+    "size_bytes": 6050
+  },
+  "status": "PREPARED_SHEET_AWARE_NATIVE_AUXILIARY_FOR_SINGLE_FACTOR",
+  "version": "0.23.1"
+}

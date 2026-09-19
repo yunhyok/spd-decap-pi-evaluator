@@ -1,0 +1,772 @@
+{
+  "elapsed_s": 26.60899999999674,
+  "excluded_source_vias": {
+    "compiled_link_count": 20,
+    "compiled_owner_rows": 40,
+    "count": 42,
+    "inclusion_state": "excluded_pending_source_trace_and_leaf-policy",
+    "ordered_rows": [
+      {
+        "end_layer_id": "Signal$L02(DGND)",
+        "end_node_id": "Node2410466",
+        "ordinal": 343760,
+        "padstack_id": "DR-0102_60",
+        "source_record_sha256": "4cbd76f77a407a38749c3515073d1395331f78e57ea55e7056ebc1c6ee88fa62",
+        "start_layer_id": "Signal$TOP",
+        "start_node_id": "Node70462",
+        "start_x_pm": -12356900000,
+        "start_y_pm": 9097100000,
+        "status": "EXACT",
+        "via_id": "Via1309387"
+      },
+      {
+        "end_layer_id": "Signal$L03(SIG1)",
+        "end_node_id": "Node2410467",
+        "ordinal": 343761,
+        "padstack_id": "DR-0203_60",
+        "source_record_sha256": "9b22c22843cbd4c1d00294e671a0cb74c2f4f0f5c3e8b709ad88ed3685bd5abc",
+        "start_layer_id": "Signal$L02(DGND)",
+        "start_node_id": "Node2410466",
+        "start_x_pm": -12356900000,
+        "start_y_pm": 9097100000,
+        "status": "EXACT",
+        "via_id": "Via1309388"
+      },
+      {
+        "end_layer_id": "Signal$L03(SIG1)",
+        "end_node_id": "Node2413298",
+        "ordinal": 347535,
+        "padstack_id": "DR-0203_60",
+        "source_record_sha256": "7cbea6bd2f97821d014943a6e9671fc3c32238d062fcd6741aaaba4955f6dcde",
+        "start_layer_id": "Signal$L02(DGND)",
+        "start_node_id": "Node2413297",
+        "start_x_pm": 12354600000,
+        "start_y_pm": 22424400000,
+        "status": "EXACT",
+        "via_id": "Via1312784"
+      },
+      {
+        "end_layer_id": "Signal$L03(SIG1)",
+        "end_node_id": "Node2553527",
+        "ordinal": 534246,
+        "padstack_id": "DR-0203_60",
+        "source_record_sha256": "cfe64ea464fb3d8d7e6a919d0ef16de4ca37138c902040de3320a9e732608f9f",
+        "start_layer_id": "Signal$L02(DGND)",
+        "start_node_id": "Node2553528",
+        "start_x_pm": 12190600000,
+        "start_y_pm": 10549800000,
+        "status": "EXACT",
+        "via_id": "Via1480824"
+      },
+      {
+        "end_layer_id": "Signal$L02(DGND)",
+        "end_node_id": "Node2553528",
+        "ordinal": 534247,
+        "padstack_id": "DR-0102_60",
+        "source_record_sha256": "4df0aeb1c60392337d68ce419ed76d48e8f47c963cbf2739f952067cdfbca0a6",
+        "start_layer_id": "Signal$TOP",
+        "start_node_id": "Node79990",
+        "start_x_pm": 12190600000,
+        "start_y_pm": 10549800000,
+        "status": "EXACT",
+        "via_id": "Via1480825"
+      },
+      {
+        "end_layer_id": "Signal$L03(SIG1)",
+        "end_node_id": "Node2556772",
+        "ordinal": 538560,
+        "padstack_id": "DR-0203_60",
+        "source_record_sha256": "45d7b189c459fd8084c6f23d06b3227f43498a97d24e456e839aaba365160d85",
+        "start_layer_id": "Signal$L02(DGND)",
+        "start_node_id": "Node2556773",
+        "start_x_pm": -7437000000,
+        "start_y_pm": 10458700000,
+        "status": "EXACT",
+        "via_id": "Via1484707"
+      },
+      {
+        "end_layer_id": "Signal$L02(DGND)",
+        "end_node_id": "Node2556773",
+        "ordinal": 538561,
+        "padstack_id": "DR-0102_60",
+        "source_record_sha256": "2d73755f40b421e862d524a8b711ca6be9579dab8118ba22c5936970424589a6",
+        "start_layer_id": "Signal$TOP",
+        "start_node_id": "Node80188",
+        "start_x_pm": -7437000000,
+        "start_y_pm": 10458700000,
+        "status": "EXACT",
+        "via_id": "Via1484708"
+      },
+      {
+        "end_layer_id": "Signal$L03(SIG1)",
+        "end_node_id": "Node2562597",
+        "ordinal": 546272,
+        "padstack_id": "DR-0203_60",
+        "source_record_sha256": "5d9669ec9619cd9d761037250f47fe85995090279e2dccd94e167e3c25c18e2e",
+        "start_layer_id": "Signal$L02(DGND)",
+        "start_node_id": "Node2562598",
+        "start_x_pm": -12421900000,
+        "start_y_pm": 9885300000,
+        "status": "EXACT",
+        "via_id": "Via1491648"
+      },
+      {
+        "end_layer_id": "Signal$L02(DGND)",
+        "end_node_id": "Node2562598",
+        "ordinal": 546273,
+        "padstack_id": "DR-0102_60",
+        "source_record_sha256": "a6f0e7eb25879c5fb5d05a6556917c21087587b0797897cd38226d0fb9bce04f",
+        "start_layer_id": "Signal$TOP",
+        "start_node_id": "Node80548",
+        "start_x_pm": -12421900000,
+        "start_y_pm": 9885300000,
+        "status": "EXACT",
+        "via_id": "Via1491649"
+      },
+      {
+        "end_layer_id": "Signal$L03(SIG1)",
+        "end_node_id": "Node2564980",
+        "ordinal": 549505,
+        "padstack_id": "DR-0203_60",
+        "source_record_sha256": "3aeb7f2827dc3265b2a89d2451c0a57e78c874d8d7c93d3ec6beebddb515ba74",
+        "start_layer_id": "Signal$L02(DGND)",
+        "start_node_id": "Node2564981",
+        "start_x_pm": -12096900000,
+        "start_y_pm": 9097100000,
+        "status": "EXACT",
+        "via_id": "Via1494558"
+      },
+      {
+        "end_layer_id": "Signal$L02(DGND)",
+        "end_node_id": "Node2564981",
+        "ordinal": 549506,
+        "padstack_id": "DR-0102_60",
+        "source_record_sha256": "b74dc5e21948740fc5ecd7ed9c09a93e5e7f408917b404952b46970f2b9e05f7",
+        "start_layer_id": "Signal$TOP",
+        "start_node_id": "Node80701",
+        "start_x_pm": -12096900000,
+        "start_y_pm": 9097100000,
+        "status": "EXACT",
+        "via_id": "Via1494559"
+      },
+      {
+        "end_layer_id": "Signal$L03(SIG1)",
+        "end_node_id": "Node2565172",
+        "ordinal": 549758,
+        "padstack_id": "DR-0203_60",
+        "source_record_sha256": "d681c58d383ba5189fc1532090fd83bcbe66ffde1888e16a28281d817f9eae88",
+        "start_layer_id": "Signal$L02(DGND)",
+        "start_node_id": "Node2565173",
+        "start_x_pm": 11515000000,
+        "start_y_pm": 8729800000,
+        "status": "EXACT",
+        "via_id": "Via1494786"
+      },
+      {
+        "end_layer_id": "Signal$L02(DGND)",
+        "end_node_id": "Node2565173",
+        "ordinal": 549759,
+        "padstack_id": "DR-0102_60",
+        "source_record_sha256": "3350d6377866dc030a80d64d814c04ba1f23b48c64692b64f7cc50a384334bfa",
+        "start_layer_id": "Signal$TOP",
+        "start_node_id": "Node80713",
+        "start_x_pm": 11515000000,
+        "start_y_pm": 8729800000,
+        "status": "EXACT",
+        "via_id": "Via1494787"
+      },
+      {
+        "end_layer_id": "Signal$L03(SIG1)",
+        "end_node_id": "Node2567082",
+        "ordinal": 552299,
+        "padstack_id": "DR-0203_60",
+        "source_record_sha256": "675627232d83402ab47f6102af326e88c00591457df8535d207f5b5a67afebd5",
+        "start_layer_id": "Signal$L02(DGND)",
+        "start_node_id": "Node2567083",
+        "start_x_pm": -8911900000,
+        "start_y_pm": 8984500000,
+        "status": "EXACT",
+        "via_id": "Via1497072"
+      },
+      {
+        "end_layer_id": "Signal$L02(DGND)",
+        "end_node_id": "Node2567083",
+        "ordinal": 552300,
+        "padstack_id": "DR-0102_60",
+        "source_record_sha256": "d70667ee0847f72acfb47ab9bc7896b30813dbb3c34cf955e1c8e92758b7e316",
+        "start_layer_id": "Signal$TOP",
+        "start_node_id": "Node80829",
+        "start_x_pm": -8911900000,
+        "start_y_pm": 8984500000,
+        "status": "EXACT",
+        "via_id": "Via1497073"
+      },
+      {
+        "end_layer_id": "Signal$L03(SIG1)",
+        "end_node_id": "Node2567284",
+        "ordinal": 552573,
+        "padstack_id": "DR-0203_60",
+        "source_record_sha256": "3387d09eaa44bfb9afc2e885782c6fc260445d37e7b918a1b391faf9d6744e42",
+        "start_layer_id": "Signal$L02(DGND)",
+        "start_node_id": "Node2567285",
+        "start_x_pm": -10211900000,
+        "start_y_pm": 8984500000,
+        "status": "EXACT",
+        "via_id": "Via1497319"
+      },
+      {
+        "end_layer_id": "Signal$L02(DGND)",
+        "end_node_id": "Node2567285",
+        "ordinal": 552575,
+        "padstack_id": "DR-0102_60",
+        "source_record_sha256": "5efff4fad1bc720029595f191a89d0228c47fea3caf48b4780c8a351cc886973",
+        "start_layer_id": "Signal$TOP",
+        "start_node_id": "Node80842",
+        "start_x_pm": -10211900000,
+        "start_y_pm": 8984500000,
+        "status": "EXACT",
+        "via_id": "Via1497320"
+      },
+      {
+        "end_layer_id": "Signal$L03(SIG1)",
+        "end_node_id": "Node2567398",
+        "ordinal": 552726,
+        "padstack_id": "DR-0203_60",
+        "source_record_sha256": "db36c17f846812098b68c7728af03c4d9887b75f1e3ac8fd935989f2d667b05a",
+        "start_layer_id": "Signal$L02(DGND)",
+        "start_node_id": "Node2567399",
+        "start_x_pm": -11836900000,
+        "start_y_pm": 8871900000,
+        "status": "EXACT",
+        "via_id": "Via1497457"
+      },
+      {
+        "end_layer_id": "Signal$L02(DGND)",
+        "end_node_id": "Node2567399",
+        "ordinal": 552727,
+        "padstack_id": "DR-0102_60",
+        "source_record_sha256": "1de8f526af1da9f5c445aaada6f4aec96608ff0028b08b21c407f01a370c1e36",
+        "start_layer_id": "Signal$TOP",
+        "start_node_id": "Node80849",
+        "start_x_pm": -11836900000,
+        "start_y_pm": 8871900000,
+        "status": "EXACT",
+        "via_id": "Via1497458"
+      },
+      {
+        "end_layer_id": "Signal$L03(SIG1)",
+        "end_node_id": "Node2567462",
+        "ordinal": 552811,
+        "padstack_id": "DR-0203_60",
+        "source_record_sha256": "d915c8a797e039591902210fbd0db27748c1ff2c1a6c83a818e92da89ff33a98",
+        "start_layer_id": "Signal$L02(DGND)",
+        "start_node_id": "Node2567463",
+        "start_x_pm": -12226900000,
+        "start_y_pm": 8871900000,
+        "status": "EXACT",
+        "via_id": "Via1497533"
+      },
+      {
+        "end_layer_id": "Signal$L02(DGND)",
+        "end_node_id": "Node2567463",
+        "ordinal": 552812,
+        "padstack_id": "DR-0102_60",
+        "source_record_sha256": "6c4087c471dc94f98532e027b06edb4fc516700dc9a19204656a07fca47fc0e5",
+        "start_layer_id": "Signal$TOP",
+        "start_node_id": "Node80853",
+        "start_x_pm": -12226900000,
+        "start_y_pm": 8871900000,
+        "status": "EXACT",
+        "via_id": "Via1497534"
+      },
+      {
+        "end_layer_id": "Signal$L02(DGND)",
+        "end_node_id": "Node2584427",
+        "ordinal": 678343,
+        "padstack_id": "DR-0102_60",
+        "source_record_sha256": "3f18392b3e4a8b5c8dd7c228a5a2917182a1e4fe456746a08a24228d928778b3",
+        "start_layer_id": "Signal$TOP",
+        "start_node_id": "Node82783",
+        "start_x_pm": -12356900000,
+        "start_y_pm": -23508800000,
+        "status": "EXACT",
+        "via_id": "Via1610510"
+      },
+      {
+        "end_layer_id": "Signal$L03(SIG1)",
+        "end_node_id": "Node2584428",
+        "ordinal": 678344,
+        "padstack_id": "DR-0203_60",
+        "source_record_sha256": "08480e9128632796df2dea959601dcf57629712910b5a795f761dda3b538d5a3",
+        "start_layer_id": "Signal$L02(DGND)",
+        "start_node_id": "Node2584427",
+        "start_x_pm": -12356900000,
+        "start_y_pm": -23508800000,
+        "status": "EXACT",
+        "via_id": "Via1610511"
+      },
+      {
+        "end_layer_id": "Signal$L03(SIG1)",
+        "end_node_id": "Node2585832",
+        "ordinal": 680236,
+        "padstack_id": "DR-0203_60",
+        "source_record_sha256": "ec392c96e7a7819a20f8f0feab383ca33763763c59b6e5a5a0e9a129c4ecee05",
+        "start_layer_id": "Signal$L02(DGND)",
+        "start_node_id": "Node2585831",
+        "start_x_pm": 12354600000,
+        "start_y_pm": -10181500000,
+        "status": "EXACT",
+        "via_id": "Via1612214"
+      },
+      {
+        "end_layer_id": "Signal$L03(SIG1)",
+        "end_node_id": "Node2727889",
+        "ordinal": 869355,
+        "padstack_id": "DR-0203_60",
+        "source_record_sha256": "c3808e513951ffc9ab497cbd5b9ee6407c3489f4b704ab3bd4ec5da732b1313e",
+        "start_layer_id": "Signal$L02(DGND)",
+        "start_node_id": "Node2727890",
+        "start_x_pm": 12190600000,
+        "start_y_pm": -22056100000,
+        "status": "EXACT",
+        "via_id": "Via1782422"
+      },
+      {
+        "end_layer_id": "Signal$L02(DGND)",
+        "end_node_id": "Node2727890",
+        "ordinal": 869356,
+        "padstack_id": "DR-0102_60",
+        "source_record_sha256": "e8ceeceab9cf6fbe88bcdbe131ed5d8f8b25c3c04cde2c15509e525c9cceca1a",
+        "start_layer_id": "Signal$TOP",
+        "start_node_id": "Node92336",
+        "start_x_pm": 12190600000,
+        "start_y_pm": -22056100000,
+        "status": "EXACT",
+        "via_id": "Via1782423"
+      },
+      {
+        "end_layer_id": "Signal$L03(SIG1)",
+        "end_node_id": "Node2731134",
+        "ordinal": 873669,
+        "padstack_id": "DR-0203_60",
+        "source_record_sha256": "6a013f9807d7c1e483b681617056f49a408b992e706d431ad3d3f33788460c23",
+        "start_layer_id": "Signal$L02(DGND)",
+        "start_node_id": "Node2731135",
+        "start_x_pm": -7437000000,
+        "start_y_pm": -22147200000,
+        "status": "EXACT",
+        "via_id": "Via1786305"
+      },
+      {
+        "end_layer_id": "Signal$L02(DGND)",
+        "end_node_id": "Node2731135",
+        "ordinal": 873670,
+        "padstack_id": "DR-0102_60",
+        "source_record_sha256": "af901639bce8721f318fa3a837cc1890659bcb2597472c9ebc7d0551543d5e2c",
+        "start_layer_id": "Signal$TOP",
+        "start_node_id": "Node92534",
+        "start_x_pm": -7437000000,
+        "start_y_pm": -22147200000,
+        "status": "EXACT",
+        "via_id": "Via1786306"
+      },
+      {
+        "end_layer_id": "Signal$L03(SIG1)",
+        "end_node_id": "Node2736592",
+        "ordinal": 880895,
+        "padstack_id": "DR-0203_60",
+        "source_record_sha256": "21a30f87a47074121d8669e44aff2b8eaf03d281ef58b201bf1cdbaadecec46f",
+        "start_layer_id": "Signal$L02(DGND)",
+        "start_node_id": "Node2736593",
+        "start_x_pm": -12421900000,
+        "start_y_pm": -22720600000,
+        "status": "EXACT",
+        "via_id": "Via1792809"
+      },
+      {
+        "end_layer_id": "Signal$L02(DGND)",
+        "end_node_id": "Node2736593",
+        "ordinal": 880897,
+        "padstack_id": "DR-0102_60",
+        "source_record_sha256": "a8d6070c23dbbfba90f93edc5e4a2a8da81218a85308156891112513564006bb",
+        "start_layer_id": "Signal$TOP",
+        "start_node_id": "Node92871",
+        "start_x_pm": -12421900000,
+        "start_y_pm": -22720600000,
+        "status": "EXACT",
+        "via_id": "Via1792810"
+      },
+      {
+        "end_layer_id": "Signal$L03(SIG1)",
+        "end_node_id": "Node2738685",
+        "ordinal": 883748,
+        "padstack_id": "DR-0203_60",
+        "source_record_sha256": "82b9665c2f860c4453d4ebcef34e1551b9320297b85378041bca24c32f5b12b8",
+        "start_layer_id": "Signal$L02(DGND)",
+        "start_node_id": "Node2738686",
+        "start_x_pm": -10211900000,
+        "start_y_pm": -23621400000,
+        "status": "EXACT",
+        "via_id": "Via1795377"
+      },
+      {
+        "end_layer_id": "Signal$L02(DGND)",
+        "end_node_id": "Node2738686",
+        "ordinal": 883749,
+        "padstack_id": "DR-0102_60",
+        "source_record_sha256": "17596375f9f1d5a35e28c160e5dc762bf0a55368b394b0c36e126716040e050e",
+        "start_layer_id": "Signal$TOP",
+        "start_node_id": "Node93006",
+        "start_x_pm": -10211900000,
+        "start_y_pm": -23621400000,
+        "status": "EXACT",
+        "via_id": "Via1795378"
+      },
+      {
+        "end_layer_id": "Signal$L03(SIG1)",
+        "end_node_id": "Node2739104",
+        "ordinal": 884302,
+        "padstack_id": "DR-0203_60",
+        "source_record_sha256": "fd2087ada8e96a40e80341b9ef2fad4a0793f5c0306ae619fb1e6b26368d9b4c",
+        "start_layer_id": "Signal$L02(DGND)",
+        "start_node_id": "Node2739105",
+        "start_x_pm": -12096900000,
+        "start_y_pm": -23508800000,
+        "status": "EXACT",
+        "via_id": "Via1795876"
+      },
+      {
+        "end_layer_id": "Signal$L02(DGND)",
+        "end_node_id": "Node2739105",
+        "ordinal": 884303,
+        "padstack_id": "DR-0102_60",
+        "source_record_sha256": "fd7436a15db366c3c433e4ffd9d61c7c22ea73afaa23ed4032940c909dcfa686",
+        "start_layer_id": "Signal$TOP",
+        "start_node_id": "Node93032",
+        "start_x_pm": -12096900000,
+        "start_y_pm": -23508800000,
+        "status": "EXACT",
+        "via_id": "Via1795877"
+      },
+      {
+        "end_layer_id": "Signal$L03(SIG1)",
+        "end_node_id": "Node2739296",
+        "ordinal": 884557,
+        "padstack_id": "DR-0203_60",
+        "source_record_sha256": "537acd7cdb21d0916fcbf4bf0a338203eb9ffaf13b06a9a43d8b65df52c55f2b",
+        "start_layer_id": "Signal$L02(DGND)",
+        "start_node_id": "Node2739297",
+        "start_x_pm": 11515000000,
+        "start_y_pm": -23876100000,
+        "status": "EXACT",
+        "via_id": "Via1796104"
+      },
+      {
+        "end_layer_id": "Signal$L02(DGND)",
+        "end_node_id": "Node2739297",
+        "ordinal": 884558,
+        "padstack_id": "DR-0102_60",
+        "source_record_sha256": "b5e957d5aa6ea99b6a7ed3fb5ef085ecc45d048aeb31c79d8f2683bad357e269",
+        "start_layer_id": "Signal$TOP",
+        "start_node_id": "Node93044",
+        "start_x_pm": 11515000000,
+        "start_y_pm": -23876100000,
+        "status": "EXACT",
+        "via_id": "Via1796105"
+      },
+      {
+        "end_layer_id": "Signal$L03(SIG1)",
+        "end_node_id": "Node2741206",
+        "ordinal": 887096,
+        "padstack_id": "DR-0203_60",
+        "source_record_sha256": "adc0c9830e97864f3b50b5846f119dac5df07a92f7604e5c6750a381828bbf5d",
+        "start_layer_id": "Signal$L02(DGND)",
+        "start_node_id": "Node2741207",
+        "start_x_pm": -8911900000,
+        "start_y_pm": -23621400000,
+        "status": "EXACT",
+        "via_id": "Via1798390"
+      },
+      {
+        "end_layer_id": "Signal$L02(DGND)",
+        "end_node_id": "Node2741207",
+        "ordinal": 887097,
+        "padstack_id": "DR-0102_60",
+        "source_record_sha256": "615394eadd483a722812f01a837710ac5479f1f33ca576674e3dc4d5464d76ae",
+        "start_layer_id": "Signal$TOP",
+        "start_node_id": "Node93160",
+        "start_x_pm": -8911900000,
+        "start_y_pm": -23621400000,
+        "status": "EXACT",
+        "via_id": "Via1798391"
+      },
+      {
+        "end_layer_id": "Signal$L03(SIG1)",
+        "end_node_id": "Node2741391",
+        "ordinal": 887349,
+        "padstack_id": "DR-0203_60",
+        "source_record_sha256": "7c9e1d08cf8a954f3e405b50eeda0a82ffe83b04c193e3ae654f8cfda8f5238c",
+        "start_layer_id": "Signal$L02(DGND)",
+        "start_node_id": "Node2741392",
+        "start_x_pm": -11836900000,
+        "start_y_pm": -23734000000,
+        "status": "EXACT",
+        "via_id": "Via1798618"
+      },
+      {
+        "end_layer_id": "Signal$L02(DGND)",
+        "end_node_id": "Node2741392",
+        "ordinal": 887350,
+        "padstack_id": "DR-0102_60",
+        "source_record_sha256": "6eb5fc7d57663404f7f02825756bf3cbb7ec0f6c4591ce80ff450932d1e123e7",
+        "start_layer_id": "Signal$TOP",
+        "start_node_id": "Node93172",
+        "start_x_pm": -11836900000,
+        "start_y_pm": -23734000000,
+        "status": "EXACT",
+        "via_id": "Via1798619"
+      },
+      {
+        "end_layer_id": "Signal$L03(SIG1)",
+        "end_node_id": "Node2741423",
+        "ordinal": 887391,
+        "padstack_id": "DR-0203_60",
+        "source_record_sha256": "8965e8da1f69e84b521535c0635ca119c57b1b9e259ebd2f129f6e268a3a2d7c",
+        "start_layer_id": "Signal$L02(DGND)",
+        "start_node_id": "Node2741424",
+        "start_x_pm": -12226900000,
+        "start_y_pm": -23734000000,
+        "status": "EXACT",
+        "via_id": "Via1798656"
+      },
+      {
+        "end_layer_id": "Signal$L02(DGND)",
+        "end_node_id": "Node2741424",
+        "ordinal": 887392,
+        "padstack_id": "DR-0102_60",
+        "source_record_sha256": "083dea1a4b389d0cecc6dd990186b0d1444410c88e4e18b6303db082f8014eb6",
+        "start_layer_id": "Signal$TOP",
+        "start_node_id": "Node93174",
+        "start_x_pm": -12226900000,
+        "start_y_pm": -23734000000,
+        "status": "EXACT",
+        "via_id": "Via1798657"
+      }
+    ],
+    "unmatched_exception_via_ids": [
+      "Via1312784",
+      "Via1612214"
+    ]
+  },
+  "geometry_classification": {
+    "circle_convention": "shared_pad._placed_pad_polygon uses a 256-edge inscribed polygon (quad_segs=64)",
+    "island_wkb_map_saved": true,
+    "status": "PENDING_EXACT_FOOTPRINT_OVERLAP"
+  },
+  "inputs": {
+    "compiled_db": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-step4-basis-01\\indexes\\compiled-topology.sqlite",
+      "sha256": "5a4fd917e0c415a50d75e1e52be22580d0c9c88423e6e93c5eb69f62f0aa849b"
+    },
+    "exceptions": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-via-exceptions-01\\result.json",
+      "sha256": "1a39a0f3360844dd801abf5914230cf5e132a7ee717a41ee82c304d35f7ea7da"
+    },
+    "geometry_asset": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-gc-source-overlaps-01\\source-assets\\0000-b6d6b3d52268fc49.spdgeom.zlib",
+      "sha256": "b6d6b3d52268fc4972140b93e62ce8eb191a5367f5fc0cc74f3f836a117b1ddd"
+    },
+    "inventory": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-source-inventory-02\\result.json",
+      "sha256": "0af954600a5070f8f2fa27a81ba941889b46ac9f26ac2b76d8669f4ce3af93f2"
+    },
+    "placed_pad_geometry": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\src\\spd_decap_pi\\_core\\io\\shared_pad.py",
+      "sha256": "f6a53ca964efe79bed9da2bc88099d395f5f01f65d9b925ab9c8e18749ce8b4c"
+    },
+    "polygon_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\project_astra_l14_gc_mass.py",
+      "sha256": "f2c668fd090db5c4606eec27558c9bdbbdde6552d2f82c3b64b8837bd7350dc3"
+    },
+    "raw_field": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\raw-field-snapshot.npz",
+      "sha256": "6eac098738598a78b2068ce4f80e46fd70e17010a89bfb5949ec8a68124df4a7"
+    },
+    "raw_spatial_accessors": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\src\\spd_decap_pi\\raw_spatial_contact_asset.py",
+      "sha256": "383f17396ecc6ee2114cbb2d08be4b576b134930b6b6a49d0432a671959af4a3"
+    },
+    "raw_spatial_db": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-step4-basis-01\\indexes\\raw-spatial.sqlite",
+      "sha256": "287c1850a113b23b89c97c38941502f866131d938773c1b346d0e4972733d3a7"
+    }
+  },
+  "native_contacts": {
+    "coincident_multiplicity_histogram": {
+      "1": 1533,
+      "2": 37303
+    },
+    "count": 76139,
+    "l02_source_start_count": 38182,
+    "padstack_contact_counts": {
+      "DR-0102": 12128,
+      "DR-0102_60": 25829,
+      "DR-0203": 11600,
+      "DR-0203_60": 26582
+    },
+    "target_first_count": 47467,
+    "target_second_count": 28672,
+    "unique_center_count": 38836,
+    "unique_via_owner_count": 76139
+  },
+  "output": {
+    "bytes": 11036928,
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-source-contact-inputs-01\\contact-ledger-inputs.npz",
+    "sha256": "c5c0dab9ac22d750aeecf3a4290c2b9ef9285bcf7ed33a5d8a7a2775c8430984"
+  },
+  "pad_definitions": [
+    {
+      "l02_pad_shape": {
+        "height_pm": 100000000,
+        "layer_id": "Signal$L02(DGND)",
+        "layer_id_fold": "signal$l02(dgnd)",
+        "ordinal": 9,
+        "padstack_id": "DR-0102",
+        "padstack_id_fold": "dr-0102",
+        "shape_kind": "CIRCLE",
+        "source_record_sha256": "43f0ea905de206f096b9e2e56548aa9c8371b49ff3f2caf81d3368a257976bc7",
+        "width_pm": 100000000
+      },
+      "padstack": {
+        "drill_diameter_pm": 60000000,
+        "material": "COPPER",
+        "ordinal": 11,
+        "padstack_id": "DR-0102",
+        "padstack_id_fold": "dr-0102",
+        "source_record_sha256": "fae51e4f967874b3776c62abe416313579aea3efa09a5fd02054537c0ec850e1"
+      },
+      "padstack_index": 0
+    },
+    {
+      "l02_pad_shape": {
+        "height_pm": 60000000,
+        "layer_id": "Signal$L02(DGND)",
+        "layer_id_fold": "signal$l02(dgnd)",
+        "ordinal": 11,
+        "padstack_id": "DR-0102_60",
+        "padstack_id_fold": "dr-0102_60",
+        "shape_kind": "CIRCLE",
+        "source_record_sha256": "6d2fb53b3c61b676bf5026feb37f35eac257ada7608688e0b52e5c1a480fc6b8",
+        "width_pm": 60000000
+      },
+      "padstack": {
+        "drill_diameter_pm": 40000000,
+        "material": "COPPER",
+        "ordinal": 12,
+        "padstack_id": "DR-0102_60",
+        "padstack_id_fold": "dr-0102_60",
+        "source_record_sha256": "f5556fe8fbee699bd2e395fc2951cf688ae535edd797c1a60548a6d9d0540ada"
+      },
+      "padstack_index": 1
+    },
+    {
+      "l02_pad_shape": {
+        "height_pm": 100000000,
+        "layer_id": "Signal$L02(DGND)",
+        "layer_id_fold": "signal$l02(dgnd)",
+        "ordinal": 13,
+        "padstack_id": "DR-0203",
+        "padstack_id_fold": "dr-0203",
+        "shape_kind": "CIRCLE",
+        "source_record_sha256": "43f0ea905de206f096b9e2e56548aa9c8371b49ff3f2caf81d3368a257976bc7",
+        "width_pm": 100000000
+      },
+      "padstack": {
+        "drill_diameter_pm": 60000000,
+        "material": "COPPER",
+        "ordinal": 13,
+        "padstack_id": "DR-0203",
+        "padstack_id_fold": "dr-0203",
+        "source_record_sha256": "c0791867fb13a86cc8ac378b54a69b0e2ebfb82c8bf2968f54808cb3068395f1"
+      },
+      "padstack_index": 2
+    },
+    {
+      "l02_pad_shape": {
+        "height_pm": 60000000,
+        "layer_id": "Signal$L02(DGND)",
+        "layer_id_fold": "signal$l02(dgnd)",
+        "ordinal": 15,
+        "padstack_id": "DR-0203_60",
+        "padstack_id_fold": "dr-0203_60",
+        "shape_kind": "CIRCLE",
+        "source_record_sha256": "6d2fb53b3c61b676bf5026feb37f35eac257ada7608688e0b52e5c1a480fc6b8",
+        "width_pm": 60000000
+      },
+      "padstack": {
+        "drill_diameter_pm": 40000000,
+        "material": "COPPER",
+        "ordinal": 14,
+        "padstack_id": "DR-0203_60",
+        "padstack_id_fold": "dr-0203_60",
+        "source_record_sha256": "785382baef17eac134a9404acb0c0dc3b975512fa88209334b0585a10e8ac1f7"
+      },
+      "padstack_index": 3
+    }
+  ],
+  "program": "SPD Decap PI Evaluator",
+  "prospective_preflight": {
+    "contact_center_count_before_overlap_union": 38836,
+    "mesh_node_count": null,
+    "mesh_triangle_count": null,
+    "note": "Counts are source/contact inputs, not measured mesh DOF.",
+    "source_island_potential_count_before_trace_union": 491,
+    "source_island_total_area_um2": 9303654565.988352,
+    "source_island_total_coordinates": 808891,
+    "source_island_total_holes": 7022
+  },
+  "raw_spatial_meta": {
+    "adjacent_conductor_gap_count": "47",
+    "adjacent_conductor_gap_sha256": "dd752a61bd43e8d3a364f898f45b472b325ca4936920b5787c1ceaff836bd95c",
+    "certificate_evidence_sha256": "a149542975eb237456dddb8ac78d1bed8d8121545a037600500a16b2a5edb7d1",
+    "compiled_topology_identity_sha256": "0e242c069a55707b554eb632ea7a0747a29b6ad1451453c6496e8dd4cc1ac8cf",
+    "compiler_id": "raw-spd-finite-via-spatial-contact-v3",
+    "geometry_identity_sha256": "1593dcbe3e59c1eac48173a348a9b893862e99bcd3e66b14e69057197660cb4e",
+    "layers_count": "95",
+    "logical_rows_sha256": "a49f447e34a48b220bfa5107ac8a520a5a4906745f1b715c91d584c0752b09bf",
+    "nodes_count": "2751337",
+    "pad_shapes_count": "186",
+    "padstacks_count": "98",
+    "payload_schema": "spd-raw-spatial-contact-sqlite-v3",
+    "plane_sheet_dielectric_points_count": "301",
+    "plane_sheet_payload_sha256": "8124951c18011994e480fbd5a0d2ea78f7018d8e4cabe5dd4b12e7dc62fda800",
+    "plane_sheet_plane_circles_count": "57279",
+    "plane_sheet_plane_primitives_count": "339162",
+    "plane_sheet_plane_vertices_count": "11968968",
+    "plane_sheet_stackup_layers_count": "95",
+    "project_binding_sha256": "a20f131070142ecb4c332d9a8339454c13021eb6787c51944cc628f19449616e",
+    "section_coverage_count": "3",
+    "source_coverage_count": "1",
+    "source_sha256": "40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2",
+    "surfaces_count": "371",
+    "traces_count": "1412611",
+    "vias_count": "1810200"
+  },
+  "scope": "Exact ordered native finite/via endpoint, pad/drill, coincident-center and source-island WKB inputs. Footprint-to-island overlap, noncoincident pad union, trace connectivity, the 42 excluded vias, mesh, G/C mass/operator, solve, return closure and accuracy remain unresolved.",
+  "script_sha256": "282def7c0eff7a7e6b822766bbb104ee910945a2af95b49d800badcd89a4deb1",
+  "source_trace_inventory": {
+    "binding_state": "unbound",
+    "count": 38662
+  },
+  "status": "COMPLETED_L02_ORDERED_CONTACT_INPUT_LEDGER",
+  "target": {
+    "active_index": 349710,
+    "compiled_target_vertex_id": "spd-finite-via-vertex:75e70fea61021703aa9311b5",
+    "component_id": "spd-surface-equivalence-component:d4691ffaac6a928e1ffad1a1",
+    "geometry_asset_sha256": "b6d6b3d52268fc4972140b93e62ce8eb191a5367f5fc0cc74f3f836a117b1ddd",
+    "island_count": 491,
+    "layer": "Signal$L02(DGND)",
+    "net": "DGND"
+  },
+  "version": "0.23.1"
+}

@@ -1,0 +1,32 @@
+{
+  "absolute_error_ohm": 0.0,
+  "field_port_zdd_ohm": [
+    0.0005137583675450426,
+    -0.0005849760442531394
+  ],
+  "inputs": {
+    "field": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-l25-sheet-r-shadow-01\\epsilon-1-field.npz",
+      "sha256": "3874e0bd74365427b124cc31264956e925f8b5129da56f176f57a2362beeb6ae"
+    },
+    "raw": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\raw-field-snapshot.npz",
+      "sha256": "6eac098738598a78b2068ce4f80e46fd70e17010a89bfb5949ec8a68124df4a7"
+    },
+    "result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-l25-sheet-r-shadow-01\\result.json",
+      "sha256": "d5a9873fb81c21773dbca79b96a83496078bdbfaa3b345478d0d21a4448e0530"
+    }
+  },
+  "negative_active": 2656,
+  "positive_active": 2699,
+  "program": "SPD Decap PI Evaluator",
+  "recorded_zdd_ohm": [
+    0.0005137583675450426,
+    -0.0005849760442531394
+  ],
+  "relative_error": 0.0,
+  "scope": "Post hoc closure of explicit port-voltage/result binding; saved arrays only, no new solve.",
+  "status": "VERIFIED_SAVED_TWO_SHEET_FIELD_PORT_ZDD_TRIAD",
+  "version": "0.23.1"
+}

@@ -1,0 +1,1127 @@
+{
+  "frequencies_hz": [
+    1000.0,
+    10000.0,
+    100000.0,
+    1000000.0
+  ],
+  "gap_properties": [
+    {
+      "df": [
+        0.0041,
+        0.0041,
+        0.0041,
+        0.0041
+      ],
+      "dk": [
+        3.4,
+        3.4,
+        3.4,
+        3.4
+      ],
+      "lower_layer": "Signal$L02(DGND)",
+      "nominal_relative_permittivity": 3.3,
+      "ordinal": 0,
+      "upper_layer": "Signal$TOP"
+    },
+    {
+      "df": [
+        0.0041,
+        0.0041,
+        0.0041,
+        0.0041
+      ],
+      "dk": [
+        3.4,
+        3.4,
+        3.4,
+        3.4
+      ],
+      "lower_layer": "Signal$L09(MAIN_POWER1)",
+      "nominal_relative_permittivity": 3.3,
+      "ordinal": 1,
+      "upper_layer": "Signal$L08(DGND)"
+    },
+    {
+      "df": [
+        0.0041,
+        0.0041,
+        0.0041,
+        0.0041
+      ],
+      "dk": [
+        3.4,
+        3.4,
+        3.4,
+        3.4
+      ],
+      "lower_layer": "Signal$L10(DGND)",
+      "nominal_relative_permittivity": 3.3,
+      "ordinal": 2,
+      "upper_layer": "Signal$L09(MAIN_POWER1)"
+    },
+    {
+      "df": [
+        0.0041,
+        0.0041,
+        0.0041,
+        0.0041
+      ],
+      "dk": [
+        3.4,
+        3.4,
+        3.4,
+        3.4
+      ],
+      "lower_layer": "Signal$L11(MAIN_POWER2)",
+      "nominal_relative_permittivity": 3.3,
+      "ordinal": 3,
+      "upper_layer": "Signal$L10(DGND)"
+    },
+    {
+      "df": [
+        0.0041,
+        0.0041,
+        0.0041,
+        0.0041
+      ],
+      "dk": [
+        3.4,
+        3.4,
+        3.4,
+        3.4
+      ],
+      "lower_layer": "Signal$L12(MAIN_POWER3)",
+      "nominal_relative_permittivity": 3.3,
+      "ordinal": 4,
+      "upper_layer": "Signal$L11(MAIN_POWER2)"
+    },
+    {
+      "df": [
+        0.0041,
+        0.0041,
+        0.0041,
+        0.0041
+      ],
+      "dk": [
+        3.4,
+        3.4,
+        3.4,
+        3.4
+      ],
+      "lower_layer": "Signal$L13(DGND)",
+      "nominal_relative_permittivity": 3.3,
+      "ordinal": 5,
+      "upper_layer": "Signal$L12(MAIN_POWER3)"
+    },
+    {
+      "df": [
+        0.0041,
+        0.0041,
+        0.0041,
+        0.0041
+      ],
+      "dk": [
+        3.4,
+        3.4,
+        3.4,
+        3.4
+      ],
+      "lower_layer": "Signal$L14(MAIN_POWER4)",
+      "nominal_relative_permittivity": 3.3,
+      "ordinal": 6,
+      "upper_layer": "Signal$L13(DGND)"
+    },
+    {
+      "df": [
+        0.0041,
+        0.0041,
+        0.0041,
+        0.0041
+      ],
+      "dk": [
+        3.4,
+        3.4,
+        3.4,
+        3.4
+      ],
+      "lower_layer": "Signal$L15(MAIN_POWER5)",
+      "nominal_relative_permittivity": 3.3,
+      "ordinal": 7,
+      "upper_layer": "Signal$L14(MAIN_POWER4)"
+    },
+    {
+      "df": [
+        0.0041,
+        0.0041,
+        0.0041,
+        0.0041
+      ],
+      "dk": [
+        3.4,
+        3.4,
+        3.4,
+        3.4
+      ],
+      "lower_layer": "Signal$L16(DGND)",
+      "nominal_relative_permittivity": 3.3,
+      "ordinal": 8,
+      "upper_layer": "Signal$L15(MAIN_POWER5)"
+    },
+    {
+      "df": [
+        0.0041,
+        0.0041,
+        0.0041,
+        0.0041
+      ],
+      "dk": [
+        3.4,
+        3.4,
+        3.4,
+        3.4
+      ],
+      "lower_layer": "Signal$L21(DGND)",
+      "nominal_relative_permittivity": 3.3,
+      "ordinal": 9,
+      "upper_layer": "Signal$L20(DGND)"
+    },
+    {
+      "df": [
+        0.010000000000000002,
+        0.010000000000000002,
+        0.010000000000000002,
+        0.010000000000000002
+      ],
+      "dk": [
+        4.7,
+        4.7,
+        4.7,
+        4.7
+      ],
+      "lower_layer": "Signal$L22(MAIN_POWER2)",
+      "nominal_relative_permittivity": 4.3,
+      "ordinal": 10,
+      "upper_layer": "Signal$L21(DGND)"
+    },
+    {
+      "df": [
+        0.01,
+        0.01,
+        0.01,
+        0.01
+      ],
+      "dk": [
+        4.7,
+        4.7,
+        4.7,
+        4.7
+      ],
+      "lower_layer": "Signal$L23(MAIN_POWER3)",
+      "nominal_relative_permittivity": 4.3,
+      "ordinal": 11,
+      "upper_layer": "Signal$L22(MAIN_POWER2)"
+    },
+    {
+      "df": [
+        0.010000000000000002,
+        0.010000000000000002,
+        0.010000000000000002,
+        0.010000000000000002
+      ],
+      "dk": [
+        4.7,
+        4.7,
+        4.7,
+        4.7
+      ],
+      "lower_layer": "Signal$L24(DGND)",
+      "nominal_relative_permittivity": 4.3,
+      "ordinal": 12,
+      "upper_layer": "Signal$L23(MAIN_POWER3)"
+    },
+    {
+      "df": [
+        0.01,
+        0.01,
+        0.01,
+        0.01
+      ],
+      "dk": [
+        4.7,
+        4.7,
+        4.7,
+        4.7
+      ],
+      "lower_layer": "Signal$L25(MAIN_POWER4)",
+      "nominal_relative_permittivity": 4.3,
+      "ordinal": 13,
+      "upper_layer": "Signal$L24(DGND)"
+    },
+    {
+      "df": [
+        0.010000000000000002,
+        0.010000000000000002,
+        0.010000000000000002,
+        0.010000000000000002
+      ],
+      "dk": [
+        4.7,
+        4.7,
+        4.7,
+        4.7
+      ],
+      "lower_layer": "Signal$L26(MAIN_POWER5)",
+      "nominal_relative_permittivity": 4.3,
+      "ordinal": 14,
+      "upper_layer": "Signal$L25(MAIN_POWER4)"
+    },
+    {
+      "df": [
+        0.01,
+        0.01,
+        0.01,
+        0.01
+      ],
+      "dk": [
+        4.7,
+        4.7,
+        4.7,
+        4.7
+      ],
+      "lower_layer": "Signal$L27(DGND)",
+      "nominal_relative_permittivity": 4.3,
+      "ordinal": 15,
+      "upper_layer": "Signal$L26(MAIN_POWER5)"
+    },
+    {
+      "df": [
+        0.010000000000000002,
+        0.010000000000000002,
+        0.010000000000000002,
+        0.010000000000000002
+      ],
+      "dk": [
+        4.7,
+        4.7,
+        4.7,
+        4.7
+      ],
+      "lower_layer": "Signal$L28(DGND)",
+      "nominal_relative_permittivity": 4.3,
+      "ordinal": 16,
+      "upper_layer": "Signal$L27(DGND)"
+    },
+    {
+      "df": [
+        0.0041,
+        0.0041,
+        0.0041,
+        0.0041
+      ],
+      "dk": [
+        3.4,
+        3.4,
+        3.4,
+        3.4
+      ],
+      "lower_layer": "Signal$L29(DGND)",
+      "nominal_relative_permittivity": 3.3,
+      "ordinal": 17,
+      "upper_layer": "Signal$L28(DGND)"
+    },
+    {
+      "df": [
+        0.0041,
+        0.0041,
+        0.0041,
+        0.0041
+      ],
+      "dk": [
+        3.4,
+        3.4,
+        3.4,
+        3.4
+      ],
+      "lower_layer": "Signal$L30(OTHER_POWER1)",
+      "nominal_relative_permittivity": 3.3,
+      "ordinal": 18,
+      "upper_layer": "Signal$L29(DGND)"
+    },
+    {
+      "df": [
+        0.0041,
+        0.0041,
+        0.0041,
+        0.0041
+      ],
+      "dk": [
+        3.4,
+        3.4,
+        3.4,
+        3.4
+      ],
+      "lower_layer": "Signal$L31(OTHER_POWER2)",
+      "nominal_relative_permittivity": 3.3,
+      "ordinal": 19,
+      "upper_layer": "Signal$L30(OTHER_POWER1)"
+    },
+    {
+      "df": [
+        0.0041,
+        0.0041,
+        0.0041,
+        0.0041
+      ],
+      "dk": [
+        3.4,
+        3.4,
+        3.4,
+        3.4
+      ],
+      "lower_layer": "Signal$L32(DGND)",
+      "nominal_relative_permittivity": 3.3,
+      "ordinal": 20,
+      "upper_layer": "Signal$L31(OTHER_POWER2)"
+    },
+    {
+      "df": [
+        0.0041,
+        0.0041,
+        0.0041,
+        0.0041
+      ],
+      "dk": [
+        3.4,
+        3.4,
+        3.4,
+        3.4
+      ],
+      "lower_layer": "Signal$L33(OTHER_POWER3)",
+      "nominal_relative_permittivity": 3.3,
+      "ordinal": 21,
+      "upper_layer": "Signal$L32(DGND)"
+    },
+    {
+      "df": [
+        0.0041,
+        0.0041,
+        0.0041,
+        0.0041
+      ],
+      "dk": [
+        3.4,
+        3.4,
+        3.4,
+        3.4
+      ],
+      "lower_layer": "Signal$L34(OTHER_POWER4)",
+      "nominal_relative_permittivity": 3.3,
+      "ordinal": 22,
+      "upper_layer": "Signal$L33(OTHER_POWER3)"
+    },
+    {
+      "df": [
+        0.0041,
+        0.0041,
+        0.0041,
+        0.0041
+      ],
+      "dk": [
+        3.4,
+        3.4,
+        3.4,
+        3.4
+      ],
+      "lower_layer": "Signal$L35(DGND)",
+      "nominal_relative_permittivity": 3.3,
+      "ordinal": 23,
+      "upper_layer": "Signal$L34(OTHER_POWER4)"
+    },
+    {
+      "df": [
+        0.0041,
+        0.0041,
+        0.0041,
+        0.0041
+      ],
+      "dk": [
+        3.4,
+        3.4,
+        3.4,
+        3.4
+      ],
+      "lower_layer": "Signal$L36(OTHER_POWER5)",
+      "nominal_relative_permittivity": 3.3,
+      "ordinal": 24,
+      "upper_layer": "Signal$L35(DGND)"
+    },
+    {
+      "df": [
+        0.0041,
+        0.0041,
+        0.0041,
+        0.0041
+      ],
+      "dk": [
+        3.4,
+        3.4,
+        3.4,
+        3.4
+      ],
+      "lower_layer": "Signal$L37(OTHER_POWER6)",
+      "nominal_relative_permittivity": 3.3,
+      "ordinal": 25,
+      "upper_layer": "Signal$L36(OTHER_POWER5)"
+    },
+    {
+      "df": [
+        0.0041,
+        0.0041,
+        0.0041,
+        0.0041
+      ],
+      "dk": [
+        3.4,
+        3.4,
+        3.4,
+        3.4
+      ],
+      "lower_layer": "Signal$L38(DGND)",
+      "nominal_relative_permittivity": 3.3,
+      "ordinal": 26,
+      "upper_layer": "Signal$L37(OTHER_POWER6)"
+    },
+    {
+      "df": [
+        0.0041,
+        0.0041,
+        0.0041,
+        0.0041
+      ],
+      "dk": [
+        3.4,
+        3.4,
+        3.4,
+        3.4
+      ],
+      "lower_layer": "Signal$L39(OTHER_POWER7)",
+      "nominal_relative_permittivity": 3.3,
+      "ordinal": 27,
+      "upper_layer": "Signal$L38(DGND)"
+    },
+    {
+      "df": [
+        0.0041,
+        0.0041,
+        0.0041,
+        0.0041
+      ],
+      "dk": [
+        3.4,
+        3.4,
+        3.4,
+        3.4
+      ],
+      "lower_layer": "Signal$L40(OTHER_POWER8)",
+      "nominal_relative_permittivity": 3.3,
+      "ordinal": 28,
+      "upper_layer": "Signal$L39(OTHER_POWER7)"
+    },
+    {
+      "df": [
+        0.0041,
+        0.0041,
+        0.0041,
+        0.0041
+      ],
+      "dk": [
+        3.4,
+        3.4,
+        3.4,
+        3.4
+      ],
+      "lower_layer": "Signal$L41(DGND)",
+      "nominal_relative_permittivity": 3.3,
+      "ordinal": 29,
+      "upper_layer": "Signal$L40(OTHER_POWER8)"
+    },
+    {
+      "df": [
+        0.0041,
+        0.0041,
+        0.0041,
+        0.0041
+      ],
+      "dk": [
+        3.4,
+        3.4,
+        3.4,
+        3.4
+      ],
+      "lower_layer": "Signal$L42(OTHER_POWER9)",
+      "nominal_relative_permittivity": 3.3,
+      "ordinal": 30,
+      "upper_layer": "Signal$L41(DGND)"
+    },
+    {
+      "df": [
+        0.0041,
+        0.0041,
+        0.0041,
+        0.0041
+      ],
+      "dk": [
+        3.4,
+        3.4,
+        3.4,
+        3.4
+      ],
+      "lower_layer": "Signal$L43(OTHER_POWER10)",
+      "nominal_relative_permittivity": 3.3,
+      "ordinal": 31,
+      "upper_layer": "Signal$L42(OTHER_POWER9)"
+    },
+    {
+      "df": [
+        0.0041,
+        0.0041,
+        0.0041,
+        0.0041
+      ],
+      "dk": [
+        3.4,
+        3.4,
+        3.4,
+        3.4
+      ],
+      "lower_layer": "Signal$L44(DGND)",
+      "nominal_relative_permittivity": 3.3,
+      "ordinal": 32,
+      "upper_layer": "Signal$L43(OTHER_POWER10)"
+    },
+    {
+      "df": [
+        0.0041,
+        0.0041,
+        0.0041,
+        0.0041
+      ],
+      "dk": [
+        3.4,
+        3.4,
+        3.4,
+        3.4
+      ],
+      "lower_layer": "Signal$L45(OTHER_POWER11)",
+      "nominal_relative_permittivity": 3.3,
+      "ordinal": 33,
+      "upper_layer": "Signal$L44(DGND)"
+    },
+    {
+      "df": [
+        0.0041,
+        0.0041,
+        0.0041,
+        0.0041
+      ],
+      "dk": [
+        3.4,
+        3.4,
+        3.4,
+        3.4
+      ],
+      "lower_layer": "Signal$L46(OTHER_POWER12)",
+      "nominal_relative_permittivity": 3.3,
+      "ordinal": 34,
+      "upper_layer": "Signal$L45(OTHER_POWER11)"
+    },
+    {
+      "df": [
+        0.0041,
+        0.0041,
+        0.0041,
+        0.0041
+      ],
+      "dk": [
+        3.4,
+        3.4,
+        3.4,
+        3.4
+      ],
+      "lower_layer": "Signal$L47(DGND)",
+      "nominal_relative_permittivity": 3.3,
+      "ordinal": 35,
+      "upper_layer": "Signal$L46(OTHER_POWER12)"
+    }
+  ],
+  "inputs": {
+    "derived": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\derived-field-observation.npz",
+      "sha256": "be5a83dff88db545de4625414e46dcc360364eb0a29077c91848a6ac805cb6c0"
+    },
+    "raw": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\raw-field-snapshot.npz",
+      "sha256": "6eac098738598a78b2068ce4f80e46fd70e17010a89bfb5949ec8a68124df4a7"
+    },
+    "source_slice": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-frequency-stamps-01\\source-frequency-inputs.json",
+      "sha256": "61390c0ef9c7554b83d55f91b2e81a59f9453690f783b747f2906c475be5f6dc"
+    }
+  },
+  "native_1mhz_dielectric_relative_error": 1.4386493297764328e-16,
+  "native_1mhz_termination_relative_error": 0.0,
+  "native_model_code": {
+    "src/spd_decap_pi/_core/models/impedance.py": "bc64f5079d892f1ec9593b0083c8bf100028eb77b9b300ac1af5050a6c35c80d",
+    "src/spd_decap_pi/_core/solver/evaluator.py": "aca83cdfe8582000b4d92faefdb077d4690e4ce07c89a9972045b4ba896a653a",
+    "src/spd_decap_pi/_core/solver/layerwise_network.py": "dde4d562b47cc0103037b1efc5ff350a560cddffd53d9f3aaebc2579ad702b2b",
+    "src/spd_decap_pi/_core/solver/modal.py": "d72bd6333895520076bf956a616b87c6be3f087fe0c3281867c36dbd10ddde4b"
+  },
+  "output": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-low-band-stamps-01\\frequency-stamps.npz",
+    "sha256": "4ba1c4922dca764a57646a5bb30c0d43ccfe51434776d5d6bacc42c40a2f745b",
+    "size_bytes": 106605
+  },
+  "partial_count": 36,
+  "program": "SPD Decap PI Evaluator",
+  "resource": {
+    "elapsed_s": 0.21799999999348074,
+    "peak_private_bytes": 111411200,
+    "peak_working_set_bytes": 94679040
+  },
+  "scenario_member_sha256": "2f5ae107221857f7f093ab8d6cbcff4c286a0c6cee5b6a9994de1c384cf39c83",
+  "scope": "Source model evaluation and saved1MHz reproduction only; no geometry, native compilation, LU, PowerSI fitting or broadband accuracy claim.",
+  "script_sha256": "204c10c9e2885c3843967be572ff03eacf6679996b357951a95ec0394055e202",
+  "source_model_classes": {
+    "cap_0402_100nf": "SampledImpedanceModel",
+    "cap_0603_1uf": "SampledImpedanceModel",
+    "cap_1608_10uf": "SampledImpedanceModel"
+  },
+  "status": "VERIFIED_NATIVE_FREQUENCY_STAMPS_FROM_SAVED_SOURCE",
+  "target_cap_count": 421,
+  "target_termination_indices": [
+    2016,
+    2018,
+    2020,
+    2022,
+    2024,
+    2026,
+    2028,
+    2030,
+    2032,
+    2036,
+    2038,
+    2040,
+    2042,
+    2044,
+    2046,
+    2048,
+    2050,
+    2052,
+    2054,
+    2058,
+    2060,
+    2062,
+    2064,
+    2066,
+    2068,
+    2070,
+    2072,
+    2074,
+    2076,
+    2080,
+    2082,
+    2084,
+    2086,
+    2088,
+    2090,
+    2092,
+    2094,
+    2096,
+    2098,
+    2102,
+    2104,
+    2106,
+    2108,
+    2110,
+    2112,
+    2114,
+    2116,
+    2118,
+    2120,
+    2124,
+    2126,
+    2128,
+    2130,
+    2132,
+    2134,
+    2136,
+    2138,
+    2140,
+    2142,
+    2146,
+    2148,
+    2150,
+    2152,
+    2154,
+    2156,
+    2158,
+    2160,
+    2162,
+    2164,
+    2168,
+    2170,
+    2172,
+    2174,
+    2176,
+    2178,
+    2180,
+    2182,
+    2184,
+    2186,
+    2190,
+    2192,
+    2194,
+    2196,
+    2198,
+    2200,
+    2202,
+    2204,
+    2206,
+    2208,
+    2212,
+    2214,
+    2216,
+    2218,
+    2220,
+    2222,
+    2224,
+    2226,
+    2228,
+    2230,
+    2236,
+    2238,
+    2240,
+    2242,
+    2244,
+    2246,
+    2248,
+    2250,
+    2252,
+    2254,
+    2258,
+    2260,
+    2262,
+    2264,
+    2266,
+    2268,
+    2270,
+    2272,
+    2274,
+    2276,
+    2280,
+    2282,
+    2284,
+    2286,
+    2288,
+    2290,
+    2292,
+    2294,
+    2296,
+    2298,
+    2302,
+    2304,
+    2306,
+    2308,
+    2310,
+    2312,
+    2314,
+    2316,
+    2318,
+    2320,
+    2324,
+    2326,
+    2328,
+    2330,
+    2332,
+    2334,
+    2336,
+    2338,
+    2340,
+    2342,
+    2346,
+    2348,
+    2350,
+    2352,
+    2354,
+    2356,
+    2358,
+    2360,
+    2362,
+    2364,
+    2368,
+    2370,
+    2372,
+    2374,
+    2376,
+    2378,
+    8870,
+    8872,
+    8874,
+    8876,
+    8878,
+    8880,
+    8882,
+    8884,
+    8886,
+    8890,
+    8892,
+    8894,
+    8896,
+    8898,
+    8900,
+    8902,
+    8904,
+    8906,
+    8908,
+    8912,
+    8914,
+    8916,
+    8918,
+    8920,
+    8922,
+    8924,
+    8926,
+    8928,
+    8930,
+    8934,
+    8936,
+    8938,
+    8940,
+    8942,
+    8944,
+    8946,
+    8948,
+    8950,
+    8952,
+    8956,
+    8958,
+    8960,
+    8962,
+    8964,
+    8966,
+    8968,
+    8970,
+    8972,
+    8974,
+    8978,
+    8980,
+    8982,
+    8984,
+    8986,
+    8988,
+    8990,
+    8992,
+    8994,
+    8996,
+    9000,
+    9002,
+    9004,
+    9006,
+    9008,
+    9010,
+    9012,
+    9014,
+    9016,
+    9018,
+    9022,
+    9024,
+    9026,
+    9028,
+    9030,
+    9032,
+    9034,
+    9036,
+    9038,
+    9040,
+    9044,
+    9046,
+    9048,
+    9050,
+    9052,
+    9054,
+    9056,
+    9058,
+    9060,
+    9062,
+    9066,
+    9068,
+    9070,
+    9072,
+    9074,
+    9076,
+    9078,
+    9080,
+    9082,
+    9084,
+    9090,
+    9092,
+    9094,
+    9096,
+    9098,
+    9100,
+    9102,
+    9104,
+    9106,
+    9108,
+    9112,
+    9114,
+    9116,
+    9118,
+    9120,
+    9122,
+    9124,
+    9126,
+    9128,
+    9130,
+    9134,
+    9136,
+    9138,
+    9140,
+    9142,
+    9144,
+    9146,
+    9148,
+    9150,
+    9152,
+    9156,
+    9158,
+    9160,
+    9162,
+    9164,
+    9166,
+    9168,
+    9170,
+    9172,
+    9174,
+    9178,
+    9180,
+    9182,
+    9184,
+    9186,
+    9188,
+    9190,
+    9192,
+    9194,
+    9196,
+    9200,
+    9202,
+    9204,
+    9206,
+    9208,
+    9210,
+    9212,
+    9214,
+    9216,
+    9218,
+    9222,
+    9224,
+    9226,
+    9228,
+    9230,
+    9232,
+    9234,
+    9236,
+    9238,
+    9240,
+    9244,
+    9246,
+    9248,
+    9250,
+    9252,
+    9254,
+    9256,
+    9258,
+    9260,
+    9262,
+    9266,
+    9268,
+    9270,
+    9272,
+    9274,
+    9276,
+    9278,
+    9280,
+    9282,
+    9284,
+    9288,
+    9290,
+    9292,
+    9294,
+    9296,
+    9298,
+    9300,
+    9302,
+    9304,
+    9306,
+    9314,
+    9316,
+    9318,
+    9320,
+    9322,
+    9324,
+    9326,
+    9328,
+    9330,
+    9332,
+    9336,
+    9338,
+    9340,
+    9342,
+    9344,
+    9346,
+    9348,
+    9350,
+    9352,
+    9354,
+    9358,
+    9360,
+    9362,
+    9364,
+    9366,
+    9368,
+    9370,
+    9372,
+    9374,
+    9376,
+    9380,
+    9382,
+    9384,
+    9386,
+    9388,
+    9390,
+    9392,
+    9394,
+    9396,
+    9398,
+    9402,
+    9404,
+    9406,
+    9408,
+    9410,
+    9412,
+    9414,
+    9416,
+    9418,
+    10384,
+    10386,
+    10388,
+    10390,
+    10392,
+    10394,
+    10396,
+    10398
+  ],
+  "termination_count": 11050,
+  "version": "0.23.1"
+}

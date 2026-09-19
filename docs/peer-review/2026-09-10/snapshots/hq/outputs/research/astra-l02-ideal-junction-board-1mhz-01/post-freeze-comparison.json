@@ -1,0 +1,49 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "COMPLETED_POST_FREEZE_IDEAL_L02_JUNCTION_COMPARISON",
+  "inputs": {
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-ideal-junction-board-1mhz-01\\result.json": "24b607363552baa6518f79f972335da378e833d852e8290c7659e07fba7b541c",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_primary_band_comparison_2026-09-07.json": "ac08d7ea36a09989fb83e9113af399db41f698bf68e061e3c75020f4c41a5f8d",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\compare_astra_loaded_development_points.py": "0e12464d1297caa9964404a2a0777d22964d6817069f752641b2d7945c8f4f4f"
+  },
+  "script_sha256": "db1314f059b4edaf4b9bd9d7d4ae85297e612cfe3425f4ad4c655ad0798c982d",
+  "rail_id": "ADC_VDD_075_VTRIP_SRAM/0",
+  "frequency_hz": 1000000.0,
+  "reference_port_one_based": 18,
+  "reference_zdd_ohm": [
+    0.0006915479466520245,
+    -0.0004257504501139287
+  ],
+  "points": [
+    {
+      "model": "original_ideal_sheet_native",
+      "zdd_ohm": [
+        0.00010031137009881143,
+        -0.0006057593380320585
+      ],
+      "errors": {
+        "magnitude_error_db": -2.4286700035085755,
+        "complex_relative_error": 0.7610323044211814,
+        "complex_gap_ohm": 0.0006180322719598752,
+        "phase_error_deg": -48.97890346256609
+      }
+    },
+    {
+      "model": "conditional20_l02_junctions",
+      "zdd_ohm": [
+        0.00010031135440792408,
+        -0.0006057593419368344
+      ],
+      "errors": {
+        "magnitude_error_db": -2.4286699852759015,
+        "complex_relative_error": 0.7610323243053705,
+        "complex_gap_ohm": 0.0006180322881077713,
+        "phase_error_deg": -48.9789049666058
+      }
+    }
+  ],
+  "absolute_change_ohm": 1.616945332457346e-11,
+  "change_over_original_reference_gap": 2.6162797734328082e-08,
+  "scope": "Post-freeze original ideal-sheet topology discriminator only. No fitted input, finite L02 sheet, L14/L25 composition, broadband or PowerSI accuracy acceptance. The small observed change is not an error bound; independent solve/reconstruction roundoff remains explicit."
+}

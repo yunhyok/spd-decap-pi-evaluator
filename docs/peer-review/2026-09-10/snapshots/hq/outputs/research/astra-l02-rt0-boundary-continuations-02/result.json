@@ -1,0 +1,87 @@
+{
+  "assertions": {
+    "all_classes_finite_and_complete": true,
+    "every_support_has_one_branch_and_mesh_segment": true,
+    "excluded_vertical_continuations_are_contact_rim_evidence": true,
+    "exterior_and_contact_rim_branch_sets_disjoint": true,
+    "no_normal_current_inferred": true,
+    "support_ordinals_exact_0_to_n_minus_1": true
+  },
+  "counts": {
+    "ARTIFICIAL_OR_UNKNOWN_CUT_UNMATCHED": 0,
+    "EXCLUDED_PAD_INTRODUCED_COPPER_BOUNDARY_GEOMETRY_ONLY": 1490,
+    "SOURCE_BOUNDARY_MULTI_MATCH_UNRESOLVED": 0,
+    "SOURCE_POLYGON_EXTERIOR_BOUNDARY_NO_FLUX_NOT_INFERRED": 8,
+    "SOURCE_POLYGON_HOLE_BOUNDARY_UNRESOLVED": 816420,
+    "electrode_rim_branches_separate": 621696,
+    "excluded_drill_contact_support_unique": 22,
+    "excluded_drill_native_overlap_supports": 2,
+    "excluded_via_rows": 42,
+    "exterior_contact_rim_overlap": 0,
+    "exterior_support_rows": 817918,
+    "nonvia_saved_source_islands": 491
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-rt0-boundary-continuations-02\\driver-at-run.py",
+    "sha256": "d423324a7ccb6d43173e63727082ba5e612553a483ba959397591d723ae14f65",
+    "size_bytes": 19257
+  },
+  "elapsed_s": 6.707786199986003,
+  "geometry": {
+    "outer_segment_tolerance_um": 1e-07,
+    "source_boundary_segment_count": 817918,
+    "source_polygon_component_count": 1,
+    "source_ring_count": 33259
+  },
+  "inputs": {
+    "excluded_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-excluded-via-flat-domain-01\\result.json",
+      "sha256": "5e18de3bba96b07870175058852aacd5ac2c937c8ffe946bd95518899e337587",
+      "size_bytes": 30276
+    },
+    "mesh": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-sheet-mesh-preflight-02\\mesh-stiffness.npz",
+      "sha256": "137b4952f739a75e7bf6f2e21684529a43c48558412df59faab0ad003ea10fb9",
+      "size_bytes": 54863370
+    },
+    "mesh_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-sheet-mesh-preflight-02\\result.json",
+      "sha256": "2ff4183b727373d8f6d9dbd32a39fcfc55a92b19bc55328b7e79082e766bfe59",
+      "size_bytes": 4646
+    },
+    "nonvia_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-nonvia-boundary-04\\result.json",
+      "sha256": "d58c3f55566a3299f94db68ba48d5b56123a2ea38c72a3cf13585080750442b2",
+      "size_bytes": 987213
+    },
+    "pad_domain": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-pad-conductor-domain-01\\l02-pad-augmented-conductor-domain.wkb",
+      "sha256": "306515d688f6359c49a867c18240bfd0c18008086a4e8eab0da056cff97bf6f7",
+      "size_bytes": 13751877
+    },
+    "pad_domain_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-pad-conductor-domain-01\\result.json",
+      "sha256": "91e16302f7b7c6b5a43067a6208331f1aa1acee75440aa48ba035c02f1350a9d",
+      "size_bytes": 437303
+    },
+    "pad_support_map": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-pad-conductor-domain-01\\l02-pad-drill-support-map.npz",
+      "sha256": "3774bb012f5769be006ca27f463d6dcb58d07c4c611ffbf8072bc80754d20a47",
+      "size_bytes": 1262293
+    },
+    "rt0_space": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-full-rt0-current-space-01\\l02-rt0-current-space.npz",
+      "sha256": "7cd77ee8b03fd0226596748a1913ee5a913381617498c9927ef12d8b080bc98f",
+      "size_bytes": 116643248
+    }
+  },
+  "output": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-rt0-boundary-continuations-02\\boundary-continuation-map.npz",
+    "sha256": "e79e63982bb974c39b82c22f1cfbea5eca594e7bebd319c19f078b4174881557",
+    "size_bytes": 17597619
+  },
+  "program": "SPD Decap PI Evaluator",
+  "scope": "Every saved RT0 exterior support is mapped to its exact source-mesh edge and all saved polygon exterior/interior rings, with exact and tolerance match counts plus unmatched/multi-match preservation. Contact rims are already independent non-exterior RT0 branches. Excluded-via vertical continuation evidence belongs to the 22 saved contact supports; excluded pad arcs are geometry-only exterior classes, never vertical continuation evidence. No source boundary class implies a no-normal-current condition. No solve, flux clamp, FMM, Green action, raw SPD or SQLite input is used.",
+  "status": "QUALIFIED_L02_RT0_BOUNDARY_SEGMENT_CONTINUATION_MAP_NO_FLUX_INFERENCE",
+  "version": "0.23.1"
+}

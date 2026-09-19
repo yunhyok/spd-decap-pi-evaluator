@@ -1,0 +1,424 @@
+{
+  "accepted_field": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-hybrid-right-correction-01\\field.npz",
+    "sha256": "960e767c383cd7e5580dfc86e9a221cfdff78086f8478465a25d8bd4dd98654b",
+    "size_bytes": 40145495
+  },
+  "accepted_result": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-hybrid-right-correction-01\\result.json",
+    "sha256": "7341e700f5ac76f96f07558a42bc93181319b118ffb86bab64f80c5bdb54b9d3",
+    "size_bytes": 42797
+  },
+  "artifact": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-all-finite-current-l-ownership-01\\all-finite-current-l-ownership.npz",
+    "sha256": "1b908c62e385ea1c227e77b1ccc37dd5c4b3376cce6f67d7b4e5c4a0c20508e6",
+    "size_bytes": 42593028
+  },
+  "budget": {
+    "cooperative_checks": true,
+    "elapsed_s": 7.405999999959022,
+    "max_rss_bytes": 4294967296,
+    "max_runtime_s": 60.0,
+    "peak_rss_bytes": 291139584
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-all-finite-current-l-ownership-01\\driver-at-run.py",
+    "sha256": "4da0d49c62b1271d11fc80dded974c528078380eed42f41636a717009adab79e",
+    "size_bytes": 13105
+  },
+  "elapsed_s": 7.403695499990135,
+  "frequency_hz": 1000000.0,
+  "inputs": {
+    "accepted_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-hybrid-right-correction-01\\driver-at-run.py",
+      "sha256": "91e792487f371d14c21e9ce6729f17b34b93386f9f1d0c599302b129d2d755a6",
+      "size_bytes": 5545
+    },
+    "accepted_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-hybrid-right-correction-01\\result.json",
+      "sha256": "7341e700f5ac76f96f07558a42bc93181319b118ffb86bab64f80c5bdb54b9d3",
+      "size_bytes": 42797
+    },
+    "combined_map": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-assembly-map-02\\combined-assembly-map.npz",
+      "sha256": "a6ccff514fe788396eb9d7620ebc828f966efbea3f7899e7a73991c17f8a2469",
+      "size_bytes": 16919703
+    },
+    "comparator": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\compare_astra_hybrid_board_1mhz.py",
+      "sha256": "e9ce9ad63366586293364c80ec49bae77c1812c423811f06bce1c5c9a44dc1fa",
+      "size_bytes": 7906
+    },
+    "composite_delta": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-full-return-composite-sources-03\\composite-source-segment-delta.npz",
+      "sha256": "b47b6031c901e50e41c7dc12519a5fcadb7699e236d461df4d159189cd625faa",
+      "size_bytes": 4021
+    },
+    "composite_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-full-return-composite-sources-03\\result.json",
+      "sha256": "01cfbb2cbb324a2c7421d46e112a17e8ece2d3a6137aecbad12cc74dd07ff0c3",
+      "size_bytes": 5020
+    },
+    "fd28_validator": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\validate_astra_l02_hybrid_field.py",
+      "sha256": "fd28d5a3eef17d7d85e0fab52de1a88e1910faa2ad46a4cde3b16d3607c8abd9",
+      "size_bytes": 19406
+    },
+    "pack06": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-full-face-hybrid-operator-06\\hybrid-operator-pack.npz",
+      "sha256": "01ff4236af30621ca6cc4b87c4688c28ee23c22ed99b15aadd047f91a25c0b2c",
+      "size_bytes": 101366745
+    },
+    "return_current_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\measure_astra_hybrid_return_currents.py",
+      "sha256": "cce067c0e3f4276ebff982815a9118531e283106d6d55a1d5fb90c0fecf0cbdf",
+      "size_bytes": 20616
+    }
+  },
+  "program": "SPD Decap PI Evaluator",
+  "scope": "Accepted-voltage finite-branch readback only: I=Y*(Vfirst-Vsecond), with existing scalar R+j omega L ownership reported. The twenty split-leg0 rows are joined to saved composite Via/trace ownership without assigning any current to its 93 source segments. No historical current array, raw SPD/SQLite access, matrix build, magnetic action, solve, reference, or accuracy claim.",
+  "status": "COMPLETED_ACCEPTED_ALL_FINITE_CURRENT_L_OWNERSHIP_READBACK",
+  "summary": {
+    "counts": {
+      "composite_leg0_source_vias": 73,
+      "composite_source_trace_segments": 5,
+      "final_finite_rows": 1692409,
+      "native_rows": 1692389,
+      "split_leg0_rows_joined_to_composite_ownership": 20
+    },
+    "top_rows": {
+      "hermitian_abs_i_squared_l_h": [
+        {
+          "final_active_current_row": 161929,
+          "metric": [
+            4.681624228424553e-13,
+            0.0
+          ],
+          "native_active_current_row": 161930
+        },
+        {
+          "final_active_current_row": 1031306,
+          "metric": [
+            4.4834509939525706e-13,
+            0.0
+          ],
+          "native_active_current_row": 1031316
+        },
+        {
+          "final_active_current_row": 497778,
+          "metric": [
+            3.792041144183805e-13,
+            0.0
+          ],
+          "native_active_current_row": 497783
+        },
+        {
+          "final_active_current_row": 454671,
+          "metric": [
+            2.634155244157095e-13,
+            0.0
+          ],
+          "native_active_current_row": 454675
+        },
+        {
+          "final_active_current_row": 658779,
+          "metric": [
+            2.2412854388804012e-13,
+            0.0
+          ],
+          "native_active_current_row": 658786
+        },
+        {
+          "final_active_current_row": 1359084,
+          "metric": [
+            1.464660935989568e-13,
+            0.0
+          ],
+          "native_active_current_row": 1359098
+        },
+        {
+          "final_active_current_row": 80582,
+          "metric": [
+            1.264506812943541e-13,
+            0.0
+          ],
+          "native_active_current_row": 80583
+        },
+        {
+          "final_active_current_row": 561126,
+          "metric": [
+            8.003763651044871e-14,
+            0.0
+          ],
+          "native_active_current_row": 561133
+        },
+        {
+          "final_active_current_row": 594457,
+          "metric": [
+            7.101876168376821e-14,
+            0.0
+          ],
+          "native_active_current_row": 594464
+        },
+        {
+          "final_active_current_row": 812290,
+          "metric": [
+            4.294774859082793e-14,
+            0.0
+          ],
+          "native_active_current_row": 812299
+        },
+        {
+          "final_active_current_row": 937651,
+          "metric": [
+            3.9605574764838945e-14,
+            0.0
+          ],
+          "native_active_current_row": 937660
+        },
+        {
+          "final_active_current_row": 1510027,
+          "metric": [
+            2.264624962203659e-14,
+            0.0
+          ],
+          "native_active_current_row": 1510043
+        },
+        {
+          "final_active_current_row": 115714,
+          "metric": [
+            2.2312223976149878e-14,
+            0.0
+          ],
+          "native_active_current_row": 115715
+        },
+        {
+          "final_active_current_row": 1050297,
+          "metric": [
+            2.1894821984646913e-14,
+            0.0
+          ],
+          "native_active_current_row": 1050307
+        },
+        {
+          "final_active_current_row": 1065014,
+          "metric": [
+            1.387348389184857e-14,
+            0.0
+          ],
+          "native_active_current_row": 1065024
+        },
+        {
+          "final_active_current_row": 754417,
+          "metric": [
+            1.1969499771093281e-14,
+            0.0
+          ],
+          "native_active_current_row": 754424
+        },
+        {
+          "final_active_current_row": 717207,
+          "metric": [
+            1.1771107517399373e-14,
+            0.0
+          ],
+          "native_active_current_row": 717214
+        },
+        {
+          "final_active_current_row": 1691913,
+          "metric": [
+            7.743693396287387e-15,
+            0.0
+          ],
+          "native_active_current_row": 1691933
+        },
+        {
+          "final_active_current_row": 563754,
+          "metric": [
+            7.201993553208155e-15,
+            0.0
+          ],
+          "native_active_current_row": 563761
+        },
+        {
+          "final_active_current_row": 509669,
+          "metric": [
+            6.6339022314106714e-15,
+            0.0
+          ],
+          "native_active_current_row": 509674
+        }
+      ],
+      "ordinary_i_squared_l_h": [
+        {
+          "final_active_current_row": 161929,
+          "metric": [
+            2.5766619055295e-13,
+            -3.9087618040454787e-13
+          ],
+          "native_active_current_row": 161930
+        },
+        {
+          "final_active_current_row": 1031306,
+          "metric": [
+            2.8396760365923183e-13,
+            -3.4695205464700215e-13
+          ],
+          "native_active_current_row": 1031316
+        },
+        {
+          "final_active_current_row": 497778,
+          "metric": [
+            2.7611840889571526e-13,
+            -2.5991226339041166e-13
+          ],
+          "native_active_current_row": 497783
+        },
+        {
+          "final_active_current_row": 454671,
+          "metric": [
+            2.157649496694476e-13,
+            -1.5110666761378864e-13
+          ],
+          "native_active_current_row": 454675
+        },
+        {
+          "final_active_current_row": 658779,
+          "metric": [
+            2.0615577446515797e-13,
+            -8.793975687960516e-14
+          ],
+          "native_active_current_row": 658786
+        },
+        {
+          "final_active_current_row": 1359084,
+          "metric": [
+            1.4065751373126398e-13,
+            -4.0838467222431983e-14
+          ],
+          "native_active_current_row": 1359098
+        },
+        {
+          "final_active_current_row": 80582,
+          "metric": [
+            1.2603722943725974e-13,
+            -1.021722054111898e-14
+          ],
+          "native_active_current_row": 80583
+        },
+        {
+          "final_active_current_row": 561126,
+          "metric": [
+            8.001277139040308e-14,
+            1.9949116786993076e-15
+          ],
+          "native_active_current_row": 561133
+        },
+        {
+          "final_active_current_row": 594457,
+          "metric": [
+            6.948342550057197e-14,
+            1.468734461372542e-14
+          ],
+          "native_active_current_row": 594464
+        },
+        {
+          "final_active_current_row": 812290,
+          "metric": [
+            4.069452725039047e-14,
+            1.3728239540749202e-14
+          ],
+          "native_active_current_row": 812299
+        },
+        {
+          "final_active_current_row": 937651,
+          "metric": [
+            3.5207397007535285e-14,
+            1.813948037863937e-14
+          ],
+          "native_active_current_row": 937660
+        },
+        {
+          "final_active_current_row": 1510027,
+          "metric": [
+            1.8275452773127902e-14,
+            1.3373871835813437e-14
+          ],
+          "native_active_current_row": 1510043
+        },
+        {
+          "final_active_current_row": 115714,
+          "metric": [
+            2.188062415347819e-14,
+            -4.36733619224624e-15
+          ],
+          "native_active_current_row": 115715
+        },
+        {
+          "final_active_current_row": 1050297,
+          "metric": [
+            1.6352834525350823e-14,
+            1.4559121976474818e-14
+          ],
+          "native_active_current_row": 1050307
+        },
+        {
+          "final_active_current_row": 1065014,
+          "metric": [
+            1.3336973161875442e-14,
+            3.820824803206226e-15
+          ],
+          "native_active_current_row": 1065024
+        },
+        {
+          "final_active_current_row": 754417,
+          "metric": [
+            6.792072689363524e-15,
+            9.855793897632207e-15
+          ],
+          "native_active_current_row": 754424
+        },
+        {
+          "final_active_current_row": 717207,
+          "metric": [
+            6.792483857697217e-15,
+            9.613591172350674e-15
+          ],
+          "native_active_current_row": 717214
+        },
+        {
+          "final_active_current_row": 1691913,
+          "metric": [
+            6.035525608269289e-15,
+            -4.851517087224415e-15
+          ],
+          "native_active_current_row": 1691933
+        },
+        {
+          "final_active_current_row": 563754,
+          "metric": [
+            6.081556369504456e-15,
+            -3.8578988147684244e-15
+          ],
+          "native_active_current_row": 563761
+        },
+        {
+          "final_active_current_row": 509669,
+          "metric": [
+            5.8757783029476006e-15,
+            -3.079592205232e-15
+          ],
+          "native_active_current_row": 509674
+        }
+      ]
+    },
+    "totals": {
+      "hermitian_abs_i_squared_l_h": 6.633376248489018e-12,
+      "ordinary_i_squared_l_h": [
+        5.753832011712286e-12,
+        -2.0936807249534643e-12
+      ]
+    }
+  },
+  "version": "0.23.1"
+}

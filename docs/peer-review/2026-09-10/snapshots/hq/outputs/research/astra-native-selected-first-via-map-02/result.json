@@ -1,0 +1,104 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "VERIFIED_NATIVE_INTERFACE_MAP_AND_SAVED_FIELD_DIAGNOSTIC",
+  "input_sha256": {
+    "astra-native-loaded-vtrip-field-02/raw-field-snapshot.npz": "6eac098738598a78b2068ce4f80e46fd70e17010a89bfb5949ec8a68124df4a7",
+    "astra-device-first-via-sources-01/selected-device-first-via-sources.json": "35df74b796157bef2fdc4b2894e16838f872e7a9006dc34e3a9b841eacdf6303"
+  },
+  "driver_sha256": "32365a33aeb5984a20b7ce42445f510c7413b7a4f5c61e6dd81d61f7cb33fba0",
+  "frequency_hz": 1000000.0,
+  "saved_baseline_zdd_ohm": [
+    0.00010031137009881143,
+    -0.0006057593380320585
+  ],
+  "roles": {
+    "power": {
+      "pin_count": 978,
+      "unique_native_top_rows": 1,
+      "unique_native_lower_rows": 978,
+      "top_outward_current_sum_a": [
+        1.0000000000037712,
+        2.2528163780429236e-12
+      ],
+      "rms_pin_current_a": 0.0010224948875294185,
+      "first_via_joule_w": 7.168647064061416e-07,
+      "log_series_z_scale_derivative_ohm": [
+        7.168647064053334e-07,
+        1.7931744963392761e-07
+      ]
+    },
+    "ground": {
+      "pin_count": 978,
+      "unique_native_top_rows": 1,
+      "unique_native_lower_rows": 1,
+      "top_outward_current_sum_a": [
+        -0.037911224917243025,
+        2.2978106980456147e-08
+      ],
+      "rms_pin_current_a": 3.876403365771982e-05,
+      "first_via_joule_w": 1.0303216666684135e-09,
+      "log_series_z_scale_derivative_ohm": [
+        1.0303219790846243e-09,
+        2.577247234774235e-10
+      ]
+    }
+  },
+  "actual_native_port_incident_finite_edges": {
+    "power": {
+      "all": {
+        "edge_count": 978,
+        "outward_current_sum_a": [
+          1.0000000000037712,
+          2.2528163780429232e-12
+        ],
+        "joule_w": 7.168647064061416e-07
+      },
+      "outside_selected": {
+        "edge_count": 0,
+        "outward_current_sum_a": [
+          0.0,
+          0.0
+        ],
+        "joule_w": 0.0
+      }
+    },
+    "ground": {
+      "all": {
+        "edge_count": 25812,
+        "outward_current_sum_a": [
+          -1.0000000001725886,
+          7.015984894364615e-10
+        ],
+        "joule_w": 2.7177133029176234e-08
+      },
+      "outside_selected": {
+        "edge_count": 24834,
+        "outward_current_sum_a": [
+          -0.9620887752553458,
+          -2.22765084910197e-08
+        ],
+        "joule_w": 2.6146811362507816e-08
+      }
+    }
+  },
+  "selected_first_via_joule_w": 7.178950280728099e-07,
+  "selected_first_via_joule_fraction_of_port_real_power": 0.007156666560985554,
+  "log_selected_series_z_scale_derivative_ohm": [
+    7.178950283844181e-07,
+    1.79575174357405e-07
+  ],
+  "derivative_magnitude_over_saved_port_z": 0.0012052171241756266,
+  "elapsed_s": 2.8119999999762513,
+  "budget": {
+    "elapsed_s": 2.8119999999762513,
+    "peak_rss_bytes": 384901120,
+    "max_runtime_s": 45,
+    "max_rss_bytes": 2147483648
+  },
+  "artifacts": {
+    "pin-edge-map.json": "72bb2b2e6389bd5407c7bea67b53cb306ade91f3c1a65d6e71c5a97bdfc379b4",
+    "selected-native-first-vias.npz": "aa8349094aae8a27c5f2f05cda41e69bb40171ff76911f3507b499673efe8500"
+  },
+  "scope": "No board solve, new operator stamp or accuracy claim. Exact 1956 pin/first-via edge/source-node/native-row join with separate columns. Native first-via scalar series stamps are identified for removal, but their removal alone is not a complete replacement: new pad/plane, P-G mutual, charge and external-continuation operators are required. Native G lower rows are ideal-potential quotient rows, not distinct physical contacts. All native external G paths remain recorded; their old current split does not predict the split in a new physical model. Joule is saved-circuit dissipation only; sum(I^2 Z) is the infinitesimal reciprocal-circuit derivative for scaling these existing series impedances, not a finite-change bound or the derivative of missing geometry/coupling. Original first-via cache alone does not prove physical pin-pad location; subsequent pad evidence is separate."
+}

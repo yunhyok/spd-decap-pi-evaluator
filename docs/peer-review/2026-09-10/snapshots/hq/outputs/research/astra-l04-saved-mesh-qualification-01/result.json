@@ -1,0 +1,113 @@
+{
+  "budget": {
+    "elapsed_s": 1.5939999999827705,
+    "max_rss_bytes": 4294967296,
+    "max_runtime_s": 60,
+    "peak_rss_bytes": 217825280
+  },
+  "contact_count": 38278,
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-saved-mesh-qualification-01\\driver-at-run.py",
+    "sha256": "510e5673b538eb3988029f73c9651c7cb2bf9f023099891348aadbd513944cda",
+    "size_bytes": 8852
+  },
+  "geometry_approximation": {
+    "domain": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-conditional-sheet-mesh-02\\l04-coalesced-conductor-domain.wkb",
+      "sha256": "8dbfbb75d87efa7c9504b1ab521a78687ef97b45d1eb0e6a8d5ff6007658c674",
+      "size_bytes": 14024197
+    },
+    "max_vertex_displacement_um": 1.473493695890548e-10,
+    "method": "EXACT_TWO_SOURCE_VERTEX_COALESCENCE_L04_RING563",
+    "source_domain": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-pad-conductor-domain-01\\l04-pad-augmented-conductor-domain.wkb",
+      "sha256": "0eeaffc34a6b9759fd285f28d35ebd59042e6bcd909a697fad3f18a5d2eafa68",
+      "size_bytes": 14024197
+    },
+    "unchanged_source_geometry": false,
+    "witness_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-cdt-local-coalescence-witness-02\\result.json",
+      "sha256": "3e097e7086f6bd10e009afbcdb6b98ca8029f6555273f4e7b1f92c3059a216ce",
+      "size_bytes": 6819
+    }
+  },
+  "inputs": {
+    "outputs\\research\\astra-l04-cdt-local-coalescence-witness-02\\result.json": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-cdt-local-coalescence-witness-02\\result.json",
+      "sha256": "3e097e7086f6bd10e009afbcdb6b98ca8029f6555273f4e7b1f92c3059a216ce",
+      "size_bytes": 6819
+    },
+    "outputs\\research\\astra-l04-conditional-sheet-mesh-02\\driver-at-run.py": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-conditional-sheet-mesh-02\\driver-at-run.py",
+      "sha256": "816312674f846bf0b08d85222f962b58996c4b5b75b17276768d22a932da723a",
+      "size_bytes": 24194
+    },
+    "outputs\\research\\astra-l04-conditional-sheet-mesh-02\\external-budget.json": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-conditional-sheet-mesh-02\\external-budget.json",
+      "sha256": "c741aab57d59172d3b7a31aea28ec56900e6c91a3a8f2ad9fab5c737b6d1d5ad",
+      "size_bytes": 1026
+    },
+    "outputs\\research\\astra-l04-conditional-sheet-mesh-02\\failure.json": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-conditional-sheet-mesh-02\\failure.json",
+      "sha256": "6884c1f847db741d9c61d2f2d7dc4a14540c11976db062c217f4f40d74a425d7",
+      "size_bytes": 599
+    },
+    "outputs\\research\\astra-l04-conditional-sheet-mesh-02\\l04-coalesced-conductor-domain.wkb": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-conditional-sheet-mesh-02\\l04-coalesced-conductor-domain.wkb",
+      "sha256": "8dbfbb75d87efa7c9504b1ab521a78687ef97b45d1eb0e6a8d5ff6007658c674",
+      "size_bytes": 14024197
+    },
+    "outputs\\research\\astra-l04-conditional-sheet-mesh-02\\l04-conditional-sheet-mesh-before-stiffness.json": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-conditional-sheet-mesh-02\\l04-conditional-sheet-mesh-before-stiffness.json",
+      "sha256": "1dda2cb3a109081b5a5206d54dbcea81b3f979ceaf53d6bd4e48f6d3f90d7bac",
+      "size_bytes": 1998
+    },
+    "outputs\\research\\astra-l04-conditional-sheet-mesh-02\\l04-conditional-sheet-mesh-before-stiffness.npz": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-conditional-sheet-mesh-02\\l04-conditional-sheet-mesh-before-stiffness.npz",
+      "sha256": "6f2f396fe2319d60ad4b1586fd7043960e42f1d85c29f28a1d9c082302a3a211",
+      "size_bytes": 19845932
+    },
+    "outputs\\research\\astra-l04-pad-conductor-domain-01\\l04-pad-augmented-conductor-domain.wkb": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-pad-conductor-domain-01\\l04-pad-augmented-conductor-domain.wkb",
+      "sha256": "0eeaffc34a6b9759fd285f28d35ebd59042e6bcd909a697fad3f18a5d2eafa68",
+      "size_bytes": 14024197
+    },
+    "outputs\\research\\astra-l04-pad-conductor-domain-01\\result.json": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-pad-conductor-domain-01\\result.json",
+      "sha256": "bde2eb7c636276da737d0e6c91b0309603d9570899ccf5bbbfc2acffe7a74f96",
+      "size_bytes": 428850
+    },
+    "tools\\research\\project_astra_l14_gc_mass.py": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\project_astra_l14_gc_mass.py",
+      "sha256": "f2c668fd090db5c4606eec27558c9bdbbdde6552d2f82c3b64b8837bd7350dc3",
+      "size_bytes": 61282
+    },
+    "tools\\research\\reconstruct_astra_native_loaded_field.py": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\reconstruct_astra_native_loaded_field.py",
+      "sha256": "354d9e004b189cf8193c2922c8fa4dc1903b407bebb295a4576673200ce6b213",
+      "size_bytes": 33457
+    }
+  },
+  "mesh_nodes": 1448429,
+  "mesh_triangles": 2125719,
+  "metrics": {
+    "area_sum_error_um2": 0.00452423095703125,
+    "domain_area_um2": 9370509254.916111,
+    "minimum_area_um2": 0.006032676888298349,
+    "triangle_area_sum_um2": 9370509254.911587
+  },
+  "program": "SPD Decap PI Evaluator",
+  "scope": "Saved native geometry/contact checkpoint qualified for RT0. Parent failure and guard are preserved. No CDT, coverage union, P1 stiffness or operator identity is recomputed or claimed. No current, coupled response, frequency convergence or accuracy claim.",
+  "snapshot": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-conditional-sheet-mesh-02\\l04-conditional-sheet-mesh-before-stiffness.npz",
+    "sha256": "6f2f396fe2319d60ad4b1586fd7043960e42f1d85c29f28a1d9c082302a3a211",
+    "size_bytes": 19845932
+  },
+  "source_result": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-pad-conductor-domain-01\\result.json",
+    "sha256": "bde2eb7c636276da737d0e6c91b0309603d9570899ccf5bbbfc2acffe7a74f96",
+    "size_bytes": 428850
+  },
+  "status": "COMPLETED_CONDITIONAL_L04_RT0_MESH_QUALIFICATION",
+  "version": "0.23.1"
+}

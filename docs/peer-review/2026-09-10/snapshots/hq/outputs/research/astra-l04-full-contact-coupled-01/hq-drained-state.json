@@ -1,0 +1,125 @@
+{
+  "status": "DRAINED_HQ_STOPPED_UNCONVERGED_L04_CONTACT_MODEL",
+  "owned_pid": 43892,
+  "guard": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-full-contact-coupled-01\\external-budget.json",
+    "sha256": "d8bf0b874fb8e003a6b3f79e82c5226542ebf09a42338b8f80fd9b92c365a0a2",
+    "size_bytes": 1144
+  },
+  "decision": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-full-contact-coupled-01\\hq-stop-decision.json",
+    "sha256": "650bc7d17d463690958dd2c9b219392d4e2b1a6a9fe0d1c68c177f93792a95a5",
+    "size_bytes": 3202
+  },
+  "field": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-full-contact-coupled-01\\stopped-restart6-unvalidated-field.npz",
+    "sha256": "e0950b0cddf277b6b336beb96e1a9d4b8925d377d7613a5f7bf0edbe08a3e792",
+    "size_bytes": 44788326
+  },
+  "last_completed_restart": {
+    "calls": {
+      "operator": 90,
+      "preconditioner": 89
+    },
+    "cycle": 6,
+    "elapsed_s": 443.5278810999589,
+    "event": "gmres_restart",
+    "scaled_residual_relative": 219.88929969936788,
+    "scaled_residual_squared_norms": {
+      "l02": 4.1641556103399885e-09,
+      "l04_contact": 0.018541409637716826,
+      "l14": 3.9996638894287005e-18,
+      "l25": 1.474984542061042e-23,
+      "l25_current": 1.662288383473616e-33,
+      "native": 1.0740013148593374e-07
+    },
+    "scope": "Top residuals belong to the eliminated MNA potential equations; full physical KCL is checked separately.",
+    "solve_seconds": 385.22135989996605,
+    "top_physical_potential_row_indices": [
+      71610,
+      2656,
+      751579,
+      581824,
+      324023,
+      653063,
+      577793,
+      285355,
+      160766,
+      196021,
+      567186,
+      131486,
+      462308,
+      696867,
+      687738,
+      557244
+    ],
+    "top_physical_potential_row_residuals_a": [
+      [
+        0.026724487645253703,
+        0.006937381743199467
+      ],
+      [
+        0.020706936281659986,
+        0.006177234458397882
+      ],
+      [
+        -0.01093773636661257,
+        -0.00016346942997919753
+      ],
+      [
+        -0.010923652841272575,
+        -0.00010396168987363614
+      ],
+      [
+        -0.010740735753419006,
+        -0.00014131845333514425
+      ],
+      [
+        -0.010727270730214117,
+        -8.638274651846192e-05
+      ],
+      [
+        -0.010697066684747958,
+        -0.0001476961479204425
+      ],
+      [
+        -0.010686584620832003,
+        -9.422037604158752e-05
+      ],
+      [
+        -0.01059356715152855,
+        -0.0001623498849352336
+      ],
+      [
+        -0.010581220051124217,
+        -0.00011215768398939365
+      ],
+      [
+        -0.01056871178273396,
+        -0.0001480091415785919
+      ],
+      [
+        -0.01055664116558821,
+        -0.00013132970978708535
+      ],
+      [
+        -0.010555315807059438,
+        -9.821048684590349e-05
+      ],
+      [
+        -0.010541087174410812,
+        -8.21372393960797e-05
+      ],
+      [
+        -0.010484294686602225,
+        -0.0001378013544638644
+      ],
+      [
+        -0.010471541896851375,
+        -9.068275504082231e-05
+      ]
+    ]
+  },
+  "l04_contact_squared_residual_fraction": 0.9999939830024794,
+  "note": "HQ decided after restart5. The first stop identity check rejected a timezone-kind comparison before affecting the process; exact executable and UTC start-time check then stopped the owned worker. Restart6 completed before termination, so this stable field supersedes the decision-time temporary checkpoint. No physical validation, final numerical PASS, or accuracy claim."
+}

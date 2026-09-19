@@ -1,0 +1,27 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "COMPLETED_NATIVE_WORKER",
+  "owned_pid": 31636,
+  "exit_code": 0,
+  "elapsed_s": 1075.4689999999973,
+  "sampled_peak_private_bytes": 23798689792,
+  "sampled_peak_working_set_bytes": 21290446848,
+  "max_runtime_s": 1320.0,
+  "max_memory_bytes": 34359738368,
+  "driver_sha256": "466cd9ef7e10d1d39b3821040c79899690170e5bc17e7d217023565e4683a087",
+  "worker_command": [
+    "C:\\Users\\User\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+    "-B",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\compare_astra_l04_10mhz_forward_closed_gcrotmk.py",
+    "--native-worker",
+    "--output",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-forward-closed-gcrotmk-01"
+  ],
+  "memory_at_launch": {
+    "total_physical_bytes": 68374552576,
+    "available_physical_bytes": 51930226688,
+    "available_commit_bytes": 55029620736
+  },
+  "guard_failure": null
+}

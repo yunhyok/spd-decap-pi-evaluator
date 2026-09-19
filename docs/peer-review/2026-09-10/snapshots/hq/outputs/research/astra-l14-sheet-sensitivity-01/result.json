@@ -1,0 +1,46 @@
+{
+  "d_zdd_d_epsilon_at_zero_ohm": [
+    0.0016082886026030992,
+    -9.223125239723472e-06
+  ],
+  "driver_sha256": "d5ae985a139c690e3506d4625a5a2320acca32bae3e035a2c9e8f8c044bfd41c",
+  "field_sha256": "7a65b34e8f13173f8d1ab86e6ad8ea27fcb1adf01f638cec4ef172c6c85c7003",
+  "frequency_of_native_drive_hz": 1000000.0,
+  "input_sha256": {
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-gc-projection-03\\gc-nodal-injection.npz": "5d25cfd04533b2e92c5c82f0143801cf282b2b6f41f4e138295651ed1576bfa9",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-gc-projection-03\\receipt.json": "c819c905e174bde9ce718fbbc053fb232c36d60dddde73a8aab0ae1ae2d9b98e",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-sheet-mesh-preflight-05\\mesh-stiffness.npz": "a7a8234df9fb173a6fd88a5c613fc074321b984d5e7f0708842d66c8f0b9e779",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-sheet-mesh-preflight-05\\sheet-electrode-drive.npz": "05a1102082a76cb2f83184576e4d1c4af5985824e134e3199b2ac06fa32c050d",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\l14-island-external-current-ledger.json": "8cf11e747532b87f2955fbfb65ec65fab12fd18bafa1da08e9b3ca47ee83bc5b"
+  },
+  "joule_coefficient_ohm": [
+    0.0016092593124591328,
+    4.2012834183813297e-19
+  ],
+  "limitations": [
+    "All L14 sheet DC resistance is scaled by epsilon; this is the derivative at the original equipotential limit.",
+    "Not a finite-epsilon global shadow, converged mesh, qualified physical electrode, magnetic-return model or PowerSI accuracy improvement.",
+    "Original source G/C currents are spatially projected only on their original overlap owners; no new trace-area capacitance is introduced.",
+    "Complex bilinear Device sensitivity and Hermitian Joule coefficient are distinct."
+  ],
+  "native_kcl_balance_removed_a": [
+    -1.2560634662974195e-11,
+    4.103340310899562e-11
+  ],
+  "numerical": {
+    "alternate_gauge_max_kcl_residual_a": 2.2640872995055847e-11,
+    "gauge_slope_relative_difference": 1.3965318200507213e-12,
+    "max_kcl_residual_a": 1.7529553830415768e-11,
+    "triangle_bilinear_relative_difference": 2.0768876601632913e-11,
+    "triangle_joule_relative_difference": 2.076751389308528e-11
+  },
+  "program": "SPD Decap PI Evaluator v0.23.1",
+  "refinement_level": 0,
+  "resource": {
+    "elapsed_s": 1.6089999999967404,
+    "max_memory_bytes": 8589934592,
+    "max_recorded_private_bytes": 196026368,
+    "max_runtime_s": 120
+  },
+  "status": "COMPLETED_CONDITIONAL_FIXED_MESH_SHEET_IDEAL_LIMIT_SENSITIVITY"
+}

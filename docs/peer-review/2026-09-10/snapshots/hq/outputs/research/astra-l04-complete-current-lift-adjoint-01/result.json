@@ -1,0 +1,127 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "MEASURED_L04_COMPLETE_CURRENT_LIFT_TRANSPOSE",
+  "driver_sha256": "85ac6bdcb2dca9c2ecfccb2709b548fef9f61de49af2feb1e8323aeb80e4722a",
+  "inputs": {
+    "ntd": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l04_contact_ntd_action.py",
+      "sha256": "e9108a481308335d3f442a53652468ec9b8507204537c6d96d6f730de2bfbde8"
+    },
+    "guard": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_fmm3d_runtime.py",
+      "sha256": "2961d1606ec2d4583c37d990d238a6abc87a54d8e0b93f9d83397f3851536a25"
+    },
+    "recovery": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-l25-magnetic-checkpoint-recovery-01\\result.json",
+      "sha256": "8824a89b08d18970f65799241b9b5b8a2309395886c546f9e1f8c7e01719c394"
+    },
+    "recovery_guard": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-l25-magnetic-checkpoint-recovery-01\\external-budget.json",
+      "sha256": "2cad57b4504627775bed45a0aca07ec91d1f30056c808907629a1896e2902fa5"
+    },
+    "recovery_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-l25-magnetic-checkpoint-recovery-01\\driver-at-run.py",
+      "sha256": "783d526bb18610c46385c56504fae6a6098a490bb76feac6fa3ec0859edb6ef4"
+    },
+    "field": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-l25-magnetic-checkpoint-recovery-01\\recovered-unvalidated-full-contact-l04-10mhz-field.npz",
+      "sha256": "f5def3cb8846f94e2bfc18a6992690eef1e9c54bc1402b86421a3271ffca2ba8"
+    },
+    "qualified_stream_chain": {
+      "stream_reader": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\solve_astra_l04_fixed_contact_stream.py",
+        "sha256": "65c48fe18db408a9c38ee28a86b50f57c470e3286b7dab975ca0a77f1c6b8c27",
+        "size_bytes": 24864
+      },
+      "stream_result": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\result.json",
+        "sha256": "3e5417fa1a2db0308208449896c2aa1650beff5051d2ee03b60a8b4a11fe2bf1",
+        "size_bytes": 8797
+      },
+      "stream_guard": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\external-budget.json",
+        "sha256": "016bd3039ada75e8475a23ab328b2b0f135f641235bf5c9088e62636c0d04efc",
+        "size_bytes": 1634
+      },
+      "stream_driver": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\driver-at-run.py",
+        "sha256": "65c48fe18db408a9c38ee28a86b50f57c470e3286b7dab975ca0a77f1c6b8c27",
+        "size_bytes": 24864
+      },
+      "stream_field": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\l04-fixed-contact-current.npz",
+        "sha256": "dec07e1681c8400c43b6c79ab7a25ef37f7c19443441ad369016f6daefbfe9fd",
+        "size_bytes": 63886278
+      },
+      "stream_space": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\l04-fixed-contact-rt0-space.npz",
+        "sha256": "5d31b3c6183eb4f43723eb80d1a545953a42fb2c9320be425d3ebc034cb51bb6",
+        "size_bytes": 79222436
+      },
+      "stream_system": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\l04-fixed-contact-stream-system.npz",
+        "sha256": "b299d67995b58b7fa698b080380cda495032472d0f426ed2dd9e4b78542fb34a",
+        "size_bytes": 21072655
+      },
+      "dual_driver": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-saved-contact-potentials-01\\driver-at-run.py",
+        "sha256": "e3b0ff15c28b2ecd9f132e311a843225cd9ac6834915c63cc61ef84df57c2c39",
+        "size_bytes": 9649
+      },
+      "dual_result": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-saved-contact-potentials-01\\result.json",
+        "sha256": "97e36e08295f2d8eeeb15c508598842d552ee6f7c2601fdac51d8ba5aa6eb6b4",
+        "size_bytes": 5937
+      },
+      "dual_guard": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-saved-contact-potentials-01\\external-budget.json",
+        "sha256": "60676fd4b5f5d937f0668d21dae39d9e78f6f9d22338ce02dae9dc039a1ecb41",
+        "size_bytes": 1016
+      },
+      "dual_artifact": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-saved-contact-potentials-01\\l04-saved-contact-dual-potentials.npz",
+        "sha256": "d638dcf046a22709111bceea53f720477430c78d46ed2f79d8dc1b60b52f0fd2",
+        "size_bytes": 1223786
+      },
+      "external_guard": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_fmm3d_runtime.py",
+        "sha256": "2961d1606ec2d4583c37d990d238a6abc87a54d8e0b93f9d83397f3851536a25",
+        "size_bytes": 16465
+      }
+    }
+  },
+  "metrics": {
+    "transpose_norm_scaled": 1.6149360282226825e-16,
+    "hermitian_norm_scaled": 6.025554996949982e-17,
+    "projected_force_gradient_relative": 1.9101816211837356e-12,
+    "projected_closed_relative": 8.560008328051474e-15,
+    "pt_r_p_ntd_relative": 2.2902107205289404e-12,
+    "closed_addition_divergence_max_a": 4.84869951806108e-19,
+    "r_energy_orthogonality_relative": 1.2469020826825763e-16,
+    "closed_current_recovery_relative": 1.1335715062543329e-14
+  },
+  "gates": {
+    "transpose": true,
+    "hermitian": true,
+    "projected_gradient": true,
+    "projected_closed": true,
+    "ntd_identity": true,
+    "closed_divergence": true,
+    "r_orthogonality": true,
+    "closed_recovery": true
+  },
+  "counts": {
+    "branches": 2272974,
+    "independent_contacts": 38277,
+    "retained_closed_currents": 644870
+  },
+  "factor_seconds": 1.1629457999952137,
+  "budget": {
+    "elapsed_s": 7.23499999998603,
+    "peak_rss_bytes": 3281895424,
+    "max_runtime_s": 90.0,
+    "max_rss_bytes": 8589934592
+  },
+  "scope": "New source lift transpose and complete Pg+Cpsi representation only. No Green/FMM, board solve, geometry/charge extension or accuracy acceptance. Saved Pg is the pinned diagnostic NtD recovery; closed coordinates are retained, not eliminated under magnetism. Internal8GiB; reused external guard24GiB."
+}

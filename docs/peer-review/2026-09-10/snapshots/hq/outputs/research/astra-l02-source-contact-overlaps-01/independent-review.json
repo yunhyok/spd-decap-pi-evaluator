@@ -1,0 +1,209 @@
+{
+  "checks": {
+    "excluded_direct_samples": [
+      {
+        "drill": {
+          "direct": [],
+          "match_count": 0,
+          "saved": []
+        },
+        "pad": {
+          "direct": [],
+          "match_count": 0,
+          "saved": []
+        },
+        "row": 0,
+        "via_id": "Via1309387"
+      },
+      {
+        "drill": {
+          "direct": [],
+          "match_count": 0,
+          "saved": []
+        },
+        "pad": {
+          "direct": [],
+          "match_count": 0,
+          "saved": []
+        },
+        "row": 41,
+        "via_id": "Via1798657"
+      },
+      {
+        "drill": {
+          "direct": [
+            [
+              43,
+              1256.510900373094
+            ]
+          ],
+          "match_count": 1,
+          "saved": [
+            [
+              43,
+              1256.510900373094
+            ]
+          ]
+        },
+        "pad": {
+          "direct": [
+            [
+              43,
+              2827.1495258394943
+            ]
+          ],
+          "match_count": 1,
+          "saved": [
+            [
+              43,
+              2827.149525839491
+            ]
+          ]
+        },
+        "row": 2,
+        "via_id": "Via1312784"
+      },
+      {
+        "drill": {
+          "direct": [
+            [
+              43,
+              1256.5109003731077
+            ]
+          ],
+          "match_count": 1,
+          "saved": [
+            [
+              43,
+              1256.5109003731081
+            ]
+          ]
+        },
+        "pad": {
+          "direct": [
+            [
+              43,
+              2827.149525839472
+            ]
+          ],
+          "match_count": 1,
+          "saved": [
+            [
+              43,
+              2827.1495258394707
+            ]
+          ]
+        },
+        "row": 23,
+        "via_id": "Via1612214"
+      }
+    ],
+    "excluded_single_rows": 2,
+    "excluded_zero_rows": 40,
+    "identity_arrays_exact": true,
+    "native_direct_samples": [
+      {
+        "drill": {
+          "direct_area_um2": 2827.1495258395053,
+          "island_index": 43,
+          "saved_area_um2": 2827.149525839509
+        },
+        "pad": {
+          "direct_area_um2": 7853.193127332005,
+          "island_index": 43,
+          "saved_area_um2": 7853.193127332011
+        },
+        "padstack_index": 0,
+        "row": 2
+      },
+      {
+        "drill": {
+          "direct_area_um2": 1256.5109003731081,
+          "island_index": 43,
+          "saved_area_um2": 1256.5109003731086
+        },
+        "pad": {
+          "direct_area_um2": 2827.149525839491,
+          "island_index": 43,
+          "saved_area_um2": 2827.149525839491
+        },
+        "padstack_index": 1,
+        "row": 0
+      },
+      {
+        "drill": {
+          "direct_area_um2": 2827.149525839484,
+          "island_index": 43,
+          "saved_area_um2": 2827.149525839487
+        },
+        "pad": {
+          "direct_area_um2": 7853.193127332,
+          "island_index": 43,
+          "saved_area_um2": 7853.193127332005
+        },
+        "padstack_index": 2,
+        "row": 3
+      },
+      {
+        "drill": {
+          "direct_area_um2": 1256.5109003731077,
+          "island_index": 43,
+          "saved_area_um2": 1256.5109003731081
+        },
+        "pad": {
+          "direct_area_um2": 2827.149525839472,
+          "island_index": 43,
+          "saved_area_um2": 2827.1495258394707
+        },
+        "padstack_index": 3,
+        "row": 6
+      }
+    ],
+    "native_pad_and_drill_single_island_rows": 76139,
+    "noncoincident_positive_pad_pairs": 0,
+    "noncoincident_tangent_pad_pairs": 8503,
+    "prospective_contact_dof_count": 38836,
+    "tangent_examples": [
+      [
+        276,
+        11777
+      ],
+      [
+        2813,
+        33862
+      ],
+      [
+        13281,
+        38832
+      ],
+      [
+        9525,
+        29435
+      ]
+    ],
+    "unique_pad_supports": 38836
+  },
+  "findings": [],
+  "program": "SPD Decap PI Evaluator",
+  "reviewed": {
+    "artifact": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-source-contact-overlaps-01\\l02-source-contact-overlaps.npz",
+      "sha256": "dcdc4b8022cfce7e2decb206a812fc62f75b968a5c3e0d0cb2b27f4395707501"
+    },
+    "frozen_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-source-contact-overlaps-01\\driver-at-run.py",
+      "sha256": "29051b25bbbc49303c653f2dbe62b809c47a24ac8787f7ca32eb8f97a87e8859"
+    },
+    "input_artifact": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-source-contact-inputs-01\\contact-ledger-inputs.npz",
+      "sha256": "c5c0dab9ac22d750aeecf3a4290c2b9ef9285bcf7ed33a5d8a7a2775c8430984"
+    },
+    "result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-source-contact-overlaps-01\\result.json",
+      "sha256": "5431d8f042b3c4ac3d53c28441f0301fad6a7a350a87add98aa6f9466e6b272f"
+    }
+  },
+  "scope": "Independent hash/schema/CSR/identity replay, four native padstack whole-polygon pad/drill cuts, two zero and two positive excluded cuts, and exact integer center-radius classification for all support candidates. This does not replay all 76,139 polygon cuts, merge contacts, add traces, build a mesh/operator, split currents, or prove analytic-circle behavior beyond the pinned 256-edge source convention.",
+  "status": "ACCEPT_L02_CACHED_CIRCLE_CONTACT_OVERLAPS_INDEPENDENT_REVIEW",
+  "version": "0.23.1"
+}

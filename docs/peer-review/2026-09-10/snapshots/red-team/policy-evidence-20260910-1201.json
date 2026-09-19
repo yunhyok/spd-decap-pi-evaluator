@@ -1,0 +1,103 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "artifact": "12시 pi-6 runtime and operating-policy evidence",
+  "interval_kst": {
+    "start": "2026-09-10T06:00:26.402+09:00",
+    "end": "2026-09-10T12:01:20.526+09:00"
+  },
+  "sources": {
+    "hq": "C:/Users/User/.codex/sessions/2026/09/06/rollout-2026-09-06T15-09-09-01a07555-bfad-7463-b6fe-2a3d14b2cb56.jsonl",
+    "sol": "C:/Users/User/.codex/sessions/2026/09/09/rollout-2026-09-09T23-56-04-01a086ab-3d08-7172-aea0-2f35b4aea753.jsonl",
+    "mobile_coordinator": "C:/Users/User/.codex/sessions/2026/09/06/rollout-2026-09-06T20-59-27-01a07696-742c-7020-bf48-8b9ae43ce684.jsonl"
+  },
+  "pause_and_resume": {
+    "pause_acknowledged": {
+      "hq_line": 66304,
+      "ordinal": 66303,
+      "timestamp_kst": "2026-09-10T08:13:39.973+09:00"
+    },
+    "pause_checkpoint_completed": {
+      "hq_lines": [66362, 66365],
+      "timestamp_kst": "2026-09-10T08:17:14.927+09:00",
+      "scope": "research calculations, child work, and reporting/red-team schedules paused until explicit user resume"
+    },
+    "policy_wording_correction": {
+      "turn_id": "01a08876-2368-7d90-8938-a9b9d3ce1fef",
+      "hq_message_line": 66372,
+      "hq_patch_line": 66373,
+      "timestamp_kst": "2026-09-10T08:17:31.308+09:00",
+      "change": "Luna/high or Terra/high wording replaced with medium for bounded implementation, high for complex implementation, xhigh for difficult physics review",
+      "runtime_model_change": false,
+      "turn_model": "gpt-6-astra",
+      "turn_effort": "high",
+      "turn_context_line": 66368,
+      "task_complete_present": false
+    },
+    "resume_input_path": [
+      {
+        "source_user_line": 5655,
+        "source_user_ordinal": 5654,
+        "source_user_timestamp_kst": "2026-09-10T08:51:13.172+09:00",
+        "source_user_text": "작업 재개할 것.",
+        "source_send_message_to_thread_line": 5676,
+        "source_send_timestamp_kst": "2026-09-10T08:52:39.499+09:00",
+        "hq_delegation_output_line": 66387,
+        "hq_delegation_timestamp_kst": "2026-09-10T08:52:42.723+09:00",
+        "assistant_resume_line": 66392,
+        "timestamp_kst": "2026-09-10T08:52:54.222+09:00",
+        "preceding_user_line": 66382,
+        "preceding_user_record": "AGENTS.md instructions only; the actual resume authorization arrived through the codex_app send_message_to_thread function-call output",
+        "authorization": "explicit user resume confirmed"
+      },
+      {
+        "source_send_message_to_thread_line": 5870,
+        "source_send_timestamp_kst": "2026-09-10T11:02:52.278+09:00",
+        "hq_delegation_output_line": 68132,
+        "hq_delegation_timestamp_kst": "2026-09-10T11:02:53.741+09:00",
+        "assistant_resume_line": 68135,
+        "timestamp_kst": "2026-09-10T11:03:00.062+09:00",
+        "preceding_task_started_line": 68130,
+        "preceding_turn_context_line": 68131,
+        "delegation_basis": "mobile coordinator stated that the user had already approved post-reboot continuation; no new direct user message was required"
+      }
+    ],
+    "source_mobile_user_control_records_after_pause_through_cutoff": {
+      "resume_count": 1,
+      "resume_lines": [5655],
+      "later_stop_or_pause_count": 0
+    },
+    "conclusion": "Explicit user resume was confirmed in the mobile coordinator log and delivered to HQ through send_message_to_thread. Research resumed within that authorization, and no later stop or pause request was found before the cutoff."
+  },
+  "role_policy_samples": {
+    "hq": {
+      "requested": "gpt-6-astra/high",
+      "actual": "gpt-6-astra/high",
+      "turn_context_count": 8,
+      "lines": [65087, 65124, 65904, 66368, 66385, 66854, 68099, 68131]
+    },
+    "sol": {
+      "requested": "gpt-5.6-sol/high",
+      "actual": "gpt-5.6-sol/high",
+      "turn_context_count": 15,
+      "first_line": 4652,
+      "last_line": 8555
+    },
+    "children": [
+      {"task": "terra_source_joint_field_review", "request_line": 4659, "requested": "gpt-5.6-terra/xhigh", "actual": "gpt-5.6-terra/xhigh", "actual_log": "rollout-2026-09-10T06-01-52-01a087fa-23c3-7732-80f4-39e0a62ef4c6.jsonl", "actual_line": 8},
+      {"task": "terra_l25_magnetic_10mhz_driver", "request_line": 5006, "requested": "gpt-5.6-terra/high", "actual": "gpt-5.6-terra/high", "actual_log": "rollout-2026-09-10T06-13-10-01a08804-797e-70a0-8567-1d195ad4fa50.jsonl", "actual_line": 8},
+      {"task": "terra_l04_current_space_algebra", "request_line": 6074, "requested": "gpt-5.6-terra/xhigh", "actual": "gpt-5.6-terra/xhigh", "actual_log": "rollout-2026-09-10T07-37-49-01a08851-f930-7a53-b06d-0a7c9a56ac25.jsonl", "actual_line": 8},
+      {"task": "terra_l25_l04_cross_force_impl", "request_line": 6384, "requested": "gpt-5.6-terra/high", "actual": "gpt-5.6-terra/high", "actual_log": "rollout-2026-09-10T07-56-23-01a08862-f9c1-7d51-8582-e575c8307b94.jsonl", "actual_line": 8},
+      {"task": "luna_l04_self_magnetic", "request_line": 6926, "requested": "gpt-5.6-luna/medium", "actual": "gpt-5.6-luna/medium", "actual_log": "rollout-2026-09-10T09-00-56-01a0889e-12b3-7f40-883b-a857e91f3d38.jsonl", "actual_line": 8},
+      {"task": "terra_joint_operator_review", "request_line": 7097, "requested": "gpt-5.6-terra/xhigh", "actual": "gpt-5.6-terra/xhigh", "actual_log": "rollout-2026-09-10T09-13-28-01a088a9-8b70-7481-be30-94b23468e10a.jsonl", "actual_line": 8},
+      {"task": "terra_closed_feedback_high", "request_line": 7799, "requested": "gpt-5.6-terra/high", "actual": "gpt-5.6-terra/high", "actual_log": "rollout-2026-09-10T09-54-52-01a088cf-719c-7ca1-b3de-036e7fc3d161.jsonl", "actual_line": 8}
+    ],
+    "request_actual_mismatches": 0,
+    "ultra_or_max_observed": false
+  },
+  "interaction_counts": {
+    "definition": "Count records inside the interval. Calls count response_item/function_call by name. Subagent interactions count event_msg/item_completed where item.type is SubAgentActivity and item.kind is interacted. Turn completions count event_msg/task_complete.",
+    "hq": {"followup_task_calls": 10, "send_message_calls": 111, "wait_agent_calls": 41, "subagent_interacted_events": 121, "turn_contexts": 8, "task_completions": 3},
+    "sol": {"spawn_agent_calls": 7, "followup_task_calls": 29, "send_message_calls": 95, "wait_agent_calls": 83, "subagent_interacted_events": 124, "turn_contexts": 15, "task_completions": 9},
+    "sol_wait_agent_recount": "83 response_item/function_call records whose name is wait_agent; the earlier prose value 133 was a transcription error."
+  }
+}
