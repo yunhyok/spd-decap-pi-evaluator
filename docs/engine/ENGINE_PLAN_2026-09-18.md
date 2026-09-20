@@ -195,3 +195,6 @@ mdl.set_decaps({"C1234": None, "C1235": "GRM155R61A106M"}); res2 = mdl.solve(res
 - `.venv`에 pytest를 설치 중이다(`pip install -e .[dev]`). CLAUDE.md §실행의
   `pytest tests` 안내가 그대로 동작하게 하기 위함이며, W11-e·W11-f 실행은 여전히
   시스템 Python 3.12(pytest 9.0.3)로 했다.
+
+## W14 착수 (2026-09-20)
+- 소유자 승인("권장안대로 계속 추진"; 근거: 앱 완성 후에도 워크스테이션 자원으로 엔진만 업그레이드할 수 있어야 함). 계획 `W14_PLAN_2026-09-20.md`(사전 등록): a) `Rail.mesh → MeshedRail → solve` API 경계 분리(파일 이동 없음, numerics_id 불변), b) 격자 민감도 h ∈ {400, 200, 100}·서브타일 10 µm 고정·영수증 9케이스·사다리 27점·판정 규칙 R1/R2/R3 동결, c) 수렴 관리자(`convergence_check`)로 제품 게이트 균일 적용. a와 b 병렬 진행 중, c는 b 판정 후.
