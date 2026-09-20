@@ -143,6 +143,9 @@ LAYERWISE_DIAGNOSTIC_REPORT_SCHEMA_VERSION = (
     "layerwise-single-frequency-diagnostic-v1"
 )
 TERMINAL_COMPLETE_BATCH_REUSE_VERSION = "terminal-complete-batch-reuse-v1"
+BOUNDED_SCORING_RAIL = "ADC_VDD_180_VQPS_SYS_1_AON/0"
+BOUNDED_SCORING_FROZEN_LOW_OFFSET_DB = 1.5547211732
+BOUNDED_SCORING_EVENTUAL_GATE_DB = 1.0
 
 
 class _TerminalCompleteReuseError(ValueError):
@@ -988,6 +991,119 @@ def _correlation_metrics_on_grid(
             "complex_rms_uohm": (float(np.sqrt(np.mean(sub_errors**2))) if sub_errors.size else None),
             "complex_p95_uohm": (_percentile(sub_errors, 95.0) if sub_errors.size else None),
             "complex_max_uohm": (float(np.max(sub_errors)) if sub_errors.size else None),
+        },
+    }
+
+
+def _bounded_scoring_for_frozen_rail(
+    source: Mapping[str, Any],
+    touchstone: Mapping[str, Any],
+    candidate_runs: Mapping[str, Any],
+    *,
+    frozen_rail: str = BOUNDED_SCORING_RAIL,
+) -> dict[str, Any]:
+    def finite_number(value: Any, label: str) -> float:
+        try:
+            value_f = float(value)
+        except (TypeError, ValueError):
+            raise ValueError(f"{label} is malformed or missing") from None
+        if not np.isfinite(value_f):
+            raise ValueError(f"{label} must be finite")
+        return value_f
+
+    source_sha256 = str(source.get("sha256", "")).casefold()
+    touchstone_sha256 = str(touchstone.get("sha256", "")).casefold()
+    if not _valid_sha256(source_sha256):
+        raise ValueError("bounded scoring source identity sha256 is malformed")
+    if not _valid_sha256(touchstone_sha256):
+        raise ValueError("bounded scoring touchstone identity sha256 is malformed")
+
+    if not candidate_runs:
+        raise ValueError("bounded scoring requires at least one candidate mode")
+    selected_run: tuple[int, str, Mapping[str, Any]] | None = None
+    sortable_modes: list[tuple[int, Any]] = []
+    for mode_key, run in candidate_runs.items():
+        try:
+            sortable_modes.append((int(mode_key), mode_key))
+        except (TypeError, ValueError):
+            raise ValueError(
+                "bounded scoring candidate runs are not keyed by numeric modal indices"
+            )
+    for _, mode_key in sorted(sortable_modes, reverse=True):
+        run = candidate_runs[mode_key]
+        if not isinstance(run, Mapping):
+            continue
+        rails = run.get("rails")
+        if not isinstance(rails, Mapping) or frozen_rail not in rails:
+            continue
+        outcome_candidate = rails[frozen_rail]
+        if not isinstance(outcome_candidate, Mapping):
+            continue
+        if outcome_candidate.get("status") != "completed":
+            continue
+        selected_run = (int(mode_key), str(mode_key), run)
+        break
+    if selected_run is None:
+        raise ValueError(
+            f"bounded scoring requires completed rail {frozen_rail!r} in at least one candidate mode"
+        )
+    selected_mode, selected_mode_str, run = selected_run
+    outcome = run["rails"][frozen_rail]
+    if not isinstance(outcome, Mapping):
+        raise ValueError(f"bounded scoring outcome for {frozen_rail!r} in run {selected_mode!r} is malformed")
+
+    metrics = outcome.get("metrics")
+    if not isinstance(metrics, Mapping):
+        raise ValueError(
+            f"bounded scoring missing metrics for {frozen_rail!r} in run {selected_mode!r}"
+        )
+    anchors = metrics.get("anchors")
+    if not isinstance(anchors, Mapping):
+        raise ValueError(
+            f"bounded scoring missing anchors for {frozen_rail!r} in run {selected_mode!r}"
+        )
+    anchor_100k = finite_number(
+        anchors.get("0.1MHz", {}).get("signed_magnitude_error_db"),
+        f"run {selected_mode} rail {frozen_rail} 0.1MHz signed_magnitude_error_db",
+    )
+    anchor_1m = finite_number(
+        anchors.get("1MHz", {}).get("signed_magnitude_error_db"),
+        f"run {selected_mode} rail {frozen_rail} 1MHz signed_magnitude_error_db",
+    )
+    magnitude = metrics.get("magnitude_db")
+    if not isinstance(magnitude, Mapping):
+        raise ValueError(
+            f"bounded scoring missing magnitude_db for {frozen_rail!r} in run {selected_mode!r}"
+        )
+    sigma_mag = finite_number(
+        magnitude.get("rms_db"), f"run {selected_mode} rail {frozen_rail} magnitude rms_db"
+    )
+    low_offset = abs((anchor_100k + anchor_1m) / 2.0)
+    baseline_candidate = BOUNDED_SCORING_FROZEN_LOW_OFFSET_DB - low_offset
+    first_metric_threshold = max(3.0 * abs(sigma_mag), 0.25)
+    first_metric_pass = bool(baseline_candidate >= first_metric_threshold)
+    eventual_gate_pass = bool(low_offset <= BOUNDED_SCORING_EVENTUAL_GATE_DB)
+    return {
+        "status": "passed" if first_metric_pass and eventual_gate_pass else "failed",
+        "rail": frozen_rail,
+        "mode": selected_mode_str,
+        "baseline_low_offset_db": float(BOUNDED_SCORING_FROZEN_LOW_OFFSET_DB),
+        "candidate_low_offset_db": float(low_offset),
+        "baseline_candidate_improvement_db": float(baseline_candidate),
+        "sigma_mag_db": float(sigma_mag),
+        "first_metric": {
+            "threshold_db": first_metric_threshold,
+            "required": True,
+            "passed": first_metric_pass,
+        },
+        "eventual_gate": {
+            "threshold_db": float(BOUNDED_SCORING_EVENTUAL_GATE_DB),
+            "passed": eventual_gate_pass,
+        },
+        "input_identity": {
+            "source_sha256": source_sha256,
+            "source_size_bytes": int(source.get("size_bytes", -1)),
+            "touchstone_sha256": touchstone_sha256,
         },
     }
 
@@ -3693,6 +3809,11 @@ def main(argv: list[str] | None = None) -> int:
         "failure_count": len(convergence_failures),
         "failures": list(convergence_failures),
     }
+    report["bounded_scoring"] = _bounded_scoring_for_frozen_rail(
+        source,
+        report["touchstone"],
+        report["runs"]["candidate"],
+    )
     report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print(candidate_path)
     print(report_path)

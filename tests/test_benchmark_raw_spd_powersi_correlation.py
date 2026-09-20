@@ -50,6 +50,42 @@ def test_metric_bands_keep_critical_score_and_cover_complete_evaluation_range():
     )
 
 
+def test_bounded_scoring_frozen_rail_tracks_improvement_and_eventual_gate():
+    source = {"sha256": "a" * 64, "size_bytes": 1234}
+    touchstone = {"sha256": "b" * 64}
+    candidate_runs = {
+        "12": {
+            "rails": {
+                module.BOUNDED_SCORING_RAIL: {
+                    "status": "completed",
+                    "metrics": {
+                        "anchors": {
+                            "0.1MHz": {"signed_magnitude_error_db": 0.1},
+                            "1MHz": {"signed_magnitude_error_db": 0.2},
+                        },
+                        "magnitude_db": {"rms_db": 0.05},
+                    },
+                }
+            }
+        }
+    }
+
+    result = module._bounded_scoring_for_frozen_rail(source, touchstone, candidate_runs)
+    assert result["status"] == "passed"
+    assert result["mode"] == "12"
+    assert result["candidate_low_offset_db"] == pytest.approx(0.15)
+    assert result["baseline_candidate_improvement_db"] == pytest.approx(
+        module.BOUNDED_SCORING_FROZEN_LOW_OFFSET_DB - 0.15
+    )
+    assert result["first_metric"]["threshold_db"] == pytest.approx(0.25)
+    assert result["first_metric"]["passed"] is True
+    assert result["eventual_gate"]["passed"] is True
+
+    incomplete = {"12": {"rails": {module.BOUNDED_SCORING_RAIL: {"status": "completed"}}}}
+    with pytest.raises(ValueError, match="missing metrics"):
+        module._bounded_scoring_for_frozen_rail(source, touchstone, incomplete)
+
+
 def test_log_interpolation_filters_dc_before_validating_positive_samples():
     grid = np.asarray([1e5, 1e6, 1e7, 1e8])
     frequencies = np.asarray([0.0, 0.0, 1e5, 1e6, 1e7, 1e8])
@@ -1009,11 +1045,16 @@ def _batch_board_fixture():
 
 
 def _batch_outcome(source, board_result, *, mode):
-    from spd_decap_pi._core.solver.evaluator import ConvergenceReport
+    from spd_decap_pi._core.solver.evaluator import (
+        CONVERGENCE_ALGORITHM_VERSION,
+        ConvergenceReport,
+    )
 
     port = source.substrate.port_by_rail_key[source.rail_id.casefold()]
     impedance = 1.0 / board_result.effective_admittance_by_port[port.port_id]
     convergence = ConvergenceReport(
+        start_mode_x=mode,
+        start_mode_y=mode,
         policy_version=module.CONVERGENCE_POLICY_VERSION,
         initial_frequency_points=2,
         final_frequency_points=2,
@@ -1040,6 +1081,10 @@ def _batch_outcome(source, board_result, *, mode):
         modal_max_delta_db=0.0,
         modal_peak_shift_percent=0.0,
         modal_converged=True,
+        ceiling_mode_x=mode,
+        ceiling_mode_y=mode,
+        modal_budget_exhausted=False,
+        algorithm_version=CONVERGENCE_ALGORITHM_VERSION,
         converged=True,
     )
     provenance = {
