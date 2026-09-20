@@ -39,6 +39,10 @@ VALIDITY_NOTES = [
     "G4 f_res bias +5-14 % on every case (design-independent, cause not established).",
     "Microvias are modelled as copper-filled cylinders of drill diameter (owner decision D9, "
     "2026-09-19); core PTH (150 um) as plated barrels. Via length = layer-centre to layer-centre.",
+    "Mesh sensitivity (W14-b): |Z| at 3-100 MHz moves up to 1.8 dB on package rails (1.4 dB on "
+    "PCB) when h goes 200 -> 100 um, and <= 0.15 dB below 1 MHz; h=400 stays within 0.13 dB of "
+    "h=200 except on one sparse-decap rail (1.0 dB). h=200 um is the frozen default, not a "
+    "converged grid.",
 ]
 
 

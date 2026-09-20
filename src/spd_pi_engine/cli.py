@@ -5,6 +5,7 @@
     solve  --spd PATH --port NAME --cache DIR --out receipt.json [options]
     verify --receipt A.json --against B.json [--tol 1e-8]
     sweep  --spd PATH --ports all|a,b,c --cache DIR --outdir DIR [--jobs auto|N] [options]
+    converge --spd PATH --port NAME --cache DIR [--pair coarse|fine] [--out J.json] [options]
 
 No numerics live here: `solve` is `Design.open -> .rail -> .build -> .solve -> .receipt()`
 (api.py, receipt.py) exactly as `docs/engine/W4_REPORT.md` §2 shows it, and `sweep` is
@@ -23,6 +24,10 @@ snapped to the nearest frequency of the reference grid, matching the reproductio
 `LADDER`, `ladder_freqs` and `unique_path` moved to `api.py` in W12-c (they are public API now,
 `from spd_pi_engine import ladder_freqs, unique_path`); this module still has and uses them, just
 by importing them from there.
+
+W14-c: `converge` runs `convergence.check_mesh_convergence` -- the same rail meshed and solved on
+its own grid and on the h*2 ("coarse") or h/2 ("fine") variant -- and prints the dB metric.  It
+takes `solve`'s options so the check runs on the grid a receipt would have used.
 """
 from __future__ import annotations
 
@@ -39,6 +44,7 @@ import numpy as np
 
 from .api import LADDER, Design, ladder_freqs, unique_path
 from .backend import Backend
+from .convergence import MAX_DB_TOL, PAIRS, RMS_DB_TOL, check_mesh_convergence
 from .hardware import DEFAULT_UNKNOWNS, HardwareProfile, plan_sweep
 from .model import FLAGS_LEGACY, FLAGS_P, FLAGS_PMK, FLAGS_Q, ModelOptions
 from .receipt import attach_reference
@@ -81,11 +87,15 @@ def _add_solve_options(sp):
                      help="force breakdown_100k in the receipt even if 1e5 Hz is not in freq")
 
 
-def _build_model(args):
-    d = Design.open(args.spd)
-    rail = d.rail(args.port, args.cache)
+def _rail_options_backend(args):
+    """`solve`'s argument plumbing: the extracted rail, its `ModelOptions` and the `Backend`."""
+    rail = Design.open(args.spd).rail(args.port, args.cache)
     opt = ModelOptions(reference=args.reference, flags=dict(VARIANTS[args.variant]), fringe=True)
-    backend = Backend(solver=args.solver, fast=args.fast)
+    return rail, opt, Backend(solver=args.solver, fast=args.fast)
+
+
+def _build_model(args):
+    rail, opt, backend = _rail_options_backend(args)
     return rail, rail.build(opt, backend)
 
 
@@ -130,6 +140,36 @@ def cmd_solve(args) -> int:
         summary += f" err_1MHz={err:.4f} ({err * 100:.2f}%)"
     print(summary)
     print(f"wrote {out_path}")
+    return 0
+
+
+def cmd_converge(args) -> int:
+    """W14-c: mesh the rail twice (own grid + `--pair` variant), solve both, print the dB metric."""
+    ref_freq = None
+    if args.ref_npz:
+        ref_freq, _ = read_npz_ref(args.ref_npz, args.port)
+    freqs = resolve_freqs(args, ref_freq)
+
+    rail, opt, backend = _rail_options_backend(args)
+    conv = check_mesh_convergence(rail, opt, freqs, pair=args.pair, backend=backend,
+                                  rms_db_tol=args.rms_tol, max_db_tol=args.max_tol)
+    c = conv.cost
+    print(f"pair={conv.pair} h_ref={conv.h_ref:g} h_var={conv.h_var:g} points={len(freqs)}")
+    print(f"unknowns ref={c['ref']['unknowns']} var={c['var']['unknowns']}  "
+          f"wall ref={c['ref']['wall_seconds']:.1f}s var={c['var']['wall_seconds']:.1f}s")
+    print(f"RMS={conv.rms_db:.3f} dB (tol {conv.rms_db_tol}) "
+          f"max={conv.max_db:.3f} dB (tol {conv.max_db_tol})")
+    print(f"f_res shift={conv.f_res_shift_pct:+.1f}%  converged={conv.converged}")
+
+    if args.out:
+        out_path = unique_path(args.out)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        doc = dict(convergence=conv.product_dict(), delta_db=[float(x) for x in conv.delta_db],
+                   f_res_shift_pct=conv.f_res_shift_pct, cost=c,
+                   reference_receipt=conv.ref.receipt(breakdown_100k=False, light=True),
+                   variant_receipt=conv.var.receipt(breakdown_100k=False, light=True))
+        out_path.write_text(json.dumps(doc, indent=1, default=_json_default), encoding="utf-8")
+        print(f"wrote {out_path}")
     return 0
 
 
@@ -254,6 +294,18 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--out", required=True)
     _add_solve_options(sp)
     sp.set_defaults(func=cmd_solve)
+
+    sp = sub.add_parser("converge", help="W14-c: mesh convergence check (h*2 or h/2) on one rail")
+    sp.add_argument("--spd", required=True)
+    sp.add_argument("--port", required=True)
+    sp.add_argument("--cache", required=True)
+    sp.add_argument("--out", default=None, help="optional JSON (product convergence dict + both "
+                                                "light receipts); never overwrites")
+    sp.add_argument("--pair", choices=list(PAIRS), default="coarse")
+    sp.add_argument("--rms-tol", type=float, default=RMS_DB_TOL, dest="rms_tol")
+    sp.add_argument("--max-tol", type=float, default=MAX_DB_TOL, dest="max_tol")
+    _add_solve_options(sp)
+    sp.set_defaults(func=cmd_converge)
 
     sp = sub.add_parser("verify", help="compare two receipts' freq/Z (the engine's own smoke test)")
     sp.add_argument("--receipt", required=True)

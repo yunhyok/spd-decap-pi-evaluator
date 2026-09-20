@@ -20,12 +20,13 @@ from __future__ import annotations
 
 __version__ = "0.1.0.dev0"
 
-from . import (api, cache, decaps, geometry, hardware, homogenise, model, receipt, reference,
-               solver, spd_source)
+from . import (api, cache, convergence, decaps, geometry, hardware, homogenise, model, receipt,
+               reference, solver, spd_source)
 from .api import (LADDER, DecapSite, Design, MeshedRail, Rail, find_site_pair, ladder_freqs,
                   match_sites, unique_path)
 from .backend import DEFAULT, Backend
 from .cache import CacheDir
+from .convergence import MeshConvergence, check_mesh_convergence
 from .decaps import DecapBasis
 from .hardware import (HardwareProfile, Plan, plan_basis, plan_chunk_tiles, plan_sweep,
                        plan_threads)
@@ -37,10 +38,12 @@ from .spd_source import (SPD_PARSER_SYMBOLS, check_parser_api, extract, list_por
                          load_layer_shapes, prepare, sha256_of)
 
 __all__ = ["Backend", "CacheDir", "DEFAULT", "DecapBasis", "DecapSite", "Design",
-           "DesignConventions", "FLAGS", "HardwareProfile", "MeshedRail", "Plan",
+           "DesignConventions", "FLAGS", "HardwareProfile", "MeshConvergence", "MeshedRail",
+           "Plan",
            "FLAGS_LEGACY", "FLAGS_P", "FLAGS_PMK", "FLAGS_Q", "LADDER", "Model", "ModelOptions",
            "RECEIPT_VERSION", "Rail", "ReferenceSearch", "Result", "SPD_PARSER_SYMBOLS", "Sheet",
            "VALIDITY_NOTES", "api", "attach_mask", "attach_reference", "cache", "check_parser_api",
+           "check_mesh_convergence", "convergence",
            "decaps", "decap_config_sha256", "extract", "find_site_pair", "geometry", "homogenise",
            "hardware", "ladder_freqs", "ladder_gates", "list_ports", "load_layer_shapes",
            "mask_margin", "plan_basis", "plan_chunk_tiles", "plan_sweep", "plan_threads",

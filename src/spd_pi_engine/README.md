@@ -11,7 +11,8 @@ PowerSI SPD 파일 하나와 포트 이름 하나를 받아, 그 레일의 PDN �
 - 패키지 전 포트: 1 MHz 오차 중앙값 28–32 %, Re Z_ref/Re Z_model @100 kHz 중앙값 1.46 — **급전 경로 R 관례 차이 미해결**.
 - f_res 편향 +5–14 %(설계 무관, 원인 미확정).
 - microvia는 드릴 지름의 구리 충전 원기둥으로 계산한다(소유자 결정 D9, 2026-09-19; 40 µm via는 어느 분기에서든 이미 충전 면적). core PTH(150 µm)는 도금 배럴. via 길이는 층 중심 간.
-영수증의 `validity` 필드가 이 다섯 줄을 항상 담는다. 앱은 이를 표시해야 한다.
+- 격자 민감도(W14-b, `docs/engine/W14B_REPORT.md` §3): h를 200 → 100 µm로 줄이면 3–100 MHz의 |Z|가 패키지 레일에서 최대 1.8 dB(PCB 1.4 dB) 움직이고 1 MHz 아래는 ≤ 0.15 dB다. h=400은 h=200과 0.13 dB 안(decap이 적은 레일 1건만 1.0 dB). **h=200 µm는 동결 기본값이지 수렴한 격자가 아니다.**
+영수증의 `validity` 필드가 이 여섯 줄을 항상 담는다. 앱은 이를 표시해야 한다.
 
 ## 2. 빠른 사용
 ```python
@@ -37,6 +38,8 @@ info   --spd PATH --port NAME --cache DIR            # rail_net, decap 수, 노�
 solve  --spd PATH --port NAME --cache DIR --out R.json [--variant legacy|p|q|pmk] [--reference …]
        [--freqs 1e3,1e4,… | --ladder] [--solver splu|cudss|auto] [--fast] [--ref-npz Zdiag.npz] [--breakdown-100k]
 verify --receipt A.json --against B.json [--tol 1e-8]  # 주파수 배열 일치 + max|ΔZ|/|Z|, exit 0/1
+converge --spd PATH --port NAME --cache DIR [--pair coarse|fine] [--rms-tol 0.2] [--max-tol 0.5] [--out J.json] [solve 옵션]
+       # W14-c 격자 수렴 검사: 같은 레일을 h와 h×2(또는 h÷2)로 각각 풀어 RMS/max dB 비교
 sweep  --spd PATH --ports all|a,b --cache DIR --outdir DIR --jobs N [solve 옵션]   # 포트당 1 프로세스, 재개 가능, cudss면 jobs ≤ 4
 ```
 예: 260729 Port18을 `--variant p --ladder --solver cudss --fast --ref-npz …`로 풀면 `unknowns=275218 wall=30 s err_1MHz=0.0081`, `verify`로 exp28 영수증과 5.5e-11.
@@ -194,3 +197,14 @@ A6000의 VRAM은 소유자 메모에 42 GB로 적혀 있지만 스펙은 48 GB�
 - `solve(backend=…)`는 호출 단위가 아니라 모델의 백엔드를 바꿔 그대로 둔다(`mdl.backend = …` 대입과 같다). `Model.solve`에는 호출별 백엔드 인자가 없다.
 - **왜 나누나**(소유자 근거, `docs/engine/W14_PLAN_2026-09-20.md`): "엔진을 앱과 분리해 두는 이유는 앱 개발이 끝난 뒤에도 워크스테이션 자원으로 추가 검토를 하고 **엔진만 업그레이드**할 수 있게 하기 위함이다." 경계가 API로 드러나 있으면 앱은 격자를 한 번 만들어 두고 구성만 바꿔 여러 번 풀 수 있고(W8 `set_decaps`, W9 `decap_basis`와 같은 구조), 격자 수렴 검사(W14-b/c)는 `mesh`를 두 번 부르는 순수 오케스트레이션으로 끝난다 — 수치 모듈을 건드리지 않고.
 - **격자를 검증 경계 밖으로 빼는 것은 아니다.** 균질화는 MFDM 물리의 일부라서 mesh 단계는 `numerics_id` 안에 남는다(W14 계획 §배경: "엔진이 mesh를 만들 필요가 없다"는 계산 코어에 대해서만 맞는 말이다). 기본 격자 h=200 µm도 그대로이며 변경은 소유자 결정이다.
+
+### 11-1. 격자 수렴 검사 (W14-c, `convergence.py`)
+```python
+from spd_pi_engine import check_mesh_convergence
+conv = check_mesh_convergence(rail, opt, freqs, pair="coarse")   # "coarse" = h×2, "fine" = h÷2
+conv.rms_db, conv.max_db, conv.converged, conv.f_res_shift_pct, conv.cost
+conv.ref                    # 기준 격자의 `Result` — `rail.mesh(opt).solve(freqs)`와 같은 풀이(재계산 없음)
+conv.product_dict()         # 제품의 `convergence` dict 형식(아직 제품에 연결하지 않았다)
+```
+`Rail.mesh` 두 번 + `solve` 두 번의 순수 오케스트레이션이다(수치 모듈 미수정, `numerics_id` 불변). 변형은 서브타일 물리 크기를 고정한 채 coarse 피치만 바꾼다(`sub_c`를 h와 같은 비율로). 지표는 W14-b와 같다 — Δ_i = 20·log10(|Z_var|/|Z_ref|), 27점 RMS와 max |Δ|, 허용치 RMS 0.2 / max 0.5 dB. 비용은 추가 mesh+solve 1회(패키지 +113~129 %, PCB +60 %, W14B §6).
+**기본값이 통과하는 게이트가 아니다**: W14-b 판정은 R3(두 쌍 모두 9케이스를 채우지 못함)이고, 제품 쪽 연결(`convergence_check` 옵션, W11-b 면제 제거)은 기본 격자·지표 결정과 함께 소유자 판단으로 **보류**다(`docs/engine/W14C_REPORT.md`).
