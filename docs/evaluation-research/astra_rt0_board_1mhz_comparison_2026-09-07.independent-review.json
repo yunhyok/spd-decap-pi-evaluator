@@ -1,0 +1,77 @@
+{
+  "checks": {
+    "actual_status": "COMPLETED_CONDITIONAL_L14_P1_L25_RT0_BOARD_1MHZ",
+    "category_passivity_all_true": true,
+    "device_active_indices": [
+      2699,
+      2656
+    ],
+    "field_sha256": "be2a3515dca426a45a5fe8c0eb696e3aa59544ee32e2d93971917e19c32b5ce1",
+    "field_z_reproduction_abs_error_ohm": 0.0,
+    "frequency_hz": 1000000.0,
+    "kcl_gate_lt_1e-7": true,
+    "kcl_max_a": 6.612764906435021e-11,
+    "no_powersi_input_or_text_in_comparator": true,
+    "no_solver_or_lu_call_in_comparator": true,
+    "primary_1mhz_two_sheet_binding_equal": true,
+    "primary_status": "COMPLETED_CONDITIONAL_PRIMARY_BAND_DECADE_COMPARISON",
+    "rail_match": true,
+    "raw_source_snapshot_sha256": "6eac098738598a78b2068ce4f80e46fd70e17010a89bfb5949ec8a68124df4a7",
+    "reference_port_one_based": 18,
+    "reference_role": "comparison-only pinned primary JSON; not a solver input"
+  },
+  "input_pins": {
+    "actual": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-rt0-board-1mhz-01\\result.json",
+      "sha256": "61a48c10c054e65accc32203429d6b1c49b215693e12d439493a106d7c9e1752"
+    },
+    "errors_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\compare_astra_loaded_development_points.py",
+      "sha256": "0e12464d1297caa9964404a2a0777d22964d6817069f752641b2d7945c8f4f4f"
+    },
+    "primary": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_primary_band_comparison_2026-09-07.json",
+      "sha256": "ac08d7ea36a09989fb83e9113af399db41f698bf68e061e3c75020f4c41a5f8d"
+    }
+  },
+  "limitations": [
+    "One conditional 1 MHz development point; no broadband or holdout claim.",
+    "The reference is used only for comparison arithmetic; no solver/reference re-entry was performed.",
+    "No PowerSI input or accuracy claim."
+  ],
+  "program": "SPD Decap PI Evaluator",
+  "recomputed_errors": {
+    "native_vs_reference": {
+      "complex_gap_ohm": 0.0006180322719598752,
+      "complex_relative_error": 0.7610323044211814,
+      "magnitude_error_db": -2.428670003508578,
+      "phase_error_deg": -48.97890346256608
+    },
+    "p1_vs_reference": {
+      "complex_gap_ohm": 0.00023866697355944,
+      "complex_relative_error": 0.29388963184913114,
+      "magnitude_error_db": -0.3663985855593993,
+      "phase_error_deg": -17.09013811230245
+    },
+    "rt0_vs_reference": {
+      "complex_gap_ohm": 0.00021492977803100452,
+      "complex_relative_error": 0.26466013456703086,
+      "magnitude_error_db": -0.057321571224598834,
+      "phase_error_deg": -15.254341292751285
+    }
+  },
+  "recomputed_p1_gap_reduction_fraction": 0.09945739527519393,
+  "reported_errors_match": true,
+  "reported_p1_gap_reduction_fraction": 0.09945739527519393,
+  "reviewed_artifact": {
+    "path": "docs\\evaluation-research\\astra_rt0_board_1mhz_comparison_2026-09-07.json",
+    "sha256": "b3441baaa1549cff6d0b7eb9aa39f3a048ed6ca7efff71954e76481d41ca814f"
+  },
+  "reviewed_script": {
+    "path": "tools\\research\\compare_astra_rt0_board_1mhz.py",
+    "sha256": "c98cafb9d5cb1f5f6ed2623c9b33c5d83e231c3bfd2a5a7b5f823c79d1c8faba"
+  },
+  "status": "COMPLETED_INDEPENDENT_RT0_BOARD_1MHZ_QA",
+  "verdict": "ACCEPT",
+  "version": "0.23.1"
+}

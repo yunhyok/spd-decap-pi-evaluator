@@ -1,0 +1,537 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "ACCEPT_CONDITIONAL_LOCAL_POWER_FEED_ONLY",
+  "frequency_hz": 1000000.0,
+  "inputs": {
+    "boundary10": {
+      "path": "docs/evaluation-research/astra_l21_triangle_boundary10_2026-09-07.json",
+      "size_bytes": 5870,
+      "sha256": "547f06c5c41d4f4a1d8ee19c70ba449d931546a5b3e6891efc4c74ed0c4c9b3d"
+    },
+    "source": {
+      "path": "docs/evaluation-research/astra_l21_four_terminal_dc_2026-09-07.json",
+      "size_bytes": 22257,
+      "sha256": "76bbb152f89b0e8086128f34a489f06c77ba10b2dfae0b952fc245723881ce3b"
+    },
+    "ownership": {
+      "path": "outputs/research/astra-step4-basis-01/replacement-boundary.json",
+      "size_bytes": 18173,
+      "sha256": "8de6711dd64ba9d4391f5b604223cb6f6eae70bc0df20faaf044b3a59c8eef22"
+    },
+    "old_triangle": {
+      "path": "docs/evaluation-research/astra_l21_triangle_mesh_2026-09-07.json",
+      "size_bytes": 14055,
+      "sha256": "dc9b2816fb8dd109db55e4080bfe049a73a2ac65c2fd1af3c7c2ed6800bc1589"
+    }
+  },
+  "source_contact_order": [
+    "Node2140546",
+    "Node2140547",
+    "Node2140578",
+    "Node2140579"
+  ],
+  "external_nodes": {
+    "reference_power_exit_not_ground": 750336,
+    "left": 229906,
+    "right_shared": 482985
+  },
+  "native_via_owners": [
+    "via:via336239",
+    "via:via336240",
+    "via:via336279",
+    "via:via336280"
+  ],
+  "native_via_impedance_ohm": {
+    "core": [
+      0.0008328251054298727,
+      0.0024385151009861114
+    ],
+    "micro_each": [
+      0.000767864509798958,
+      0.0001986479195437346
+    ]
+  },
+  "selected_sheet": {
+    "nodal_y_s": [
+      [
+        [
+          11803.728003583818,
+          0.0
+        ],
+        [
+          -5161.428480539722,
+          0.0
+        ],
+        [
+          -2773.896182274059,
+          0.0
+        ],
+        [
+          -3868.403340770037,
+          0.0
+        ]
+      ],
+      [
+        [
+          -5161.428480539722,
+          0.0
+        ],
+        [
+          5161.837989653866,
+          0.0
+        ],
+        [
+          -0.020832540540385133,
+          0.0
+        ],
+        [
+          -0.3886765736041811,
+          0.0
+        ]
+      ],
+      [
+        [
+          -2773.896182274059,
+          0.0
+        ],
+        [
+          -0.020832540540385133,
+          0.0
+        ],
+        [
+          4279.393960778666,
+          0.0
+        ],
+        [
+          -1505.4769459640668,
+          0.0
+        ]
+      ],
+      [
+        [
+          -3868.403340770037,
+          0.0
+        ],
+        [
+          -0.3886765736041811,
+          0.0
+        ],
+        [
+          -1505.4769459640668,
+          0.0
+        ],
+        [
+          5374.268963307708,
+          0.0
+        ]
+      ]
+    ],
+    "balanced_r_ohm": [
+      [
+        [
+          0.0001937294444914741,
+          0.0
+        ],
+        [
+          6.514009059721071e-09,
+          0.0
+        ],
+        [
+          1.5835602523371595e-08,
+          0.0
+        ]
+      ],
+      [
+        [
+          6.514009059707519e-09,
+          0.0
+        ],
+        [
+          0.00025922386774777017,
+          0.0
+        ],
+        [
+          7.261556165762827e-05,
+          0.0
+        ]
+      ],
+      [
+        [
+          1.5835602523351267e-08,
+          0.0
+        ],
+        [
+          7.261556165762828e-05,
+          0.0
+        ],
+        [
+          0.00020641338714576807,
+          0.0
+        ]
+      ]
+    ]
+  },
+  "analytic_local_z_ohm": [
+    [
+      [
+        0.001794419059675542,
+        0.002637163020539427
+      ],
+      [
+        0.0008328364070346472,
+        0.002438515073845465
+      ]
+    ],
+    [
+      [
+        0.0008328364070346472,
+        0.002438515073845465
+      ],
+      [
+        0.0013691152719126774,
+        0.0025379159419586356
+      ]
+    ]
+  ],
+  "full_y_mna_z_ohm": [
+    [
+      [
+        0.0017944190596755538,
+        0.0026371630205394327
+      ],
+      [
+        0.0008328364070346574,
+        0.002438515073845466
+      ]
+    ],
+    [
+      [
+        0.000832836407034659,
+        0.0024385150738454706
+      ],
+      [
+        0.0013691152719126879,
+        0.0025379159419586374
+      ]
+    ]
+  ],
+  "series_branch_mna_z_ohm": [
+    [
+      [
+        0.001794419059675542,
+        0.002637163020539427
+      ],
+      [
+        0.0008328364070346472,
+        0.002438515073845465
+      ]
+    ],
+    [
+      [
+        0.0008328364070346471,
+        0.0024385150738454645
+      ],
+      [
+        0.0013691152719126777,
+        0.002537915941958636
+      ]
+    ]
+  ],
+  "ideal_sheet_closed_form_z_ohm": [
+    [
+      [
+        0.0016006896152288307,
+        0.002637163020529846
+      ],
+      [
+        0.0008328251054298727,
+        0.0024385151009861114
+      ]
+    ],
+    [
+      [
+        0.0008328251054298727,
+        0.0024385151009861114
+      ],
+      [
+        0.0012167573603293516,
+        0.0025378390607579786
+      ]
+    ]
+  ],
+  "analytic_via_currents_a_per_a": [
+    [
+      [
+        -1.0,
+        0.0
+      ],
+      [
+        -1.0,
+        0.0
+      ]
+    ],
+    [
+      [
+        1.0,
+        0.0
+      ],
+      [
+        1.6940658945086007e-21,
+        8.470329472543003e-22
+      ]
+    ],
+    [
+      [
+        4.802038592012725e-06,
+        -1.0278507739779342e-06
+      ],
+      [
+        0.48639728460039355,
+        0.0029115887521067862
+      ]
+    ],
+    [
+      [
+        -4.8020385920127285e-06,
+        1.027850773977935e-06
+      ],
+      [
+        0.5136027153996063,
+        -0.0029115887521068
+      ]
+    ]
+  ],
+  "full_y_via_currents_a_per_a": [
+    [
+      [
+        -1.0000000000000036,
+        3.552713678800501e-15
+      ],
+      [
+        -1.0000000000000018,
+        3.552713678800501e-15
+      ]
+    ],
+    [
+      [
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        -0.0
+      ]
+    ],
+    [
+      [
+        4.802038591992219e-06,
+        -1.0278507739735453e-06
+      ],
+      [
+        0.4863972846003936,
+        0.0029115887521067862
+      ]
+    ],
+    [
+      [
+        -4.802038591992219e-06,
+        1.0278507739735453e-06
+      ],
+      [
+        0.5136027153996063,
+        -0.0029115887521067862
+      ]
+    ]
+  ],
+  "series_via_currents_a_per_a": [
+    [
+      [
+        -1.0,
+        -0.0
+      ],
+      [
+        -1.0,
+        0.0
+      ]
+    ],
+    [
+      [
+        1.0,
+        -0.0
+      ],
+      [
+        0.0,
+        -0.0
+      ]
+    ],
+    [
+      [
+        4.802038592040653e-06,
+        -1.027850773983912e-06
+      ],
+      [
+        0.48639728460039366,
+        0.002911588752106814
+      ]
+    ],
+    [
+      [
+        -4.802038592040653e-06,
+        1.027850773983912e-06
+      ],
+      [
+        0.5136027153996063,
+        -0.002911588752106814
+      ]
+    ]
+  ],
+  "right_port_solved_split": {
+    "via336279": [
+      0.48639728460039355,
+      0.0029115887521067862
+    ],
+    "via336280": [
+      0.5136027153996063,
+      -0.0029115887521068
+    ],
+    "sum": [
+      0.9999999999999999,
+      -1.3877787807814457e-17
+    ]
+  },
+  "left_port_induced_right_loop": {
+    "via336279": [
+      4.802038592012725e-06,
+      -1.0278507739779342e-06
+    ],
+    "via336280": [
+      -4.8020385920127285e-06,
+      1.027850773977935e-06
+    ]
+  },
+  "relative_errors": {
+    "full_vs_branch_z": 4.1915559346150585e-15,
+    "full_vs_analytic_z": 4.184532345225222e-15,
+    "full_vs_branch_via_currents": 3.423688874151998e-15,
+    "full_vs_analytic_via_currents": 3.4234646133103946e-15,
+    "full_reordered_z": 4.176522562507275e-15,
+    "full_reordered_via_currents": 3.4245371651359996e-15,
+    "branch_reordered_z": 1.170044770554722e-16,
+    "branch_reordered_via_currents": 5.4773655383669554e-17,
+    "ideal_vs_closed_form_z": 0.0,
+    "ideal_vs_closed_form_via_currents": 1.049062151062894e-17,
+    "y_from_balanced_r": 3.1250937494345725e-16,
+    "analytic_current_kcl": 1.582311261842491e-16
+  },
+  "old_triangle_rejection": {
+    "maximum_off_diagonal_y_s": 847.5426754014502,
+    "minimum_balanced_z_entry_ohm": -2.4767431334761977e-05,
+    "minimum_balanced_z_eigenvalue_ohm": 9.121985445049608e-05
+  },
+  "selected_boundary10_sign": {
+    "maximum_off_diagonal_y_s": -0.020832540540385133,
+    "minimum_balanced_z_eigenvalue_ohm": 0.00015555119022194814
+  },
+  "diagnostics": {
+    "full": {
+      "component_count": 1,
+      "gauge_node_ids": [
+        "compiled-node:750336"
+      ],
+      "branch_impedance_condition_estimate": 1.0,
+      "scaled_saddle_condition_estimate": 2714.769281013246,
+      "backward_relative_residual": 2.0928903936579055e-19,
+      "nodal_kcl_relative_residual": 3.4821738871400156e-15,
+      "branch_equation_relative_residual": 6.098745165142671e-17,
+      "raw_reciprocity_relative_error": 1.2645732743320182e-15,
+      "min_hermitian_impedance_eigenvalue_ohm": 0.0007222107052554551,
+      "passivity_tolerance_ohm": 5.585453330158507e-12
+    },
+    "branch": {
+      "component_count": 1,
+      "gauge_node_ids": [
+        "compiled-node:750336"
+      ],
+      "branch_impedance_condition_estimate": 2.283144752458302,
+      "scaled_saddle_condition_estimate": 5964.483195526818,
+      "backward_relative_residual": 5.622010500420266e-20,
+      "nodal_kcl_relative_residual": 0.0,
+      "branch_equation_relative_residual": 1.0575323303163043e-16,
+      "raw_reciprocity_relative_error": 1.1216079434199787e-16,
+      "min_hermitian_impedance_eigenvalue_ohm": 0.0007222107052554549,
+      "passivity_tolerance_ohm": 5.5854533301584915e-12
+    },
+    "ideal": {
+      "component_count": 1,
+      "gauge_node_ids": [
+        "compiled-node:750336"
+      ],
+      "branch_impedance_condition_estimate": 1.0,
+      "scaled_saddle_condition_estimate": 7135.994884832112,
+      "backward_relative_residual": 2.0178378205107673e-20,
+      "nodal_kcl_relative_residual": 0.0,
+      "branch_equation_relative_residual": 3.811474038495024e-17,
+      "raw_reciprocity_relative_error": 0.0,
+      "min_hermitian_impedance_eigenvalue_ohm": 0.0005540606008334087,
+      "passivity_tolerance_ohm": 5.5109193375441566e-12
+    },
+    "full_reordered": {
+      "component_count": 1,
+      "gauge_node_ids": [
+        "Node2140579"
+      ],
+      "branch_impedance_condition_estimate": 1.0,
+      "scaled_saddle_condition_estimate": 2746.1584492423135,
+      "backward_relative_residual": 8.70135508807316e-21,
+      "nodal_kcl_relative_residual": 1.4477437254040216e-16,
+      "branch_equation_relative_residual": 1.4816363272129275e-17,
+      "raw_reciprocity_relative_error": 2.7202988360308048e-17,
+      "min_hermitian_impedance_eigenvalue_ohm": 0.0007222107052554549,
+      "passivity_tolerance_ohm": 5.5854533301584915e-12
+    },
+    "branch_reordered": {
+      "component_count": 1,
+      "gauge_node_ids": [
+        "Node2140579"
+      ],
+      "branch_impedance_condition_estimate": 2.283144752458302,
+      "scaled_saddle_condition_estimate": 5964.659602515763,
+      "backward_relative_residual": 1.3779918844478938e-20,
+      "nodal_kcl_relative_residual": 0.0,
+      "branch_equation_relative_residual": 2.5746221489357028e-17,
+      "raw_reciprocity_relative_error": 0.0,
+      "min_hermitian_impedance_eigenvalue_ohm": 0.0007222107052554549,
+      "passivity_tolerance_ohm": 5.58545333015849e-12
+    }
+  },
+  "checks": {
+    "composition_and_gauge_errors_below_1e_10": true,
+    "gauge_nodes_changed": true,
+    "selected_dc_sign_and_positive_r": true,
+    "old_mesh_rejected_without_false_passivity_claim": true,
+    "all_mna_outputs_passive_reciprocal": true
+  },
+  "ownership": {
+    "conditional_sheet_owner": "source-asset:b0ab5dda526415e8",
+    "native_vias_retained_once": [
+      "via:via336239",
+      "via:via336240",
+      "via:via336279",
+      "via:via336280"
+    ],
+    "native_gc_changed": false,
+    "native_fifth_artwork_gc_link_included": false
+  },
+  "scope": "CONDITIONAL_LOCAL_L21_POWER_FEED_ONLY",
+  "limitations": [
+    "DC sheet R is held constant at 1 MHz.",
+    "Via336239 retains a conditional whole-pad electrode, not plating/current-injection certification.",
+    "The fifth native artwork/G-C link is excluded only from this labelled local experiment.",
+    "No full AC replacement, board current sharing, Evaluation Zii, PowerSI comparison or product promotion."
+  ],
+  "resources": {
+    "elapsed_s": 0.03200000000651926,
+    "max_runtime_s": 55.0
+  }
+}

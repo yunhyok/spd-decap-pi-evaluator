@@ -1,0 +1,1972 @@
+{
+  "acceptance": {
+    "checks": {
+      "all_loaded_real_nonnegative_with_first_order_tolerance": true,
+      "all_raw_validation_and_open_passivity": true,
+      "analytic_schur_matches_direct_to_1ppm": true,
+      "bulk_control_differs_by_at_least_10pct_somewhere": true,
+      "finest_loaded_error_le_2pct": true,
+      "finest_loaded_refinement_change_le_2pct": true,
+      "finest_open_matrix_error_le_2pct": true,
+      "loaded_error_improves_or_stays_within_5pct_of_coarsest": true
+    },
+    "measured": {
+      "all_solve_quality_estimate_passed": false,
+      "coarsest_max_loaded_complex_relative": 5.310634143820798e-05,
+      "finest_max_bulk_vs_boundary_loaded_relative": 1.9817140592346754,
+      "finest_max_loaded_complex_relative": 6.555695525863869e-07,
+      "finest_max_loaded_refinement_change_relative": 5.2446140270451205e-06,
+      "finest_max_open_matrix_complex_relative": 4.826913424380447e-07,
+      "max_loaded_first_order_error_estimate_relative": 0.7359187549612519,
+      "max_schur_cancellation_factor": 34619.45094261352
+    },
+    "predeclared_thresholds": {
+      "analytic_schur_vs_direct_relative": 1e-06,
+      "finest_loaded_complex_relative": 0.02,
+      "finest_loaded_refinement_change_relative": 0.02,
+      "finest_open_matrix_complex_relative": 0.02
+    }
+  },
+  "inputs": {
+    "cells": [
+      4,
+      12,
+      36
+    ],
+    "frequencies_hz": [
+      100000.0,
+      1000000.0,
+      10000000.0,
+      100000000.0
+    ],
+    "max_runtime_s": 45.0,
+    "port_layout": "fixed-eighth",
+    "remote_series_rlc_load": {
+      "capacitance_f": 1e-07,
+      "series_inductance_h": 5e-10,
+      "series_resistance_ohm": 0.02
+    },
+    "strip": {
+      "copper_conductivity_s_per_m": 58000000.0,
+      "copper_thickness_m": 3.5e-05,
+      "gap_m": 0.0001,
+      "length_m": 0.02,
+      "loss_tangent": 0.02,
+      "relative_permittivity": 4.0,
+      "width_m": 0.002
+    }
+  },
+  "nonclaims": [
+    "No canonical value was fitted to PowerSI.",
+    "This does not attribute the recorded W6 loaded discrepancy.",
+    "This does not close C1, WP2, or WP3 and does not promote a production solver."
+  ],
+  "program": "SPD Decap PI Evaluator",
+  "reference": {
+    "loaded_error_propagation": "first-order use of the solver estimate; not a rigorous bound because denominator perturbation and higher-order terms are omitted",
+    "loaded_evaluation": "direct impedance transform; analytic Schur is retained only as a cancellation cross-check",
+    "model": "closed-form lossy RLGC transmission-line Green function with open half-cell end stubs",
+    "primary_sources": [
+      "https://doi.org/10.1109/TEMC.2007.893331",
+      "https://www.egr.msu.edu/emrg/sites/default/files/content/module2_fundamental_behavior.pdf"
+    ],
+    "shared_primitive": "existing finite-thickness copper_surface_impedance material law; no MFDM matrix assembly"
+  },
+  "resources": {
+    "max_physical_nodes": 72,
+    "max_relative_unknowns": 36,
+    "run_count": 12,
+    "total_elapsed_s": 0.031000000017229468,
+    "within_requested_process_limit": true
+  },
+  "runs": [
+    {
+      "cells": 4,
+      "diagnostics": {
+        "condition_estimate": 619726548.6783912,
+        "forward_error_estimate_ohm": 0.030912554811890848,
+        "loaded_first_order_error_estimate_ohm": 0.12363270541839387,
+        "loaded_first_order_error_estimate_relative_to_reference": 0.007769670871302019,
+        "loaded_real_nonnegative_with_first_order_tolerance": true,
+        "loaded_real_part_tolerance_ohm": 0.989061643347151,
+        "open_min_hermitian_eigenvalue_ohm": 0.0036948396607385803,
+        "open_passive": true,
+        "raw_reciprocity_pair_max_absolute_ohm": 1.0209153987143737e-10,
+        "raw_reciprocity_pair_max_relative": 9.089189895935447e-16,
+        "raw_validation_passed": true,
+        "raw_vs_symmetric_loaded_delta_ohm": 1.4551915228366852e-11,
+        "residual_relative": 1.249809723039525e-16,
+        "schur_cancellation_factor": 14116.696015976226,
+        "schur_denominator_relative_margin": 0.9999999751256878,
+        "solve_quality_estimate_passed": false
+      },
+      "equipotential_open_control_ohm": {
+        "imag": -112299.4776122198,
+        "real": 2245.989552244396
+      },
+      "errors": {
+        "analytic_schur_vs_direct_relative": 6.441208619814498e-13,
+        "bulk_vs_boundary_loaded_relative": 0.0006221418242646249,
+        "center_vs_boundary_loaded_relative": 0.00015553545655908076,
+        "loaded_complex_relative": 5.144640200224216e-12,
+        "loaded_magnitude_error_db": -3.923848461406211e-12,
+        "loaded_phase_error_deg": -2.9362787089103794e-10,
+        "mfdm_loaded_change_from_previous_relative": null,
+        "open_matrix_complex_relative": 3.7749085900463236e-08,
+        "open_z11_complex_relative": 3.774908584275977e-08,
+        "reference_loaded_change_from_previous_relative": null
+      },
+      "frequency_hz": 100000.0,
+      "load_impedance_ohm": {
+        "imag": -15.915180149924177,
+        "real": 0.02
+      },
+      "loaded_input_ohm": {
+        "analytic_direct_boundary_port": {
+          "imag": -15.911952062801223,
+          "real": 0.029890921653344848
+        },
+        "analytic_direct_center_port": {
+          "imag": -15.912195484073662,
+          "real": 0.027428044733528466
+        },
+        "equipotential_bulk_control": {
+          "imag": -15.912925748023895,
+          "real": 0.02003941401874288
+        },
+        "mfdm_raw_schur": {
+          "imag": -15.912195484066615,
+          "real": 0.027428044651969685
+        }
+      },
+      "open": {
+        "analytic_boundary_port_z_ohm": [
+          [
+            {
+              "imag": -112299.47728762073,
+              "real": 2245.992836546292
+            },
+            {
+              "imag": -112299.47777451934,
+              "real": 2245.987910093415
+            }
+          ],
+          [
+            {
+              "imag": -112299.47777451934,
+              "real": 2245.987910093415
+            },
+            {
+              "imag": -112299.47728762073,
+              "real": 2245.992836546292
+            }
+          ]
+        ],
+        "analytic_center_port_z_ohm": [
+          [
+            {
+              "imag": -112299.47739412978,
+              "real": 2245.991758884732
+            },
+            {
+              "imag": -112299.47775930371,
+              "real": 2245.988064045076
+            }
+          ],
+          [
+            {
+              "imag": -112299.47775930371,
+              "real": 2245.988064045076
+            },
+            {
+              "imag": -112299.47739412978,
+              "real": 2245.991758884732
+            }
+          ]
+        ],
+        "mfdm_raw_z_ohm": [
+          [
+            {
+              "imag": -112299.4773216807,
+              "real": 2245.9875194533706
+            },
+            {
+              "imag": -112299.47768685466,
+              "real": 2245.983824613704
+            }
+          ],
+          [
+            {
+              "imag": -112299.47768685456,
+              "real": 2245.9838246136974
+            },
+            {
+              "imag": -112299.47732168062,
+              "real": 2245.9875194533524
+            }
+          ]
+        ]
+      },
+      "port_center_indices": [
+        0,
+        3
+      ],
+      "port_layout": "fixed-eighth",
+      "port_positions_m": [
+        0.0025,
+        0.0175
+      ],
+      "resources": {
+        "compile_elapsed_s": 0.0,
+        "physical_nodes": 8,
+        "relative_unknowns": 4,
+        "solve_elapsed_s": 0.0
+      },
+      "rlgc": {
+        "capacitance_f_per_m": 7.083350250239999e-10,
+        "conductance_s_per_m": 8.90120044358296e-06,
+        "effective_inductance_h_per_m": 7.749232585445557e-08,
+        "effective_resistance_ohm_per_m": 0.4926452871873503,
+        "series_impedance_ohm_per_m": {
+          "imag": 0.048689864322788795,
+          "real": 0.4926452871873503
+        },
+        "shunt_admittance_s_per_m": {
+          "imag": 0.00044506002217914806,
+          "real": 8.90120044358296e-06
+        }
+      }
+    },
+    {
+      "cells": 4,
+      "diagnostics": {
+        "condition_estimate": 44146069.25403796,
+        "forward_error_estimate_ohm": 0.0002202048232098795,
+        "loaded_first_order_error_estimate_ohm": 0.000880695027061731,
+        "loaded_first_order_error_estimate_relative_to_reference": 0.0005570065187907081,
+        "loaded_real_nonnegative_with_first_order_tolerance": true,
+        "loaded_real_part_tolerance_ohm": 0.007045560216493848,
+        "open_min_hermitian_eigenvalue_ohm": 0.0037203428441756614,
+        "open_passive": true,
+        "raw_reciprocity_pair_max_absolute_ohm": 4.143822854874209e-12,
+        "raw_reciprocity_pair_max_relative": 3.689236922192188e-16,
+        "raw_validation_passed": true,
+        "raw_vs_symmetric_loaded_delta_ohm": 1.8198773652309366e-12,
+        "residual_relative": 6.237770457896665e-17,
+        "schur_cancellation_factor": 14206.878229813992,
+        "schur_denominator_relative_margin": 0.9999999961215476,
+        "solve_quality_estimate_passed": false
+      },
+      "equipotential_open_control_ohm": {
+        "imag": -11229.947761221978,
+        "real": 224.59895522443958
+      },
+      "errors": {
+        "analytic_schur_vs_direct_relative": 3.313441004737752e-12,
+        "bulk_vs_boundary_loaded_relative": 0.008802641450175328,
+        "center_vs_boundary_loaded_relative": 0.0022006606589082107,
+        "loaded_complex_relative": 8.420833793790116e-11,
+        "loaded_magnitude_error_db": 5.0850915966139087e-11,
+        "loaded_phase_error_deg": 4.81310794460697e-09,
+        "mfdm_loaded_change_from_previous_relative": null,
+        "open_matrix_complex_relative": 6.178807247338525e-09,
+        "open_z11_complex_relative": 6.1788058886473725e-09,
+        "reference_loaded_change_from_previous_relative": null
+      },
+      "frequency_hz": 1000000.0,
+      "load_impedance_ohm": {
+        "imag": -1.5884078382653637,
+        "real": 0.02
+      },
+      "loaded_input_ohm": {
+        "analytic_direct_boundary_port": {
+          "imag": -1.5784502378591259,
+          "real": 0.029918340553537735
+        },
+        "analytic_direct_center_port": {
+          "imag": -1.580883481305462,
+          "real": 0.02743846357355472
+        },
+        "equipotential_bulk_control": {
+          "imag": -1.5881832117291808,
+          "real": 0.019998835338687373
+        },
+        "mfdm_raw_schur": {
+          "imag": -1.5808834813124122,
+          "real": 0.027438463706516814
+        }
+      },
+      "open": {
+        "analytic_boundary_port_z_ohm": [
+          [
+            {
+              "imag": -11229.94451644196,
+              "real": 224.60226219564257
+            },
+            {
+              "imag": -11229.949383611985,
+              "real": 224.59730173869627
+            }
+          ],
+          [
+            {
+              "imag": -11229.949383611985,
+              "real": 224.59730173869627
+            },
+            {
+              "imag": -11229.94451644196,
+              "real": 224.60226219564257
+            }
+          ]
+        ],
+        "analytic_center_port_z_ohm": [
+          [
+            {
+              "imag": -11229.945581135406,
+              "real": 224.60117709577474
+            },
+            {
+              "imag": -11229.94923151292,
+              "real": 224.59745675299706
+            }
+          ],
+          [
+            {
+              "imag": -11229.94923151292,
+              "real": 224.59745675299706
+            },
+            {
+              "imag": -11229.945581135406,
+              "real": 224.60117709577474
+            }
+          ]
+        ],
+        "mfdm_raw_z_ohm": [
+          [
+            {
+              "imag": -11229.945626106737,
+              "real": 224.60112423603823
+            },
+            {
+              "imag": -11229.949276484253,
+              "real": 224.5974038931954
+            }
+          ],
+          [
+            {
+              "imag": -11229.94927648425,
+              "real": 224.59740389319168
+            },
+            {
+              "imag": -11229.945626106739,
+              "real": 224.60112423603718
+            }
+          ]
+        ]
+      },
+      "port_center_indices": [
+        0,
+        3
+      ],
+      "port_layout": "fixed-eighth",
+      "port_positions_m": [
+        0.0025,
+        0.0175
+      ],
+      "resources": {
+        "compile_elapsed_s": 0.0,
+        "physical_nodes": 8,
+        "relative_unknowns": 4,
+        "solve_elapsed_s": 0.0
+      },
+      "rlgc": {
+        "capacitance_f_per_m": 7.083350250239999e-10,
+        "conductance_s_per_m": 8.901200443582961e-05,
+        "effective_inductance_h_per_m": 7.746341727129373e-08,
+        "effective_resistance_ohm_per_m": 0.49604562305974353,
+        "series_impedance_ohm_per_m": {
+          "imag": 0.48671700524291417,
+          "real": 0.49604562305974353
+        },
+        "shunt_admittance_s_per_m": {
+          "imag": 0.004450600221791481,
+          "real": 8.901200443582961e-05
+        }
+      }
+    },
+    {
+      "cells": 4,
+      "diagnostics": {
+        "condition_estimate": 640525.7660957696,
+        "forward_error_estimate_ohm": 3.194995599439009e-07,
+        "loaded_first_order_error_estimate_ohm": 1.2778927036834745e-06,
+        "loaded_first_order_error_estimate_relative_to_reference": 1.9694219804991376e-05,
+        "loaded_real_nonnegative_with_first_order_tolerance": true,
+        "loaded_real_part_tolerance_ohm": 1.0223141629467796e-05,
+        "open_min_hermitian_eigenvalue_ohm": 0.005692468433158737,
+        "open_passive": true,
+        "raw_reciprocity_pair_max_absolute_ohm": 1.4210854715202004e-14,
+        "raw_reciprocity_pair_max_relative": 1.2651730351414277e-17,
+        "raw_validation_passed": true,
+        "raw_vs_symmetric_loaded_delta_ohm": 0.0,
+        "residual_relative": 7.041975490930593e-17,
+        "schur_cancellation_factor": 34619.45094261352,
+        "schur_denominator_relative_margin": 0.9999989480903413,
+        "solve_quality_estimate_passed": false
+      },
+      "equipotential_open_control_ohm": {
+        "imag": -1122.9947761221977,
+        "real": 22.459895522443954
+      },
+      "errors": {
+        "analytic_schur_vs_direct_relative": 4.159147680371315e-12,
+        "bulk_vs_boundary_loaded_relative": 1.9817140592346754,
+        "center_vs_boundary_loaded_relative": 0.4954350105179354,
+        "loaded_complex_relative": 9.835387362216273e-07,
+        "loaded_magnitude_error_db": -5.682231170289797e-06,
+        "loaded_phase_error_deg": 4.207957307763212e-05,
+        "mfdm_loaded_change_from_previous_relative": null,
+        "open_matrix_complex_relative": 4.441921515623201e-07,
+        "open_z11_complex_relative": 4.441851615758771e-07,
+        "reference_loaded_change_from_previous_relative": null
+      },
+      "frequency_hz": 10000000.0,
+      "load_impedance_ohm": {
+        "imag": -0.1277390165559974,
+        "real": 0.02
+      },
+      "loaded_input_ohm": {
+        "analytic_direct_boundary_port": {
+          "imag": -0.03314962554584302,
+          "real": 0.03517601015112019
+        },
+        "analytic_direct_center_port": {
+          "imag": -0.05679370987154097,
+          "real": 0.03138083571212997
+        },
+        "equipotential_bulk_control": {
+          "imag": -0.12772475888462484,
+          "real": 0.01999573595076687
+        },
+        "mfdm_raw_schur": {
+          "imag": -0.05679364967068068,
+          "real": 0.03138085689387893
+        }
+      },
+      "open": {
+        "analytic_boundary_port_z_ohm": [
+          [
+            {
+              "imag": -1122.9632480885746,
+              "real": 22.464955460494966
+            },
+            {
+              "imag": -1123.0105402032339,
+              "real": 22.457365530825403
+            }
+          ],
+          [
+            {
+              "imag": -1123.0105402032339,
+              "real": 22.457365530825403
+            },
+            {
+              "imag": -1122.9632480885746,
+              "real": 22.464955460494966
+            }
+          ]
+        ],
+        "analytic_center_port_z_ohm": [
+          [
+            {
+              "imag": -1122.973593199143,
+              "real": 22.463295177279768
+            },
+            {
+              "imag": -1123.0090623152428,
+              "real": 22.457602719437116
+            }
+          ],
+          [
+            {
+              "imag": -1123.0090623152428,
+              "real": 22.457602719437116
+            },
+            {
+              "imag": -1122.973593199143,
+              "real": 22.463295177279768
+            }
+          ]
+        ],
+        "mfdm_raw_z_ohm": [
+          [
+            {
+              "imag": -1122.9740858026157,
+              "real": 22.46321611399111
+            },
+            {
+              "imag": -1123.0095549488208,
+              "real": 22.457523645558013
+            }
+          ],
+          [
+            {
+              "imag": -1123.0095549488208,
+              "real": 22.457523645558
+            },
+            {
+              "imag": -1122.9740858026162,
+              "real": 22.463216113991223
+            }
+          ]
+        ]
+      },
+      "port_center_indices": [
+        0,
+        3
+      ],
+      "port_layout": "fixed-eighth",
+      "port_positions_m": [
+        0.0025,
+        0.0175
+      ],
+      "resources": {
+        "compile_elapsed_s": 0.0,
+        "physical_nodes": 8,
+        "relative_unknowns": 4,
+        "solve_elapsed_s": 0.0
+      },
+      "rlgc": {
+        "capacitance_f_per_m": 7.083350250239999e-10,
+        "conductance_s_per_m": 0.0008901200443582963,
+        "effective_inductance_h_per_m": 7.52672270936415e-08,
+        "effective_resistance_ohm_per_m": 0.7589816704429496,
+        "series_impedance_ohm_per_m": {
+          "imag": 4.729179353869176,
+          "real": 0.7589816704429496
+        },
+        "shunt_admittance_s_per_m": {
+          "imag": 0.044506002217914814,
+          "real": 0.0008901200443582963
+        }
+      }
+    },
+    {
+      "cells": 4,
+      "diagnostics": {
+        "condition_estimate": 7274.45669577683,
+        "forward_error_estimate_ohm": 3.6277200497495015e-10,
+        "loaded_first_order_error_estimate_ohm": 1.4590552839338983e-09,
+        "loaded_first_order_error_estimate_relative_to_reference": 1.5600659450232452e-09,
+        "loaded_real_nonnegative_with_first_order_tolerance": true,
+        "loaded_real_part_tolerance_ohm": 1.1672442271471186e-08,
+        "open_min_hermitian_eigenvalue_ohm": 0.01960133476672965,
+        "open_passive": true,
+        "raw_reciprocity_pair_max_absolute_ohm": 4.266955553143359e-14,
+        "raw_reciprocity_pair_max_relative": 3.7944215957398096e-16,
+        "raw_validation_passed": true,
+        "raw_vs_symmetric_loaded_delta_ohm": 1.4210854715202004e-14,
+        "residual_relative": 2.703601743573792e-17,
+        "schur_cancellation_factor": 240.78634977295587,
+        "schur_denominator_relative_margin": 0.9946930985215124,
+        "solve_quality_estimate_passed": true
+      },
+      "equipotential_open_control_ohm": {
+        "imag": -112.29947761221977,
+        "real": 2.2459895522443953
+      },
+      "errors": {
+        "analytic_schur_vs_direct_relative": 6.4104079791819216e-15,
+        "bulk_vs_boundary_loaded_relative": 0.7388038327461229,
+        "center_vs_boundary_loaded_relative": 0.18491916675331208,
+        "loaded_complex_relative": 5.310634143820798e-05,
+        "loaded_magnitude_error_db": 0.00045977885849304097,
+        "loaded_phase_error_deg": -0.00024393571053362426,
+        "mfdm_loaded_change_from_previous_relative": null,
+        "open_matrix_complex_relative": 3.909933277611421e-05,
+        "open_z11_complex_relative": 3.904415674421637e-05,
+        "reference_loaded_change_from_previous_relative": null
+      },
+      "frequency_hz": 100000000.0,
+      "load_impedance_ohm": {
+        "imag": 0.2982437710497898,
+        "real": 0.02
+      },
+      "loaded_input_ohm": {
+        "analytic_direct_boundary_port": {
+          "imag": 1.1451142050276655,
+          "real": 0.07293930340385392
+        },
+        "analytic_direct_center_port": {
+          "imag": 0.9333450315668788,
+          "real": 0.05969875646026916
+        },
+        "equipotential_bulk_control": {
+          "imag": 0.2990319039234601,
+          "real": 0.02012245982681726
+        },
+        "mfdm_raw_schur": {
+          "imag": 0.9333941843696323,
+          "real": 0.05970589054655884
+        }
+      },
+      "open": {
+        "analytic_boundary_port_z_ohm": [
+          [
+            {
+              "imag": -112.01875533156873,
+              "real": 2.2634016002771737
+            },
+            {
+              "imag": -112.43989102352181,
+              "real": 2.2372759550651318
+            }
+          ],
+          [
+            {
+              "imag": -112.43989102352181,
+              "real": 2.2372759550651318
+            },
+            {
+              "imag": -112.01875533156873,
+              "real": 2.2634016002771737
+            }
+          ]
+        ],
+        "analytic_center_port_z_ohm": [
+          [
+            {
+              "imag": -112.11084660634361,
+              "real": 2.257691274413274
+            },
+            {
+              "imag": -112.426722875576,
+              "real": 2.2380934909867602
+            }
+          ],
+          [
+            {
+              "imag": -112.426722875576,
+              "real": 2.2380934909867602
+            },
+            {
+              "imag": -112.11084660634364,
+              "real": 2.257691274413276
+            }
+          ]
+        ],
+        "mfdm_raw_z_ohm": [
+          [
+            {
+              "imag": -112.11521645362616,
+              "real": 2.2574215929368284
+            },
+            {
+              "imag": -112.43111723105889,
+              "real": 2.2378202581700988
+            }
+          ],
+          [
+            {
+              "imag": -112.43111723105885,
+              "real": 2.2378202581701006
+            },
+            {
+              "imag": -112.11521645362613,
+              "real": 2.25742159293683
+            }
+          ]
+        ]
+      },
+      "port_center_indices": [
+        0,
+        3
+      ],
+      "port_layout": "fixed-eighth",
+      "port_positions_m": [
+        0.0025,
+        0.0175
+      ],
+      "resources": {
+        "compile_elapsed_s": 0.0,
+        "physical_nodes": 8,
+        "relative_unknowns": 4,
+        "solve_elapsed_s": 0.015000000013969839
+      },
+      "rlgc": {
+        "capacitance_f_per_m": 7.083350250239999e-10,
+        "conductance_s_per_m": 0.008901200443582962,
+        "effective_inductance_h_per_m": 6.698423702407585e-08,
+        "effective_resistance_ohm_per_m": 2.6087787853512414,
+        "series_impedance_ohm_per_m": {
+          "imag": 42.08743738823082,
+          "real": 2.6087787853512414
+        },
+        "shunt_admittance_s_per_m": {
+          "imag": 0.4450600221791481,
+          "real": 0.008901200443582962
+        }
+      }
+    },
+    {
+      "cells": 12,
+      "diagnostics": {
+        "condition_estimate": 6423164518.4497385,
+        "forward_error_estimate_ohm": 0.3203936127020982,
+        "loaded_first_order_error_estimate_ohm": 1.281392928479854,
+        "loaded_first_order_error_estimate_relative_to_reference": 0.08052886392325986,
+        "loaded_real_nonnegative_with_first_order_tolerance": true,
+        "loaded_real_part_tolerance_ohm": 10.251143427838832,
+        "open_min_hermitian_eigenvalue_ohm": 0.003694839630043134,
+        "open_passive": true,
+        "raw_reciprocity_pair_max_absolute_ohm": 2.0453725005602753e-10,
+        "raw_reciprocity_pair_max_relative": 1.82099112695607e-15,
+        "raw_validation_passed": true,
+        "raw_vs_symmetric_loaded_delta_ohm": 0.0,
+        "residual_relative": 2.4430304763768244e-17,
+        "schur_cancellation_factor": 14116.69619956705,
+        "schur_denominator_relative_margin": 0.9999999751257774,
+        "solve_quality_estimate_passed": false
+      },
+      "equipotential_open_control_ohm": {
+        "imag": -112299.4776122198,
+        "real": 2245.989552244396
+      },
+      "errors": {
+        "analytic_schur_vs_direct_relative": 6.441208619814498e-13,
+        "bulk_vs_boundary_loaded_relative": 0.0006221418242646249,
+        "center_vs_boundary_loaded_relative": 0.00015553545655908076,
+        "loaded_complex_relative": 3.360494336317778e-11,
+        "loaded_magnitude_error_db": -2.661842749242491e-10,
+        "loaded_phase_error_deg": -7.900619927068787e-10,
+        "mfdm_loaded_change_from_previous_relative": 3.141245165879997e-11,
+        "open_matrix_complex_relative": 7.229698809635783e-08,
+        "open_z11_complex_relative": 7.229698815784585e-08,
+        "reference_loaded_change_from_previous_relative": 0.0
+      },
+      "frequency_hz": 100000.0,
+      "load_impedance_ohm": {
+        "imag": -15.915180149924177,
+        "real": 0.02
+      },
+      "loaded_input_ohm": {
+        "analytic_direct_boundary_port": {
+          "imag": -15.911952062801223,
+          "real": 0.029890921653344848
+        },
+        "analytic_direct_center_port": {
+          "imag": -15.912195484073662,
+          "real": 0.027428044733528466
+        },
+        "equipotential_bulk_control": {
+          "imag": -15.912925748023895,
+          "real": 0.02003941401874288
+        },
+        "mfdm_raw_schur": {
+          "imag": -15.912195483586402,
+          "real": 0.027428044513271743
+        }
+      },
+      "open": {
+        "analytic_boundary_port_z_ohm": [
+          [
+            {
+              "imag": -112299.47728762073,
+              "real": 2245.992836546292
+            },
+            {
+              "imag": -112299.47777451934,
+              "real": 2245.987910093415
+            }
+          ],
+          [
+            {
+              "imag": -112299.47777451934,
+              "real": 2245.987910093415
+            },
+            {
+              "imag": -112299.47728762073,
+              "real": 2245.992836546292
+            }
+          ]
+        ],
+        "analytic_center_port_z_ohm": [
+          [
+            {
+              "imag": -112299.47739412978,
+              "real": 2245.991758884732
+            },
+            {
+              "imag": -112299.47775930371,
+              "real": 2245.988064045076
+            }
+          ],
+          [
+            {
+              "imag": -112299.47775930371,
+              "real": 2245.988064045076
+            },
+            {
+              "imag": -112299.47739412978,
+              "real": 2245.991758884732
+            }
+          ]
+        ],
+        "mfdm_raw_z_ohm": [
+          [
+            {
+              "imag": -112299.47885422941,
+              "real": 2245.9837706909348
+            },
+            {
+              "imag": -112299.47921940387,
+              "real": 2245.9800758513484
+            }
+          ],
+          [
+            {
+              "imag": -112299.47921940367,
+              "real": 2245.98007585133
+            },
+            {
+              "imag": -112299.47885422969,
+              "real": 2245.983770691004
+            }
+          ]
+        ]
+      },
+      "port_center_indices": [
+        1,
+        10
+      ],
+      "port_layout": "fixed-eighth",
+      "port_positions_m": [
+        0.0025,
+        0.0175
+      ],
+      "resources": {
+        "compile_elapsed_s": 0.0,
+        "physical_nodes": 24,
+        "relative_unknowns": 12,
+        "solve_elapsed_s": 0.0
+      },
+      "rlgc": {
+        "capacitance_f_per_m": 7.083350250239999e-10,
+        "conductance_s_per_m": 8.90120044358296e-06,
+        "effective_inductance_h_per_m": 7.749232585445557e-08,
+        "effective_resistance_ohm_per_m": 0.4926452871873503,
+        "series_impedance_ohm_per_m": {
+          "imag": 0.048689864322788795,
+          "real": 0.4926452871873503
+        },
+        "shunt_admittance_s_per_m": {
+          "imag": 0.00044506002217914806,
+          "real": 8.90120044358296e-06
+        }
+      }
+    },
+    {
+      "cells": 12,
+      "diagnostics": {
+        "condition_estimate": 457552557.9264489,
+        "forward_error_estimate_ohm": 0.0022823159696480364,
+        "loaded_first_order_error_estimate_ohm": 0.009127975924184309,
+        "loaded_first_order_error_estimate_relative_to_reference": 0.005773101853541997,
+        "loaded_real_nonnegative_with_first_order_tolerance": true,
+        "loaded_real_part_tolerance_ohm": 0.07302380739347447,
+        "open_min_hermitian_eigenvalue_ohm": 0.0037203427787204646,
+        "open_passive": true,
+        "raw_reciprocity_pair_max_absolute_ohm": 4.547473508864641e-11,
+        "raw_reciprocity_pair_max_relative": 4.048606316174378e-15,
+        "raw_validation_passed": true,
+        "raw_vs_symmetric_loaded_delta_ohm": 0.0,
+        "residual_relative": 3.48271215948074e-17,
+        "schur_cancellation_factor": 14206.878050860283,
+        "schur_denominator_relative_margin": 0.9999999961215326,
+        "solve_quality_estimate_passed": false
+      },
+      "equipotential_open_control_ohm": {
+        "imag": -11229.947761221978,
+        "real": 224.59895522443958
+      },
+      "errors": {
+        "analytic_schur_vs_direct_relative": 3.313441004737752e-12,
+        "bulk_vs_boundary_loaded_relative": 0.008802641450175328,
+        "center_vs_boundary_loaded_relative": 0.0022006606589082107,
+        "loaded_complex_relative": 2.1166069725663177e-11,
+        "loaded_magnitude_error_db": -1.8113830699179167e-10,
+        "loaded_phase_error_deg": 2.0737726203807972e-10,
+        "mfdm_loaded_change_from_previous_relative": 8.470615004417935e-11,
+        "open_matrix_complex_relative": 1.2861230523806095e-08,
+        "open_z11_complex_relative": 1.2861232004876537e-08,
+        "reference_loaded_change_from_previous_relative": 0.0
+      },
+      "frequency_hz": 1000000.0,
+      "load_impedance_ohm": {
+        "imag": -1.5884078382653637,
+        "real": 0.02
+      },
+      "loaded_input_ohm": {
+        "analytic_direct_boundary_port": {
+          "imag": -1.5784502378591259,
+          "real": 0.029918340553537735
+        },
+        "analytic_direct_center_port": {
+          "imag": -1.580883481305462,
+          "real": 0.02743846357355472
+        },
+        "equipotential_bulk_control": {
+          "imag": -1.5881832117291808,
+          "real": 0.019998835338687373
+        },
+        "mfdm_raw_schur": {
+          "imag": -1.5808834812723944,
+          "real": 0.027438463578704386
+        }
+      },
+      "open": {
+        "analytic_boundary_port_z_ohm": [
+          [
+            {
+              "imag": -11229.94451644196,
+              "real": 224.60226219564257
+            },
+            {
+              "imag": -11229.949383611985,
+              "real": 224.59730173869627
+            }
+          ],
+          [
+            {
+              "imag": -11229.949383611985,
+              "real": 224.59730173869627
+            },
+            {
+              "imag": -11229.94451644196,
+              "real": 224.60226219564257
+            }
+          ]
+        ],
+        "analytic_center_port_z_ohm": [
+          [
+            {
+              "imag": -11229.945581135406,
+              "real": 224.60117709577474
+            },
+            {
+              "imag": -11229.94923151292,
+              "real": 224.59745675299706
+            }
+          ],
+          [
+            {
+              "imag": -11229.94923151292,
+              "real": 224.59745675299706
+            },
+            {
+              "imag": -11229.945581135406,
+              "real": 224.60117709577474
+            }
+          ]
+        ],
+        "mfdm_raw_z_ohm": [
+          [
+            {
+              "imag": -11229.945481161785,
+              "real": 224.6012813738389
+            },
+            {
+              "imag": -11229.949131539302,
+              "real": 224.59756103109157
+            }
+          ],
+          [
+            {
+              "imag": -11229.949131539346,
+              "real": 224.59756103107884
+            },
+            {
+              "imag": -11229.9454811618,
+              "real": 224.60128137388892
+            }
+          ]
+        ]
+      },
+      "port_center_indices": [
+        1,
+        10
+      ],
+      "port_layout": "fixed-eighth",
+      "port_positions_m": [
+        0.0025,
+        0.0175
+      ],
+      "resources": {
+        "compile_elapsed_s": 0.0,
+        "physical_nodes": 24,
+        "relative_unknowns": 12,
+        "solve_elapsed_s": 0.0
+      },
+      "rlgc": {
+        "capacitance_f_per_m": 7.083350250239999e-10,
+        "conductance_s_per_m": 8.901200443582961e-05,
+        "effective_inductance_h_per_m": 7.746341727129373e-08,
+        "effective_resistance_ohm_per_m": 0.49604562305974353,
+        "series_impedance_ohm_per_m": {
+          "imag": 0.48671700524291417,
+          "real": 0.49604562305974353
+        },
+        "shunt_admittance_s_per_m": {
+          "imag": 0.004450600221791481,
+          "real": 8.901200443582961e-05
+        }
+      }
+    },
+    {
+      "cells": 12,
+      "diagnostics": {
+        "condition_estimate": 6638747.597709124,
+        "forward_error_estimate_ohm": 3.3114610273741304e-06,
+        "loaded_first_order_error_estimate_ohm": 1.3244750277322321e-05,
+        "loaded_first_order_error_estimate_relative_to_reference": 0.00020412122431870134,
+        "loaded_real_nonnegative_with_first_order_tolerance": true,
+        "loaded_real_part_tolerance_ohm": 0.00010595800221857857,
+        "open_min_hermitian_eigenvalue_ohm": 0.0056924590188316415,
+        "open_passive": true,
+        "raw_reciprocity_pair_max_absolute_ohm": 1.8192114345999087e-12,
+        "raw_reciprocity_pair_max_relative": 1.6196197858578862e-15,
+        "raw_validation_passed": true,
+        "raw_vs_symmetric_loaded_delta_ohm": 2.2740142932498854e-13,
+        "residual_relative": 2.996444889814213e-17,
+        "schur_cancellation_factor": 34619.41735082332,
+        "schur_denominator_relative_margin": 0.9999989480910245,
+        "solve_quality_estimate_passed": false
+      },
+      "equipotential_open_control_ohm": {
+        "imag": -1122.9947761221977,
+        "real": 22.459895522443954
+      },
+      "errors": {
+        "analytic_schur_vs_direct_relative": 4.159147680371315e-12,
+        "bulk_vs_boundary_loaded_relative": 1.9817140592346754,
+        "center_vs_boundary_loaded_relative": 0.4954350105179354,
+        "loaded_complex_relative": 1.0924246608810784e-07,
+        "loaded_magnitude_error_db": -6.31156431788647e-07,
+        "loaded_phase_error_deg": 4.673656302117666e-06,
+        "mfdm_loaded_change_from_previous_relative": 8.742968421747658e-07,
+        "open_matrix_complex_relative": 4.911871390852642e-08,
+        "open_z11_complex_relative": 4.9117934951095645e-08,
+        "reference_loaded_change_from_previous_relative": 0.0
+      },
+      "frequency_hz": 10000000.0,
+      "load_impedance_ohm": {
+        "imag": -0.1277390165559974,
+        "real": 0.02
+      },
+      "loaded_input_ohm": {
+        "analytic_direct_boundary_port": {
+          "imag": -0.03314962554584302,
+          "real": 0.03517601015112019
+        },
+        "analytic_direct_center_port": {
+          "imag": -0.05679370987154097,
+          "real": 0.03138083571212997
+        },
+        "equipotential_bulk_control": {
+          "imag": -0.12772475888462484,
+          "real": 0.01999573595076687
+        },
+        "mfdm_raw_schur": {
+          "imag": -0.056793703184894184,
+          "real": 0.031380838064556826
+        }
+      },
+      "open": {
+        "analytic_boundary_port_z_ohm": [
+          [
+            {
+              "imag": -1122.9632480885746,
+              "real": 22.464955460494966
+            },
+            {
+              "imag": -1123.0105402032339,
+              "real": 22.457365530825403
+            }
+          ],
+          [
+            {
+              "imag": -1123.0105402032339,
+              "real": 22.457365530825403
+            },
+            {
+              "imag": -1122.9632480885746,
+              "real": 22.464955460494966
+            }
+          ]
+        ],
+        "analytic_center_port_z_ohm": [
+          [
+            {
+              "imag": -1122.973593199143,
+              "real": 22.463295177279768
+            },
+            {
+              "imag": -1123.0090623152428,
+              "real": 22.457602719437116
+            }
+          ],
+          [
+            {
+              "imag": -1123.0090623152428,
+              "real": 22.457602719437116
+            },
+            {
+              "imag": -1122.973593199143,
+              "real": 22.463295177279768
+            }
+          ]
+        ],
+        "mfdm_raw_z_ohm": [
+          [
+            {
+              "imag": -1122.9736476608828,
+              "real": 22.46328637062817
+            },
+            {
+              "imag": -1123.009116780326,
+              "real": 22.457593911610104
+            }
+          ],
+          [
+            {
+              "imag": -1123.0091167803243,
+              "real": 22.457593911609223
+            },
+            {
+              "imag": -1122.9736476608803,
+              "real": 22.463286370628822
+            }
+          ]
+        ]
+      },
+      "port_center_indices": [
+        1,
+        10
+      ],
+      "port_layout": "fixed-eighth",
+      "port_positions_m": [
+        0.0025,
+        0.0175
+      ],
+      "resources": {
+        "compile_elapsed_s": 0.0,
+        "physical_nodes": 24,
+        "relative_unknowns": 12,
+        "solve_elapsed_s": 0.0
+      },
+      "rlgc": {
+        "capacitance_f_per_m": 7.083350250239999e-10,
+        "conductance_s_per_m": 0.0008901200443582963,
+        "effective_inductance_h_per_m": 7.52672270936415e-08,
+        "effective_resistance_ohm_per_m": 0.7589816704429496,
+        "series_impedance_ohm_per_m": {
+          "imag": 4.729179353869176,
+          "real": 0.7589816704429496
+        },
+        "shunt_admittance_s_per_m": {
+          "imag": 0.044506002217914814,
+          "real": 0.0008901200443582963
+        }
+      }
+    },
+    {
+      "cells": 12,
+      "diagnostics": {
+        "condition_estimate": 75405.54267733543,
+        "forward_error_estimate_ohm": 3.760290773727846e-09,
+        "loaded_first_order_error_estimate_ohm": 1.5123747196609555e-08,
+        "loaded_first_order_error_estimate_relative_to_reference": 1.6170766949253073e-08,
+        "loaded_real_nonnegative_with_first_order_tolerance": true,
+        "loaded_real_part_tolerance_ohm": 1.2098997757287644e-07,
+        "open_min_hermitian_eigenvalue_ohm": 0.019598177968493946,
+        "open_passive": true,
+        "raw_reciprocity_pair_max_absolute_ohm": 4.133533127768899e-13,
+        "raw_reciprocity_pair_max_relative": 3.675902224285774e-15,
+        "raw_validation_passed": true,
+        "raw_vs_symmetric_loaded_delta_ohm": 0.0,
+        "residual_relative": 3.3083706473923176e-17,
+        "schur_cancellation_factor": 240.78933843221915,
+        "schur_denominator_relative_margin": 0.99469291610132,
+        "solve_quality_estimate_passed": true
+      },
+      "equipotential_open_control_ohm": {
+        "imag": -112.29947761221977,
+        "real": 2.2459895522443953
+      },
+      "errors": {
+        "analytic_schur_vs_direct_relative": 6.4104079791819216e-15,
+        "bulk_vs_boundary_loaded_relative": 0.7388038327461229,
+        "center_vs_boundary_loaded_relative": 0.18491916675331208,
+        "loaded_complex_relative": 5.900214424384642e-06,
+        "loaded_magnitude_error_db": 5.108351811818129e-05,
+        "loaded_phase_error_deg": -2.7100687771694544e-05,
+        "mfdm_loaded_change_from_previous_relative": 4.720362827111421e-05,
+        "open_matrix_complex_relative": 4.344038969909252e-06,
+        "open_z11_complex_relative": 4.337908849147893e-06,
+        "reference_loaded_change_from_previous_relative": 0.0
+      },
+      "frequency_hz": 100000000.0,
+      "load_impedance_ohm": {
+        "imag": 0.2982437710497898,
+        "real": 0.02
+      },
+      "loaded_input_ohm": {
+        "analytic_direct_boundary_port": {
+          "imag": 1.1451142050276655,
+          "real": 0.07293930340385392
+        },
+        "analytic_direct_center_port": {
+          "imag": 0.9333450315668788,
+          "real": 0.05969875646026916
+        },
+        "equipotential_bulk_control": {
+          "imag": 0.2990319039234601,
+          "real": 0.02012245982681726
+        },
+        "mfdm_raw_schur": {
+          "imag": 0.9333504925411376,
+          "real": 0.05969954903333985
+        }
+      },
+      "open": {
+        "analytic_boundary_port_z_ohm": [
+          [
+            {
+              "imag": -112.01875533156873,
+              "real": 2.2634016002771737
+            },
+            {
+              "imag": -112.43989102352181,
+              "real": 2.2372759550651318
+            }
+          ],
+          [
+            {
+              "imag": -112.43989102352181,
+              "real": 2.2372759550651318
+            },
+            {
+              "imag": -112.01875533156873,
+              "real": 2.2634016002771737
+            }
+          ]
+        ],
+        "analytic_center_port_z_ohm": [
+          [
+            {
+              "imag": -112.11084660634361,
+              "real": 2.257691274413274
+            },
+            {
+              "imag": -112.426722875576,
+              "real": 2.2380934909867602
+            }
+          ],
+          [
+            {
+              "imag": -112.426722875576,
+              "real": 2.2380934909867602
+            },
+            {
+              "imag": -112.11084660634364,
+              "real": 2.257691274413276
+            }
+          ]
+        ],
+        "mfdm_raw_z_ohm": [
+          [
+            {
+              "imag": -112.11133210809263,
+              "real": 2.257661315074314
+            },
+            {
+              "imag": -112.42721110023518,
+              "real": 2.2380631371057795
+            }
+          ],
+          [
+            {
+              "imag": -112.42721110023477,
+              "real": 2.2380631371057476
+            },
+            {
+              "imag": -112.1113321080928,
+              "real": 2.257661315074201
+            }
+          ]
+        ]
+      },
+      "port_center_indices": [
+        1,
+        10
+      ],
+      "port_layout": "fixed-eighth",
+      "port_positions_m": [
+        0.0025,
+        0.0175
+      ],
+      "resources": {
+        "compile_elapsed_s": 0.0,
+        "physical_nodes": 24,
+        "relative_unknowns": 12,
+        "solve_elapsed_s": 0.0
+      },
+      "rlgc": {
+        "capacitance_f_per_m": 7.083350250239999e-10,
+        "conductance_s_per_m": 0.008901200443582962,
+        "effective_inductance_h_per_m": 6.698423702407585e-08,
+        "effective_resistance_ohm_per_m": 2.6087787853512414,
+        "series_impedance_ohm_per_m": {
+          "imag": 42.08743738823082,
+          "real": 2.6087787853512414
+        },
+        "shunt_admittance_s_per_m": {
+          "imag": 0.4450600221791481,
+          "real": 0.008901200443582962
+        }
+      }
+    },
+    {
+      "cells": 36,
+      "diagnostics": {
+        "condition_estimate": 58698531017.07203,
+        "forward_error_estimate_ohm": 2.927939835005297,
+        "loaded_first_order_error_estimate_ohm": 11.710100485729955,
+        "loaded_first_order_error_estimate_relative_to_reference": 0.7359187549612519,
+        "loaded_real_nonnegative_with_first_order_tolerance": true,
+        "loaded_real_part_tolerance_ohm": 93.68080388583964,
+        "open_min_hermitian_eigenvalue_ohm": 0.003694839496347413,
+        "open_passive": true,
+        "raw_reciprocity_pair_max_absolute_ohm": 1.783455859519225e-09,
+        "raw_reciprocity_pair_max_relative": 1.587806845703852e-14,
+        "raw_validation_passed": true,
+        "raw_vs_symmetric_loaded_delta_ohm": 1.4551915228366852e-11,
+        "residual_relative": 3.4907136399647716e-17,
+        "schur_cancellation_factor": 14116.699842625258,
+        "schur_denominator_relative_margin": 0.9999999751256683,
+        "solve_quality_estimate_passed": false
+      },
+      "equipotential_open_control_ohm": {
+        "imag": -112299.4776122198,
+        "real": 2245.989552244396
+      },
+      "errors": {
+        "analytic_schur_vs_direct_relative": 6.441208619814498e-13,
+        "bulk_vs_boundary_loaded_relative": 0.0006221418242646249,
+        "center_vs_boundary_loaded_relative": 0.00015553545655908076,
+        "loaded_complex_relative": 3.260578892738246e-10,
+        "loaded_magnitude_error_db": -2.8241072394753373e-09,
+        "loaded_phase_error_deg": -1.4028500691145175e-09,
+        "mfdm_loaded_change_from_previous_relative": 2.946858810143379e-10,
+        "open_matrix_complex_relative": 2.7075568382260106e-07,
+        "open_z11_complex_relative": 2.707556357992802e-07,
+        "reference_loaded_change_from_previous_relative": 0.0
+      },
+      "frequency_hz": 100000.0,
+      "load_impedance_ohm": {
+        "imag": -15.915180149924177,
+        "real": 0.02
+      },
+      "loaded_input_ohm": {
+        "analytic_direct_boundary_port": {
+          "imag": -15.911952062801223,
+          "real": 0.029890921653344848
+        },
+        "analytic_direct_center_port": {
+          "imag": -15.912195484073662,
+          "real": 0.027428044733528466
+        },
+        "equipotential_bulk_control": {
+          "imag": -15.912925748023895,
+          "real": 0.02003941401874288
+        },
+        "mfdm_raw_schur": {
+          "imag": -15.912195478900685,
+          "real": 0.02742804433501078
+        }
+      },
+      "open": {
+        "analytic_boundary_port_z_ohm": [
+          [
+            {
+              "imag": -112299.47728762073,
+              "real": 2245.992836546292
+            },
+            {
+              "imag": -112299.47777451934,
+              "real": 2245.987910093415
+            }
+          ],
+          [
+            {
+              "imag": -112299.47777451934,
+              "real": 2245.987910093415
+            },
+            {
+              "imag": -112299.47728762073,
+              "real": 2245.992836546292
+            }
+          ]
+        ],
+        "analytic_center_port_z_ohm": [
+          [
+            {
+              "imag": -112299.47739412978,
+              "real": 2245.991758884732
+            },
+            {
+              "imag": -112299.47775930371,
+              "real": 2245.988064045076
+            }
+          ],
+          [
+            {
+              "imag": -112299.47775930371,
+              "real": 2245.988064045076
+            },
+            {
+              "imag": -112299.47739412978,
+              "real": 2245.991758884732
+            }
+          ]
+        ],
+        "mfdm_raw_z_ohm": [
+          [
+            {
+              "imag": -112299.50770198584,
+              "real": 2245.9892466637593
+            },
+            {
+              "imag": -112299.50806716588,
+              "real": 2245.9855518243858
+            }
+          ],
+          [
+            {
+              "imag": -112299.50806716747,
+              "real": 2245.9855518235704
+            },
+            {
+              "imag": -112299.5077019938,
+              "real": 2245.98924666319
+            }
+          ]
+        ]
+      },
+      "port_center_indices": [
+        4,
+        31
+      ],
+      "port_layout": "fixed-eighth",
+      "port_positions_m": [
+        0.0025,
+        0.0175
+      ],
+      "resources": {
+        "compile_elapsed_s": 0.0,
+        "physical_nodes": 72,
+        "relative_unknowns": 36,
+        "solve_elapsed_s": 0.0
+      },
+      "rlgc": {
+        "capacitance_f_per_m": 7.083350250239999e-10,
+        "conductance_s_per_m": 8.90120044358296e-06,
+        "effective_inductance_h_per_m": 7.749232585445557e-08,
+        "effective_resistance_ohm_per_m": 0.4926452871873503,
+        "series_impedance_ohm_per_m": {
+          "imag": 0.048689864322788795,
+          "real": 0.4926452871873503
+        },
+        "shunt_admittance_s_per_m": {
+          "imag": 0.00044506002217914806,
+          "real": 8.90120044358296e-06
+        }
+      }
+    },
+    {
+      "cells": 36,
+      "diagnostics": {
+        "condition_estimate": 4181377215.866842,
+        "forward_error_estimate_ohm": 0.020857108394409542,
+        "loaded_first_order_error_estimate_ohm": 0.08341666351291901,
+        "loaded_first_order_error_estimate_relative_to_reference": 0.052757905886540335,
+        "loaded_real_nonnegative_with_first_order_tolerance": true,
+        "loaded_real_part_tolerance_ohm": 0.6673333081033521,
+        "open_min_hermitian_eigenvalue_ohm": 0.0037203427735619243,
+        "open_passive": true,
+        "raw_reciprocity_pair_max_absolute_ohm": 3.766925071723384e-10,
+        "raw_reciprocity_pair_max_relative": 3.353685892572299e-14,
+        "raw_validation_passed": true,
+        "raw_vs_symmetric_loaded_delta_ohm": 5.684341886080802e-14,
+        "residual_relative": 4.047102047482119e-17,
+        "schur_cancellation_factor": 14206.877011988945,
+        "schur_denominator_relative_margin": 0.9999999961216816,
+        "solve_quality_estimate_passed": false
+      },
+      "equipotential_open_control_ohm": {
+        "imag": -11229.947761221978,
+        "real": 224.59895522443958
+      },
+      "errors": {
+        "analytic_schur_vs_direct_relative": 3.313441004737752e-12,
+        "bulk_vs_boundary_loaded_relative": 0.008802641450175328,
+        "center_vs_boundary_loaded_relative": 0.0022006606589082107,
+        "loaded_complex_relative": 5.593883004274862e-11,
+        "loaded_magnitude_error_db": -4.449194778748176e-10,
+        "loaded_phase_error_deg": -1.28797782897589e-09,
+        "mfdm_loaded_change_from_previous_relative": 4.004281083055478e-11,
+        "open_matrix_complex_relative": 1.5617127037604626e-07,
+        "open_z11_complex_relative": 1.561712749579319e-07,
+        "reference_loaded_change_from_previous_relative": 0.0
+      },
+      "frequency_hz": 1000000.0,
+      "load_impedance_ohm": {
+        "imag": -1.5884078382653637,
+        "real": 0.02
+      },
+      "loaded_input_ohm": {
+        "analytic_direct_boundary_port": {
+          "imag": -1.5784502378591259,
+          "real": 0.029918340553537735
+        },
+        "analytic_direct_center_port": {
+          "imag": -1.580883481305462,
+          "real": 0.02743846357355472
+        },
+        "equipotential_bulk_control": {
+          "imag": -1.5881832117291808,
+          "real": 0.019998835338687373
+        },
+        "mfdm_raw_schur": {
+          "imag": -1.5808834812251007,
+          "real": 0.027438463536611835
+        }
+      },
+      "open": {
+        "analytic_boundary_port_z_ohm": [
+          [
+            {
+              "imag": -11229.94451644196,
+              "real": 224.60226219564257
+            },
+            {
+              "imag": -11229.949383611985,
+              "real": 224.59730173869627
+            }
+          ],
+          [
+            {
+              "imag": -11229.949383611985,
+              "real": 224.59730173869627
+            },
+            {
+              "imag": -11229.94451644196,
+              "real": 224.60226219564257
+            }
+          ]
+        ],
+        "analytic_center_port_z_ohm": [
+          [
+            {
+              "imag": -11229.945581135406,
+              "real": 224.60117709577474
+            },
+            {
+              "imag": -11229.94923151292,
+              "real": 224.59745675299706
+            }
+          ],
+          [
+            {
+              "imag": -11229.94923151292,
+              "real": 224.59745675299706
+            },
+            {
+              "imag": -11229.945581135406,
+              "real": 224.60117709577474
+            }
+          ]
+        ],
+        "mfdm_raw_z_ohm": [
+          [
+            {
+              "imag": -11229.944691689978,
+              "real": 224.59966517190333
+            },
+            {
+              "imag": -11229.948342067513,
+              "real": 224.59594482907323
+            }
+          ],
+          [
+            {
+              "imag": -11229.948342067251,
+              "real": 224.59594482880252
+            },
+            {
+              "imag": -11229.94469168969,
+              "real": 224.59966517151958
+            }
+          ]
+        ]
+      },
+      "port_center_indices": [
+        4,
+        31
+      ],
+      "port_layout": "fixed-eighth",
+      "port_positions_m": [
+        0.0025,
+        0.0175
+      ],
+      "resources": {
+        "compile_elapsed_s": 0.0,
+        "physical_nodes": 72,
+        "relative_unknowns": 36,
+        "solve_elapsed_s": 0.0
+      },
+      "rlgc": {
+        "capacitance_f_per_m": 7.083350250239999e-10,
+        "conductance_s_per_m": 8.901200443582961e-05,
+        "effective_inductance_h_per_m": 7.746341727129373e-08,
+        "effective_resistance_ohm_per_m": 0.49604562305974353,
+        "series_impedance_ohm_per_m": {
+          "imag": 0.48671700524291417,
+          "real": 0.49604562305974353
+        },
+        "shunt_admittance_s_per_m": {
+          "imag": 0.004450600221791481,
+          "real": 8.901200443582961e-05
+        }
+      }
+    },
+    {
+      "cells": 36,
+      "diagnostics": {
+        "condition_estimate": 60668672.91955895,
+        "forward_error_estimate_ohm": 3.026202385408578e-05,
+        "loaded_first_order_error_estimate_ohm": 0.00012103809935192055,
+        "loaded_first_order_error_estimate_relative_to_reference": 0.001865376433047971,
+        "loaded_real_nonnegative_with_first_order_tolerance": true,
+        "loaded_real_part_tolerance_ohm": 0.0009683047948153644,
+        "open_min_hermitian_eigenvalue_ohm": 0.005692457975126075,
+        "open_passive": true,
+        "raw_reciprocity_pair_max_absolute_ohm": 2.751196538609049e-11,
+        "raw_reciprocity_pair_max_relative": 2.4493538446405934e-14,
+        "raw_validation_passed": true,
+        "raw_vs_symmetric_loaded_delta_ohm": 3.552713678800501e-15,
+        "residual_relative": 2.2416282055533018e-17,
+        "schur_cancellation_factor": 34619.41376575874,
+        "schur_denominator_relative_margin": 0.9999989480911095,
+        "solve_quality_estimate_passed": false
+      },
+      "equipotential_open_control_ohm": {
+        "imag": -1122.9947761221977,
+        "real": 22.459895522443954
+      },
+      "errors": {
+        "analytic_schur_vs_direct_relative": 4.159147680371315e-12,
+        "bulk_vs_boundary_loaded_relative": 1.9817140592346754,
+        "center_vs_boundary_loaded_relative": 0.4954350105179354,
+        "loaded_complex_relative": 1.1996914346169953e-08,
+        "loaded_magnitude_error_db": -6.86071878122184e-08,
+        "loaded_phase_error_deg": 5.173671863873103e-07,
+        "mfdm_loaded_change_from_previous_relative": 9.724610895816926e-08,
+        "open_matrix_complex_relative": 9.561302763307864e-09,
+        "open_z11_complex_relative": 9.561271133049163e-09,
+        "reference_loaded_change_from_previous_relative": 0.0
+      },
+      "frequency_hz": 10000000.0,
+      "load_impedance_ohm": {
+        "imag": -0.1277390165559974,
+        "real": 0.02
+      },
+      "loaded_input_ohm": {
+        "analytic_direct_boundary_port": {
+          "imag": -0.03314962554584302,
+          "real": 0.03517601015112019
+        },
+        "analytic_direct_center_port": {
+          "imag": -0.05679370987154097,
+          "real": 0.03138083571212997
+        },
+        "equipotential_bulk_control": {
+          "imag": -0.12772475888462484,
+          "real": 0.01999573595076687
+        },
+        "mfdm_raw_schur": {
+          "imag": -0.05679370913958337,
+          "real": 0.031380835977095956
+        }
+      },
+      "open": {
+        "analytic_boundary_port_z_ohm": [
+          [
+            {
+              "imag": -1122.9632480885746,
+              "real": 22.464955460494966
+            },
+            {
+              "imag": -1123.0105402032339,
+              "real": 22.457365530825403
+            }
+          ],
+          [
+            {
+              "imag": -1123.0105402032339,
+              "real": 22.457365530825403
+            },
+            {
+              "imag": -1122.9632480885746,
+              "real": 22.464955460494966
+            }
+          ]
+        ],
+        "analytic_center_port_z_ohm": [
+          [
+            {
+              "imag": -1122.973593199143,
+              "real": 22.463295177279768
+            },
+            {
+              "imag": -1123.0090623152428,
+              "real": 22.457602719437116
+            }
+          ],
+          [
+            {
+              "imag": -1123.0090623152428,
+              "real": 22.457602719437116
+            },
+            {
+              "imag": -1122.973593199143,
+              "real": 22.463295177279768
+            }
+          ]
+        ],
+        "mfdm_raw_z_ohm": [
+          [
+            {
+              "imag": -1122.9736039223749,
+              "real": 22.46329459180953
+            },
+            {
+              "imag": -1123.0090730388454,
+              "real": 22.45760213383764
+            }
+          ],
+          [
+            {
+              "imag": -1123.0090730388727,
+              "real": 22.45760213383411
+            },
+            {
+              "imag": -1122.9736039224115,
+              "real": 22.46329459181248
+            }
+          ]
+        ]
+      },
+      "port_center_indices": [
+        4,
+        31
+      ],
+      "port_layout": "fixed-eighth",
+      "port_positions_m": [
+        0.0025,
+        0.0175
+      ],
+      "resources": {
+        "compile_elapsed_s": 0.0,
+        "physical_nodes": 72,
+        "relative_unknowns": 36,
+        "solve_elapsed_s": 0.0
+      },
+      "rlgc": {
+        "capacitance_f_per_m": 7.083350250239999e-10,
+        "conductance_s_per_m": 0.0008901200443582963,
+        "effective_inductance_h_per_m": 7.52672270936415e-08,
+        "effective_resistance_ohm_per_m": 0.7589816704429496,
+        "series_impedance_ohm_per_m": {
+          "imag": 4.729179353869176,
+          "real": 0.7589816704429496
+        },
+        "shunt_admittance_s_per_m": {
+          "imag": 0.044506002217914814,
+          "real": 0.0008901200443582963
+        }
+      }
+    },
+    {
+      "cells": 36,
+      "diagnostics": {
+        "condition_estimate": 689106.9991560394,
+        "forward_error_estimate_ohm": 3.43639555786143e-08,
+        "loaded_first_order_error_estimate_ohm": 1.3821052886902732e-07,
+        "loaded_first_order_error_estimate_relative_to_reference": 1.4777886876971145e-07,
+        "loaded_real_nonnegative_with_first_order_tolerance": true,
+        "loaded_real_part_tolerance_ohm": 1.1056842309522186e-06,
+        "open_min_hermitian_eigenvalue_ohm": 0.019597827263634127,
+        "open_passive": true,
+        "raw_reciprocity_pair_max_absolute_ohm": 6.517980116941717e-12,
+        "raw_reciprocity_pair_max_relative": 5.796385127017174e-14,
+        "raw_validation_passed": true,
+        "raw_vs_symmetric_loaded_delta_ohm": 1.4217791915866692e-14,
+        "residual_relative": 2.683287870771715e-17,
+        "schur_cancellation_factor": 240.78967049213938,
+        "schur_denominator_relative_margin": 0.9946928958334693,
+        "solve_quality_estimate_passed": true
+      },
+      "equipotential_open_control_ohm": {
+        "imag": -112.29947761221977,
+        "real": 2.2459895522443953
+      },
+      "errors": {
+        "analytic_schur_vs_direct_relative": 6.4104079791819216e-15,
+        "bulk_vs_boundary_loaded_relative": 0.7388038327461229,
+        "center_vs_boundary_loaded_relative": 0.18491916675331208,
+        "loaded_complex_relative": 6.555695525863869e-07,
+        "loaded_magnitude_error_db": 5.675876455309212e-06,
+        "loaded_phase_error_deg": -3.0111296265690274e-06,
+        "mfdm_loaded_change_from_previous_relative": 5.2446140270451205e-06,
+        "open_matrix_complex_relative": 4.826913424380447e-07,
+        "open_z11_complex_relative": 4.820102618016459e-07,
+        "reference_loaded_change_from_previous_relative": 0.0
+      },
+      "frequency_hz": 100000000.0,
+      "load_impedance_ohm": {
+        "imag": 0.2982437710497898,
+        "real": 0.02
+      },
+      "loaded_input_ohm": {
+        "analytic_direct_boundary_port": {
+          "imag": 1.1451142050276655,
+          "real": 0.07293930340385392
+        },
+        "analytic_direct_center_port": {
+          "imag": 0.9333450315668788,
+          "real": 0.05969875646026916
+        },
+        "equipotential_bulk_control": {
+          "imag": 0.2990319039234601,
+          "real": 0.02012245982681726
+        },
+        "mfdm_raw_schur": {
+          "imag": 0.9333456383327672,
+          "real": 0.059698844522161565
+        }
+      },
+      "open": {
+        "analytic_boundary_port_z_ohm": [
+          [
+            {
+              "imag": -112.01875533156873,
+              "real": 2.2634016002771737
+            },
+            {
+              "imag": -112.43989102352181,
+              "real": 2.2372759550651318
+            }
+          ],
+          [
+            {
+              "imag": -112.43989102352181,
+              "real": 2.2372759550651318
+            },
+            {
+              "imag": -112.01875533156873,
+              "real": 2.2634016002771737
+            }
+          ]
+        ],
+        "analytic_center_port_z_ohm": [
+          [
+            {
+              "imag": -112.11084660634361,
+              "real": 2.257691274413274
+            },
+            {
+              "imag": -112.426722875576,
+              "real": 2.2380934909867602
+            }
+          ],
+          [
+            {
+              "imag": -112.426722875576,
+              "real": 2.2380934909867602
+            },
+            {
+              "imag": -112.11084660634364,
+              "real": 2.257691274413276
+            }
+          ]
+        ],
+        "mfdm_raw_z_ohm": [
+          [
+            {
+              "imag": -112.11090055327988,
+              "real": 2.257687945707506
+            },
+            {
+              "imag": -112.42677712505073,
+              "real": 2.2380901184441013
+            }
+          ],
+          [
+            {
+              "imag": -112.4267771250572,
+              "real": 2.2380901184432793
+            },
+            {
+              "imag": -112.11090055328113,
+              "real": 2.2576879457071426
+            }
+          ]
+        ]
+      },
+      "port_center_indices": [
+        4,
+        31
+      ],
+      "port_layout": "fixed-eighth",
+      "port_positions_m": [
+        0.0025,
+        0.0175
+      ],
+      "resources": {
+        "compile_elapsed_s": 0.0,
+        "physical_nodes": 72,
+        "relative_unknowns": 36,
+        "solve_elapsed_s": 0.0
+      },
+      "rlgc": {
+        "capacitance_f_per_m": 7.083350250239999e-10,
+        "conductance_s_per_m": 0.008901200443582962,
+        "effective_inductance_h_per_m": 6.698423702407585e-08,
+        "effective_resistance_ohm_per_m": 2.6087787853512414,
+        "series_impedance_ohm_per_m": {
+          "imag": 42.08743738823082,
+          "real": 2.6087787853512414
+        },
+        "shunt_admittance_s_per_m": {
+          "imag": 0.4450600221791481,
+          "real": 0.008901200443582962
+        }
+      }
+    }
+  ],
+  "scope": "synthetic canonical strip only; no PowerSI attribution or production promotion",
+  "status": "ACCEPT_CANONICAL_ONLY",
+  "study": "Astra MFDM Loaded-Sheet Study",
+  "version": "0.23.1"
+}

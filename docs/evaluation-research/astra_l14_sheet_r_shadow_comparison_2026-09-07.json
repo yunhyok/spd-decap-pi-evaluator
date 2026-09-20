@@ -1,0 +1,67 @@
+{
+  "baseline": {
+    "complex_gap_ohm": 0.0006180322719598752,
+    "complex_relative_error": 0.7610323044211814,
+    "magnitude_error_db": -2.428670003508578,
+    "magnitude_ohm": 0.00061400875122765,
+    "phase_error_deg": -48.97890346256608,
+    "zdd_ohm": [
+      0.00010031137009881143,
+      -0.0006057593380320584
+    ]
+  },
+  "conditional_change": {
+    "absolute_magnitude_error_reduction_db": -0.19658041453919628,
+    "complex_gap_reduction_fraction": 0.11814989232348995,
+    "complex_gap_reduction_ohm": 7.302044638450112e-05,
+    "delta_zdd_ohm": [
+      6.744512350494255e-05,
+      2.9408742730339986e-05
+    ]
+  },
+  "conditional_sheet_r_shadow": {
+    "complex_gap_ohm": 0.0005450118255753741,
+    "complex_relative_error": 0.6711164195991214,
+    "magnitude_error_db": -2.6252504180477745,
+    "magnitude_ohm": 0.0006002684814738081,
+    "phase_error_deg": -42.153011281173775,
+    "zdd_ohm": [
+      0.00016775649360375398,
+      -0.0005763505953017184
+    ]
+  },
+  "frequency_hz": 1000000.0,
+  "inputs": {
+    "baseline_comparison": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_loaded_development_comparison_2026-09-07.json",
+      "sha256": "3c3574ca191afb54f928a3851fbdfbaa7e512434544ca4d464a2a14b84212bac",
+      "size_bytes": 9689
+    },
+    "reference": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_loaded_development_reference_2026-09-07.json",
+      "sha256": "761d61334678ceaca0db55bc8c5539bb080ee36363eae33a2c419a1ea5c06430",
+      "size_bytes": 2005
+    },
+    "shadow": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-sheet-r-shadow-01\\result.json",
+      "sha256": "b0401b240cd855dc4beffbc2f8920c2f285022885c2940660601cc41aa2adca5",
+      "size_bytes": 9846
+    }
+  },
+  "limitations": [
+    "Source-derived fixed-mesh DC sheet resistance with unchanged native external terms; no reference fitting.",
+    "One development rail at 1 MHz; no mesh/electrode convergence, AC magnetic/return validation or unseen accuracy promotion.",
+    "Positive gap reduction indicates improvement only for this conditional point; negative indicates worsening."
+  ],
+  "metrics_helper_sha256": "791dff2b36406d7b6c8db903fa04916ef0a42b010da96368e6a8e18573426bbe",
+  "program": "SPD Decap PI Evaluator",
+  "rail_id": "ADC_VDD_075_VTRIP_SRAM/0",
+  "reference_port_one_based": 18,
+  "reference_zdd_ohm": [
+    0.0006915479466520245,
+    -0.0004257504501139287
+  ],
+  "script_sha256": "e847c85ee884d91d9ac8bebd18c3a702f5691571252ab99137175850362d468c",
+  "status": "COMPLETED_CONDITIONAL_L14_SHEET_R_SHADOW_COMPARISON",
+  "version": "0.23.1"
+}

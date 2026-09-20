@@ -1,0 +1,117 @@
+{
+  "comparison_to_saved_field": {
+    "full_physical_voltage_max_abs_error_ohm": 1.0243594849542939e-14,
+    "full_physical_voltage_tolerance_ohm": 6.272858852367888e-14,
+    "pass": true,
+    "reconstructed_minus_prior_zdd_ohm": [
+      -1.068669621111934e-14,
+      -4.33138767907959e-16
+    ],
+    "reconstructed_minus_saved_zdd_ohm": [
+      -1.068669621111934e-14,
+      -4.3303034769071047e-16
+    ],
+    "reconstructed_zdd_ohm": [
+      0.00010031137008812473,
+      -0.0006057593380324915
+    ],
+    "saved_zdd_ohm": [
+      0.00010031137009881143,
+      -0.0006057593380320585
+    ],
+    "scaled_solution_max_abs_error": 5.157756126040277e-11,
+    "zdd_tolerance_ohm": 6.140087512276502e-14
+  },
+  "frequency_hz": 1000000.0,
+  "inputs": {
+    "derived": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\derived-field-observation.npz",
+      "sha256": "be5a83dff88db545de4625414e46dcc360364eb0a29077c91848a6ac805cb6c0",
+      "size_bytes": 22990365
+    },
+    "numeric": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\numeric-capture-checkpoint.npz",
+      "sha256": "c54d9e73a47a862396e6f70347ad9e319a6fbc1a3310e95feeeedf2b3cf1e292",
+      "size_bytes": 16297774
+    },
+    "raw": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\raw-field-snapshot.npz",
+      "sha256": "6eac098738598a78b2068ce4f80e46fd70e17010a89bfb5949ec8a68124df4a7",
+      "size_bytes": 145099492
+    }
+  },
+  "limitations": [
+    "The result reconstructs the persisted native baseline only; it does not replace, exclude, or re-own any G/C partial or finite R/L link.",
+    "No source-trace, island-sensitivity, finite-electrode, current-sharing, AC-convergence, PowerSI, or source-bound readiness claim follows from this one point.",
+    "The saved field JSON was known truncated; this reconstruction relies only on the three independently pinned NPZ inputs."
+  ],
+  "matrix_construction": {
+    "active_node_count": 756889,
+    "coalesced_surface_aliases": true,
+    "factor_persisted": false,
+    "finite": {
+      "finite_link_count": 1692389,
+      "finite_matrix_nnz": 2892586,
+      "maximum_finite_admittance_abs_s": 3572.3583493979695,
+      "minimum_finite_admittance_real_s": 69.89341437417194
+    },
+    "full_y_persisted": false,
+    "gauge_active_index": 0,
+    "partial": {
+      "active_precoalesce_nnz": 22355,
+      "coalesced_surface_alias_occurrences": 3998,
+      "minimum_partial_scale_real_s": 26541.69793396468,
+      "partial_count": 36,
+      "partial_matrix_nnz": 10541,
+      "pruned_c_entries": 0,
+      "source_nominal_c_nnz": 22355
+    },
+    "retained_node_count": 756888,
+    "surface_node_count": 812988,
+    "termination": {
+      "minimum_termination_admittance_real_s": 0.012302129414752578,
+      "termination_count": 11050,
+      "termination_matrix_nnz": 5312
+    }
+  },
+  "numerical_checks": {
+    "driven_conjugated_power_ohm": [
+      0.00010031137003879296,
+      -0.0006057593380596817
+    ],
+    "driven_vhy_ohm": [
+      0.00010031137003879296,
+      0.0006057593380596817
+    ],
+    "finite_min_real_admittance_s": 69.89341437417194,
+    "matrix": {
+      "matrix_nnz": 2904015,
+      "max_abs_entry": 147135081.85488778,
+      "row_sum_max_abs": 7.158597783408069e-05,
+      "transpose_symmetry_max_abs": 2.399963341663627e-10
+    },
+    "observed_driven_passivity_real_ohm": 0.00010031137003879296,
+    "one_superlu_factor_and_device_rhs_solve": true,
+    "passivity_scope": "nonnegative finite/termination conductance and nonnegative driven Hermitian power only; no global PSD eigen-certificate",
+    "physical_residual_max_abs_a": 7.524027032753021e-11,
+    "pivot_abs_ratio": 9031482.13993586,
+    "pivot_max_abs": 0.5000000000000002,
+    "pivot_min_abs": 5.536189877285758e-08,
+    "saved_row_scale_reused": true,
+    "saved_scaled_rhs_exact": true,
+    "scaled_matrix_nnz": 2904010,
+    "scaled_residual_max_abs": 2.1451937902388997e-14,
+    "terminal_cancellation_ratio_abs_vdiff_over_abs_vp_plus_abs_vn": 0.9999506838804134,
+    "termination_min_real_admittance_s": 0.012302129414752578
+  },
+  "observer_driver_sha256": "5d09ee1ffc413215e641275b9dd1851ff716f7f86aea279a10228c099ee452cd",
+  "program": "SPD Decap PI Evaluator",
+  "resource": {
+    "elapsed_s": 48.90600000001723,
+    "max_rss_bytes": 25769803776,
+    "max_runtime_s": 180.0,
+    "peak_rss_bytes": 0
+  },
+  "scope": "One 1 MHz Device one-amp reconstruction from the three pinned Run02 NPZs only. No bundle, geometry, native compile, product source, old controller, PowerSI fit, source-trace expansion, or replacement claim was used.",
+  "status": "COMPLETED_SAVED_NATIVE_FIELD_RECONSTRUCTION"
+}

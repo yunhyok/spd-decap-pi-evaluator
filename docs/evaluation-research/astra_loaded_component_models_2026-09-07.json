@@ -1,0 +1,103 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "COMPLETED_SAVED_LOADED_COMPONENT_MODEL_AUDIT",
+  "rail_id": "ADC_VDD_075_VTRIP_SRAM/0",
+  "bundle_path": "D:\\SPD-Decap-PI-Evaluator-W7\\e2f219e71d8c8a397009f72242cce10d78cfc7ab\\260902-d115b-source-plane-ownership-materialization-04\\source_plane_ownership_candidate.spdpi",
+  "scenario_sha256": "2f5ae107221857f7f093ab8d6cbcff4c286a0c6cee5b6a9994de1c384cf39c83",
+  "code_sha256": "680d0810d7edc19d80033b3105066bd1c9f1d491f7e92b089fd0639323c5989e",
+  "frequencies_hz": [
+    1000000.0,
+    10000000.0,
+    100000000.0,
+    1000000000.0
+  ],
+  "models": [
+    {
+      "model_id": "CAP_0402_100NF",
+      "count": 165,
+      "actual_model_class": "SampledImpedanceModel",
+      "sample_count": 401,
+      "valid_min_hz": 1000.0,
+      "valid_max_hz": 1000000000.0,
+      "sample_payload_sha256": "86cea55860b11500503677743bb22688203203d9adf5372d8144f906e4b98ba9",
+      "individual_component_z_ohm": [
+        [
+          0.04293811466937638,
+          -1.867740800630535
+        ],
+        [
+          0.01622208704554329,
+          -0.17836654713105982
+        ],
+        [
+          0.04071671817159543,
+          0.08359805913050039
+        ],
+        [
+          0.10225501616566862,
+          0.7423439188718118
+        ]
+      ]
+    },
+    {
+      "model_id": "CAP_0603_1UF",
+      "count": 248,
+      "actual_model_class": "SampledImpedanceModel",
+      "sample_count": 401,
+      "valid_min_hz": 1000.0,
+      "valid_max_hz": 1000000000.0,
+      "sample_payload_sha256": "acabbff6c9847503dde3ad4bd0833887767f38f6cdb717781111e1c971538be8",
+      "individual_component_z_ohm": [
+        [
+          0.019571849049216845,
+          -0.21579193982154032
+        ],
+        [
+          0.015041543616670284,
+          -0.004804513955158081
+        ],
+        [
+          0.04300181925894393,
+          0.12416656170362703
+        ],
+        [
+          0.20267409712580814,
+          0.9240209803178955
+        ]
+      ]
+    },
+    {
+      "model_id": "CAP_1608_10UF",
+      "count": 8,
+      "actual_model_class": "SampledImpedanceModel",
+      "sample_count": 401,
+      "valid_min_hz": 1000.0,
+      "valid_max_hz": 1000000000.0,
+      "sample_payload_sha256": "f453368c661321cb660f731ee4eeb975bc451309f413ade930c841ab211e7bd9",
+      "individual_component_z_ohm": [
+        [
+          0.003805177917341136,
+          -0.02055969550385439
+        ],
+        [
+          0.013784012717941937,
+          0.021979933514890967
+        ],
+        [
+          0.03703161217156118,
+          0.16990202525757786
+        ],
+        [
+          0.15312644529890004,
+          1.4511532476232671
+        ]
+      ]
+    }
+  ],
+  "limitations": [
+    "Values are individual saved component impedances, not Device response or a board-free accuracy substitute.",
+    "Uses the native evaluator model selection and evaluation; no geometry, placement, coupling, fit or PowerSI response is used.",
+    "This read only validates the scenario member hash, not every other archive attachment; the native driver validates the full bundle separately."
+  ]
+}

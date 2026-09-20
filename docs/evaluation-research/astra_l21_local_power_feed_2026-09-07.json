@@ -1,0 +1,651 @@
+{
+  "analytic_ideal_sheet_baseline_ohm": [
+    [
+      [
+        0.0016006896152288307,
+        0.002637163020529846
+      ],
+      [
+        0.0008328251054298727,
+        0.0024385151009861114
+      ]
+    ],
+    [
+      [
+        0.0008328251054298727,
+        0.0024385151009861114
+      ],
+      [
+        0.0012167573603293516,
+        0.0025378390607579786
+      ]
+    ]
+  ],
+  "checks": {
+    "boundary10_balanced_z_psd": true,
+    "boundary10_offdiag_sign_gate": true,
+    "conditioning_gate": true,
+    "full_y_vs_balanced_branch_via_currents": true,
+    "full_y_vs_balanced_branch_z": true,
+    "ideal_sheet_limit_recovers_analytic": true,
+    "native_via_current_kcl": true,
+    "native_via_currents_finite": true,
+    "old_initial_8edge_triangle_rejected": true,
+    "passivity_gate": true,
+    "reciprocity_gate": true,
+    "source_boundary10_hash_pinned": true,
+    "source_matrix_finite": true,
+    "source_nodal_floating_row_sum": true,
+    "source_nodal_reciprocity": true,
+    "two_node_orderings_match": true
+  },
+  "comparison_errors": {
+    "full_y_vs_branch_native_via_current_max_abs": 1.1618843868059943e-16,
+    "full_y_vs_branch_native_via_current_relative": 1.1618843868059943e-16,
+    "full_y_vs_branch_z_relative": 6.798017333058046e-17,
+    "node_order_via_max_abs": 4.530719893078742e-16,
+    "node_order_z_relative": 1.9227696619316133e-16
+  },
+  "frequency_hz": 1000000.0,
+  "ideal_sheet_limit": {
+    "diagnostics": {
+      "backward_relative_residual": 1.4022852582644957e-22,
+      "branch_equation_relative_residual": 2.6487469637698177e-19,
+      "branch_impedance_condition_estimate": 1.0,
+      "component_count": 1,
+      "gauge_node_ids": [
+        "S0"
+      ],
+      "min_hermitian_impedance_eigenvalue_ohm": 0.0005540606015272563,
+      "nodal_kcl_relative_residual": 0.0,
+      "passivity_tolerance_ohm": 5.510919337868655e-12,
+      "raw_reciprocity_absolute_error_ohm": 0.0,
+      "raw_reciprocity_relative_error": 0.0,
+      "scaled_saddle_condition_estimate": 8639.590704552054
+    },
+    "impedance_ohm": [
+      [
+        [
+          0.0016006896162288307,
+          0.002637163020529846
+        ],
+        [
+          0.0008328251054298727,
+          0.0024385151009861114
+        ]
+      ],
+      [
+        [
+          0.0008328251054298727,
+          0.0024385151009861114
+        ],
+        [
+          0.0012167573608293516,
+          0.0025378390607579786
+        ]
+      ]
+    ],
+    "relative_error": 3.241557313121274e-10,
+    "sheet_impedance_ohm": 1e-12
+  },
+  "inputs": {
+    "boundary10": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_l21_triangle_boundary10_2026-09-07.json",
+      "sha256": "547f06c5c41d4f4a1d8ee19c70ba449d931546a5b3e6891efc4c74ed0c4c9b3d",
+      "size_bytes": 5870
+    },
+    "prior_four_terminal_study": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_balanced_sheet_branch_2026-09-06.json",
+      "sha256": "3b3fd45795df6c6b0040615547874b1b53998f8a177044a93fbd4ca2eff32f7b",
+      "size_bytes": 2626
+    },
+    "replacement_boundary": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-step4-basis-01\\replacement-boundary.json",
+      "sha256": "8de6711dd64ba9d4391f5b604223cb6f6eae70bc0df20faaf044b3a59c8eef22",
+      "size_bytes": 18173
+    }
+  },
+  "models": {
+    "equivalent_series_branch_z3": {
+      "diagnostics": {
+        "backward_relative_residual": 7.876615645780534e-21,
+        "branch_equation_relative_residual": 1.4780521174167228e-17,
+        "branch_impedance_condition_estimate": 2.283144752458302,
+        "component_count": 1,
+        "gauge_node_ids": [
+          "S0"
+        ],
+        "min_hermitian_impedance_eigenvalue_ohm": 0.0007222107052554549,
+        "nodal_kcl_relative_residual": 0.0,
+        "passivity_tolerance_ohm": 5.5854533301584915e-12,
+        "raw_reciprocity_absolute_error_ohm": 0.0,
+        "raw_reciprocity_relative_error": 0.0,
+        "scaled_saddle_condition_estimate": 4319.613180219719
+      },
+      "impedance_ohm": [
+        [
+          [
+            0.001794419059675542,
+            0.0026371630205394275
+          ],
+          [
+            0.0008328364070346472,
+            0.002438515073845465
+          ]
+        ],
+        [
+          [
+            0.0008328364070346472,
+            0.002438515073845465
+          ],
+          [
+            0.0013691152719126777,
+            0.0025379159419586356
+          ]
+        ]
+      ],
+      "native_via_currents_a_per_a": [
+        [
+          [
+            -1.0,
+            0.0
+          ],
+          [
+            -1.0,
+            0.0
+          ]
+        ],
+        [
+          [
+            1.0,
+            0.0
+          ],
+          [
+            -0.0,
+            0.0
+          ]
+        ],
+        [
+          [
+            4.802038592012729e-06,
+            -1.027850773977935e-06
+          ],
+          [
+            0.48639728460039366,
+            0.0029115887521067724
+          ]
+        ],
+        [
+          [
+            -4.802038592012729e-06,
+            1.027850773977935e-06
+          ],
+          [
+            0.5136027153996063,
+            -0.0029115887521067724
+          ]
+        ]
+      ]
+    },
+    "full_nodal_y4": {
+      "diagnostics": {
+        "backward_relative_residual": 6.6727755907482866e-21,
+        "branch_equation_relative_residual": 1.760429399166292e-17,
+        "branch_impedance_condition_estimate": 1.0,
+        "component_count": 1,
+        "gauge_node_ids": [
+          "S0"
+        ],
+        "min_hermitian_impedance_eigenvalue_ohm": 0.0007222107052554549,
+        "nodal_kcl_relative_residual": 1.1102256718930014e-16,
+        "passivity_tolerance_ohm": 5.5854533301584915e-12,
+        "raw_reciprocity_absolute_error_ohm": 0.0,
+        "raw_reciprocity_relative_error": 0.0,
+        "scaled_saddle_condition_estimate": 2728.566845205417
+      },
+      "impedance_ohm": [
+        [
+          [
+            0.001794419059675542,
+            0.0026371630205394275
+          ],
+          [
+            0.0008328364070346471,
+            0.002438515073845465
+          ]
+        ],
+        [
+          [
+            0.0008328364070346471,
+            0.002438515073845465
+          ],
+          [
+            0.0013691152719126774,
+            0.0025379159419586356
+          ]
+        ]
+      ],
+      "native_via_currents_a_per_a": [
+        [
+          [
+            -1.0,
+            -0.0
+          ],
+          [
+            -1.0,
+            -0.0
+          ]
+        ],
+        [
+          [
+            1.0,
+            -2.680604846321239e-27
+          ],
+          [
+            4.626751537287575e-21,
+            3.636782768364303e-24
+          ]
+        ],
+        [
+          [
+            4.8020385920007015e-06,
+            -1.027850773975357e-06
+          ],
+          [
+            0.48639728460039355,
+            0.0029115887521068066
+          ]
+        ],
+        [
+          [
+            -4.8020385920007015e-06,
+            1.027850773975357e-06
+          ],
+          [
+            0.5136027153996064,
+            -0.0029115887521068066
+          ]
+        ]
+      ]
+    },
+    "second_node_order_full_y4": {
+      "diagnostics": {
+        "backward_relative_residual": 2.9350777580499584e-20,
+        "branch_equation_relative_residual": 2.766031777403369e-17,
+        "branch_impedance_condition_estimate": 1.0,
+        "component_count": 1,
+        "gauge_node_ids": [
+          "X482985"
+        ],
+        "min_hermitian_impedance_eigenvalue_ohm": 0.0007222107052554551,
+        "nodal_kcl_relative_residual": 4.883425677289657e-16,
+        "passivity_tolerance_ohm": 5.5854533301584915e-12,
+        "raw_reciprocity_absolute_error_ohm": 1.0842021724855044e-19,
+        "raw_reciprocity_relative_error": 2.7202988360308048e-17,
+        "scaled_saddle_condition_estimate": 3393.8625611183575
+      },
+      "impedance_ohm": [
+        [
+          [
+            0.001794419059675542,
+            0.0026371630205394275
+          ],
+          [
+            0.000832836407034647,
+            0.002438515073845465
+          ]
+        ],
+        [
+          [
+            0.0008328364070346471,
+            0.002438515073845465
+          ],
+          [
+            0.0013691152719126779,
+            0.002537915941958636
+          ]
+        ]
+      ]
+    },
+    "second_node_order_series_branch_z3": {
+      "diagnostics": {
+        "backward_relative_residual": 1.6407699286881393e-20,
+        "branch_equation_relative_residual": 2.986254761413345e-17,
+        "branch_impedance_condition_estimate": 2.283144752458302,
+        "component_count": 1,
+        "gauge_node_ids": [
+          "X482985"
+        ],
+        "min_hermitian_impedance_eigenvalue_ohm": 0.0007222107052554549,
+        "nodal_kcl_relative_residual": 0.0,
+        "passivity_tolerance_ohm": 5.58545333015849e-12,
+        "raw_reciprocity_absolute_error_ohm": 4.336808689942018e-19,
+        "raw_reciprocity_relative_error": 1.088119534412322e-16,
+        "scaled_saddle_condition_estimate": 5969.135726516769
+      },
+      "impedance_ohm": [
+        [
+          [
+            0.001794419059675542,
+            0.0026371630205394275
+          ],
+          [
+            0.0008328364070346471,
+            0.0024385150738454645
+          ]
+        ],
+        [
+          [
+            0.0008328364070346471,
+            0.002438515073845465
+          ],
+          [
+            0.0013691152719126774,
+            0.0025379159419586356
+          ]
+        ]
+      ]
+    }
+  },
+  "native_vias": [
+    {
+      "external_node": "X750336",
+      "external_role": "external_power_exit",
+      "impedance_ohm": [
+        0.0008328251054298727,
+        0.0024385151009861114
+      ],
+      "inductance_h": 3.88101732126172e-10,
+      "is_gnd": false,
+      "owner_id": "via:via336239",
+      "resistance_ohm": 0.0008328251054298727,
+      "role": "core336239",
+      "sheet_node": "S0",
+      "source_external_node_id": "Node750336",
+      "source_sheet_node_id": "Node2140546",
+      "via_id": "via336239"
+    },
+    {
+      "external_node": "X229906",
+      "external_role": "local_power_exit",
+      "impedance_ohm": [
+        0.000767864509798958,
+        0.0001986479195437346
+      ],
+      "inductance_h": 3.1615798330306487e-11,
+      "is_gnd": false,
+      "owner_id": "via:via336240",
+      "resistance_ohm": 0.000767864509798958,
+      "role": "micro336240",
+      "sheet_node": "S1",
+      "source_external_node_id": "Node229906",
+      "source_sheet_node_id": "Node2140547",
+      "via_id": "via336240"
+    },
+    {
+      "external_node": "X482985",
+      "external_role": "shared_power_exit",
+      "impedance_ohm": [
+        0.000767864509798958,
+        0.0001986479195437346
+      ],
+      "inductance_h": 3.1615798330306487e-11,
+      "is_gnd": false,
+      "owner_id": "via:via336279",
+      "resistance_ohm": 0.000767864509798958,
+      "role": "micro336279",
+      "sheet_node": "S2",
+      "source_external_node_id": "Node482985",
+      "source_sheet_node_id": "Node2140578",
+      "via_id": "via336279"
+    },
+    {
+      "external_node": "X482985",
+      "external_role": "shared_power_exit",
+      "impedance_ohm": [
+        0.000767864509798958,
+        0.0001986479195437346
+      ],
+      "inductance_h": 3.1615798330306487e-11,
+      "is_gnd": false,
+      "owner_id": "via:via336280",
+      "resistance_ohm": 0.000767864509798958,
+      "role": "micro336280",
+      "sheet_node": "S3",
+      "source_external_node_id": "Node482985",
+      "source_sheet_node_id": "Node2140579",
+      "via_id": "via336280"
+    }
+  ],
+  "nonclaims": [
+    "The core is a conditional whole-pad equipotential approximation; all four via values and owners are preserved as supplied.",
+    "The fifth ideal artwork G/C link is deliberately excluded from this local experiment.",
+    "This is not a full AC topology, replacement, current-sharing, or PowerSI claim; no old job replay, import, or SPD scan was performed."
+  ],
+  "old_initial_8edge_triangle_negative_control": {
+    "max_positive_offdiagonal_y_s": 847.542675401,
+    "min_balanced_z_eigenvalue_ohm": 9.121985445e-05,
+    "min_balanced_z_entry_ohm": -2.476743133e-05,
+    "reason": "positive off-diagonal/sign and independent mesh discrepancy; the positive eigenvalue is not labelled non-passive",
+    "rejected": true
+  },
+  "owner_value_evidence": {
+    "basis_matches": {
+      "certificate_evidence_sha256": true,
+      "plane_sheet": true,
+      "project_binding_sha256": true,
+      "raw_geometry": true,
+      "raw_rows": true,
+      "source_sha256": true,
+      "topology": true
+    },
+    "candidate_c_f": 3.4022141411807816e-10,
+    "native_numeric_substrate_loaded": false,
+    "prior_four_terminal_status": "ACCEPT_PAIRED_CANONICAL_ONLY",
+    "prior_gauge_node_ids": [
+      "P0",
+      "P1"
+    ],
+    "prior_terminal_y_nullity": 2,
+    "replacement_boundary_status": "PARTIAL_SAME_BASIS_REPLACEMENT_NOT_READY",
+    "replacement_executed": false
+  },
+  "program": "SPD Decap PI Evaluator",
+  "resources": {
+    "bounded_under_55s": true,
+    "elapsed_s": 0.03200000000651926
+  },
+  "right_two_via_current_split": {
+    "port_columns": [
+      "left_feed",
+      "right_feed"
+    ],
+    "via336279_current_a_per_a": [
+      [
+        4.8020385920007015e-06,
+        -1.027850773975357e-06
+      ],
+      [
+        0.48639728460039355,
+        0.0029115887521068066
+      ]
+    ],
+    "via336280_current_a_per_a": [
+      [
+        -4.8020385920007015e-06,
+        1.027850773975357e-06
+      ],
+      [
+        0.5136027153996064,
+        -0.0029115887521068066
+      ]
+    ]
+  },
+  "scope": "SOURCE_FINEST_4X4_DC_SHEET_AT_1MHZ_WITH_CONDITIONAL_CORE_WHOLE_PAD",
+  "source": {
+    "balanced_basis": [
+      [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      [
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "balanced_z3_ohm": [
+      [
+        [
+          0.0001937294444914741,
+          0.0
+        ],
+        [
+          6.514009059721071e-09,
+          0.0
+        ],
+        [
+          1.5835602523371595e-08,
+          0.0
+        ]
+      ],
+      [
+        [
+          6.514009059707519e-09,
+          0.0
+        ],
+        [
+          0.00025922386774777017,
+          0.0
+        ],
+        [
+          7.261556165762827e-05,
+          0.0
+        ]
+      ],
+      [
+        [
+          1.5835602523351267e-08,
+          0.0
+        ],
+        [
+          7.261556165762828e-05,
+          0.0
+        ],
+        [
+          0.00020641338714576807,
+          0.0
+        ]
+      ]
+    ],
+    "balanced_z_hermitian_eigenvalues_ohm": [
+      0.0001555511902219481,
+      0.00019372944493740153,
+      0.0003100860642256628
+    ],
+    "contact_order": [
+      "Node2140546",
+      "Node2140547",
+      "Node2140578",
+      "Node2140579"
+    ],
+    "declared_input_sha256": "76bbb152f89b0e8086128f34a489f06c77ba10b2dfae0b952fc245723881ce3b",
+    "offdiag_normalized_tolerance_s": 1.1803728003583817e-08,
+    "status": "DIAGNOSTIC_LOCAL_DC_SINGLE_MESH_ONLY",
+    "y4_hermitian_eigenvalues_s": [
+      -2.6281199438926706e-12,
+      4190.029032114923,
+      6356.133234568229,
+      16073.066650640907
+    ],
+    "y4_max_raw_offdiag_s": -0.020832540540385133,
+    "y4_row_sum_max_s": 1.8174350913113813e-13,
+    "y4_siemens": [
+      [
+        [
+          11803.728003583818,
+          0.0
+        ],
+        [
+          -5161.428480539722,
+          0.0
+        ],
+        [
+          -2773.896182274059,
+          0.0
+        ],
+        [
+          -3868.403340770037,
+          0.0
+        ]
+      ],
+      [
+        [
+          -5161.428480539722,
+          0.0
+        ],
+        [
+          5161.837989653866,
+          0.0
+        ],
+        [
+          -0.020832540540385133,
+          0.0
+        ],
+        [
+          -0.3886765736041811,
+          0.0
+        ]
+      ],
+      [
+        [
+          -2773.896182274059,
+          0.0
+        ],
+        [
+          -0.020832540540385133,
+          0.0
+        ],
+        [
+          4279.393960778666,
+          0.0
+        ],
+        [
+          -1505.4769459640668,
+          0.0
+        ]
+      ],
+      [
+        [
+          -3868.403340770037,
+          0.0
+        ],
+        [
+          -0.3886765736041811,
+          0.0
+        ],
+        [
+          -1505.4769459640668,
+          0.0
+        ],
+        [
+          5374.268963307708,
+          0.0
+        ]
+      ]
+    ]
+  },
+  "status": "ACCEPT_L21_LOCAL_POWER_FEED_RESEARCH_ONLY",
+  "version": "0.23.1"
+}

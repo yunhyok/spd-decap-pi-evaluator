@@ -1,0 +1,46 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "ACCEPT_EXISTING_REFERENCE_POINTS_ONLY",
+  "source_path": "D:\\S4LB002-2Para_260729_1_injected_073026_100913_33216_S.s92p",
+  "source_sha256": "c5fca21da6f3b1f1e097ac6fc4c2c4f40a44201617502a9e5bf864e2a5fe7a11",
+  "rail_id": "ADC_VDD_180_VQPS_SYS_1_AON/0",
+  "port_one_based": 44,
+  "port_header": "2nd_SITE0-ADC_VDD_180_VQPS_SYS_1_AON/0",
+  "reference_ohm": 1.0,
+  "full_matrix_ports": 92,
+  "points": [
+    {
+      "frequency_hz": 10000000.0,
+      "source_frequency_index": 200,
+      "reference_zdd_ohm": [
+        0.11399988370808822,
+        -24.686706945219413
+      ],
+      "s_to_z_condition": 37.239753455080745,
+      "s_to_z_relative_residual": 2.9436779916631783e-16
+    },
+    {
+      "frequency_hz": 100000000.0,
+      "source_frequency_index": 325,
+      "reference_zdd_ohm": [
+        0.05939400549468876,
+        -2.043986139239798
+      ],
+      "s_to_z_condition": 3.4193209411281216,
+      "s_to_z_relative_residual": 4.4370662757075913e-16
+    },
+    {
+      "frequency_hz": 1000000000.0,
+      "source_frequency_index": 625,
+      "reference_zdd_ohm": [
+        0.1662621799193209,
+        3.9043520066012003
+      ],
+      "s_to_z_condition": 8.209026027319247,
+      "s_to_z_relative_residual": 4.338163355616256e-16
+    }
+  ],
+  "elapsed_s": 20.23499999998603,
+  "scope": "Existing source-mounted PowerSI export; full92-port S-to-Z at three exact frequencies with other port currents zero. No interpolation, fitting, new PowerSI run, raw SPD scan or candidate solve."
+}

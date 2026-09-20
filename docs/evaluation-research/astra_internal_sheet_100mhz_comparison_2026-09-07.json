@@ -1,0 +1,104 @@
+{
+  "checks": {
+    "baseline_two_sheet_exact": true,
+    "finite_complex_power_passivity": true,
+    "native_baseline_exact": true,
+    "physical_residual_below_1e-7_a": true,
+    "physical_residual_max_abs_a": 9.653005325552626e-11
+  },
+  "comparisons": {
+    "internal_vs_reference": {
+      "complex_gap_ohm": 0.008554984506478602,
+      "complex_relative_error": 0.8023381592949861,
+      "magnitude_error_db": -13.777937671599009,
+      "phase_error_deg": -13.453169961474904
+    },
+    "internal_vs_two_sheet_dc": {
+      "complex_gap_ohm": 0.0007052218683518673,
+      "complex_relative_error": 0.4552319194200415,
+      "magnitude_error_db": 2.9774366166985016,
+      "phase_error_deg": 9.672810853582329
+    },
+    "native_vs_reference": {
+      "complex_gap_ohm": 0.009741241248346017,
+      "complex_relative_error": 0.9135924871082506,
+      "magnitude_error_db": -21.26194549417672,
+      "phase_error_deg": 2.2021265534632546
+    },
+    "two_sheet_dc_vs_reference": {
+      "complex_gap_ohm": 0.009257917699229725,
+      "complex_relative_error": 0.8682634831283816,
+      "magnitude_error_db": -16.755374288297514,
+      "phase_error_deg": -23.125980815057236
+    }
+  },
+  "constitutive_pins": {
+    "l14": {
+      "admittance_scale": [
+        0.36017547701995584,
+        -0.3552417191089739
+      ],
+      "conductivity_s_per_m": 59590000.0,
+      "dc_ohm_per_square": 0.0008390669575432118,
+      "internal_ohm_per_square": [
+        0.0011808679908135436,
+        0.0011646922177162018
+      ],
+      "permeability_h_per_m": 1.2566370614359173e-06,
+      "thickness_m": 2e-05
+    },
+    "l25": {
+      "admittance_scale": [
+        0.20019379869859558,
+        -0.2060811994575984
+      ],
+      "conductivity_s_per_m": 59590000.0,
+      "dc_ohm_per_square": 0.0005244168484645075,
+      "internal_ohm_per_square": [
+        0.001271820639732752,
+        0.0013092229861008894
+      ],
+      "permeability_h_per_m": 1.2566370614359173e-06,
+      "thickness_m": 3.2e-05
+    }
+  },
+  "frequency_hz": 100000000.0,
+  "inputs": {
+    "internal_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-internal-sheet-100mhz-shadow-01\\result.json",
+      "sha256": "36613cde0c127bae3d7af50d9bc8e53296e0538ff473152e04ea591d23e5c93b"
+    },
+    "primary_comparison": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_primary_band_comparison_2026-09-07.json",
+      "sha256": "ac08d7ea36a09989fb83e9113af399db41f698bf68e061e3c75020f4c41a5f8d"
+    }
+  },
+  "limitations": [
+    "One conditional symmetric two-face internal-only 100 MHz point; no fit or derivative extrapolation.",
+    "No external magnetic coupling, return-path, proximity, broadband or PowerSI accuracy claim."
+  ],
+  "program": "SPD Decap PI Evaluator",
+  "rail_id": "ADC_VDD_075_VTRIP_SRAM/0",
+  "reference_port_one_based": 18,
+  "script_sha256": "7a44054c13654916264edd55f1e35f585d4ce8d8f9567cc19db0f5a65b10abd6",
+  "status": "COMPLETED_CONDITIONAL_INTERNAL_SHEET_100MHZ_COMPARISON",
+  "version": "0.23.1",
+  "zdd_ohm": {
+    "internal_sheet": [
+      0.000854939011764992,
+      0.0020081381969814438
+    ],
+    "native": [
+      0.00011885382968568422,
+      0.0009143791612678196
+    ],
+    "reference": [
+      0.001779666643964065,
+      0.010512997908483828
+    ],
+    "two_sheet_dc": [
+      0.0008376874678580425,
+      0.001303127368813163
+    ]
+  }
+}

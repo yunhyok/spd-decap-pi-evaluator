@@ -1,0 +1,955 @@
+{
+  "experiment_budget_seconds": 60.0,
+  "input": {
+    "embedded_source": {
+      "sha256": "40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2",
+      "size_bytes": 1116717287
+    },
+    "path": "D:\\SPD-Decap-PI-Evaluator-W7\\8177f7a82715979652d7dcb3cd7bfd2770746133\\260729-d103-source-stackup-material-receipt-02\\stackup_material_receipt.json",
+    "sha256": "4ea63cf86f6b1f4e8d56eead82033606cd2a2f9b6fae1b14e857a51e4c0749f9",
+    "size_bytes": 204735
+  },
+  "material_count": 2,
+  "materials": [
+    {
+      "fits": [
+        {
+          "active_poles": 6,
+          "epsilon_inf": 3.2465748550522573,
+          "fit_seconds": 0.0003766000154428184,
+          "identifiability": {
+            "caveat": "Fixed-grid coefficients are an experimental representation; sparse points do not identify a unique relaxation spectrum.",
+            "condition_number": 55034356845436.67,
+            "condition_number_defined": true,
+            "design_rows": 14,
+            "parameter_count": 10,
+            "rank": 10,
+            "rank_deficient": false,
+            "singular_values": [
+              62.82432916344893,
+              32.683709778728925,
+              31.488199370490594,
+              15.033578584173876,
+              8.381690833929865,
+              0.8097145893143177,
+              0.31506300218058925,
+              0.0029598162103142106,
+              4.480193957025191e-06,
+              1.1415474398999574e-12
+            ],
+            "underdetermined": false
+          },
+          "policy": {
+            "description": "Equal aggregate channel weight after per-channel RMS normalization.",
+            "loss_channel_weight": 1.0,
+            "name": "balanced_channels"
+          },
+          "relaxation_strengths": [
+            {
+              "delta_epsilon": 0.03934435591535477,
+              "tau_s": 1e-12
+            },
+            {
+              "delta_epsilon": 0.01952118484459195,
+              "tau_s": 7.498942093324559e-12
+            },
+            {
+              "delta_epsilon": 0.016674818501760332,
+              "tau_s": 5.6234132519034906e-11
+            },
+            {
+              "delta_epsilon": 0.01946162008291464,
+              "tau_s": 4.2169650342858224e-10
+            },
+            {
+              "delta_epsilon": 0.0,
+              "tau_s": 3.1622776601683795e-09
+            },
+            {
+              "delta_epsilon": 0.0540892716990884,
+              "tau_s": 2.371373705661655e-08
+            },
+            {
+              "delta_epsilon": 0.012068338640616176,
+              "tau_s": 1.7782794100389227e-07
+            },
+            {
+              "delta_epsilon": 0.0,
+              "tau_s": 1.333521432163324e-06
+            },
+            {
+              "delta_epsilon": 0.0,
+              "tau_s": 1e-05
+            }
+          ],
+          "source_residuals": {
+            "df": {
+              "mae": 6.793579097083235e-05,
+              "max_abs": 0.00015180897977612028,
+              "max_relative": 0.029766466622768682,
+              "rmse": 8.475134637654175e-05
+            },
+            "dk": {
+              "mae": 0.03799227257550143,
+              "max_abs": 0.1040185989448772,
+              "max_relative": 0.0321886133160082,
+              "rmse": 0.05659685642232498
+            },
+            "epsilon_loss_dk_times_df": {
+              "mae": 0.00018563321304940677,
+              "max_abs": 0.00040941227239045183,
+              "max_relative": 0.027813333722177435,
+              "rmse": 0.0002473687897901928
+            },
+            "weighted_scaled_2norm": 0.060471364569240196
+          },
+          "sum_relaxation_strengths": 0.16115958968432625
+        },
+        {
+          "active_poles": 6,
+          "epsilon_inf": 3.2466771667527627,
+          "fit_seconds": 0.00020979999681003392,
+          "identifiability": {
+            "caveat": "Fixed-grid coefficients are an experimental representation; sparse points do not identify a unique relaxation spectrum.",
+            "condition_number": 109433334932552.98,
+            "condition_number_defined": true,
+            "design_rows": 14,
+            "parameter_count": 10,
+            "rank": 10,
+            "rank_deficient": false,
+            "singular_values": [
+              125.63895771547986,
+              65.3660406312796,
+              62.973265185864726,
+              30.056026609458108,
+              16.75762076196553,
+              0.8102552596374498,
+              0.31513609555512273,
+              0.004450439219608925,
+              5.9570000811810775e-06,
+              1.1480867122702136e-12
+            ],
+            "underdetermined": false
+          },
+          "policy": {
+            "description": "Two times the normalized Dk*Df channel weight to expose weighting sensitivity.",
+            "loss_channel_weight": 2.0,
+            "name": "loss_emphasis_2x"
+          },
+          "relaxation_strengths": [
+            {
+              "delta_epsilon": 0.039338029556059466,
+              "tau_s": 1e-12
+            },
+            {
+              "delta_epsilon": 0.01952589882380532,
+              "tau_s": 7.498942093324559e-12
+            },
+            {
+              "delta_epsilon": 0.01667239359754175,
+              "tau_s": 5.6234132519034906e-11
+            },
+            {
+              "delta_epsilon": 0.01947954244046381,
+              "tau_s": 4.2169650342858224e-10
+            },
+            {
+              "delta_epsilon": 0.0,
+              "tau_s": 3.1622776601683795e-09
+            },
+            {
+              "delta_epsilon": 0.05325206594383068,
+              "tau_s": 2.371373705661655e-08
+            },
+            {
+              "delta_epsilon": 0.012313814523481752,
+              "tau_s": 1.7782794100389227e-07
+            },
+            {
+              "delta_epsilon": 0.0,
+              "tau_s": 1.333521432163324e-06
+            },
+            {
+              "delta_epsilon": 0.0,
+              "tau_s": 1e-05
+            }
+          ],
+          "source_residuals": {
+            "df": {
+              "mae": 6.803392149871757e-05,
+              "max_abs": 0.00015204696257064589,
+              "max_relative": 0.029813129915812916,
+              "rmse": 8.476543355993414e-05
+            },
+            "dk": {
+              "mae": 0.0380781102201379,
+              "max_abs": 0.10392005978215524,
+              "max_relative": 0.03221977365515452,
+              "rmse": 0.05659816723996117
+            },
+            "epsilon_loss_dk_times_df": {
+              "mae": 0.0001853906716186338,
+              "max_abs": 0.00041033405568633927,
+              "max_relative": 0.027875954869995872,
+              "rmse": 0.0002473653427969059
+            },
+            "weighted_scaled_2norm": 0.09222521385439567
+          },
+          "sum_relaxation_strengths": 0.1605817448851828
+        }
+      ],
+      "interest_band_100khz_1ghz": {
+        "candidate_by_policy": {
+          "balanced_channels": {
+            "df_range": {
+              "max": 0.008616185357395459,
+              "min": 0.0006290112430559742
+            },
+            "dk_range": {
+              "max": 3.4075736325094117,
+              "min": 3.3226487187308034
+            },
+            "epsilon_loss_range": {
+              "max": 0.029041042467414107,
+              "min": 0.0021434021263895065
+            },
+            "min_loss": 0.0021434021263895065,
+            "min_real_epsilon": 3.3226487187308034,
+            "nonnegative_dissipation_sampled": true
+          },
+          "loss_emphasis_2x": {
+            "df_range": {
+              "max": 0.00850325698935874,
+              "min": 0.000633391407485599
+            },
+            "dk_range": {
+              "max": 3.407095258454537,
+              "min": 3.3227494491782017
+            },
+            "epsilon_loss_range": {
+              "max": 0.028657665067849118,
+              "min": 0.00215802486119003
+            },
+            "min_loss": 0.00215802486119003,
+            "min_real_epsilon": 3.3227494491782017,
+            "nonnegative_dissipation_sampled": true
+          }
+        },
+        "control_interpolation": {
+          "clamped_outside_source_knots": true,
+          "df_range": {
+            "max": 0.0041,
+            "min": 0.004
+          },
+          "dk_range": {
+            "max": 3.4,
+            "min": 3.3
+          },
+          "epsilon_loss_range": {
+            "max": 0.013940000000000001,
+            "min": 0.0132
+          }
+        },
+        "frequency_hz": {
+          "max": 1000000000.0,
+          "min": 100000.0,
+          "samples": 121
+        },
+        "policy_spread": {
+          "max_abs_df": 0.00011433082115589778,
+          "max_abs_dk": 0.0006174359547701513,
+          "max_abs_epsilon_loss": 0.00038707349743986874,
+          "max_dk_spread_frequency_hz": 1584893.1924611141
+        }
+      },
+      "material": "ABF-GL102",
+      "nonnegative_debye_monotonicity_conflict": true,
+      "record_id": "material:ABF-GL102",
+      "repeated_rows_validated": 273,
+      "representative_values_100khz_1mhz_1ghz": {
+        "100000": {
+          "balanced_channels": {
+            "df": 0.0006290112430559741,
+            "dk": 3.407573632509412,
+            "epsilon_loss": 0.0021434021263895065
+          },
+          "control_interpolation": {
+            "df": 0.0041,
+            "dk": 3.4,
+            "epsilon_loss": 0.013940000000000001
+          },
+          "loss_emphasis_2x": {
+            "df": 0.0006333914074855989,
+            "dk": 3.407095258454537,
+            "epsilon_loss": 0.0021580248611900296
+          },
+          "policy_spread": {
+            "df_abs": 4.380164429624873e-06,
+            "df_percent_of_mean": 0.6939409431286879,
+            "dk_abs": 0.0004783740548752746,
+            "dk_percent_of_mean": 0.014039539191979953,
+            "epsilon_loss_abs": 1.4622734800523104e-05
+          }
+        },
+        "1000000": {
+          "balanced_channels": {
+            "df": 0.004100171025840623,
+            "dk": 3.3998587279865826,
+            "epsilon_loss": 0.01394000224844194
+          },
+          "control_interpolation": {
+            "df": 0.0041,
+            "dk": 3.4,
+            "epsilon_loss": 0.013940000000000001
+          },
+          "loss_emphasis_2x": {
+            "df": 0.004100887278626911,
+            "dk": 3.3992650786726215,
+            "epsilon_loss": 0.013940002917809259
+          },
+          "policy_spread": {
+            "df_abs": 7.162527862879936e-07,
+            "df_percent_of_mean": 0.017467325793740895,
+            "dk_abs": 0.0005936493139611088,
+            "dk_percent_of_mean": 0.01746252402051206,
+            "epsilon_loss_abs": 6.69367318517633e-10
+          }
+        },
+        "1000000000": {
+          "balanced_channels": {
+            "df": 0.003974501733643113,
+            "dk": 3.3226487187308034,
+            "epsilon_loss": 0.013205873092882646
+          },
+          "control_interpolation": {
+            "df": 0.004,
+            "dk": 3.3,
+            "epsilon_loss": 0.0132
+          },
+          "loss_emphasis_2x": {
+            "df": 0.003974363794523061,
+            "dk": 3.3227494491782017,
+            "epsilon_loss": 0.013205815109085287
+          },
+          "policy_spread": {
+            "df_abs": 1.3793912005243686e-07,
+            "df_percent_of_mean": 0.0034706618086231436,
+            "dk_abs": 0.00010073044739833392,
+            "dk_percent_of_mean": 0.003031585011256867,
+            "epsilon_loss_abs": 5.798379735903747e-08
+          }
+        }
+      },
+      "source_band_hz": {
+        "max": 60000000000.0,
+        "min": 1000000.0
+      },
+      "source_dk_increase_pairs": [
+        {
+          "from_dk": 3.2,
+          "from_frequency_hz": 10000000000.0,
+          "to_dk": 3.4,
+          "to_frequency_hz": 20000000000.0
+        }
+      ],
+      "source_interpolation_control": {
+        "implementation": "DielectricDispersion.interpolate: linear interpolation in log10(frequency), clamped at endpoints",
+        "is_causal_realization": false,
+        "source_knot_df_rmse": 0.0,
+        "source_knot_dk_rmse": 0.0
+      },
+      "source_points": [
+        {
+          "df": 0.0041,
+          "dk": 3.4,
+          "epsilon_loss_dk_times_df": 0.013940000000000001,
+          "frequency_hz": 1000000.0
+        },
+        {
+          "df": 0.004,
+          "dk": 3.3,
+          "epsilon_loss_dk_times_df": 0.0132,
+          "frequency_hz": 1000000000.0
+        },
+        {
+          "df": 0.0044,
+          "dk": 3.3,
+          "epsilon_loss_dk_times_df": 0.01452,
+          "frequency_hz": 5800000000.0
+        },
+        {
+          "df": 0.0046,
+          "dk": 3.2,
+          "epsilon_loss_dk_times_df": 0.01472,
+          "frequency_hz": 10000000000.0
+        },
+        {
+          "df": 0.0051,
+          "dk": 3.4,
+          "epsilon_loss_dk_times_df": 0.01734,
+          "frequency_hz": 20000000000.0
+        },
+        {
+          "df": 0.0058,
+          "dk": 3.3,
+          "epsilon_loss_dk_times_df": 0.019139999999999997,
+          "frequency_hz": 40000000000.0
+        },
+        {
+          "df": 0.006,
+          "dk": 3.3,
+          "epsilon_loss_dk_times_df": 0.019799999999999998,
+          "frequency_hz": 60000000000.0
+        }
+      ],
+      "source_record_sha256": "56e04e2b086e67fdab2284538d1393215a2f4d23e1930100da0a78dd0aa8e25f",
+      "source_rows_seen": 280,
+      "unique_source_points": 7,
+      "wider_audit_band_10khz_100ghz": {
+        "candidate_by_policy": {
+          "balanced_channels": {
+            "df_range": {
+              "max": 0.008616185357395459,
+              "min": 6.338634613745696e-05
+            },
+            "dk_range": {
+              "max": 3.4077328181988586,
+              "min": 3.275638099959327
+            },
+            "epsilon_loss_range": {
+              "max": 0.029041042467414107,
+              "min": 0.00021600373195832456
+            },
+            "min_loss": 0.00021600373195832456,
+            "min_real_epsilon": 3.275638099959327,
+            "nonnegative_dissipation_sampled": true
+          },
+          "loss_emphasis_2x": {
+            "df_range": {
+              "max": 0.00850325698935874,
+              "min": 6.383410220102425e-05
+            },
+            "dk_range": {
+              "max": 3.4072572563170245,
+              "min": 3.2757360774299533
+            },
+            "epsilon_loss_range": {
+              "max": 0.028657665067849118,
+              "min": 0.0002174992079249224
+            },
+            "min_loss": 0.0002174992079249224,
+            "min_real_epsilon": 3.2757360774299533,
+            "nonnegative_dissipation_sampled": true
+          }
+        },
+        "control_interpolation": {
+          "clamped_outside_source_knots": true,
+          "df_range": {
+            "max": 0.006,
+            "min": 0.004000416666666667
+          },
+          "dk_range": {
+            "max": 3.4,
+            "min": 3.20264190175927
+          },
+          "epsilon_loss_range": {
+            "max": 0.019799999999999998,
+            "min": 0.013203041840277778
+          }
+        },
+        "frequency_hz": {
+          "max": 100000000000.0,
+          "min": 10000.0,
+          "samples": 161
+        },
+        "policy_spread": {
+          "max_abs_df": 0.00011419805485061649,
+          "max_abs_dk": 0.0006172394535690628,
+          "max_abs_epsilon_loss": 0.00038698473901185165,
+          "max_dk_spread_frequency_hz": 1703138.6316718743
+        }
+      }
+    },
+    {
+      "fits": [
+        {
+          "active_poles": 4,
+          "epsilon_inf": 4.105454955943909,
+          "fit_seconds": 0.0001416000013705343,
+          "identifiability": {
+            "caveat": "Fixed-grid coefficients are an experimental representation; sparse points do not identify a unique relaxation spectrum.",
+            "condition_number": null,
+            "condition_number_defined": false,
+            "design_rows": 6,
+            "parameter_count": 10,
+            "rank": 6,
+            "rank_deficient": true,
+            "singular_values": [
+              12.045645315115335,
+              11.111710081867786,
+              6.743433455431038,
+              0.5504591928494788,
+              0.2109012607240895,
+              0.06415665611339164
+            ],
+            "underdetermined": true
+          },
+          "policy": {
+            "description": "Equal aggregate channel weight after per-channel RMS normalization.",
+            "loss_channel_weight": 1.0,
+            "name": "balanced_channels"
+          },
+          "relaxation_strengths": [
+            {
+              "delta_epsilon": 0.0,
+              "tau_s": 1e-12
+            },
+            {
+              "delta_epsilon": 0.04583214380251163,
+              "tau_s": 7.498942093324559e-12
+            },
+            {
+              "delta_epsilon": 0.11712554991187635,
+              "tau_s": 5.6234132519034906e-11
+            },
+            {
+              "delta_epsilon": 0.0,
+              "tau_s": 4.2169650342858224e-10
+            },
+            {
+              "delta_epsilon": 0.12594887905542923,
+              "tau_s": 3.1622776601683795e-09
+            },
+            {
+              "delta_epsilon": 0.3050186785632358,
+              "tau_s": 2.371373705661655e-08
+            },
+            {
+              "delta_epsilon": 0.0,
+              "tau_s": 1.7782794100389227e-07
+            },
+            {
+              "delta_epsilon": 0.0,
+              "tau_s": 1.333521432163324e-06
+            },
+            {
+              "delta_epsilon": 0.0,
+              "tau_s": 1e-05
+            }
+          ],
+          "source_residuals": {
+            "df": {
+              "mae": 9.466237439104593e-05,
+              "max_abs": 0.00014905213000241356,
+              "max_relative": 0.012421010833534463,
+              "rmse": 0.00011028359559897783
+            },
+            "dk": {
+              "mae": 0.03443344952816455,
+              "max_abs": 0.051650174292249496,
+              "max_relative": 0.012597603485914512,
+              "rmse": 0.039532331518462964
+            },
+            "epsilon_loss_dk_times_df": {
+              "mae": 7.213071250363375e-06,
+              "max_abs": 1.550895570255617e-05,
+              "max_relative": 0.00032788489857412626,
+              "rmse": 9.450428613807479e-06
+            },
+            "weighted_scaled_2norm": 0.015658828138473958
+          },
+          "sum_relaxation_strengths": 0.593925251333053
+        },
+        {
+          "active_poles": 4,
+          "epsilon_inf": 4.105451841072409,
+          "fit_seconds": 0.00012539999443106353,
+          "identifiability": {
+            "caveat": "Fixed-grid coefficients are an experimental representation; sparse points do not identify a unique relaxation spectrum.",
+            "condition_number": null,
+            "condition_number_defined": false,
+            "design_rows": 6,
+            "parameter_count": 10,
+            "rank": 6,
+            "rank_deficient": true,
+            "singular_values": [
+              24.072991872072652,
+              22.222049415868216,
+              13.48168076056286,
+              0.5509466741342928,
+              0.2109575331480123,
+              0.06416013065417543
+            ],
+            "underdetermined": true
+          },
+          "policy": {
+            "description": "Two times the normalized Dk*Df channel weight to expose weighting sensitivity.",
+            "loss_channel_weight": 2.0,
+            "name": "loss_emphasis_2x"
+          },
+          "relaxation_strengths": [
+            {
+              "delta_epsilon": 0.0,
+              "tau_s": 1e-12
+            },
+            {
+              "delta_epsilon": 0.04586300915295202,
+              "tau_s": 7.498942093324559e-12
+            },
+            {
+              "delta_epsilon": 0.11707639733988902,
+              "tau_s": 5.6234132519034906e-11
+            },
+            {
+              "delta_epsilon": 0.0,
+              "tau_s": 4.2169650342858224e-10
+            },
+            {
+              "delta_epsilon": 0.12600031006938153,
+              "tau_s": 3.1622776601683795e-09
+            },
+            {
+              "delta_epsilon": 0.3049853333023209,
+              "tau_s": 2.371373705661655e-08
+            },
+            {
+              "delta_epsilon": 0.0,
+              "tau_s": 1.7782794100389227e-07
+            },
+            {
+              "delta_epsilon": 0.0,
+              "tau_s": 1.333521432163324e-06
+            },
+            {
+              "delta_epsilon": 0.0,
+              "tau_s": 1e-05
+            }
+          ],
+          "source_residuals": {
+            "df": {
+              "mae": 9.357046741101788e-05,
+              "max_abs": 0.00014928372048167264,
+              "max_relative": 0.012440310040139386,
+              "rmse": 0.0001093930129940551
+            },
+            "dk": {
+              "mae": 0.03444578232854371,
+              "max_abs": 0.051668673492815564,
+              "max_relative": 0.012602115486052577,
+              "rmse": 0.039546490551607076
+            },
+            "epsilon_loss_dk_times_df": {
+              "mae": 1.8039136770592323e-06,
+              "max_abs": 3.878627610594265e-06,
+              "max_relative": 8.200058373349398e-05,
+              "rmse": 2.363453352788279e-06
+            },
+            "weighted_scaled_2norm": 0.015661632096767873
+          },
+          "sum_relaxation_strengths": 0.5939250498645434
+        }
+      ],
+      "interest_band_100khz_1ghz": {
+        "candidate_by_policy": {
+          "balanced_channels": {
+            "df_range": {
+              "max": 0.0376487730261127,
+              "min": 0.0010210656392124866
+            },
+            "dk_range": {
+              "max": 4.699312009734108,
+              "min": 4.255643791068788
+            },
+            "epsilon_loss_range": {
+              "max": 0.17021435683233527,
+              "min": 0.004798306021078071
+            },
+            "min_loss": 0.004798306021078071,
+            "min_real_epsilon": 4.255643791068788,
+            "nonnegative_dissipation_sampled": true
+          },
+          "loss_emphasis_2x": {
+            "df_range": {
+              "max": 0.03764673561093911,
+              "min": 0.0010209820629984386
+            },
+            "dk_range": {
+              "max": 4.699308700592239,
+              "min": 4.255627904299443
+            },
+            "epsilon_loss_range": {
+              "max": 0.1702049972931271,
+              "min": 0.0047979098917971755
+            },
+            "min_loss": 0.0047979098917971755,
+            "min_real_epsilon": 4.255627904299443,
+            "nonnegative_dissipation_sampled": true
+          }
+        },
+        "control_interpolation": {
+          "clamped_outside_source_knots": true,
+          "df_range": {
+            "max": 0.011,
+            "min": 0.01
+          },
+          "dk_range": {
+            "max": 4.7,
+            "min": 4.3
+          },
+          "epsilon_loss_range": {
+            "max": 0.04730624691358025,
+            "min": 0.047
+          }
+        },
+        "frequency_hz": {
+          "max": 1000000000.0,
+          "min": 100000.0,
+          "samples": 121
+        },
+        "policy_spread": {
+          "max_abs_df": 4.7896715309053706e-06,
+          "max_abs_dk": 2.0320018728980926e-05,
+          "max_abs_epsilon_loss": 2.072203171937792e-05,
+          "max_dk_spread_frequency_hz": 15848931.924611142
+        }
+      },
+      "material": "EL190T",
+      "nonnegative_debye_monotonicity_conflict": false,
+      "record_id": "material:EL190T",
+      "repeated_rows_validated": 18,
+      "representative_values_100khz_1mhz_1ghz": {
+        "100000": {
+          "balanced_channels": {
+            "df": 0.0010210656392124866,
+            "dk": 4.699312009734108,
+            "epsilon_loss": 0.004798306021078071
+          },
+          "control_interpolation": {
+            "df": 0.01,
+            "dk": 4.7,
+            "epsilon_loss": 0.047
+          },
+          "loss_emphasis_2x": {
+            "df": 0.0010209820629984386,
+            "dk": 4.699308700592239,
+            "epsilon_loss": 0.0047979098917971755
+          },
+          "policy_spread": {
+            "df_abs": 8.357621404794444e-08,
+            "df_percent_of_mean": 0.0081855300400139,
+            "dk_abs": 3.309141868967913e-06,
+            "dk_percent_of_mean": 7.041760639052346e-05,
+            "epsilon_loss_abs": 3.9612928089561433e-07
+          }
+        },
+        "1000000": {
+          "balanced_channels": {
+            "df": 0.010016638613430858,
+            "dk": 4.6927060346389675,
+            "epsilon_loss": 0.04700514046804469
+          },
+          "control_interpolation": {
+            "df": 0.01,
+            "dk": 4.7,
+            "epsilon_loss": 0.047
+          },
+          "loss_emphasis_2x": {
+            "df": 0.010015822724884809,
+            "dk": 4.6927034222077415,
+            "epsilon_loss": 0.04700128557729301
+          },
+          "policy_spread": {
+            "df_abs": 8.158885460487347e-07,
+            "df_percent_of_mean": 0.008145664501927198,
+            "dk_abs": 2.6124312260122906e-06,
+            "dk_percent_of_mean": 5.5670053353005445e-05,
+            "epsilon_loss_abs": 3.85489075167833e-06
+          }
+        },
+        "1000000000": {
+          "balanced_channels": {
+            "df": 0.011118296379739866,
+            "dk": 4.255643791068788,
+            "epsilon_loss": 0.04731550895570255
+          },
+          "control_interpolation": {
+            "df": 0.011,
+            "dk": 4.3,
+            "epsilon_loss": 0.047299999999999995
+          },
+          "loss_emphasis_2x": {
+            "df": 0.011115604956866572,
+            "dk": 4.255627904299443,
+            "epsilon_loss": 0.04730387862761059
+          },
+          "policy_spread": {
+            "df_abs": 2.691422873294519e-06,
+            "df_percent_of_mean": 0.024210082005386022,
+            "dk_abs": 1.5886769345385687e-05,
+            "dk_percent_of_mean": 0.00037331129621983857,
+            "epsilon_loss_abs": 1.1630328091961906e-05
+          }
+        }
+      },
+      "source_band_hz": {
+        "max": 10000000000.0,
+        "min": 1000000.0
+      },
+      "source_dk_increase_pairs": [],
+      "source_interpolation_control": {
+        "implementation": "DielectricDispersion.interpolate: linear interpolation in log10(frequency), clamped at endpoints",
+        "is_causal_realization": false,
+        "source_knot_df_rmse": 0.0,
+        "source_knot_dk_rmse": 0.0
+      },
+      "source_points": [
+        {
+          "df": 0.01,
+          "dk": 4.7,
+          "epsilon_loss_dk_times_df": 0.047,
+          "frequency_hz": 1000000.0
+        },
+        {
+          "df": 0.011,
+          "dk": 4.3,
+          "epsilon_loss_dk_times_df": 0.047299999999999995,
+          "frequency_hz": 1000000000.0
+        },
+        {
+          "df": 0.012,
+          "dk": 4.1,
+          "epsilon_loss_dk_times_df": 0.049199999999999994,
+          "frequency_hz": 10000000000.0
+        }
+      ],
+      "source_record_sha256": "3dd689a667d4a8bd72643431cf9152f35fdd2b568c73abc03b7ebdf9d67ee95d",
+      "source_rows_seen": 21,
+      "unique_source_points": 3,
+      "wider_audit_band_10khz_100ghz": {
+        "candidate_by_policy": {
+          "balanced_channels": {
+            "df_range": {
+              "max": 0.03764016210732143,
+              "min": 0.00010212636799717092
+            },
+            "dk_range": {
+              "max": 4.69937952515272,
+              "min": 4.107524227375305
+            },
+            "epsilon_loss_range": {
+              "max": 0.17023911895096006,
+              "min": 0.00047993056274411703
+            },
+            "min_loss": 0.00047993056274411703,
+            "min_real_epsilon": 4.107524227375305,
+            "nonnegative_dissipation_sampled": true
+          },
+          "loss_emphasis_2x": {
+            "df_range": {
+              "max": 0.037638067455620886,
+              "min": 0.00010211800835001685
+            },
+            "dk_range": {
+              "max": 4.699376208884708,
+              "min": 4.107522403559496
+            },
+            "epsilon_loss_range": {
+              "max": 0.17023019060496353,
+              "min": 0.0004798909389387591
+            },
+            "min_loss": 0.0004798909389387591,
+            "min_real_epsilon": 4.107522403559496,
+            "nonnegative_dissipation_sampled": true
+          }
+        },
+        "control_interpolation": {
+          "clamped_outside_source_knots": true,
+          "df_range": {
+            "max": 0.012,
+            "min": 0.01
+          },
+          "dk_range": {
+            "max": 4.7,
+            "min": 4.1
+          },
+          "epsilon_loss_range": {
+            "max": 0.049199999999999994,
+            "min": 0.047
+          }
+        },
+        "frequency_hz": {
+          "max": 100000000000.0,
+          "min": 10000.0,
+          "samples": 161
+        },
+        "policy_spread": {
+          "max_abs_df": 4.7896359816682055e-06,
+          "max_abs_dk": 2.0315063562925673e-05,
+          "max_abs_epsilon_loss": 2.0730461336757044e-05,
+          "max_dk_spread_frequency_hz": 15622480.81465289
+        }
+      }
+    }
+  ],
+  "program": "SPD Decap PI Evaluator",
+  "recommendation": {
+    "decision": "ACCEPT_DIAGNOSTIC / DEFER_PRODUCT_PROMOTION",
+    "reason": "The bounded fits test a passive causal candidate representation, but sparse source rows, ABF non-monotonic Dk, and low-band extrapolation uncertainty do not justify product integration or a PowerSI accuracy claim."
+  },
+  "runtime_seconds": 0.004539200017461553,
+  "status": "PASS_DIAGNOSTIC",
+  "study": {
+    "bands": {
+      "audit": {
+        "max_hz": 100000000000.0,
+        "min_hz": 10000.0,
+        "purpose": "wider sampled sanity audit only"
+      },
+      "interest": {
+        "max_hz": 1000000000.0,
+        "min_hz": 100000.0,
+        "purpose": "low-band uncertainty view; partly below source minimum"
+      },
+      "source": "material-specific supplied knots"
+    },
+    "complex_permittivity": "epsilon*(omega) = epsilon_inf + sum(delta_epsilon/(1 + j omega tau)) = epsilon_prime - j epsilon_double_prime",
+    "constraints": "fixed positive tau grid, epsilon_inf > 0, nonnegative delta_epsilon via scipy.optimize.nnls",
+    "fit_targets": [
+      "Dk",
+      "Dk*Df = epsilon_double_prime"
+    ],
+    "literature": {
+      "construction_basis": "Positive-residue relaxation ODEs below establish this study's causal passive model; the background paper does not validate this NNLS construction or these source materials.",
+      "relaxation_background_reference": "https://doi.org/10.1103/PhysRevB.37.448",
+      "scipy_nnls": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.nnls.html"
+    },
+    "name": "source-only passive generalized Debye feasibility",
+    "policies": [
+      {
+        "description": "Equal aggregate channel weight after per-channel RMS normalization.",
+        "loss_channel_weight": 1.0,
+        "name": "balanced_channels"
+      },
+      {
+        "description": "Two times the normalized Dk*Df channel weight to expose weighting sensitivity.",
+        "loss_channel_weight": 2.0,
+        "name": "loss_emphasis_2x"
+      }
+    ],
+    "scope": "D103 material rows only; no raw SPD, PowerSI, Triangle, FasterCap, or product integration",
+    "tau_grid_s": [
+      1e-12,
+      7.498942093324559e-12,
+      5.6234132519034906e-11,
+      4.2169650342858224e-10,
+      3.1622776601683795e-09,
+      2.371373705661655e-08,
+      1.7782794100389227e-07,
+      1.333521432163324e-06,
+      1e-05
+    ],
+    "time_convention": "e^(+j omega t)",
+    "weighting": "Each unique source frequency is equally weighted; Dk and Dk*Df are divided by their source-band RMS; loss channel is then multiplied by policy weight."
+  },
+  "version": "0.23.1"
+}

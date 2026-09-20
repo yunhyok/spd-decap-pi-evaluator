@@ -1,0 +1,79 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "COMPLETED_CONDITIONAL_L25_FMM_MAGNETIC_1MHZ_COMPARISON",
+  "script_sha256": "39b1f4a86efddb3a2f11c577387f3a270a7ae046ee6d06df54e4f85323e40fb3",
+  "inputs": {
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-self-magnetic-board-1mhz-01\\result.json": "36d293fa18b32f88a195d71a20934fe678e1b3cec49eed6cdd39f2cb0ce687ab",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_primary_band_comparison_2026-09-07.json": "ac08d7ea36a09989fb83e9113af399db41f698bf68e061e3c75020f4c41a5f8d",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\compare_astra_loaded_development_points.py": "0e12464d1297caa9964404a2a0777d22964d6817069f752641b2d7945c8f4f4f",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\compare_astra_rt0_board_1mhz.py": "c98cafb9d5cb1f5f6ed2623c9b33c5d83e231c3bfd2a5a7b5f823c79d1c8faba",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-fmm-magnetic-board-1mhz-03\\result.json": "40a0f959f2b5ada9251a175cb14460e86bca0c04e6afd9e7d0b7a3c03aeb92d8"
+  },
+  "rail_id": "ADC_VDD_075_VTRIP_SRAM/0",
+  "frequency_hz": 1000000.0,
+  "reference_port_one_based": 18,
+  "reference_zdd_ohm": [
+    0.0006915479466520245,
+    -0.0004257504501139287
+  ],
+  "device_active_indices": [
+    2699,
+    2656
+  ],
+  "points": [
+    {
+      "model": "rt0_r_only",
+      "field": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-self-magnetic-board-1mhz-01\\alpha-0\\field.npz",
+        "sha256": "be2a3515dca426a45a5fe8c0eb696e3aa59544ee32e2d93971917e19c32b5ce1"
+      },
+      "zdd_ohm": [
+        0.0005515144327164612,
+        -0.0005888008241071069
+      ],
+      "errors": {
+        "magnitude_error_db": -0.057321571224598834,
+        "complex_relative_error": 0.26466013456703086,
+        "complex_gap_ohm": 0.00021492977803100452,
+        "phase_error_deg": -15.254341292751285
+      }
+    },
+    {
+      "model": "same_triangle_self",
+      "field": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-self-magnetic-board-1mhz-01\\alpha-1\\field.npz",
+        "sha256": "fa2178ca6d20597508c193213955b2407319626a318c9fd50f9a534e81aa2da5"
+      },
+      "zdd_ohm": [
+        0.0006312032027337987,
+        -0.0004933757051512947
+      ],
+      "errors": {
+        "magnitude_error_db": -0.11791326033986789,
+        "complex_relative_error": 0.1116058143873527,
+        "complex_gap_ohm": 9.063477940297003e-05,
+        "phase_error_deg": -6.394253400143949
+      }
+    },
+    {
+      "model": "l25_full_centroid_self_shared_edge",
+      "field": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-fmm-magnetic-board-1mhz-03\\field.npz",
+        "sha256": "e095cb5743f69d2b8af744507ff8cdfd5cf5237be308fcf3480a9aab82f6890c"
+      },
+      "zdd_ohm": [
+        0.0008134569497492327,
+        -0.0005753452913787627
+      ],
+      "errors": {
+        "magnitude_error_db": 1.7761695469447552,
+        "complex_relative_error": 0.23762888659069023,
+        "complex_gap_ohm": 0.00019297777480633876,
+        "phase_error_deg": -3.652700970109287
+      }
+    }
+  ],
+  "remaining_rt0_reference_gap_reduction_fraction": 0.10213569950972123,
+  "scope": "Post-freeze comparison only; no reference-fitted coefficient. Same source/RT0/G/C/contacts/native-via basis. Full candidate includes L25 centroid mutual, exact triangle self and selected shared-edge correction. Other geometric near pairs, 415 shared-edge tails, cross-layer magnetic currents and complete return remain unqualified. A final-field three-point diagnostic is separate. This single development point is not quadrature/mesh convergence, global PSD, broadband, unseen or product accuracy acceptance."
+}

@@ -1,0 +1,111 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "ACCEPT_ASSUMED_LOCAL_DC_REFINEMENT_ONLY",
+  "input_sha256": "3bb5027424488b17cb2c6f85c75f5edeb0ff9b041929c5b6c3087417b9c4554d",
+  "normalized_xy_unit": "um numerical coordinates; DC stiffness only",
+  "dyadic_quantum_um": 9.5367431640625e-07,
+  "rectangle_analytic_r_ohm": 0.0010068803490518544,
+  "similarity_controls": [
+    {
+      "xy_scale_from_um_numbers": 1.0,
+      "linear_dirichlet_energy_conductance_s": 993.1666666666662,
+      "operator_sha256": "889ccd3f0d7fa645c2d45f1b347eda916e2728b0d0c444f09a957656dd692982"
+    },
+    {
+      "xy_scale_from_um_numbers": 1e-06,
+      "linear_dirichlet_energy_conductance_s": 993.1666666666662,
+      "operator_sha256": "b87688931c9039d74fc4c4b4a434b0dbd2dc3f28afa4283d62ec0c7dfcddb959"
+    }
+  ],
+  "geometries": [
+    {
+      "circle_sides": 64,
+      "artwork_inner_approximation": true,
+      "dyadic_artwork_hausdorff_um": 5.528293579467444e-07,
+      "dyadic_electrode_hausdorff_um": [
+        6.18029010999579e-07,
+        6.180290158733031e-07
+      ],
+      "artwork_wkb_sha256": "9f1370439176ad2e13e1e48a6d7dac2b08bfb8cc195f1fe7ae18a0bb3b727129",
+      "electrode_wkb_sha256": [
+        "b7655c3290b98f8c3c9afc119e266d11564ae6b3122145169ee7338e863dfb8c",
+        "a738c83e89ebd6c9b395385514b6d29b1516da722bee802263aa57ac8c98b7b2"
+      ]
+    },
+    {
+      "circle_sides": 128,
+      "artwork_inner_approximation": true,
+      "dyadic_artwork_hausdorff_um": 5.957670969268129e-07,
+      "dyadic_electrode_hausdorff_um": [
+        9.20076362036175e-07,
+        9.200763691968887e-07
+      ],
+      "artwork_wkb_sha256": "d71474bbaed0f0b332588692f56a43ffed0a2ebd2df95b7bbb8ad66bc54b871a",
+      "electrode_wkb_sha256": [
+        "70410cb67d5b995f60f3d850b5ac0c463a50a187f4ddba612ec31f57d3863dc2",
+        "42159e11bddd03917a90275f4c19ed01d4aaf005656260aee8b259d6d99732af"
+      ]
+    }
+  ],
+  "sheet_rows": [
+    {
+      "circle_sides": 64,
+      "level": 0,
+      "nodes": 218,
+      "triangles": 344,
+      "r_ohm": 0.0004072526616727718,
+      "operator_sha256": "e5c6755b62af9f3be8113091bba9181f8bf58408dac3663c62a5766b603932e0"
+    },
+    {
+      "circle_sides": 64,
+      "level": 1,
+      "nodes": 779,
+      "triangles": 1376,
+      "r_ohm": 0.00043257740445547314,
+      "operator_sha256": "98e3514c7dd40fc23f3629224976a7ea5301e1952b19dca7a75cb3ac70e9cde0"
+    },
+    {
+      "circle_sides": 64,
+      "level": 2,
+      "nodes": 2933,
+      "triangles": 5504,
+      "r_ohm": 0.00044218964748322785,
+      "operator_sha256": "a3f7ad815fc9ab8af8a3128250e94205240fe541329447ea7371858c460f4567"
+    },
+    {
+      "circle_sides": 64,
+      "level": 3,
+      "nodes": 11369,
+      "triangles": 22016,
+      "r_ohm": 0.00044505795094975487,
+      "operator_sha256": "b06ca87fed14f5c0c997bf37989b5d43992d1891d6881b45532fa76c7c2c0168"
+    },
+    {
+      "circle_sides": 128,
+      "level": 2,
+      "nodes": 5861,
+      "triangles": 11008,
+      "r_ohm": 0.00044180989282225757,
+      "operator_sha256": "eaa7a881dd5ded605c4d6f21c40c2f1b3a3deeebe4d5742f079a1cd2998f0695"
+    },
+    {
+      "circle_sides": 128,
+      "level": 3,
+      "nodes": 22729,
+      "triangles": 44032,
+      "r_ohm": 0.00044462442577010127,
+      "operator_sha256": "c47c355025280c4c01ae5b692a21324567fd6b77019f0d696cbdc9bc0b115afc"
+    }
+  ],
+  "prior_control_attempt": "Boundary-touching finite rectangle electrodes rejected as CONTACT_BOUNDARY_AMBIGUOUS before the source experiment; corrected control evaluates the exact linear Dirichlet energy on a contact-free rectangle, with no guard change.",
+  "relative_changes": {
+    "mesh_64_relative": 0.00644478648321204,
+    "mesh_128_relative": 0.006330135693667418,
+    "circle_64_to_128_relative": 0.0009750368052828576
+  },
+  "gate": 0.02,
+  "failure": null,
+  "elapsed_s": 12.437999999994645,
+  "scope": "New inward polygon approximations of the same source trace/pads/qualified filled-microvia electrodes, in DC similarity coordinates. Original source and prior STOP remain unchanged. All existing mesh/contact/void guards run unchanged. Fixed electrodes within each mesh-refinement sequence; circle discretization changes are checked separately. No SI-coordinate AC/L operator, 3D injection, production eligibility attestation, complete-board replacement or PowerSI claim."
+}

@@ -1,0 +1,134 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "ACCEPT_CONDITIONAL_INTERNAL_SHEET_100MHZ_COMPARISON_INDEPENDENT_REVIEW",
+  "review_scope": "Read-only arithmetic and provenance review of the saved single 100 MHz conditional internal-sheet comparator; no LU, geometry, Touchstone, or fit.",
+  "inputs": {
+    "comparison": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_internal_sheet_100mhz_comparison_2026-09-07.json",
+      "sha256": "4be1c9f60cb1f40015004e7e655f3d54aabf899bc75e3ad5a7d15ba7f8e27af3"
+    },
+    "primary_comparison": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_primary_band_comparison_2026-09-07.json",
+      "sha256": "ac08d7ea36a09989fb83e9113af399db41f698bf68e061e3c75020f4c41a5f8d"
+    },
+    "internal_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-internal-sheet-100mhz-shadow-01\\result.json",
+      "sha256": "36613cde0c127bae3d7af50d9bc8e53296e0538ff473152e04ea591d23e5c93b"
+    },
+    "comparator_script": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\compare_astra_internal_sheet_point.py",
+      "sha256": "7a44054c13654916264edd55f1e35f585d4ce8d8f9567cc19db0f5a65b10abd6"
+    }
+  },
+  "identity_checks": {
+    "comparison_status": "COMPLETED_CONDITIONAL_INTERNAL_SHEET_100MHZ_COMPARISON",
+    "primary_status": "COMPLETED_CONDITIONAL_PRIMARY_BAND_DECADE_COMPARISON",
+    "internal_result_status": "COMPLETED_CONDITIONAL_INTERNAL_SHEET_100MHZ",
+    "rail_id": "ADC_VDD_075_VTRIP_SRAM/0",
+    "reference_port_one_based": 18,
+    "frequency_hz": 100000000.0,
+    "internal_result_point_count": 1,
+    "all_pass": true
+  },
+  "zdd_ohm": {
+    "internal": [
+      0.000854939011764992,
+      0.0020081381969814438
+    ],
+    "native": [
+      0.00011885382968568422,
+      0.0009143791612678196
+    ],
+    "reference": [
+      0.001779666643964065,
+      0.010512997908483828
+    ],
+    "two_sheet_dc": [
+      0.0008376874678580425,
+      0.001303127368813163
+    ]
+  },
+  "arithmetic": {
+    "recomputed_comparisons": {
+      "internal_vs_reference": {
+        "complex_gap_ohm": 0.008554984506478602,
+        "complex_relative_error": 0.8023381592949861,
+        "magnitude_error_db": -13.777937671599009,
+        "phase_error_deg": -13.453169961474904
+      },
+      "native_vs_reference": {
+        "complex_gap_ohm": 0.009741241248346017,
+        "complex_relative_error": 0.9135924871082506,
+        "magnitude_error_db": -21.26194549417672,
+        "phase_error_deg": 2.2021265534632546
+      },
+      "two_sheet_dc_vs_reference": {
+        "complex_gap_ohm": 0.009257917699229725,
+        "complex_relative_error": 0.8682634831283816,
+        "magnitude_error_db": -16.755374288297514,
+        "phase_error_deg": -23.125980815057236
+      },
+      "internal_vs_two_sheet_dc": {
+        "complex_gap_ohm": 0.0007052218683518673,
+        "complex_relative_error": 0.4552319194200415,
+        "magnitude_error_db": 2.9774366166985016,
+        "phase_error_deg": 9.672810853582329
+      }
+    },
+    "max_abs_metric_difference_from_comparator": {
+      "internal_vs_reference": 0.0,
+      "native_vs_reference": 0.0,
+      "two_sheet_dc_vs_reference": 0.0,
+      "internal_vs_two_sheet_dc": 0.0
+    },
+    "all_metrics_match_within": 1e-14
+  },
+  "constitutive_scale_checks": {
+    "l14": {
+      "rdc_recomputed_ohm_per_square": 0.0008390669575432118,
+      "zcm_ohm_per_square": [
+        0.0011808679908135436,
+        0.0011646922177162018
+      ],
+      "stored_scale": [
+        0.36017547701995584,
+        -0.3552417191089739
+      ],
+      "rdc_over_zcm_abs_error": 0.0
+    },
+    "l25": {
+      "rdc_recomputed_ohm_per_square": 0.0005244168484645075,
+      "zcm_ohm_per_square": [
+        0.001271820639732752,
+        0.0013092229861008894
+      ],
+      "stored_scale": [
+        0.20019379869859558,
+        -0.2060811994575984
+      ],
+      "rdc_over_zcm_abs_error": 0.0
+    }
+  },
+  "saved_solver_receipt_checks": {
+    "physical_residual_max_abs_a": 9.653005325552626e-11,
+    "physical_residual_gate_a": 1e-07,
+    "normalized_backward_residual": 1.8652123841480893e-19,
+    "pivot_abs_ratio": 6788.264426695264,
+    "power_sum_ohm": [
+      0.0008549390119708862,
+      0.002008138196975363
+    ],
+    "zdd_minus_power_sum_abs_ohm": 2.0598399062599897e-13,
+    "stored_power_closure_error_ohm": 2.0598399062599897e-13,
+    "minimum_category_real_power_ohm": 1.964852489386352e-10,
+    "category_count": 9,
+    "all_category_real_parts_nonnegative_to_minus_1e12": true,
+    "all_pass": true
+  },
+  "findings": [],
+  "limitations": [
+    "The saved result supplies the final physical-residual and solver-gate receipt; this review recalculates comparator arithmetic and category-power closure but does not rerun the solver.",
+    "This remains one conditional symmetric two-face internal-only 100 MHz point. It does not establish external magnetic coupling, return-path, proximity, broadband, or PowerSI accuracy."
+  ]
+}

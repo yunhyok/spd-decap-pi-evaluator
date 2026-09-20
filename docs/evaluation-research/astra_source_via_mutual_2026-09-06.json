@@ -1,0 +1,278 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "ACCEPT_SOURCE_CENTERLINE_MUTUAL_DIAGNOSTIC_ONLY",
+  "production_eligible": false,
+  "input_sha256": "82ddadb7edb005c14ac3870a0a7d6641ba336d1cbd71d9586f98c4b99792194d",
+  "power_source_via": {
+    "ordinal": 1072686,
+    "via_id": "Via336239",
+    "via_id_fold": "via336239",
+    "net_name": "ADC_VDD_180_VQPS_SYS_1_AON/0",
+    "net_fold": "adc_vdd_180_vqps_sys_1_aon/0",
+    "start_layer_id": "Signal$L21(DGND)",
+    "start_layer_id_fold": "signal$l21(dgnd)",
+    "end_layer_id": "Signal$L28(DGND)",
+    "end_layer_id_fold": "signal$l28(dgnd)",
+    "start_node_id": "Node2140546",
+    "start_node_id_fold": "node2140546",
+    "end_node_id": "Node487654",
+    "end_node_id_fold": "node487654",
+    "padstack_id": "DR-2128_350",
+    "padstack_id_fold": "dr-2128_350",
+    "status": "EXACT",
+    "owner_id": "via:adc_vdd_180_vqps_sys_1_aon/0:via336239",
+    "owner_id_fold": "via:adc_vdd_180_vqps_sys_1_aon/0:via336239",
+    "start_x_pm": -11700000000,
+    "start_y_pm": 12403000000,
+    "end_x_pm": -11700000000,
+    "end_y_pm": 12403000000,
+    "rotation_microdegrees": 0,
+    "source_record_sha256": "8182618091b255249f9a66fa8af66df119158b15ae141eb086e9268126408d94"
+  },
+  "source_stackup_rows": [
+    {
+      "layer_ordinal": 40,
+      "layer_name": "Signal$L21(DGND)",
+      "layer_kind": "conductor",
+      "thickness_um": 35.0,
+      "conductivity_s_per_m": 59590000.0,
+      "material_name": "COPPER"
+    },
+    {
+      "layer_ordinal": 41,
+      "layer_name": "Medium$81",
+      "layer_kind": "dielectric",
+      "thickness_um": 70.0,
+      "conductivity_s_per_m": null,
+      "material_name": "EL190T"
+    },
+    {
+      "layer_ordinal": 42,
+      "layer_name": "Signal$L22(MAIN_POWER2)",
+      "layer_kind": "conductor",
+      "thickness_um": 32.0,
+      "conductivity_s_per_m": 59590000.0,
+      "material_name": "COPPER"
+    },
+    {
+      "layer_ordinal": 43,
+      "layer_name": "Medium$83",
+      "layer_kind": "dielectric",
+      "thickness_um": 100.0,
+      "conductivity_s_per_m": null,
+      "material_name": "EL190T"
+    },
+    {
+      "layer_ordinal": 44,
+      "layer_name": "Signal$L23(MAIN_POWER3)",
+      "layer_kind": "conductor",
+      "thickness_um": 32.0,
+      "conductivity_s_per_m": 59590000.0,
+      "material_name": "COPPER"
+    },
+    {
+      "layer_ordinal": 45,
+      "layer_name": "Medium$85",
+      "layer_kind": "dielectric",
+      "thickness_um": 105.0,
+      "conductivity_s_per_m": null,
+      "material_name": "EL190T"
+    },
+    {
+      "layer_ordinal": 46,
+      "layer_name": "Signal$L24(DGND)",
+      "layer_kind": "conductor",
+      "thickness_um": 32.0,
+      "conductivity_s_per_m": 59590000.0,
+      "material_name": "COPPER"
+    },
+    {
+      "layer_ordinal": 47,
+      "layer_name": "Medium$DR2128",
+      "layer_kind": "dielectric",
+      "thickness_um": 100.0,
+      "conductivity_s_per_m": null,
+      "material_name": "EL190T"
+    },
+    {
+      "layer_ordinal": 48,
+      "layer_name": "Signal$L25(MAIN_POWER4)",
+      "layer_kind": "conductor",
+      "thickness_um": 32.0,
+      "conductivity_s_per_m": 59590000.0,
+      "material_name": "COPPER"
+    },
+    {
+      "layer_ordinal": 49,
+      "layer_name": "Medium$89",
+      "layer_kind": "dielectric",
+      "thickness_um": 105.0,
+      "conductivity_s_per_m": null,
+      "material_name": "EL190T"
+    },
+    {
+      "layer_ordinal": 50,
+      "layer_name": "Signal$L26(MAIN_POWER5)",
+      "layer_kind": "conductor",
+      "thickness_um": 32.0,
+      "conductivity_s_per_m": 59590000.0,
+      "material_name": "COPPER"
+    },
+    {
+      "layer_ordinal": 51,
+      "layer_name": "Medium$91",
+      "layer_kind": "dielectric",
+      "thickness_um": 100.0,
+      "conductivity_s_per_m": null,
+      "material_name": "EL190T"
+    },
+    {
+      "layer_ordinal": 52,
+      "layer_name": "Signal$L27(DGND)",
+      "layer_kind": "conductor",
+      "thickness_um": 32.0,
+      "conductivity_s_per_m": 59590000.0,
+      "material_name": "COPPER"
+    },
+    {
+      "layer_ordinal": 53,
+      "layer_name": "Medium$93",
+      "layer_kind": "dielectric",
+      "thickness_um": 70.0,
+      "conductivity_s_per_m": null,
+      "material_name": "EL190T"
+    },
+    {
+      "layer_ordinal": 54,
+      "layer_name": "Signal$L28(DGND)",
+      "layer_kind": "conductor",
+      "thickness_um": 35.0,
+      "conductivity_s_per_m": 59590000.0,
+      "material_name": "COPPER"
+    }
+  ],
+  "z_intervals_m": {
+    "inner_foil_faces": [
+      3.5e-05,
+      0.000877
+    ],
+    "foil_midplanes": [
+      1.75e-05,
+      0.0008944999999999999
+    ],
+    "outer_foil_faces": [
+      0.0,
+      0.0009119999999999999
+    ]
+  },
+  "rows": [
+    {
+      "ground_source_via": {
+        "ordinal": 520160,
+        "via_id": "Via1468147",
+        "via_id_fold": "via1468147",
+        "net_name": "DGND",
+        "net_fold": "dgnd",
+        "start_layer_id": "Signal$L21(DGND)",
+        "start_layer_id_fold": "signal$l21(dgnd)",
+        "end_layer_id": "Signal$L28(DGND)",
+        "end_layer_id_fold": "signal$l28(dgnd)",
+        "start_node_id": "Node1785759",
+        "start_node_id_fold": "node1785759",
+        "end_node_id": "Node2542899",
+        "end_node_id_fold": "node2542899",
+        "padstack_id": "DR-2128_350",
+        "padstack_id_fold": "dr-2128_350",
+        "status": "EXACT",
+        "owner_id": "via:dgnd:via1468147",
+        "owner_id_fold": "via:dgnd:via1468147",
+        "start_x_pm": -8450000000,
+        "start_y_pm": 12403000000,
+        "end_x_pm": -8450000000,
+        "end_y_pm": 12403000000,
+        "rotation_microdegrees": 0,
+        "source_record_sha256": "b704357ce248bf3c3c6d529ff82f63fe4b5876f2f555b317ba8c19b69f9d25e9"
+      },
+      "axis_spacing_m": 0.00325,
+      "mutual_inductance_h": {
+        "inner_foil_faces": 2.1694646761393628e-11,
+        "foil_midplanes": 2.3524942462496096e-11,
+        "outer_foil_faces": 2.5428018958577415e-11
+      },
+      "independent_quadrature_relative_error": 6.867549778148152e-16
+    },
+    {
+      "ground_source_via": {
+        "ordinal": 552834,
+        "via_id": "Via1497554",
+        "via_id_fold": "via1497554",
+        "net_name": "DGND",
+        "net_fold": "dgnd",
+        "start_layer_id": "Signal$L21(DGND)",
+        "start_layer_id_fold": "signal$l21(dgnd)",
+        "end_layer_id": "Signal$L28(DGND)",
+        "end_layer_id_fold": "signal$l28(dgnd)",
+        "start_node_id": "Node1795393",
+        "start_node_id_fold": "node1795393",
+        "end_node_id": "Node2567480",
+        "end_node_id_fold": "node2567480",
+        "padstack_id": "DR-2128_350",
+        "padstack_id_fold": "dr-2128_350",
+        "status": "EXACT",
+        "owner_id": "via:dgnd:via1497554",
+        "owner_id_fold": "via:dgnd:via1497554",
+        "start_x_pm": -10400000000,
+        "start_y_pm": 8503000000,
+        "end_x_pm": -10400000000,
+        "end_y_pm": 8503000000,
+        "rotation_microdegrees": 0,
+        "source_record_sha256": "2fa39b30b5aa50097ab5ff90e016c008c2dda0b8b170219785f85afb3de01d68"
+      },
+      "axis_spacing_m": 0.0041109609582188926,
+      "mutual_inductance_h": {
+        "inner_foil_faces": 1.7186156139498144e-11,
+        "foil_midplanes": 1.8639220470689604e-11,
+        "outer_foil_faces": 2.0150569738988136e-11
+      },
+      "independent_quadrature_relative_error": 3.987130699801838e-15
+    },
+    {
+      "ground_source_via": {
+        "ordinal": 1741143,
+        "via_id": "Via937851",
+        "via_id_fold": "via937851",
+        "net_name": "DGND",
+        "net_fold": "dgnd",
+        "start_layer_id": "Signal$L21(DGND)",
+        "start_layer_id_fold": "signal$l21(dgnd)",
+        "end_layer_id": "Signal$L28(DGND)",
+        "end_layer_id_fold": "signal$l28(dgnd)",
+        "start_node_id": "Node1298909",
+        "start_node_id_fold": "node1298909",
+        "end_node_id": "Node2366313",
+        "end_node_id_fold": "node2366313",
+        "padstack_id": "DR-2128_350",
+        "padstack_id_fold": "dr-2128_350",
+        "status": "EXACT",
+        "owner_id": "via:dgnd:via937851",
+        "owner_id_fold": "via:dgnd:via937851",
+        "start_x_pm": -13000000000,
+        "start_y_pm": 16303000000,
+        "end_x_pm": -13000000000,
+        "end_y_pm": 16303000000,
+        "rotation_microdegrees": 0,
+        "source_record_sha256": "42aaf173ba68bb3aa60a67e41d7c35309dca62a411cc226aba2c440fdcd884f4"
+      },
+      "axis_spacing_m": 0.0041109609582188926,
+      "mutual_inductance_h": {
+        "inner_foil_faces": 1.7186156139498144e-11,
+        "foil_midplanes": 1.8639220470689604e-11,
+        "outer_foil_faces": 2.0150569738988136e-11
+      },
+      "independent_quadrature_relative_error": 3.987130699801838e-15
+    }
+  ],
+  "elapsed_s": 0.014999999984866008,
+  "scope": "Existing free-space Neumann filament kernel, mu=mu0, straight source XY axes. Foil-face alternatives describe endpoint convention only, not physical confidence bounds. No solid-fill/plating/radius inference, self/internal L, R, G/C, plane screening, return assignment, current sharing, owner replacement or PowerSI improvement claim. The three same-span GND vias are coefficient examples, not a complete return network."
+}

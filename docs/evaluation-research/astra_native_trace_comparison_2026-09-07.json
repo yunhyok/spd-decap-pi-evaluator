@@ -1,0 +1,268 @@
+{
+  "program": "SPD Decap PI Evaluator v0.23.1",
+  "version": "0.23.1",
+  "status": "COMPLETED_CONDITIONAL_ACTUAL_BOARD_TRACE_SHADOW",
+  "inputs": {
+    "native": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_native_device_branch_2port_2026-09-07.json",
+      "sha256": "ca736c0c593f75def6dc309607b3a5d97bbf478ce2f23c0edeab5a27ffff2568"
+    },
+    "trace": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_dyadic_trace_sheet_2026-09-07.json",
+      "sha256": "e997be26af4c75c45c2e473e9264237a748fb49516a1db1253056d340d4b84ca"
+    },
+    "bounds": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_trace_dc_bounds_2026-09-06.json",
+      "sha256": "998e776db8e852f2229cbba6cecbacebbf86c6cf2f7de323c4a781528646c91a"
+    },
+    "reference": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_powersi_1mhz_reference_2026-09-07.json",
+      "sha256": "00fbcfe67f1c1e1a2193b4ea0425d9f766040a92938a574dce6daa1b7be4365d"
+    },
+    "patch": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_isolated_trace_patch_2026-09-06.json",
+      "sha256": "3bb5027424488b17cb2c6f85c75f5edeb0ff9b041929c5b6c3087417b9c4554d"
+    },
+    "basis": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-step4-basis-01\\ownership-basis.json",
+      "sha256": "3dadf2d8028a68fd98ba05c2bc90fc4a0cbb85a5b9a605ce73e4bc925526ce5c"
+    }
+  },
+  "frequency_hz": 1000000.0,
+  "rail_id": "ADC_VDD_180_VQPS_SYS_1_AON/0",
+  "native_identities": {
+    "base_substrate_identity_sha256": "ded5a0de451b0f195214f9f175c51ccb61af1b60f97f5a4b1052570125a84abc",
+    "driver_code_sha256": "5f73464f9bd8aea1eac54bae7c7840134fbf19a63d62b28e1edb57e76ec844eb",
+    "loaded_scenario_identity_sha256": "a3ffcfffc90b18f552c8e887185042478c21cedd9aa01e0a1008a21d3148c844",
+    "probe_port_manifest_sha256": "0caff3d9d91d96399a27e35b368373905c3f1d516846b17376a35b6a9f65158a",
+    "solver_profile": "layerwise_admittance_v1",
+    "source_model_evidence_sha256": "2aae9ea0a26d8b4b7a6fbd6c0b7d21cad8ed75e5ad1684db97831cc75fa62aac",
+    "termination_manifest_sha256": "c753669eacf83d3bfcf5c657e14e343a8c9ab5a0a2464039069a9053a293af75"
+  },
+  "native_branch": {
+    "inductance_h": 2.6094379124341013e-11,
+    "link_id": "spd-finite-via-edge:fab23cbe1e898b5ed9b72332",
+    "negative_node_id": "spd-finite-via-vertex:921ff757f2ea39c7c1a13f53",
+    "owner_id": "via:via336274",
+    "positive_node_id": "spd-finite-via-vertex:b9bb8fd2222593d92b1c9511",
+    "resistance_ohm": 0.0006677082693903983
+  },
+  "new_trace_owner": "trace:adc_vdd_180_vqps_sys_1_aon/0:trace311318",
+  "states": {
+    "global_native_base_without_scenario_terminations": {
+      "baseline_zdd_ohm": [
+        1.2188327436874191,
+        -295.8343303132505
+      ],
+      "native_branch_current_per_device_amp": [
+        -0.3333333333857508,
+        -2.1540889972212128e-10
+      ],
+      "passive_branch_current_squared_ceiling": 1825.3971076323262,
+      "d_zdd_d_trace_resistance_at_zero": [
+        0.11111111114605607,
+        1.436059331706632e-10
+      ],
+      "polarization_cancellation_ratio": 1290853.947893025,
+      "zero_resistance_check": true,
+      "cases": {
+        "dc_lower": {
+          "trace_resistance_ohm": 0.0003356267830172847,
+          "updated_zdd_ohm": [
+            1.2188694350271054,
+            -295.83433016805185
+          ],
+          "delta_zdd_ohm": [
+            3.669133968641128e-05,
+            1.4519865075545908e-07
+          ],
+          "absolute_delta_ohm": 3.669162698262099e-05,
+          "relative_complex_change": 1.2402656426303765e-07,
+          "magnitude_change_db": 1.7531859072748448e-10,
+          "delta_y_s": [
+            -441.7400563336737,
+            188.20629845068734
+          ],
+          "denominator": [
+            0.6854268123047416,
+            0.05140000328159777
+          ],
+          "reduced_inverse_relative_agreement": 1.9214448968064976e-16,
+          "passive_branch_energy_delta_ceiling_ohm": 0.6027911077260246
+        },
+        "refined_dc": {
+          "trace_resistance_ohm": 0.00044462442577010127,
+          "updated_zdd_ohm": [
+            1.218881097654616,
+            -295.834330061074
+          ],
+          "delta_zdd_ohm": [
+            4.835396719703556e-05,
+            2.5217651708155926e-07
+          ],
+          "absolute_delta_ohm": 4.835462477041631e-05,
+          "relative_complex_change": 1.6345031468197674e-07,
+          "magnitude_change_db": -1.5547668522411514e-09,
+          "delta_y_s": [
+            -532.5991388090479,
+            217.14310610994184
+          ],
+          "denominator": [
+            0.622271350983777,
+            0.05567094347657987
+          ],
+          "reduced_inverse_relative_agreement": 7.505644129645382e-19,
+          "passive_branch_energy_delta_ceiling_ohm": 0.7943975295192379
+        },
+        "dc_upper": {
+          "trace_resistance_ohm": 0.0005535909243976422,
+          "updated_zdd_ohm": [
+            1.218892635942559,
+            -295.83432992636006
+          ],
+          "delta_zdd_ohm": [
+            5.989225513986254e-05,
+            3.8689047746893944e-07
+          ],
+          "absolute_delta_ohm": 5.989350473949531e-05,
+          "relative_complex_change": 2.0245451688555602e-07,
+          "magnitude_change_db": -4.11421731187946e-09,
+          "delta_y_s": [
+            -608.1891690284218,
+            238.86245576173818
+          ],
+          "denominator": [
+            0.5701020433809099,
+            0.05770621414403174
+          ],
+          "reduced_inverse_relative_agreement": 0.0,
+          "passive_branch_energy_delta_ceiling_ohm": 0.9839648725474781
+        }
+      }
+    },
+    "source_mounted_scenario_manifest": {
+      "baseline_zdd_ohm": [
+        1.218516664300409,
+        -295.7561129768786
+      ],
+      "native_branch_current_per_device_amp": [
+        -0.33333333338086757,
+        -2.5917403009046736e-10
+      ],
+      "passive_branch_current_squared_ceiling": 1824.92372816183,
+      "d_zdd_d_trace_resistance_at_zero": [
+        0.1111111111428006,
+        1.7278268675161752e-10
+      ],
+      "polarization_cancellation_ratio": 1290512.654627941,
+      "zero_resistance_check": true,
+      "cases": {
+        "dc_lower": {
+          "trace_resistance_ohm": 0.0003356267830172847,
+          "updated_zdd_ohm": [
+            1.2185533556400943,
+            -295.75611283167996
+          ],
+          "delta_zdd_ohm": [
+            3.6691339685298124e-05,
+            1.4519866038601143e-07
+          ],
+          "absolute_delta_ohm": 3.669162698154595e-05,
+          "relative_complex_change": 1.2405936501622345e-07,
+          "magnitude_change_db": 1.753880223050749e-10,
+          "delta_y_s": [
+            -441.7400563336737,
+            188.20629845068734
+          ],
+          "denominator": [
+            0.6854268123047416,
+            0.05140000328159777
+          ],
+          "reduced_inverse_relative_agreement": 1.921967716121028e-16,
+          "passive_branch_energy_delta_ceiling_ohm": 0.6026347861594996,
+          "reference_comparison": {
+            "baseline_signed_magnitude_error_db": 1.5541533919696349,
+            "updated_signed_magnitude_error_db": 1.554153392145023,
+            "baseline_relative_complex_error": 0.19593536764095762,
+            "updated_relative_complex_error": 0.19593536780893467,
+            "delta_to_existing_complex_error_ratio": 7.572240297692759e-07,
+            "energy_ceiling_to_existing_complex_error_ratio": 0.012436884891595378
+          }
+        },
+        "refined_dc": {
+          "trace_resistance_ohm": 0.00044462442577010127,
+          "updated_zdd_ohm": [
+            1.2185650182676047,
+            -295.7561127247021
+          ],
+          "delta_zdd_ohm": [
+            4.8353967195552614e-05,
+            2.5217652977147605e-07
+          ],
+          "absolute_delta_ohm": 4.835462476899956e-05,
+          "relative_complex_change": 1.6349354165889e-07,
+          "magnitude_change_db": -1.5551496902454415e-09,
+          "delta_y_s": [
+            -532.5991388090479,
+            217.14310610994184
+          ],
+          "denominator": [
+            0.622271350983777,
+            0.05567094347657987
+          ],
+          "reduced_inverse_relative_agreement": 7.507629114147555e-19,
+          "passive_branch_energy_delta_ceiling_ohm": 0.7941915187392738,
+          "reference_comparison": {
+            "baseline_signed_magnitude_error_db": 1.5541533919696349,
+            "updated_signed_magnitude_error_db": 1.5541533904144855,
+            "baseline_relative_complex_error": 0.19593536764095762,
+            "updated_relative_complex_error": 0.19593536761639976,
+            "delta_to_existing_complex_error_ratio": 9.979193303142088e-07,
+            "energy_ceiling_to_existing_complex_error_ratio": 0.01639013997746131
+          }
+        },
+        "dc_upper": {
+          "trace_resistance_ohm": 0.0005535909243976422,
+          "updated_zdd_ohm": [
+            1.218576556555547,
+            -295.7561125899881
+          ],
+          "delta_zdd_ohm": [
+            5.989225513800615e-05,
+            3.8689049318475555e-07
+          ],
+          "absolute_delta_ohm": 5.989350473774048e-05,
+          "relative_complex_change": 2.0250805913014836e-07,
+          "magnitude_change_db": -4.115271321800902e-09,
+          "delta_y_s": [
+            -608.1891690284218,
+            238.86245576173818
+          ],
+          "denominator": [
+            0.5701020433809099,
+            0.05770621414403174
+          ],
+          "reduced_inverse_relative_agreement": 3.843913439238587e-16,
+          "passive_branch_energy_delta_ceiling_ohm": 0.9837097013475207,
+          "reference_comparison": {
+            "baseline_signed_magnitude_error_db": 1.5541533919696349,
+            "updated_signed_magnitude_error_db": 1.554153387854364,
+            "baseline_relative_complex_error": 0.19593536764095762,
+            "updated_relative_complex_error": 0.19593536730916386,
+            "delta_to_existing_complex_error_ratio": 1.2360531474204524e-06,
+            "energy_ceiling_to_existing_complex_error_ratio": 0.02030132445618021
+          }
+        }
+      }
+    }
+  },
+  "energy_bound_basis": "For 1 A Device excitation in the passive reciprocal native circuit, Rv*|Iv|^2 <= Re(Zdd) and Iv=Zbd/Zv. Therefore |delta Zdd| <= |delta Y|*|Zv|^2*Re(Zdd)/(Rv*|1+delta Y*Zbb|). This conditional circuit bound uses self responses, not subtractive transfer extraction; it is not a forward numerical error bound or a bound on unmodeled AC physics.",
+  "limitations": [
+    "Conditional DC trace resistance inserted in series with the verified native Via336274 branch; native G/C and other via R/L are unchanged.",
+    "This is an algebraic shadow of the actual native response, not a full-board physical promotion or a new full-matrix recomposition.",
+    "DC resistance bounds are not ordered bounds on complex Device impedance or on actual AC conductor physics.",
+    "Polarization cancellation ratio is a diagnostic, not an error bound; tiny updates require adequate transfer accuracy.",
+    "Only the source-mounted state is compared with the existing source-mounted PowerSI export, at one exact frequency.",
+    "No fitting, broadband accuracy acceptance, installer or product change."
+  ]
+}

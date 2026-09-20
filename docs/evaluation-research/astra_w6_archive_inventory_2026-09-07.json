@@ -1,0 +1,33 @@
+{
+  "status": "SCOPED_ARCHIVE_METADATA_ONLY_NO_NUMERIC_CACHE_MEMBER",
+  "run_manifest_sha256": "2b14f90e762abc49833518137812e8fc97fcde0e9c145795b7384210cfd9f5de",
+  "archive_path": "D:\\SPD-Decap-PI-Evaluator-W6\\fb36288781dcc0b884950ef5a486c474090ceebd\\260729\\import\\S4LB002-2Para_260729_1_injected_candidate.spdpi",
+  "archive_size": 796205663,
+  "archive_expected_sha256_not_rehashed": "8b02836c03aa38c447fba37ddd30434a3e4ed34ce772654fa5bc3a8512543320",
+  "manifest_sha256": "a60f1e51f9a5e9c986e110cf65484cea8ac10d14949f53841062036efb4e2dd3",
+  "manifest_bytes": 79199,
+  "member_count": 380,
+  "member_categories": {
+    "manifest.json": 1,
+    "scenario.json": 1,
+    "attachments/cap_models": 3,
+    "attachments/geometry": 371,
+    "attachments/inputs": 1,
+    "attachments/routing": 1,
+    "attachments/spatial": 1,
+    "attachments/topology": 1
+  },
+  "unexpected_members": [],
+  "manifest_top_level": {
+    "app_version": "0.23.0",
+    "design_fingerprint": "76c7ef0a4b745a5a562372ac13efd0e95b16ab97939d2ad3a95a2e8ac007fcc1",
+    "format": "spd-decap-pi-scenario",
+    "format_version": 1,
+    "raw_spd_embedded": false,
+    "scenario_file": "scenario.json",
+    "scenario_sha256": "5dd9af5ed85daca130997ea02261cd53acc606bcea1203129bcb4fa61189b259",
+    "scenario_size": 760815902,
+    "schema_version": "0.1"
+  },
+  "scope": "ZIP directory and 79199-byte manifest only. No scenario payload, source geometry, SQLite or factorization read. No whole archive hash claim; archive size checked. Does not prove no values embedded inside the unread scenario or no cache elsewhere."
+}

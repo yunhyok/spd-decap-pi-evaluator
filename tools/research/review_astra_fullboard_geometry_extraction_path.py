@@ -1,0 +1,10 @@
+from hashlib import sha256
+import json
+from pathlib import Path
+R=Path(__file__).resolve().parents[2];O=R/'outputs/research/astra-fullboard-geometry-extraction-path-review-01'
+paths=['outputs/research/astra-3d-source-domain-inventory-01/result.json','outputs/research/astra-selected-trace-semantics-02/result.json','outputs/research/astra-device-terminal-pads-01/device-terminal-pads.json','outputs/research/astra-device-first-via-sources-01/selected-device-first-via-sources.json','src/spd_decap_pi/raw_spatial_contact_asset.py']
+def h(p):return sha256(p.read_bytes()).hexdigest()
+def main():
+ pins={p:h(R/p) for p in paths};inv=json.loads((R/paths[0]).read_text());sem=json.loads((R/paths[1]).read_text())
+ q={'program':'review_astra_fullboard_geometry_extraction_path','version':1,'status':'ACCEPT_WITH_SCOPE','reviewer_sha256':h(Path(__file__)),'pins':pins,'cache_extractable':{'conductors':'astra-3d-source-domain-inventory-01 result: stackup.layers has name/z_top_um/z_bottom_um/thickness_um/material/conductivity','traces':'raw_spatial schema traces plus selected-trace-semantics effective_width_pm and layer defaults','nodes_vias':'raw_spatial nodes/vias/padstacks/pad_shapes: xy/layer/net/padstack/rotation and endpoint geometry','artwork':'raw_spatial plane_primitives/plane_vertices/plane_circles with polarity and source asset hashes','terminal_ownership':'device-terminal-pads and first-via ledgers preserve 978 P+978 G; power bridges ledger preserves 978 posts with 933 overlapping links, not disjoint joints','ports_contacts':'group-port and terminal contact ledgers provide selected group/landing evidence'},'gaps':inv['remaining_input_gaps']+['No accepted cache certificate provides board outline/lateral dielectric/cutout domain.','Full-board plane boolean materialization and a full conductor/dielectric mesh remain unassembled.'],'scope':'Inventory only: no DB query/raw SPD/scenario/mesh/field execution.'};O.mkdir(parents=True,exist_ok=False);t=O/'independent-review.json';t.write_text(json.dumps(q,indent=2,sort_keys=True)+'\n');print(json.dumps({'status':q['status'],'receipt_sha256':h(t)}))
+if __name__=='__main__':main()

@@ -1,0 +1,70 @@
+{
+  "baseline": {
+    "complex_gap_ohm": 0.0006180322719598752,
+    "complex_relative_error": 0.7610323044211814,
+    "magnitude_error_db": -2.428670003508578,
+    "magnitude_ohm": 0.00061400875122765,
+    "phase_error_deg": -48.97890346256608,
+    "zdd_ohm": [
+      0.00010031137009881143,
+      -0.0006057593380320584
+    ]
+  },
+  "comparison_code_sha256": "791dff2b36406d7b6c8db903fa04916ef0a42b010da96368e6a8e18573426bbe",
+  "conditional_change": {
+    "complex_gap_reduction_fraction_of_baseline_gap": 0.0006881182465748707,
+    "complex_gap_reduction_ohm": 4.25279283307713e-07,
+    "complex_relative_error_change": -0.0005236802149051201,
+    "delta_zdd_abs_ohm": 4.380964102305828e-07,
+    "delta_zdd_ohm": [
+      4.3747794130523507e-07,
+      2.3270486205844397e-08
+    ],
+    "magnitude_error_improvement_db": 0.0006884375848352775,
+    "phase_error_change_deg": 0.040626004503117485
+  },
+  "conditional_trace_r_shadow": {
+    "complex_gap_ohm": 0.0006176069926765675,
+    "complex_relative_error": 0.7605086242062763,
+    "magnitude_error_db": -2.427981565923743,
+    "magnitude_ohm": 0.0006140574190638235,
+    "phase_error_deg": -48.93827745806296,
+    "zdd_ohm": [
+      0.00010074884804011666,
+      -0.0006057360675458525
+    ]
+  },
+  "frequency_hz": 1000000.0,
+  "inputs": {
+    "baseline_comparison": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_loaded_development_comparison_2026-09-07.json",
+      "sha256": "3c3574ca191afb54f928a3851fbdfbaa7e512434544ca4d464a2a14b84212bac",
+      "size_bytes": 9689
+    },
+    "reference": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_loaded_development_reference_2026-09-07.json",
+      "sha256": "761d61334678ceaca0db55bc8c5539bb080ee36363eae33a2c419a1ea5c06430",
+      "size_bytes": 2005
+    },
+    "shadow": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-trace-r-shadow-02\\result.json",
+      "sha256": "69ec5706966f892c0dbd0e7888532fd07b02255004207d58b35bec7dbc12e00c",
+      "size_bytes": 10067
+    }
+  },
+  "interpretation": "The conditional L14 centerline DC trace-R shadow changes the 1 MHz response only slightly and does not account for the measured complex gap.",
+  "limitations": [
+    "The reference was read only after the source-derived shadow result was frozen; no reference value set a model parameter.",
+    "This is one development rail and one frequency, not a held-out or broadband accuracy result.",
+    "The shadow omits distributed magnetic/return physics, skin effect, finite-width spreading, and non-ideal artwork-sheet resistance."
+  ],
+  "program": "SPD Decap PI Evaluator",
+  "rail_id": "ADC_VDD_075_VTRIP_SRAM/0",
+  "reference_port_one_based": 18,
+  "reference_zdd_ohm": [
+    0.0006915479466520245,
+    -0.0004257504501139287
+  ],
+  "status": "COMPLETED_CONDITIONAL_L14_TRACE_R_SHADOW_COMPARISON",
+  "version": "0.23.1"
+}

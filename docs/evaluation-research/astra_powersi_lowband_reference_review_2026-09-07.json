@@ -1,0 +1,73 @@
+{
+  "input_sha256": {
+    "existing_reference": "761d61334678ceaca0db55bc8c5539bb080ee36363eae33a2c419a1ea5c06430",
+    "producer": "8e13a43597c90c03c1d3af9f782bae2601e1e3bc5975208afff84dc0c2ebdf5e",
+    "receipt": "013d2a685b15fda6fc827e589e172913e25319086f672b5593e38e6975537cb1",
+    "selection": "99d0f77fcceb9d07b97aa65953dd42b8d106b7f2485f42f11ee643134d64b8f9"
+  },
+  "limitations": [
+    "Static/receipt verification only: the Touchstone was not reread and S-to-Z was not recomputed.",
+    "Reported condition numbers are retained as numerical context; small saved relative residuals do not certify a broader model or new PowerSI result.",
+    "Reference is comparison data only; no solver parameter was fitted from it."
+  ],
+  "p1_findings": [],
+  "p2_findings": [],
+  "program": "SPD Decap PI Evaluator",
+  "status": "ACCEPT_EXISTING_POWERSI_LOWBAND_REFERENCE",
+  "verified": {
+    "one_mhz_control": {
+      "relative_error": 0.0,
+      "source_index": 175,
+      "zdd_ohm": [
+        0.0006915479466520245,
+        -0.0004257504501139287
+      ]
+    },
+    "points": [
+      {
+        "condition": 365076.0177631334,
+        "frequency_hz": 1000.0,
+        "relative_residual": 2.1216819254168002e-16,
+        "source_index": 100,
+        "zdd_ohm": [
+          0.007405998229796151,
+          -0.6056929157693945
+        ]
+      },
+      {
+        "condition": 37268.51572329223,
+        "frequency_hz": 10000.0,
+        "relative_residual": 2.8541694673503785e-16,
+        "source_index": 125,
+        "zdd_ohm": [
+          0.0013448927803346375,
+          -0.061571456904480806
+        ]
+      },
+      {
+        "condition": 3727.70657312637,
+        "frequency_hz": 100000.0,
+        "relative_residual": 2.3032639434961992e-16,
+        "source_index": 150,
+        "zdd_ohm": [
+          0.0007239775128696244,
+          -0.006246865250866255
+        ]
+      }
+    ],
+    "port18": {
+      "header": "Port18_SITE0::ADC_VDD_075_VTRIP_SRAM/0",
+      "manifest_sha256": "93c26802277a4974e2df34381a07c9b17d7de28561f20a2e147b65e52c3ab690",
+      "one_based": 18,
+      "rail_id": "ADC_VDD_075_VTRIP_SRAM/0"
+    },
+    "producer_static": "Hashes and header/manifest precede the existing read; exact equality selects 100/125/150/175; only the four selected S matrices are passed to s_to_z; no interpolation or fitting.",
+    "source": {
+      "full_ports": 92,
+      "option_line": "#\tHz\tS\tRI\tR\t1",
+      "records": 826,
+      "sha256": "c5fca21da6f3b1f1e097ac6fc4c2c4f40a44201617502a9e5bf864e2a5fe7a11",
+      "size_bytes": 303974090
+    }
+  }
+}

@@ -1,0 +1,506 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "PASS_LOCAL_TRIANGLE_REFINEMENT_GATES_ONLY",
+  "input_sha256": "76bbb152f89b0e8086128f34a489f06c77ba10b2dfae0b952fc245723881ce3b",
+  "source_bridge_sha256": "e4bbbc54e4f1708ad684605e41c5a17cb0dc7fcdd49c2794437196803c82ec01",
+  "source_asset_sha256": "b0ab5dda526415e8a5373683a3a9612985e3b6f7a2aaae6808fb3ad257beb7d1",
+  "coordinate_origin_um": [
+    -11700.0,
+    12403.0
+  ],
+  "dyadic_quantum_um": 9.5367431640625e-07,
+  "electrode_radii_um": [
+    175.0,
+    20.0,
+    20.0,
+    20.0
+  ],
+  "balanced_basis": [
+    [
+      -1.0,
+      -1.0,
+      -1.0
+    ],
+    [
+      1.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      1.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "sheet_rows": [
+    {
+      "circle_sides": 64,
+      "area_target_spacing_um": 20.0,
+      "nodes": 1829,
+      "triangles": 3456,
+      "contact_node_order": [
+        "Node2140546",
+        "Node2140547",
+        "Node2140578",
+        "Node2140579"
+      ],
+      "y_s": [
+        [
+          11925.461028450292,
+          -5225.803565470791,
+          -2787.985430340966,
+          -3911.672032638533
+        ],
+        [
+          -5225.803565470791,
+          5226.219504107322,
+          -0.02029449822050395,
+          -0.3956441383103539
+        ],
+        [
+          -2787.985430340966,
+          -0.02029449822050395,
+          4327.851004702204,
+          -1539.8452798630165
+        ],
+        [
+          -3911.672032638533,
+          -0.3956441383103539,
+          -1539.8452798630165,
+          5451.912956639861
+        ]
+      ],
+      "balanced_z_ohm": [
+        [
+          0.0001913429019896381,
+          6.489976498535554e-09,
+          1.5718750086187458e-08
+        ],
+        [
+          6.489976498528778e-09,
+          0.000256875587997381,
+          7.255227062563206e-05
+        ],
+        [
+          1.5718750086173906e-08,
+          7.255227062563206e-05,
+          0.00020391361463893102
+        ]
+      ],
+      "pair_r_ohm": [
+        0.0001913429019896381,
+        0.000256875587997381,
+        0.00020391361463893102,
+        0.000448205510034022,
+        0.00039522507912839673,
+        0.00031568466138504785
+      ],
+      "operator_sha256": "b483959407b86c84dda4d76a225a7e45c874d24d8058d757a926c55eacaae334"
+    },
+    {
+      "circle_sides": 64,
+      "area_target_spacing_um": 10.0,
+      "nodes": 5452,
+      "triangles": 10702,
+      "contact_node_order": [
+        "Node2140546",
+        "Node2140547",
+        "Node2140578",
+        "Node2140579"
+      ],
+      "y_s": [
+        [
+          11830.079302050894,
+          -5175.491750415732,
+          -2777.476975263147,
+          -3877.1105763720134
+        ],
+        [
+          -5175.491750415732,
+          5175.906376649992,
+          -0.020860347952668248,
+          -0.3937658863078785
+        ],
+        [
+          -2777.476975263147,
+          -0.020860347952668248,
+          4293.235599766542,
+          -1515.737764155443
+        ],
+        [
+          -3877.1105763720134,
+          -0.3937658863078785,
+          -1515.737764155443,
+          5393.242106413764
+        ]
+      ],
+      "balanced_z_ohm": [
+        [
+          0.00019320287765056224,
+          6.570869031157433e-09,
+          1.5952633868740657e-08
+        ],
+        [
+          6.570869031109999e-09,
+          0.00025858189662777634,
+          7.267286368749085e-05
+        ],
+        [
+          1.5952633868727105e-08,
+          7.267286368749084e-05,
+          0.00020584149353907824
+        ]
+      ],
+      "pair_r_ohm": [
+        0.00019320287765056224,
+        0.00025858189662777634,
+        0.00020584149353907824,
+        0.0004517716325402763,
+        0.000399012465921903,
+        0.0003190776627918729
+      ],
+      "operator_sha256": "11fd5ffb4690813cf5917327d7ee3e51896b7aa19f7cbf66fc782fbe78d367eb"
+    },
+    {
+      "circle_sides": 64,
+      "area_target_spacing_um": 5.0,
+      "nodes": 19930,
+      "triangles": 39658,
+      "contact_node_order": [
+        "Node2140546",
+        "Node2140547",
+        "Node2140578",
+        "Node2140579"
+      ],
+      "y_s": [
+        [
+          11792.40689079918,
+          -5156.60918121518,
+          -2771.2782095823895,
+          -3864.519500001612
+        ],
+        [
+          -5156.60918121518,
+          5157.022979601836,
+          -0.02121504554615781,
+          -0.39258334110976834
+        ],
+        [
+          -2771.2782095823895,
+          -0.02121504554615781,
+          4277.401018561485,
+          -1506.1015939335489
+        ],
+        [
+          -3864.519500001612,
+          -0.39258334110976834,
+          -1506.1015939335489,
+          5371.01367727627
+        ]
+      ],
+      "balanced_z_ohm": [
+        [
+          0.00019391032585793232,
+          6.6044235610667064e-09,
+          1.6025447266596016e-08
+        ],
+        [
+          6.604423561019273e-09,
+          0.00025939861632199505,
+          7.27387222550551e-05
+        ],
+        [
+          1.6025447266562135e-08,
+          7.273872225505509e-05,
+          0.00020658147204403036
+        ]
+      ],
+      "pair_r_ohm": [
+        0.00019391032585793232,
+        0.00025939861632199505,
+        0.00020658147204403036,
+        0.0004532957333328053,
+        0.00040045974700742953,
+        0.0003205026438559152
+      ],
+      "operator_sha256": "1a9452507ccaaf9f86735ed030db0ae3e9cff399bc6a74eb409d410a8fd387d7"
+    },
+    {
+      "circle_sides": 128,
+      "area_target_spacing_um": 5.0,
+      "nodes": 20742,
+      "triangles": 41282,
+      "contact_node_order": [
+        "Node2140546",
+        "Node2140547",
+        "Node2140578",
+        "Node2140579"
+      ],
+      "y_s": [
+        [
+          11804.059391267801,
+          -5161.648476053756,
+          -2773.9124230677057,
+          -3868.4984921463392
+        ],
+        [
+          -5161.648476053756,
+          5162.057877243956,
+          -0.020792151185837434,
+          -0.3886090390144085
+        ],
+        [
+          -2773.9124230677057,
+          -0.020792151185837434,
+          4279.422848773766,
+          -1505.489633554875
+        ],
+        [
+          -3868.4984921463392,
+          -0.3886090390144085,
+          -1505.489633554875,
+          5374.376734740229
+        ]
+      ],
+      "balanced_z_ohm": [
+        [
+          0.00019372119221984984,
+          6.510638741502497e-09,
+          1.5831325133697314e-08
+        ],
+        [
+          6.510638741522826e-09,
+          0.000259221835953889,
+          7.261414832107006e-05
+        ],
+        [
+          1.583132513368376e-08,
+          7.261414832107014e-05,
+          0.00020640902349258216
+        ]
+      ],
+      "pair_r_ohm": [
+        0.00019372119221984984,
+        0.000259221835953889,
+        0.00020640902349258216,
+        0.00045293000689625585,
+        0.00040009855306216463,
+        0.00032040256280433093
+      ],
+      "operator_sha256": "b592cdedb39c91571ba57ba1126ccba3e4f38763c6f1e3523c956cb2ea6d155b"
+    }
+  ],
+  "triangulator_calls": [
+    {
+      "options": "pq20a200YYQzCS30000",
+      "input_vertices": 64,
+      "input_holes": 0,
+      "output_vertices": 402,
+      "output_triangles": 738,
+      "missing_boundary_edges": 0,
+      "native_elapsed_s": 0.0
+    },
+    {
+      "options": "pq20a200YYQzCS30000",
+      "input_vertices": 64,
+      "input_holes": 0,
+      "output_vertices": 105,
+      "output_triangles": 144,
+      "missing_boundary_edges": 0,
+      "native_elapsed_s": 0.0
+    },
+    {
+      "options": "pq20a200YYQzCS30000",
+      "input_vertices": 64,
+      "input_holes": 0,
+      "output_vertices": 105,
+      "output_triangles": 144,
+      "missing_boundary_edges": 0,
+      "native_elapsed_s": 0.0
+    },
+    {
+      "options": "pq20a200YYQzCS30000",
+      "input_vertices": 64,
+      "input_holes": 0,
+      "output_vertices": 104,
+      "output_triangles": 142,
+      "missing_boundary_edges": 0,
+      "native_elapsed_s": 0.0
+    },
+    {
+      "options": "pq20a200YYQzCS30000",
+      "input_vertices": 456,
+      "input_holes": 4,
+      "output_vertices": 1369,
+      "output_triangles": 2288,
+      "missing_boundary_edges": 0,
+      "native_elapsed_s": 0.0
+    },
+    {
+      "options": "pq20a50YYQzCS30000",
+      "input_vertices": 64,
+      "input_holes": 0,
+      "output_vertices": 1506,
+      "output_triangles": 2946,
+      "missing_boundary_edges": 0,
+      "native_elapsed_s": 0.0
+    },
+    {
+      "options": "pq20a50YYQzCS30000",
+      "input_vertices": 64,
+      "input_holes": 0,
+      "output_vertices": 108,
+      "output_triangles": 150,
+      "missing_boundary_edges": 0,
+      "native_elapsed_s": 0.0
+    },
+    {
+      "options": "pq20a50YYQzCS30000",
+      "input_vertices": 64,
+      "input_holes": 0,
+      "output_vertices": 108,
+      "output_triangles": 150,
+      "missing_boundary_edges": 0,
+      "native_elapsed_s": 0.0
+    },
+    {
+      "options": "pq20a50YYQzCS30000",
+      "input_vertices": 64,
+      "input_holes": 0,
+      "output_vertices": 106,
+      "output_triangles": 146,
+      "missing_boundary_edges": 0,
+      "native_elapsed_s": 0.0
+    },
+    {
+      "options": "pq20a50YYQzCS30000",
+      "input_vertices": 456,
+      "input_holes": 4,
+      "output_vertices": 3880,
+      "output_triangles": 7310,
+      "missing_boundary_edges": 0,
+      "native_elapsed_s": 0.0
+    },
+    {
+      "options": "pq20a12.5YYQzCS30000",
+      "input_vertices": 64,
+      "input_holes": 0,
+      "output_vertices": 5801,
+      "output_triangles": 11536,
+      "missing_boundary_edges": 0,
+      "native_elapsed_s": 0.0
+    },
+    {
+      "options": "pq20a12.5YYQzCS30000",
+      "input_vertices": 64,
+      "input_holes": 0,
+      "output_vertices": 139,
+      "output_triangles": 212,
+      "missing_boundary_edges": 0,
+      "native_elapsed_s": 0.0
+    },
+    {
+      "options": "pq20a12.5YYQzCS30000",
+      "input_vertices": 64,
+      "input_holes": 0,
+      "output_vertices": 139,
+      "output_triangles": 212,
+      "missing_boundary_edges": 0,
+      "native_elapsed_s": 0.0
+    },
+    {
+      "options": "pq20a12.5YYQzCS30000",
+      "input_vertices": 64,
+      "input_holes": 0,
+      "output_vertices": 136,
+      "output_triangles": 206,
+      "missing_boundary_edges": 0,
+      "native_elapsed_s": 0.0
+    },
+    {
+      "options": "pq20a12.5YYQzCS30000",
+      "input_vertices": 456,
+      "input_holes": 4,
+      "output_vertices": 13971,
+      "output_triangles": 27492,
+      "missing_boundary_edges": 0,
+      "native_elapsed_s": 0.015000000013969839
+    },
+    {
+      "options": "pq20a12.5YYQzCS30000",
+      "input_vertices": 128,
+      "input_holes": 0,
+      "output_vertices": 5991,
+      "output_triangles": 11852,
+      "missing_boundary_edges": 0,
+      "native_elapsed_s": 0.0
+    },
+    {
+      "options": "pq20a12.5YYQzCS30000",
+      "input_vertices": 128,
+      "input_holes": 0,
+      "output_vertices": 258,
+      "output_triangles": 386,
+      "missing_boundary_edges": 0,
+      "native_elapsed_s": 0.0
+    },
+    {
+      "options": "pq20a12.5YYQzCS30000",
+      "input_vertices": 128,
+      "input_holes": 0,
+      "output_vertices": 258,
+      "output_triangles": 386,
+      "missing_boundary_edges": 0,
+      "native_elapsed_s": 0.0
+    },
+    {
+      "options": "pq20a12.5YYQzCS30000",
+      "input_vertices": 128,
+      "input_holes": 0,
+      "output_vertices": 256,
+      "output_triangles": 382,
+      "missing_boundary_edges": 0,
+      "native_elapsed_s": 0.0
+    },
+    {
+      "options": "pq20a12.5YYQzCS30000",
+      "input_vertices": 712,
+      "input_holes": 4,
+      "output_vertices": 14491,
+      "output_triangles": 28276,
+      "missing_boundary_edges": 0,
+      "native_elapsed_s": 0.01600000000325963
+    }
+  ],
+  "relative_changes": {
+    "resolution_10_to_5_max_pair_relative": 0.004446082088118228,
+    "circle_64_to_128_max_pair_relative": 0.0009763187801767719
+  },
+  "gate": 0.02,
+  "failure": null,
+  "elapsed_s": 19.26600000000326,
+  "algorithm": "Existing Triangle per-face PSLG, q20 and max area=spacing^2/2, YY forbids segment subdivision, S30000 caps Steiner points. Requested quality/area are meshing controls, not claimed achieved gates. Exact original boundary edges, triangle face containment and all original FEM/contact/coverage guards remain required. No uniform midpoint refinement.",
+  "backend_evidence": {
+    "package": "triangle",
+    "version": "20250106",
+    "wheel_sha256": "0327032a7984a7262180ef2ddd78b36dfdcdecbc79f0f9f173732ce7c670b8ed",
+    "verified_installed_payload_files": 75,
+    "site": "D:\\SPD-Decap-PI-Evaluator-W7\\e2f219e71d8c8a397009f72242cce10d78cfc7ab\\260903-d117-triangle-w0-research-pilot-01\\site",
+    "c1_input_or_runner_executed": false,
+    "new_dependency_installed": false,
+    "outer_segment_max_um": 20.0,
+    "outer_original_edges": 8,
+    "outer_subdivided_edges": 200,
+    "identical_domain": true,
+    "original_artwork_wkb_sha256": "dc9071365d5266f08d34ef6585c9eef756e055760861ef17f1ce623f53b7e01b",
+    "subdivided_artwork_wkb_sha256": "802fb36f41b941ea4d97736ab717f6afa17ee5499187bbd6fedb1348faa1d046"
+  },
+  "reference": "https://www.cs.cmu.edu/~quake/triangle.switch.html",
+  "scope": "Full floating four-terminal DC sheet under three qualified filled-microvia barrel electrodes and a separately retained whole-core-pad equipotential approximation. The core is not classified as filled; its 175 um pad electrode is not a plating/current-injection certification. Nominal source copper is preserved through inward geometric approximation; original whole-pad tangency STOP remains. Full Y and balanced Z are retained with no chosen current split. Native fifth ideal artwork link and its G/C distribution are unresolved for AC replacement. No external/mutual L, source plane replacement, production promotion, board Zii or PowerSI comparison. Research-only triangulator substitution restored in finally. Grid-density convergence does not imply a production convergence attestation or a general mesher fix."
+}

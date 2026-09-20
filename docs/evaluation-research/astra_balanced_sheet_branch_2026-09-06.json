@@ -1,0 +1,90 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "ACCEPT_PAIRED_CANONICAL_ONLY",
+  "product_ready": false,
+  "frequency_hz": 2000000.0,
+  "elapsed_s": 0.020730199990794063,
+  "geometry": "continuous 3x1 mm TOP P / BOT G, 100 um dielectric, three cells",
+  "material": "synthetic material defaults; epsilon_r=4, tan_delta=0.01",
+  "ports": "P0/G0 co-located in left cell, P1/G1 co-located in right cell",
+  "remote_load": {
+    "r_ohm": 0.08,
+    "l_h": 1e-08,
+    "c_f": 1e-06
+  },
+  "terminal_y_reconstruction_relative": 1.1761433403934906e-16,
+  "terminal_y_nullity": 2,
+  "loop_mutual_impedance_abs_ohm": 74892.5201988558,
+  "mesh_loaded_reference_relative_error": 2.971820748451294e-10,
+  "reordered_gauge_relative_error": 0.0,
+  "impedance_ohm": {
+    "real": [
+      [
+        0.08202501549860236,
+        0.08000010058390918
+      ],
+      [
+        0.08000010058390923,
+        0.0800000978825434
+      ]
+    ],
+    "imag": [
+      [
+        0.04997556454462506,
+        0.04608617660806274
+      ],
+      [
+        0.04608617660806276,
+        0.04608617651987997
+      ]
+    ]
+  },
+  "reference_impedance_ohm": {
+    "real": [
+      [
+        0.08202501553103923,
+        0.08000010058390927
+      ],
+      [
+        0.08000010058390929,
+        0.08000009788254345
+      ]
+    ],
+    "imag": [
+      [
+        0.04997556458958135,
+        0.04608617660806273
+      ],
+      [
+        0.04608617660806274,
+        0.04608617651987995
+      ]
+    ]
+  },
+  "diagnostics": {
+    "component_count": 2,
+    "gauge_node_ids": [
+      "P0",
+      "P1"
+    ],
+    "branch_impedance_condition_estimate": 68318105.26148026,
+    "branch_impedance_nnz": 5,
+    "saddle_nnz": 21,
+    "scaled_saddle_condition_estimate": 780.1355940003593,
+    "backward_relative_residual": 3.7785729270193814e-19,
+    "nodal_kcl_relative_residual": 2.6020852139652106e-18,
+    "branch_equation_relative_residual": 9.093906995909288e-12,
+    "equipotential_relative_residual": 0.0,
+    "gauge_relative_residual": 1.7891348552278978e-17,
+    "raw_reciprocity_absolute_error_ohm": 5.928593550334434e-17,
+    "raw_reciprocity_relative_error": 4.494615645105714e-16,
+    "min_hermitian_impedance_eigenvalue_ohm": 0.0010060496659967735,
+    "passivity_tolerance_ohm": 1.8652829403670447e-10
+  },
+  "reordered_gauge_node_ids": [
+    "G1",
+    "G0"
+  ],
+  "scope": "Existing SeriesBranchBlock preserves paired loop coupling and two gauges. No ideal G0/G1 short, extra base G/C, fitted R/L, source board, or live Layerwise forwarding."
+}

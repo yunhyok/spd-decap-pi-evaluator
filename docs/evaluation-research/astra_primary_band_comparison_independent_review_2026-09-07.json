@@ -1,0 +1,183 @@
+{
+  "comparator_input": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_primary_band_comparison_2026-09-07.json",
+    "sha256": "ac08d7ea36a09989fb83e9113af399db41f698bf68e061e3c75020f4c41a5f8d",
+    "status": "COMPLETED_CONDITIONAL_PRIMARY_BAND_DECADE_COMPARISON"
+  },
+  "embedded_native_point_equality": {
+    "1000": true,
+    "10000": true,
+    "100000": true
+  },
+  "gates": {
+    "all_low_point_kcl_below_1e-7_a": true,
+    "all_saved_metric_recomputations_match": true,
+    "embedded_native_point_dicts_equal": true,
+    "low_point_kcl_values_a": [
+      2.974339576667502e-09,
+      1.4229278436021192e-08,
+      8.75543730715056e-09
+    ],
+    "low_run_embedded_native_baseline_sha_verified": true,
+    "maximum_saved_metric_absolute_recompute_error": 0.0,
+    "native02_sha_pinned_and_verified": true,
+    "shadow03_sha_pinned_and_verified": true
+  },
+  "limitations": [
+    "Saved-artifact arithmetic and binding review only; no solve, geometry, PowerSI reread or reference extraction.",
+    "Primary band contains decade anchors, not continuous-band or holdout validation; 1 GHz remains secondary.",
+    "Existing conditional two-sheet/DC-sheet physical scope and no magnetic/skin/return promotion are preserved."
+  ],
+  "native02_input": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-primary-low-band-native-02\\result.json",
+    "sha256": "4036d18172ba24a2d58b5d028bdf8c9c9c1dea4e90ccdff50e0744b711396791",
+    "status": "COMPLETED_PRIMARY_LOW_BAND_ORIGINAL_SOURCE_POINTS"
+  },
+  "pinned_inputs": {
+    "higher_comparison": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_two_sheet_four_frequency_comparison_2026-09-07.json",
+      "sha256": "042da3f43f7671763d745409f283d5bb4c4e5635ca1f3708e9749799ec2ff793"
+    },
+    "low_reference": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_powersi_lowband_reference_2026-09-07.json",
+      "sha256": "013d2a685b15fda6fc827e589e172913e25319086f672b5593e38e6975537cb1"
+    },
+    "low_run": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-primary-low-band-shadow-03\\result.json",
+      "sha256": "b8b69d292b188227bc2311c69e9ee16ca2640a6b736bb7b54596d9c1d7483bcc"
+    },
+    "native_low_baseline": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-primary-low-band-native-02\\result.json",
+      "sha256": "4036d18172ba24a2d58b5d028bdf8c9c9c1dea4e90ccdff50e0744b711396791"
+    }
+  },
+  "points": [
+    {
+      "assessment_band": "primary_1khz_to_100mhz",
+      "complex_gap_reduction_fraction": 0.7270976926345328,
+      "frequency_hz": 1000,
+      "native_error": {
+        "complex_gap_ohm": 0.0005530884819640287,
+        "complex_relative_error": 0.0009130817396654613,
+        "magnitude_error_db": -5.4404910822563445e-05,
+        "phase_error_deg": -0.052314664760386424
+      },
+      "two_sheet_error": {
+        "complex_gap_ohm": 0.000150939122905247,
+        "complex_relative_error": 0.00024918211356797916,
+        "magnitude_error_db": 1.5480179169483934e-05,
+        "phase_error_deg": -0.014276705573686129
+      }
+    },
+    {
+      "assessment_band": "primary_1khz_to_100mhz",
+      "complex_gap_reduction_fraction": 0.7282368627387085,
+      "frequency_hz": 10000,
+      "native_error": {
+        "complex_gap_ohm": 0.0005514252149209207,
+        "complex_relative_error": 0.008953722147722332,
+        "magnitude_error_db": 5.7240262121565854e-06,
+        "phase_error_deg": -0.5130120332342809
+      },
+      "two_sheet_error": {
+        "complex_gap_ohm": 0.00014985704637189136,
+        "complex_relative_error": 0.00243329162103093,
+        "magnitude_error_db": 0.0009137779391700277,
+        "phase_error_deg": -0.13927967131633184
+      }
+    },
+    {
+      "assessment_band": "primary_1khz_to_100mhz",
+      "complex_gap_reduction_fraction": 0.728215403475869,
+      "frequency_hz": 100000,
+      "native_error": {
+        "complex_gap_ohm": 0.0005503721005290216,
+        "complex_relative_error": 0.08751793541418801,
+        "magnitude_error_db": -0.02551031357686833,
+        "phase_error_deg": -5.02056318693696
+      },
+      "two_sheet_error": {
+        "complex_gap_ohm": 0.0001495826592804186,
+        "complex_relative_error": 0.023786026765170044,
+        "magnitude_error_db": 0.003858123014309332,
+        "phase_error_deg": -1.3623306954802847
+      }
+    },
+    {
+      "assessment_band": "primary_1khz_to_100mhz",
+      "complex_gap_reduction_fraction": 0.6138276520697044,
+      "frequency_hz": 1000000,
+      "native_error": {
+        "complex_gap_ohm": 0.0006180322719598752,
+        "complex_relative_error": 0.7610323044211814,
+        "magnitude_error_db": -2.428670003508578,
+        "phase_error_deg": -48.97890346256608
+      },
+      "two_sheet_error": {
+        "complex_gap_ohm": 0.00023866697355944,
+        "complex_relative_error": 0.29388963184913114,
+        "magnitude_error_db": -0.3663985855593993,
+        "phase_error_deg": -17.09013811230245
+      }
+    },
+    {
+      "assessment_band": "primary_1khz_to_100mhz",
+      "complex_gap_reduction_fraction": 0.2968922520618634,
+      "frequency_hz": 10000000,
+      "native_error": {
+        "complex_gap_ohm": 0.0014784638901228291,
+        "complex_relative_error": 0.9258218988414498,
+        "magnitude_error_db": -22.547431177075975,
+        "phase_error_deg": 5.732461590875697
+      },
+      "two_sheet_error": {
+        "complex_gap_ohm": 0.001039519416192119,
+        "complex_relative_error": 0.6509525502862211,
+        "magnitude_error_db": -8.304131340936532,
+        "phase_error_deg": -19.653151304532244
+      }
+    },
+    {
+      "assessment_band": "primary_1khz_to_100mhz",
+      "complex_gap_reduction_fraction": 0.049616217974106314,
+      "frequency_hz": 100000000,
+      "native_error": {
+        "complex_gap_ohm": 0.009741241248346017,
+        "complex_relative_error": 0.9135924871082506,
+        "magnitude_error_db": -21.26194549417672,
+        "phase_error_deg": 2.2021265534632546
+      },
+      "two_sheet_error": {
+        "complex_gap_ohm": 0.009257917699229725,
+        "complex_relative_error": 0.8682634831283816,
+        "magnitude_error_db": -16.755374288297514,
+        "phase_error_deg": -23.125980815057236
+      }
+    },
+    {
+      "assessment_band": "secondary_1ghz",
+      "complex_gap_reduction_fraction": 0.004284149736011433,
+      "frequency_hz": 1000000000,
+      "native_error": {
+        "complex_gap_ohm": 0.10131320022640695,
+        "complex_relative_error": 0.9092278660186301,
+        "magnitude_error_db": -20.790630610487927,
+        "phase_error_deg": 5.873935113223192
+      },
+      "two_sheet_error": {
+        "complex_gap_ohm": 0.10087915930640252,
+        "complex_relative_error": 0.9053325976964522,
+        "magnitude_error_db": -20.46948532590957,
+        "phase_error_deg": -2.1096414724527293
+      }
+    }
+  ],
+  "program": "SPD Decap PI Evaluator",
+  "shadow03_input": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-primary-low-band-shadow-03\\result.json",
+    "sha256": "b8b69d292b188227bc2311c69e9ee16ca2640a6b736bb7b54596d9c1d7483bcc",
+    "status": "COMPLETED_PRIMARY_LOW_BAND_NATIVE_TWO_DC_SHEET_COMPARISON"
+  },
+  "status": "ACCEPT_INDEPENDENT_SAVED_ARTIFACT_COMPARATOR_REVIEW",
+  "version": "0.23.1"
+}

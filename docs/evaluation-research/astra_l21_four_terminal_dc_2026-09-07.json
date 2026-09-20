@@ -1,0 +1,724 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "STOP_CONDITIONAL_FOUR_TERMINAL_DC",
+  "source_bridge_sha256": "e4bbbc54e4f1708ad684605e41c5a17cb0dc7fcdd49c2794437196803c82ec01",
+  "source_asset_sha256": "b0ab5dda526415e8a5373683a3a9612985e3b6f7a2aaae6808fb3ad257beb7d1",
+  "raw_basis_meta": {
+    "adjacent_conductor_gap_count": "47",
+    "adjacent_conductor_gap_sha256": "dd752a61bd43e8d3a364f898f45b472b325ca4936920b5787c1ceaff836bd95c",
+    "certificate_evidence_sha256": "a149542975eb237456dddb8ac78d1bed8d8121545a037600500a16b2a5edb7d1",
+    "compiled_topology_identity_sha256": "0e242c069a55707b554eb632ea7a0747a29b6ad1451453c6496e8dd4cc1ac8cf",
+    "compiler_id": "raw-spd-finite-via-spatial-contact-v3",
+    "geometry_identity_sha256": "1593dcbe3e59c1eac48173a348a9b893862e99bcd3e66b14e69057197660cb4e",
+    "layers_count": "95",
+    "logical_rows_sha256": "a49f447e34a48b220bfa5107ac8a520a5a4906745f1b715c91d584c0752b09bf",
+    "nodes_count": "2751337",
+    "pad_shapes_count": "186",
+    "padstacks_count": "98",
+    "payload_schema": "spd-raw-spatial-contact-sqlite-v3",
+    "plane_sheet_dielectric_points_count": "301",
+    "plane_sheet_payload_sha256": "8124951c18011994e480fbd5a0d2ea78f7018d8e4cabe5dd4b12e7dc62fda800",
+    "plane_sheet_plane_circles_count": "57279",
+    "plane_sheet_plane_primitives_count": "339162",
+    "plane_sheet_plane_vertices_count": "11968968",
+    "plane_sheet_stackup_layers_count": "95",
+    "project_binding_sha256": "a20f131070142ecb4c332d9a8339454c13021eb6787c51944cc628f19449616e",
+    "section_coverage_count": "3",
+    "source_coverage_count": "1",
+    "source_sha256": "40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2",
+    "surfaces_count": "371",
+    "traces_count": "1412611",
+    "vias_count": "1810200"
+  },
+  "material": {
+    "layer_ordinal": 40,
+    "layer_name": "Signal$L21(DGND)",
+    "layer_kind": "conductor",
+    "thickness_um": 35.0,
+    "conductivity_s_per_m": 59590000.0,
+    "material_name": "COPPER"
+  },
+  "crossing_vias": [
+    {
+      "ordinal": 1072686,
+      "via_id": "Via336239",
+      "via_id_fold": "via336239",
+      "net_name": "ADC_VDD_180_VQPS_SYS_1_AON/0",
+      "net_fold": "adc_vdd_180_vqps_sys_1_aon/0",
+      "start_layer_id": "Signal$L21(DGND)",
+      "start_layer_id_fold": "signal$l21(dgnd)",
+      "end_layer_id": "Signal$L28(DGND)",
+      "end_layer_id_fold": "signal$l28(dgnd)",
+      "start_node_id": "Node2140546",
+      "start_node_id_fold": "node2140546",
+      "end_node_id": "Node487654",
+      "end_node_id_fold": "node487654",
+      "padstack_id": "DR-2128_350",
+      "padstack_id_fold": "dr-2128_350",
+      "status": "EXACT",
+      "owner_id": "via:adc_vdd_180_vqps_sys_1_aon/0:via336239",
+      "owner_id_fold": "via:adc_vdd_180_vqps_sys_1_aon/0:via336239",
+      "start_x_pm": -11700000000,
+      "start_y_pm": 12403000000,
+      "end_x_pm": -11700000000,
+      "end_y_pm": 12403000000,
+      "rotation_microdegrees": 0,
+      "source_record_sha256": "8182618091b255249f9a66fa8af66df119158b15ae141eb086e9268126408d94"
+    },
+    {
+      "ordinal": 1072688,
+      "via_id": "Via336240",
+      "via_id_fold": "via336240",
+      "net_name": "ADC_VDD_180_VQPS_SYS_1_AON/0",
+      "net_fold": "adc_vdd_180_vqps_sys_1_aon/0",
+      "start_layer_id": "Signal$L20(DGND)",
+      "start_layer_id_fold": "signal$l20(dgnd)",
+      "end_layer_id": "Signal$L21(DGND)",
+      "end_layer_id_fold": "signal$l21(dgnd)",
+      "start_node_id": "Node487655",
+      "start_node_id_fold": "node487655",
+      "end_node_id": "Node2140547",
+      "end_node_id_fold": "node2140547",
+      "padstack_id": "DR-2021_60",
+      "padstack_id_fold": "dr-2021_60",
+      "status": "EXACT",
+      "owner_id": "via:adc_vdd_180_vqps_sys_1_aon/0:via336240",
+      "owner_id_fold": "via:adc_vdd_180_vqps_sys_1_aon/0:via336240",
+      "start_x_pm": -11915000000,
+      "start_y_pm": 12527800000,
+      "end_x_pm": -11915000000,
+      "end_y_pm": 12527800000,
+      "rotation_microdegrees": 0,
+      "source_record_sha256": "9684096552524fa058b910ef9f10f56315c75eafd978f176a87e9e2dc5142a77"
+    },
+    {
+      "ordinal": 1072730,
+      "via_id": "Via336279",
+      "via_id_fold": "via336279",
+      "net_name": "ADC_VDD_180_VQPS_SYS_1_AON/0",
+      "net_fold": "adc_vdd_180_vqps_sys_1_aon/0",
+      "start_layer_id": "Signal$L20(DGND)",
+      "start_layer_id_fold": "signal$l20(dgnd)",
+      "end_layer_id": "Signal$L21(DGND)",
+      "end_layer_id_fold": "signal$l21(dgnd)",
+      "start_node_id": "Node487664",
+      "start_node_id_fold": "node487664",
+      "end_node_id": "Node2140578",
+      "end_node_id_fold": "node2140578",
+      "padstack_id": "DR-2021_60",
+      "padstack_id_fold": "dr-2021_60",
+      "status": "EXACT",
+      "owner_id": "via:adc_vdd_180_vqps_sys_1_aon/0:via336279",
+      "owner_id_fold": "via:adc_vdd_180_vqps_sys_1_aon/0:via336279",
+      "start_x_pm": -11436400000,
+      "start_y_pm": 12514100000,
+      "end_x_pm": -11436400000,
+      "end_y_pm": 12514100000,
+      "rotation_microdegrees": 0,
+      "source_record_sha256": "552a589335c90d4d5176f47394d2c96b49f91c7830831db69522bd1c7e270be8"
+    },
+    {
+      "ordinal": 1072732,
+      "via_id": "Via336280",
+      "via_id_fold": "via336280",
+      "net_name": "ADC_VDD_180_VQPS_SYS_1_AON/0",
+      "net_fold": "adc_vdd_180_vqps_sys_1_aon/0",
+      "start_layer_id": "Signal$L20(DGND)",
+      "start_layer_id_fold": "signal$l20(dgnd)",
+      "end_layer_id": "Signal$L21(DGND)",
+      "end_layer_id_fold": "signal$l21(dgnd)",
+      "start_node_id": "Node487665",
+      "start_node_id_fold": "node487665",
+      "end_node_id": "Node2140579",
+      "end_node_id_fold": "node2140579",
+      "padstack_id": "DR-2021_60",
+      "padstack_id_fold": "dr-2021_60",
+      "status": "EXACT",
+      "owner_id": "via:adc_vdd_180_vqps_sys_1_aon/0:via336280",
+      "owner_id_fold": "via:adc_vdd_180_vqps_sys_1_aon/0:via336280",
+      "start_x_pm": -11436400000,
+      "start_y_pm": 12374100000,
+      "end_x_pm": -11436400000,
+      "end_y_pm": 12374100000,
+      "rotation_microdegrees": 0,
+      "source_record_sha256": "6848ca26b5e83e135340236e8c2cb8013082b51a6a3e8f789554d643ea00685d"
+    }
+  ],
+  "padstacks": [
+    {
+      "ordinal": 51,
+      "padstack_id": "DR-2021_60",
+      "padstack_id_fold": "dr-2021_60",
+      "drill_diameter_pm": 40000000,
+      "material": "COPPER",
+      "source_record_sha256": "d1a441e3624ca90bbe80d0b500b209cac0f0ea473616e5ab652d0623bc48f772"
+    },
+    {
+      "ordinal": 53,
+      "padstack_id": "DR-2128_350",
+      "padstack_id_fold": "dr-2128_350",
+      "drill_diameter_pm": 150000000,
+      "material": "COPPER",
+      "source_record_sha256": "ef3f63d0de1a8c57d38886ee07daf5431b2a44eb01442604b4e6fc7ef1f2e698"
+    }
+  ],
+  "pad_shapes": [
+    {
+      "ordinal": 90,
+      "padstack_id": "DR-2021_60",
+      "padstack_id_fold": "dr-2021_60",
+      "layer_id": "Signal$L21(DGND)",
+      "layer_id_fold": "signal$l21(dgnd)",
+      "shape_kind": "CIRCLE",
+      "width_pm": 140000000,
+      "height_pm": 140000000,
+      "source_record_sha256": "4b948bd2717a0b4b35966e884257ab4a224339c53725a2485ccfcb83b80efb35"
+    },
+    {
+      "ordinal": 93,
+      "padstack_id": "DR-2128_350",
+      "padstack_id_fold": "dr-2128_350",
+      "layer_id": "Signal$L21(DGND)",
+      "layer_id_fold": "signal$l21(dgnd)",
+      "shape_kind": "CIRCLE",
+      "width_pm": 350000000,
+      "height_pm": 350000000,
+      "source_record_sha256": "4e1eb582d9585c37b4af8e2cba0653377ddb1e4ae3d21535cb4fd02762cc4efc"
+    }
+  ],
+  "via_classifications": [
+    {
+      "conductor_model": "HOLLOW_PLATED_BARREL",
+      "fill_provenance": "LEGACY_PLATED_BARREL_FALLBACK",
+      "classification_basis": "source COPPER padstack does not span exactly two conductors and one dielectric",
+      "effective_area_m2": 9.424777960769378e-09
+    },
+    {
+      "conductor_model": "SOLID_COPPER_FILLED_MICROVIA",
+      "fill_provenance": "USER_CONFIRMED_MLO_COPPER_FILL_ASSUMPTION_WITH_SOURCE_COPPER_AND_GEOMETRY",
+      "classification_basis": "COPPER; drill <= 150 um; two conductor layers; one dielectric; dielectric/drill <= 1.0",
+      "effective_area_m2": 1.2566370614359174e-09
+    },
+    {
+      "conductor_model": "SOLID_COPPER_FILLED_MICROVIA",
+      "fill_provenance": "USER_CONFIRMED_MLO_COPPER_FILL_ASSUMPTION_WITH_SOURCE_COPPER_AND_GEOMETRY",
+      "classification_basis": "COPPER; drill <= 150 um; two conductor layers; one dielectric; dielectric/drill <= 1.0",
+      "effective_area_m2": 1.2566370614359174e-09
+    },
+    {
+      "conductor_model": "SOLID_COPPER_FILLED_MICROVIA",
+      "fill_provenance": "USER_CONFIRMED_MLO_COPPER_FILL_ASSUMPTION_WITH_SOURCE_COPPER_AND_GEOMETRY",
+      "classification_basis": "COPPER; drill <= 150 um; two conductor layers; one dielectric; dielectric/drill <= 1.0",
+      "effective_area_m2": 1.2566370614359174e-09
+    }
+  ],
+  "electrode_radii_um": [
+    175.0,
+    20.0,
+    20.0,
+    20.0
+  ],
+  "complete_source_scope": "All four AON source nodes and crossing via spans on L21; no source traces; one full positive polygon, no negative primitives.",
+  "native_owner_refs": [
+    {
+      "kind": 1,
+      "link_ordinal": 40385,
+      "owner_ordinal": 0,
+      "owner_id": "via:via336239"
+    },
+    {
+      "kind": 1,
+      "link_ordinal": 445758,
+      "owner_ordinal": 0,
+      "owner_id": "via:via336280"
+    },
+    {
+      "kind": 1,
+      "link_ordinal": 559027,
+      "owner_ordinal": 0,
+      "owner_id": "via:via336279"
+    },
+    {
+      "kind": 1,
+      "link_ordinal": 1193939,
+      "owner_ordinal": 0,
+      "owner_id": "via:via336240"
+    }
+  ],
+  "native_incident_links": [
+    {
+      "kind": 0,
+      "ordinal": 9671,
+      "link_id": "finite-vertex-surface-link:69ff91472d3251246b6c4411",
+      "first_node": 680823,
+      "second_node": 789430,
+      "parallel_count": 1,
+      "resistance_ohm": null,
+      "inductance_h": null
+    },
+    {
+      "kind": 1,
+      "ordinal": 40385,
+      "link_id": "spd-finite-via-edge:0613d0ca6f9ca18f09c1d8bf",
+      "first_node": 750336,
+      "second_node": 680823,
+      "parallel_count": 1,
+      "resistance_ohm": 0.0008328251054298727,
+      "inductance_h": 3.88101732126172e-10
+    },
+    {
+      "kind": 1,
+      "ordinal": 445758,
+      "link_id": "spd-finite-via-edge:436c96b13c5d18261f5e6a6d",
+      "first_node": 482985,
+      "second_node": 680823,
+      "parallel_count": 1,
+      "resistance_ohm": 0.000767864509798958,
+      "inductance_h": 3.1615798330306487e-11
+    },
+    {
+      "kind": 1,
+      "ordinal": 559027,
+      "link_id": "spd-finite-via-edge:54a104652a62628d8d9cc75c",
+      "first_node": 482985,
+      "second_node": 680823,
+      "parallel_count": 1,
+      "resistance_ohm": 0.000767864509798958,
+      "inductance_h": 3.1615798330306487e-11
+    },
+    {
+      "kind": 1,
+      "ordinal": 1193939,
+      "link_id": "spd-finite-via-edge:b4ca657349b3bb21960a1b90",
+      "first_node": 229906,
+      "second_node": 680823,
+      "parallel_count": 1,
+      "resistance_ohm": 0.000767864509798958,
+      "inductance_h": 3.1615798330306487e-11
+    }
+  ],
+  "native_ac_replacement_closed": false,
+  "coordinate_origin_um": [
+    -11700.0,
+    12403.0
+  ],
+  "dyadic_quantum_um": 9.5367431640625e-07,
+  "sheet_rows": [
+    {
+      "circle_sides": 64,
+      "level": 0,
+      "nodes": 264,
+      "triangles": 518,
+      "contact_node_order": [
+        "Node2140546",
+        "Node2140547",
+        "Node2140578",
+        "Node2140579"
+      ],
+      "y_s": [
+        [
+          30811.178309570536,
+          -15797.41956850835,
+          -7895.949396155508,
+          -7117.809344906676
+        ],
+        [
+          -15797.41956850835,
+          13702.714904153014,
+          1977.165631575854,
+          117.53903277948214
+        ],
+        [
+          -7895.949396155508,
+          1977.165631575854,
+          10325.58759478408,
+          -4406.803830204426
+        ],
+        [
+          -7117.809344906676,
+          117.53903277948214,
+          -4406.803830204426,
+          11407.07414233162
+        ]
+      ],
+      "balanced_z_ohm": [
+        [
+          7.560233032959498e-05,
+          -1.7732662708225948e-05,
+          -7.629527926199626e-06
+        ],
+        [
+          -1.7732662708225914e-05,
+          0.00012012623491585526,
+          4.6590126927142624e-05
+        ],
+        [
+          -7.62952792619962e-06,
+          4.659012692714266e-05,
+          0.00010574230535146681
+        ]
+      ],
+      "pair_r_ohm": [
+        7.560233032959498e-05,
+        0.00012012623491585526,
+        0.00010574230535146681,
+        0.00023119389066190212,
+        0.00019660369153346103,
+        0.0001326882864130368
+      ],
+      "operator_sha256": "7dcaacfd625578012eee126471c89fad3ab595234dc082c088f76eb6e4177329"
+    },
+    {
+      "circle_sides": 64,
+      "level": 1,
+      "nodes": 1045,
+      "triangles": 2072,
+      "contact_node_order": [
+        "Node2140546",
+        "Node2140547",
+        "Node2140578",
+        "Node2140579"
+      ],
+      "y_s": [
+        [
+          20559.064118129747,
+          -10148.118597324004,
+          -5149.918661543073,
+          -5261.0268592626735
+        ],
+        [
+          -10148.118597324004,
+          9157.791148661681,
+          935.4545508272693,
+          54.87289783505278
+        ],
+        [
+          -5149.918661543073,
+          935.4545508272693,
+          7045.336340348713,
+          -2830.8722296329092
+        ],
+        [
+          -5261.0268592626735,
+          54.87289783505278,
+          -2830.8722296329092,
+          8037.02619106053
+        ]
+      ],
+      "balanced_z_ohm": [
+        [
+          0.00011102854334402659,
+          -1.752715145822786e-05,
+          -6.931616610298413e-06
+        ],
+        [
+          -1.752715145822778e-05,
+          0.00016810472376871394,
+          5.933099487826206e-05
+        ],
+        [
+          -6.93161661029843e-06,
+          5.9330994878262126e-05,
+          0.0001453695428972198
+        ]
+      ],
+      "pair_r_ohm": [
+        0.00011102854334402659,
+        0.00016810472376871394,
+        0.0001453695428972198,
+        0.00031418757002919616,
+        0.0002702613194618432,
+        0.00019481227690940956
+      ],
+      "operator_sha256": "23e9b669918f9b150f08e97aebd5d15be555cccd72a7678a4bd5a4aaf352e77b"
+    },
+    {
+      "circle_sides": 64,
+      "level": 2,
+      "nodes": 4161,
+      "triangles": 8288,
+      "contact_node_order": [
+        "Node2140546",
+        "Node2140547",
+        "Node2140578",
+        "Node2140579"
+      ],
+      "y_s": [
+        [
+          15471.727555317862,
+          -7302.473554691795,
+          -3736.9307924115487,
+          -4432.323208214518
+        ],
+        [
+          -7302.473554691795,
+          6943.177767645081,
+          341.45817711612943,
+          17.83760993058456
+        ],
+        [
+          -3736.9307924115487,
+          341.45817711612943,
+          5458.206236020453,
+          -2062.7336207250337
+        ],
+        [
+          -4432.323208214518,
+          17.83760993058456,
+          -2062.7336207250337,
+          6477.219219008967
+        ]
+      ],
+      "balanced_z_ohm": [
+        [
+          0.00014454981675952582,
+          -1.0451075974189246e-05,
+          -3.726322703541038e-06
+        ],
+        [
+          -1.0451075974189219e-05,
+          0.00020903217369337327,
+          6.659711523136282e-05
+        ],
+        [
+          -3.7263227035410653e-06,
+          6.659711523136284e-05,
+          0.00017560600295630013
+        ]
+      ],
+      "pair_r_ohm": [
+        0.00014454981675952582,
+        0.00020903217369337327,
+        0.00017560600295630013,
+        0.0003744841424012775,
+        0.00032760846512290803,
+        0.00025144394618694776
+      ],
+      "operator_sha256": "a468172deb8652f2d72d78657adabcf30d1b6cf7d355da10037e509fff695bbc"
+    },
+    {
+      "circle_sides": 64,
+      "level": 3,
+      "nodes": 16609,
+      "triangles": 33152,
+      "contact_node_order": [
+        "Node2140546",
+        "Node2140547",
+        "Node2140578",
+        "Node2140579"
+      ],
+      "y_s": [
+        [
+          13177.675239990693,
+          -6009.945155668761,
+          -3097.9616340023504,
+          -4069.7684503195806
+        ],
+        [
+          -6009.945155668761,
+          5924.895269041475,
+          80.9958765312115,
+          4.054010096074113
+        ],
+        [
+          -3097.9616340023504,
+          80.9958765312115,
+          4725.145551377737,
+          -1708.179793906598
+        ],
+        [
+          -4069.7684503195806,
+          4.054010096074113,
+          -1708.179793906598,
+          5773.894234130105
+        ]
+      ],
+      "balanced_z_ohm": [
+        [
+          0.00016882505615138725,
+          -3.2884623144847225e-06,
+          -1.091413023031168e-06
+        ],
+        [
+          -3.2884623144846547e-06,
+          0.00023704275645825327,
+          7.013030753833e-05
+        ],
+        [
+          -1.0914130230311341e-06,
+          7.013030753832997e-05,
+          0.00019394182738187172
+        ]
+      ],
+      "pair_r_ohm": [
+        0.00016882505615138725,
+        0.00023704275645825327,
+        0.00019394182738187172,
+        0.0004124447372386099,
+        0.0003649497095793213,
+        0.000290723968763465
+      ],
+      "operator_sha256": "4b26a00f4fce9f6f88b4fb7c8a11b3d849eaa84d7f47d7dda19d4336bab15cdc"
+    },
+    {
+      "circle_sides": 128,
+      "level": 2,
+      "nodes": 8257,
+      "triangles": 16480,
+      "contact_node_order": [
+        "Node2140546",
+        "Node2140547",
+        "Node2140578",
+        "Node2140579"
+      ],
+      "y_s": [
+        [
+          15486.643579766449,
+          -7310.540280887934,
+          -3739.4034664360956,
+          -4436.699832442418
+        ],
+        [
+          -7310.540280887934,
+          6952.710946625318,
+          340.0680002660976,
+          17.761333996519014
+        ],
+        [
+          -3739.4034664360956,
+          340.0680002660976,
+          5461.828624963592,
+          -2062.4931587935944
+        ],
+        [
+          -4436.699832442418,
+          17.761333996519014,
+          -2062.4931587935944,
+          6481.431657239494
+        ]
+      ],
+      "balanced_z_ohm": [
+        [
+          0.00014434616934159847,
+          -1.0384608135494234e-05,
+          -3.7001028521555798e-06
+        ],
+        [
+          -1.0384608135494234e-05,
+          0.0002088415097676537,
+          6.648509965851611e-05
+        ],
+        [
+          -3.7001028521555798e-06,
+          6.648509965851606e-05,
+          0.00017545364081711536
+        ]
+      ],
+      "pair_r_ohm": [
+        0.00014434616934159847,
+        0.0002088415097676537,
+        0.00017545364081711536,
+        0.00037395689538024065,
+        0.000327200015863025,
+        0.0002513249512677369
+      ],
+      "operator_sha256": "70d9c13d24cefa377eb3fc0a9954f3bce7d7a70e24755c4e3eb6b849c92b21f4"
+    },
+    {
+      "circle_sides": 128,
+      "level": 3,
+      "nodes": 32993,
+      "triangles": 65920,
+      "contact_node_order": [
+        "Node2140546",
+        "Node2140547",
+        "Node2140578",
+        "Node2140579"
+      ],
+      "y_s": [
+        [
+          13192.140696678394,
+          -6017.1564432299065,
+          -3100.827308744644,
+          -4074.156944703844
+        ],
+        [
+          -6017.1564432299065,
+          5932.553677159336,
+          80.5740634705757,
+          4.028702599994076
+        ],
+        [
+          -3100.827308744644,
+          80.5740634705757,
+          4728.16298653868,
+          -1707.909741264612
+        ],
+        [
+          -4074.156944703844,
+          4.028702599994076,
+          -1707.909741264612,
+          5778.037983368462
+        ]
+      ],
+      "balanced_z_ohm": [
+        [
+          0.00016860654466720938,
+          -3.2642731330561177e-06,
+          -1.0824348204311742e-06
+        ],
+        [
+          -3.264273133056172e-06,
+          0.0002368432906873329,
+          7.00099437331657e-05
+        ],
+        [
+          -1.0824348204311539e-06,
+          7.000994373316562e-05,
+          0.00019376387433205306
+        ]
+      ],
+      "pair_r_ohm": [
+        0.00016860654466720938,
+        0.0002368432906873329,
+        0.00019376387433205306,
+        0.0004119783816206546,
+        0.0003645352886401248,
+        0.0002905872775530547
+      ],
+      "operator_sha256": "7b29aa10969701e8bfac87554b782965ff27dcab6af54e439b3be19d1d7a42b3"
+    }
+  ],
+  "relative_changes": {
+    "mesh_64_max_pair_relative": 0.1437893162617613,
+    "mesh_128_max_pair_relative": 0.1438875067008539,
+    "circle_64_to_128_max_pair_relative": 0.0012959845930604651
+  },
+  "gate": 0.02,
+  "failure": null,
+  "balanced_basis": [
+    [
+      -1.0,
+      -1.0,
+      -1.0
+    ],
+    [
+      1.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      1.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "elapsed_s": 18.203000000008615,
+  "scope": "Full floating four-terminal DC sheet under three qualified filled-microvia barrel electrodes and a separately retained whole-core-pad equipotential approximation. The core is not classified as filled; its 175 um pad electrode is not a plating/current-injection certification. Nominal source copper is preserved through inward geometric approximation; original whole-pad tangency STOP remains. Full Y and balanced Z are retained with no chosen current split. Native fifth ideal artwork link and its G/C distribution are unresolved for AC replacement. No external/mutual L, source plane replacement, production promotion, board Zii or PowerSI comparison."
+}

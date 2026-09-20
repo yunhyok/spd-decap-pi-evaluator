@@ -1,0 +1,74 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "STOP_LOCAL_SHEET_MESH",
+  "production_eligible": false,
+  "source_record": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-step3-source-index-01\\l21-plane-bridge.json",
+  "source_record_sha256": "e4bbbc54e4f1708ad684605e41c5a17cb0dc7fcdd49c2794437196803c82ec01",
+  "source_primitive": {
+    "primitive_ordinal": 109688,
+    "layer_ordinal": 40,
+    "layer_name": "Signal$L21(DGND)",
+    "net_name": "ADC_VDD_180_VQPS_SYS_1_AON/0",
+    "polarity": "+",
+    "kind": "polygon",
+    "source_asset_name": "geometry/0219-b0ab5dda526415e8.spdgeom.zlib",
+    "source_asset_sha256": "b0ab5dda526415e8a5373683a3a9612985e3b6f7a2aaae6808fb3ad257beb7d1",
+    "coordinate_unit": "um",
+    "primitive_sha256": "4b52ef1985b5c5af1eb092c0c34dd63770102d5a4b22b0aaa463af821ff30e7b"
+  },
+  "material": {
+    "layer_ordinal": 40,
+    "layer_name": "Signal$L21(DGND)",
+    "layer_kind": "conductor",
+    "thickness_um": 35.0,
+    "conductivity_s_per_m": 59590000.0,
+    "material_name": "COPPER"
+  },
+  "selected_nodes": [
+    "Node2140546",
+    "Node2140547"
+  ],
+  "full_four_contact_status": "STOP_EXACT_PAD_TANGENCY",
+  "touching_contacts": [
+    {
+      "nodes": [
+        "Node2140578",
+        "Node2140579"
+      ],
+      "gap_pm": 0.0
+    }
+  ],
+  "max_circle_boundary_error_um": 0.21079516409482912,
+  "assumptions": "Two whole pad disks are equipotential electrodes; other launch locations remain ordinary sheet copper. This is a lateral sheet subproblem with the two selected terminal currents balancing each other, not a GND assignment or a model of all via-barrel injections.",
+  "rows": [
+    {
+      "refinement_level": 0,
+      "nodes": 136,
+      "triangles": 262,
+      "dc_resistance_ohm": 2.2257622798741466e-05,
+      "admittance_s": [
+        [
+          44928.42784884214,
+          -44928.42784884214
+        ],
+        [
+          -44928.42784884214,
+          44928.42784884214
+        ]
+      ],
+      "floating_relative": 0.0,
+      "reciprocity_relative": 0.0,
+      "operator_identity_sha256": "732fc9ce19232a2d0736e7a2e0fa9a6c6b308f044b5d061205d7290f36533ff4"
+    },
+    {
+      "refinement_level": 1,
+      "status": "STOP",
+      "error_code": "MESH_CROSSES_VOID",
+      "error": "MESH_CROSSES_VOID: refined triangle exits artwork"
+    }
+  ],
+  "coarse_to_fine_relative_change": null,
+  "scope": "Existing triangular FEM; DC R only. No external/mutual L, G/C, dielectric/return, source ownership replacement, convergence attestation, full four-port transfer, or PowerSI accuracy claim.",
+  "elapsed_s": 0.10899999999674037
+}

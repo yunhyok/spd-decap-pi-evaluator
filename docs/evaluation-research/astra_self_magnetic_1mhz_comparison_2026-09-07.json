@@ -1,0 +1,53 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "COMPLETED_CONDITIONAL_SELF_MAGNETIC_1MHZ_COMPARISON",
+  "script_sha256": "3cb5a535515721f5e5d442f29afc26257e7053661af0dfadac95f63c8783e7db",
+  "inputs": {
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-self-magnetic-board-1mhz-01\\result.json": "36d293fa18b32f88a195d71a20934fe678e1b3cec49eed6cdd39f2cb0ce687ab",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_primary_band_comparison_2026-09-07.json": "ac08d7ea36a09989fb83e9113af399db41f698bf68e061e3c75020f4c41a5f8d",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\compare_astra_loaded_development_points.py": "0e12464d1297caa9964404a2a0777d22964d6817069f752641b2d7945c8f4f4f",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\compare_astra_rt0_board_1mhz.py": "c98cafb9d5cb1f5f6ed2623c9b33c5d83e231c3bfd2a5a7b5f823c79d1c8faba"
+  },
+  "rail_id": "ADC_VDD_075_VTRIP_SRAM/0",
+  "frequency_hz": 1000000.0,
+  "reference_port_one_based": 18,
+  "reference_zdd_ohm": [
+    0.0006915479466520245,
+    -0.0004257504501139287
+  ],
+  "device_active_indices": [
+    2699,
+    2656
+  ],
+  "points": [
+    {
+      "alpha": 0.0,
+      "zdd_ohm": [
+        0.0005515144327164612,
+        -0.0005888008241071069
+      ],
+      "errors": {
+        "magnitude_error_db": -0.057321571224598834,
+        "complex_relative_error": 0.26466013456703086,
+        "complex_gap_ohm": 0.00021492977803100452,
+        "phase_error_deg": -15.254341292751285
+      }
+    },
+    {
+      "alpha": 1.0,
+      "zdd_ohm": [
+        0.0006312032027337987,
+        -0.0004933757051512947
+      ],
+      "errors": {
+        "magnitude_error_db": -0.11791326033986789,
+        "complex_relative_error": 0.1116058143873527,
+        "complex_gap_ohm": 9.063477940297003e-05,
+        "phase_error_deg": -6.394253400143949
+      }
+    }
+  ],
+  "remaining_rt0_reference_gap_reduction_fraction": 0.5783051551381793,
+  "scope": "Reference read only after actual results were frozen; no fitted coefficient. Same geometry/RT0/G/C/contacts/native-via basis. Alpha1 adds only exact same-triangle sheet partial L and solves fresh currents/voltages. Intertriangle/interlayer mutual and magnetic return composition remain absent, so this is a conditional numerical ablation, not complete magnetic physics, mesh convergence, broadband or product accuracy acceptance."
+}

@@ -1,0 +1,181 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "STOP_SEEDED_L21_DC",
+  "input_sha256": "76bbb152f89b0e8086128f34a489f06c77ba10b2dfae0b952fc245723881ce3b",
+  "source_bridge_sha256": "e4bbbc54e4f1708ad684605e41c5a17cb0dc7fcdd49c2794437196803c82ec01",
+  "source_asset_sha256": "b0ab5dda526415e8a5373683a3a9612985e3b6f7a2aaae6808fb3ad257beb7d1",
+  "coordinate_origin_um": [
+    -11700.0,
+    12403.0
+  ],
+  "dyadic_quantum_um": 9.5367431640625e-07,
+  "electrode_radii_um": [
+    175.0,
+    20.0,
+    20.0,
+    20.0
+  ],
+  "balanced_basis": [
+    [
+      -1.0,
+      -1.0,
+      -1.0
+    ],
+    [
+      1.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      1.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "sheet_rows": [
+    {
+      "circle_sides": 64,
+      "grid_um": 20.0,
+      "nodes": 1067,
+      "triangles": 2124,
+      "contact_node_order": [
+        "Node2140546",
+        "Node2140547",
+        "Node2140578",
+        "Node2140579"
+      ],
+      "y_s": [
+        [
+          17064.48160940742,
+          -7762.06971955214,
+          -4746.5912624752655,
+          -4555.8206273800115
+        ],
+        [
+          -7762.06971955214,
+          6801.071043758529,
+          834.4279274801152,
+          126.57074831349637
+        ],
+        [
+          -4746.5912624752655,
+          834.4279274801152,
+          5754.753878810223,
+          -1842.5905438150721
+        ],
+        [
+          -4555.8206273800115,
+          126.57074831349637,
+          -1842.5905438150721,
+          6271.840422881588
+        ]
+      ],
+      "balanced_z_ohm": [
+        [
+          0.00015031276278925948,
+          -2.5130233165785973e-05,
+          -1.0416388883892397e-05
+        ],
+        [
+          -2.5130233165786007e-05,
+          0.00019601398242821916,
+          5.8093675592507164e-05
+        ],
+        [
+          -1.0416388883892404e-05,
+          5.809367559250716e-05,
+          0.00017672025955799722
+        ]
+      ],
+      "pair_r_ohm": [
+        0.00015031276278925948,
+        0.00019601398242821916,
+        0.00017672025955799722,
+        0.00039658721154905063,
+        0.0003478658001150415,
+        0.00025654689080120203
+      ],
+      "operator_sha256": "b15004ac42d84b4442abda8be5a7a957454f4e9952e9ebdeef05839b1fc70f3b"
+    }
+  ],
+  "triangulator_calls": [
+    {
+      "grid_um": 20.0,
+      "seeded_vertices": 305,
+      "kept_triangles": 544,
+      "missing_boundary_edges": 0
+    },
+    {
+      "grid_um": 20.0,
+      "seeded_vertices": 68,
+      "kept_triangles": 70,
+      "missing_boundary_edges": 0
+    },
+    {
+      "grid_um": 20.0,
+      "seeded_vertices": 68,
+      "kept_triangles": 70,
+      "missing_boundary_edges": 0
+    },
+    {
+      "grid_um": 20.0,
+      "seeded_vertices": 67,
+      "kept_triangles": 68,
+      "missing_boundary_edges": 0
+    },
+    {
+      "grid_um": 20.0,
+      "seeded_vertices": 815,
+      "kept_triangles": 1372,
+      "missing_boundary_edges": 0
+    },
+    {
+      "grid_um": 10.0,
+      "seeded_vertices": 1029,
+      "kept_triangles": 1992,
+      "missing_boundary_edges": 0
+    },
+    {
+      "grid_um": 10.0,
+      "seeded_vertices": 78,
+      "kept_triangles": 90,
+      "missing_boundary_edges": 0
+    },
+    {
+      "grid_um": 10.0,
+      "seeded_vertices": 78,
+      "kept_triangles": 90,
+      "missing_boundary_edges": 0
+    },
+    {
+      "grid_um": 10.0,
+      "seeded_vertices": 76,
+      "kept_triangles": 86,
+      "missing_boundary_edges": 0
+    },
+    {
+      "grid_um": 10.0,
+      "seeded_vertices": 2471,
+      "kept_triangles": 4676,
+      "missing_boundary_edges": 8
+    }
+  ],
+  "relative_changes": {},
+  "gate": 0.02,
+  "failure": {
+    "code": "ValueError",
+    "detail": "seeded Delaunay did not preserve every face boundary segment",
+    "circle_sides": 64,
+    "grid_um": 10.0
+  },
+  "elapsed_s": 0.8439999999827705,
+  "algorithm": "Per-face Delaunay of boundary vertices plus strictly interior fixed-grid points, tolerance=0; every original boundary segment must occur as an emitted triangle edge. Original FEM guards also verify whole-domain and contact coverage. Not a generic constrained-Delaunay guarantee.",
+  "reference": "https://shapely.readthedocs.io/en/stable/reference/shapely.delaunay_triangles.html",
+  "scope": "Full floating four-terminal DC sheet under three qualified filled-microvia barrel electrodes and a separately retained whole-core-pad equipotential approximation. The core is not classified as filled; its 175 um pad electrode is not a plating/current-injection certification. Nominal source copper is preserved through inward geometric approximation; original whole-pad tangency STOP remains. Full Y and balanced Z are retained with no chosen current split. Native fifth ideal artwork link and its G/C distribution are unresolved for AC replacement. No external/mutual L, source plane replacement, production promotion, board Zii or PowerSI comparison. Research-only triangulator substitution restored in finally. Grid-density convergence does not imply a production convergence attestation or a general mesher fix."
+}

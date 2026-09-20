@@ -1,0 +1,173 @@
+{
+  "baseline_open_z_ohm": [
+    [
+      [
+        0.0006743140328417886,
+        0.00014327383798223628
+      ],
+      [
+        -6.605763451390291e-06,
+        2.068198153179688e-05
+      ]
+    ],
+    [
+      [
+        -6.605763451390399e-06,
+        2.0681981531796867e-05
+      ],
+      [
+        0.0006743140328417884,
+        0.000143273837982235
+      ]
+    ]
+  ],
+  "checks": {
+    "direct_recomposition_matches_update": true,
+    "finite_denominator": true,
+    "invalid_input_rejected": true,
+    "near_singular_denominator_rejected": true,
+    "nonreal_cross_impedance": true,
+    "passive_reciprocal_direct_network": true,
+    "wrong_absolute_square_formula_rejected": true,
+    "wrong_conjugate_formula_rejected": true,
+    "zero_trace_resistance_recovers_baseline": true
+  },
+  "diagnostics": {
+    "baseline": {
+      "backward_relative_residual": 8.325374778614016e-18,
+      "branch_equation_relative_residual": 7.40011204693808e-16,
+      "min_hermitian_impedance_eigenvalue_ohm": 0.0006677082693903982,
+      "nodal_kcl_relative_residual": 3.3393426912553537e-17,
+      "raw_reciprocity_absolute_error_ohm": 1.0926396707304223e-19,
+      "scaled_saddle_condition_estimate": 518.1269877576201
+    },
+    "direct": {
+      "backward_relative_residual": 1.2766572754280709e-17,
+      "branch_equation_relative_residual": 7.637377454107481e-16,
+      "min_hermitian_impedance_eigenvalue_ohm": 0.0006737699305827714,
+      "nodal_kcl_relative_residual": 5.117434254131581e-17,
+      "raw_reciprocity_absolute_error_ohm": 1.648736087515688e-19,
+      "scaled_saddle_condition_estimate": 514.8513970851322
+    }
+  },
+  "direct_recomposed_z_ohm": [
+    [
+      [
+        0.0006738753053523962,
+        0.00014322240740382447
+      ],
+      [
+        -6.84276092344986e-06,
+        3.470563758840267e-05
+      ]
+    ],
+    [
+      [
+        -6.842760923449697e-06,
+        3.470563758840264e-05
+      ],
+      [
+        0.0011181208622357101,
+        0.00010639878396553545
+      ]
+    ]
+  ],
+  "formula": {
+    "delta_y_s": [
+      -532.5991388090479,
+      217.14310610994184
+    ],
+    "denominator": [
+      0.6097500006178525,
+      0.07011512086158185
+    ],
+    "predicted_zdd_ohm": [
+      0.0006738753053523962,
+      0.00014322240740382447
+    ],
+    "wrong_absolute_square_zdd_ohm": [
+      0.0006747013458065177,
+      0.0001430614336939156
+    ],
+    "wrong_conjugate_zdd_ohm": [
+      0.0006747013458065177,
+      0.0001430614336939156
+    ]
+  },
+  "frequency_hz": 1000000.0,
+  "inputs": {
+    "astra_dyadic_trace_sheet_2026-09-07.json": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_dyadic_trace_sheet_2026-09-07.json",
+      "sha256": "e997be26af4c75c45c2e473e9264237a748fb49516a1db1253056d340d4b84ca",
+      "size_bytes": 4456
+    },
+    "astra_isolated_trace_patch_2026-09-06.json": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_isolated_trace_patch_2026-09-06.json",
+      "sha256": "3bb5027424488b17cb2c6f85c75f5edeb0ff9b041929c5b6c3087417b9c4554d",
+      "size_bytes": 9158
+    },
+    "astra_trace_dc_bounds_2026-09-06.json": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_trace_dc_bounds_2026-09-06.json",
+      "sha256": "998e776db8e852f2229cbba6cecbacebbf86c6cf2f7de323c4a781528646c91a",
+      "size_bytes": 7932
+    }
+  },
+  "nonclaims": [
+    "No product/source-module change or promotion.",
+    "Physical G/C is unchanged; this is a synthetic passive network composition check.",
+    "No PowerSI, full-board, current-sharing, or native replacement claim."
+  ],
+  "owner_semantics": {
+    "native_gc_changed": false,
+    "native_via_owners_retained": [
+      "via:via336273",
+      "via:via336274"
+    ],
+    "updated_branch_owners": [
+      "via:via336274",
+      "trace:adc_vdd_180_vqps_sys_1_aon/0:trace311318"
+    ]
+  },
+  "program": "SPD Decap PI Evaluator",
+  "rejected_inputs": {
+    "near_singular": "near-singular rank-one denominator",
+    "nonfinite": "invalid nonfinite rank-one input"
+  },
+  "relative_errors": {
+    "direct_vs_formula": 0.0,
+    "wrong_absolute_square_vs_direct": 0.0012215792635850286,
+    "wrong_conjugate_vs_direct": 0.0012215792635850286,
+    "zero_formula_vs_baseline": 0.0
+  },
+  "resources": {
+    "bounded_under_55s": true,
+    "elapsed_s": 0.0
+  },
+  "saved_values": {
+    "trace311318": {
+      "owner_id": "trace:adc_vdd_180_vqps_sys_1_aon/0:trace311318",
+      "refinement": {
+        "circle_sides": 128,
+        "level": 3
+      },
+      "resistance_ohm": 0.00044462442577010127
+    },
+    "via336274": {
+      "inductance_h": 2.6094379124341013e-11,
+      "owner_id": "via:via336274",
+      "resistance_ohm": 0.0006677082693903983
+    }
+  },
+  "scope": "SYNTHETIC_RANK_ONE_UPDATE_ONLY",
+  "status": "ACCEPT_RANK_ONE_RESEARCH_ONLY",
+  "synthetic_parallel_rlc": {
+    "c_f": 1e-05,
+    "impedance_ohm": [
+      0.0012,
+      -0.010888946063445865
+    ],
+    "l_h": 8e-10,
+    "r_ohm": 0.0012
+  },
+  "version": "0.23.1"
+}

@@ -1,0 +1,198 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "ACCEPT_ASSUMED_LOCAL_DC_BOUNDS_AND_SPLICE_ONLY",
+  "input": "docs\\evaluation-research\\astra_isolated_trace_patch_2026-09-06.json",
+  "input_sha256": "3bb5027424488b17cb2c6f85c75f5edeb0ff9b041929c5b6c3087417b9c4554d",
+  "geometry_m": {
+    "center_spacing": 5.9999999999999995e-05,
+    "trace_width": 4.9999999999999996e-05,
+    "pad_radius": 3e-05,
+    "electrode_radius": 2e-05
+  },
+  "sheet_conductance_s": 1191.8,
+  "r_lower_ohm": 0.0003356267830172847,
+  "r_upper_ohm": 0.0005535909243976422,
+  "channel_integral": 1.5156804791483784,
+  "independent_quadrature": [
+    {
+      "points": 32,
+      "integral": 1.5156804791483787
+    },
+    {
+      "points": 64,
+      "integral": 1.5156804791483787
+    }
+  ],
+  "bound_basis": "Lower: enlarge equipotential electrodes to all copper at x<=r and x>=L-r; intervening width-W rectangle. Upper: admissible horizontal unit-current flow Jx(y)=1/(I*[L-2*sqrt(r*r-y*y)]), Jy=0, |y|<=r; its energy is 1/(sigma*t*I). Thomson/Rayleigh variational principles.",
+  "reference": "https://math.dartmouth.edu/~doyle/docs/walkspdf/walks.pdf",
+  "frequency_hz": 1000000.0,
+  "local_mna_solves": [
+    {
+      "case": "native_ideal_joint",
+      "trace_dc_r_ohm": 0.0,
+      "z_ohm": [
+        0.0013354165387807965,
+        0.0003279116390280663
+      ],
+      "analytic_z_ohm": [
+        0.0013354165387807965,
+        0.0003279116390280663
+      ],
+      "gauges": [
+        {
+          "component_count": 1,
+          "gauge_node_ids": [
+            "left"
+          ],
+          "branch_impedance_condition_estimate": 1.0,
+          "branch_impedance_nnz": 2,
+          "saddle_nnz": 12,
+          "scaled_saddle_condition_estimate": 4.625262638166325,
+          "backward_relative_residual": 0.0,
+          "nodal_kcl_relative_residual": 0.0,
+          "branch_equation_relative_residual": 0.0,
+          "equipotential_relative_residual": 0.0,
+          "gauge_relative_residual": 0.0,
+          "raw_reciprocity_absolute_error_ohm": 0.0,
+          "raw_reciprocity_relative_error": 0.0,
+          "min_hermitian_impedance_eigenvalue_ohm": 0.0013354165387807965,
+          "passivity_tolerance_ohm": 1.3750866791076683e-12
+        },
+        {
+          "component_count": 1,
+          "gauge_node_ids": [
+            "right"
+          ],
+          "branch_impedance_condition_estimate": 1.0,
+          "branch_impedance_nnz": 2,
+          "saddle_nnz": 12,
+          "scaled_saddle_condition_estimate": 4.625262638166325,
+          "backward_relative_residual": 0.0,
+          "nodal_kcl_relative_residual": 0.0,
+          "branch_equation_relative_residual": 0.0,
+          "equipotential_relative_residual": 0.0,
+          "gauge_relative_residual": 0.0,
+          "raw_reciprocity_absolute_error_ohm": 0.0,
+          "raw_reciprocity_relative_error": 0.0,
+          "min_hermitian_impedance_eigenvalue_ohm": 0.0013354165387807965,
+          "passivity_tolerance_ohm": 1.3750866791076683e-12
+        }
+      ]
+    },
+    {
+      "case": "dc_sheet_lower_bound",
+      "trace_dc_r_ohm": 0.0003356267830172847,
+      "z_ohm": [
+        0.0016710433217980813,
+        0.0003279116390280663
+      ],
+      "analytic_z_ohm": [
+        0.0016710433217980813,
+        0.0003279116390280663
+      ],
+      "gauges": [
+        {
+          "component_count": 1,
+          "gauge_node_ids": [
+            "left"
+          ],
+          "branch_impedance_condition_estimate": 1.0,
+          "branch_impedance_nnz": 3,
+          "saddle_nnz": 17,
+          "scaled_saddle_condition_estimate": 6.542739454294734,
+          "backward_relative_residual": 1.3732840615212272e-20,
+          "nodal_kcl_relative_residual": 0.0,
+          "branch_equation_relative_residual": 5.27013372723763e-17,
+          "equipotential_relative_residual": 0.0,
+          "gauge_relative_residual": 0.0,
+          "raw_reciprocity_absolute_error_ohm": 0.0,
+          "raw_reciprocity_relative_error": 0.0,
+          "min_hermitian_impedance_eigenvalue_ohm": 0.0016710433217980813,
+          "passivity_tolerance_ohm": 1.7029127477166994e-12
+        },
+        {
+          "component_count": 1,
+          "gauge_node_ids": [
+            "right"
+          ],
+          "branch_impedance_condition_estimate": 1.0,
+          "branch_impedance_nnz": 3,
+          "saddle_nnz": 17,
+          "scaled_saddle_condition_estimate": 6.542739454294734,
+          "backward_relative_residual": 1.3732840615212272e-20,
+          "nodal_kcl_relative_residual": 0.0,
+          "branch_equation_relative_residual": 5.27013372723763e-17,
+          "equipotential_relative_residual": 0.0,
+          "gauge_relative_residual": 0.0,
+          "raw_reciprocity_absolute_error_ohm": 0.0,
+          "raw_reciprocity_relative_error": 0.0,
+          "min_hermitian_impedance_eigenvalue_ohm": 0.0016710433217980813,
+          "passivity_tolerance_ohm": 1.7029127477166994e-12
+        }
+      ]
+    },
+    {
+      "case": "dc_sheet_upper_bound",
+      "trace_dc_r_ohm": 0.0005535909243976422,
+      "z_ohm": [
+        0.0018890074631784386,
+        0.0003279116390280663
+      ],
+      "analytic_z_ohm": [
+        0.0018890074631784386,
+        0.0003279116390280663
+      ],
+      "gauges": [
+        {
+          "component_count": 1,
+          "gauge_node_ids": [
+            "left"
+          ],
+          "branch_impedance_condition_estimate": 1.0,
+          "branch_impedance_nnz": 3,
+          "saddle_nnz": 17,
+          "scaled_saddle_condition_estimate": 6.543759715842108,
+          "backward_relative_residual": 1.3732838168272507e-20,
+          "nodal_kcl_relative_residual": 0.0,
+          "branch_equation_relative_residual": 4.8450291531493804e-17,
+          "equipotential_relative_residual": 0.0,
+          "gauge_relative_residual": 0.0,
+          "raw_reciprocity_absolute_error_ohm": 0.0,
+          "raw_reciprocity_relative_error": 0.0,
+          "min_hermitian_impedance_eigenvalue_ohm": 0.0018890074631784386,
+          "passivity_tolerance_ohm": 1.9172572177342073e-12
+        },
+        {
+          "component_count": 1,
+          "gauge_node_ids": [
+            "right"
+          ],
+          "branch_impedance_condition_estimate": 1.0,
+          "branch_impedance_nnz": 3,
+          "saddle_nnz": 17,
+          "scaled_saddle_condition_estimate": 6.543759715842108,
+          "backward_relative_residual": 1.3732838168272507e-20,
+          "nodal_kcl_relative_residual": 0.0,
+          "branch_equation_relative_residual": 4.8450291531493804e-17,
+          "equipotential_relative_residual": 0.0,
+          "gauge_relative_residual": 0.0,
+          "raw_reciprocity_absolute_error_ohm": 0.0,
+          "raw_reciprocity_relative_error": 0.0,
+          "min_hermitian_impedance_eigenvalue_ohm": 0.0018890074631784386,
+          "passivity_tolerance_ohm": 1.9172572177342073e-12
+        }
+      ]
+    }
+  ],
+  "retained_owners": [
+    "via:via336274",
+    "via:via336273"
+  ],
+  "new_trace_owner": "trace:adc_vdd_180_vqps_sys_1_aon/0:trace311318",
+  "native_gc_changed": false,
+  "full_board_solve_executed": false,
+  "powersi_comparison_executed": false,
+  "scope": "Bounds for an assumed exact-circle, uniform-thickness 2D DC sheet with equipotential 40 um filled-microvia sections under the existing qualified MLO assumption. Not bounds on 3D conductor impedance, the 64-gon FEM geometry, AC sheet response, full PDN or PowerSI. Using each DC bound in a 1 MHz local RL network tests composition only; no point estimate or product candidate is selected. Both native via RL owners are retained unchanged; only their ideal degree-two joint is split. No native G/C is present in this isolated boundary experiment.",
+  "elapsed_s": 0.046999999991385266
+}

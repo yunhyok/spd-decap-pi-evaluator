@@ -1,0 +1,18 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "ACCEPT_EXACT_SOURCE_RECORD_ONLY",
+  "source_path": "D:\\S4LB002-2Para_260729_1_injected.spd",
+  "observed_source_size_bytes": 1116717287,
+  "source_sha256_recorded_by_d103_not_recomputed": "40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2",
+  "d103_receipt_sha256_verified": "4ea63cf86f6b1f4e8d56eead82033606cd2a2f9b6fae1b14e857a51e4c0749f9",
+  "record_offset": 1068993334,
+  "record_end_exclusive": 1068993428,
+  "bytes_read": 94,
+  "record_sha256_verified": "38e968c757cf57074119eb719638729d5e5e5c1f519a7eace30dd991ebf8f437",
+  "record_text": ".MetalModel COPPER\n*Temperature(C) Conductivity(S/m)\n2.000000e+01 5.959000e+07\n.EndMetalModel\n",
+  "temperature_c": 20.0,
+  "conductivity_s_per_m": 59590000.0,
+  "verification": "Read-only seek to the D103-sealed offset, exact 94-byte length and SHA-256 match. No whole-SPD scan or reparse.",
+  "scope": "Source COPPER material row at 20 C only; selected conductor assignment, geometry, terminal return, other temperatures, and product propagation need their own evidence. No PowerSI comparison or product change."
+}

@@ -1,0 +1,207 @@
+{
+  "acceptance": {
+    "checks": {
+      "base_and_load_each_stamp_once": false,
+      "duplicate_base_negative_control_is_two_stamps": true,
+      "network_residual_and_direct_matrix_gates": false,
+      "positive_response_matches_direct_reference": false,
+      "remote_response_matches_direct_reference": false,
+      "separated_p_g_stops_without_return_mode": true,
+      "terminal_y_is_reciprocal_passive_and_floating": false,
+      "via_and_termination_owner_conflicts_fail_closed": true
+    },
+    "unchanged_scope": "canonical-only; replacement support is not demonstrated"
+  },
+  "inputs": {
+    "base_capacitance_f": 7.5e-10,
+    "frequency_hz": 2000000.0,
+    "max_runtime_s": 45.0,
+    "remote_series_rlc": {
+      "capacitance_f": 1e-06,
+      "esl_h": 1e-08,
+      "esr_ohm": 0.08,
+      "impedance_at_frequency_ohm": {
+        "imag": 0.04608623459764405,
+        "real": 0.08
+      }
+    }
+  },
+  "negative_controls": {
+    "spatially_separated_p_g": {
+      "message": "finite-port input has no admissible return mode",
+      "type": "SurfacePatchPlaneError"
+    },
+    "termination_owner_conflict": {
+      "message": "supplemental nodal owner conflicts with termination owner",
+      "type": "LayerSurfaceNetworkError"
+    },
+    "via_owner_conflict": {
+      "message": "supplemental nodal owner conflicts with Via owner",
+      "type": "LayerSurfaceNetworkError"
+    }
+  },
+  "negative_duplicate_base": {
+    "base_numeric_stamp_count": 1,
+    "base_owner_id": "synthetic:base-body",
+    "observed_admittance_s": {
+      "imag": 0.01884955592153876,
+      "real": -0.0
+    },
+    "observed_to_one_stamp_ratio": 2.0,
+    "one_stamp_reference_admittance_s": {
+      "imag": 0.00942477796076938,
+      "real": 0.0
+    },
+    "remote_observed_to_one_stamp_ratio": 2.0,
+    "same_owner_duplicate_not_rejected": true,
+    "status": "STOP_EXPECTED_DUPLICATION",
+    "supplemental_numeric_stamp_count": 1,
+    "supplemental_owner_id": "synthetic:base-body"
+  },
+  "nonclaims": [
+    "This does not modify or judge the product adapter or live layerwise replacement path.",
+    "This does not prove source connectivity, SPD/D117 validity, or PowerSI accuracy.",
+    "The duplicate-base result is an expected negative control; owner checks do not prevent replacement-vs-additive duplication."
+  ],
+  "positive_probe": {
+    "condensation": {
+      "compatible_current_residual": 4.6407061967640266e-17,
+      "constraint_transpose_incidence_residual": 0.0,
+      "gauge_residual": 6.083559329601778e-17,
+      "passivity_min_eigenvalue_s": -1.732119721326151e-14,
+      "passivity_tolerance_s": 4.212509993998752e-08,
+      "port_ids": [
+        "P0",
+        "G0",
+        "P1",
+        "G1"
+      ],
+      "reciprocity_relative": 4.841850649900688e-16,
+      "solve_residual": 6.562949600700664e-17,
+      "terminal_condition": 68318104.91363768,
+      "terminal_constraint_matrix": [
+        [
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "terminal_constraint_nullity": 2,
+      "terminal_constraint_rank": 2,
+      "terminal_row_sum_max_abs": 6.355287432313019e-14
+    },
+    "differential_reference_impedance_ohm": {
+      "drive_drive_loaded": {
+        "imag": 0.049895097389591296,
+        "real": 0.08217178896598122
+      },
+      "drive_nodal_pinv": {
+        "imag": 0.049895097389591345,
+        "real": 0.08217178896598021
+      },
+      "drive_remote_loaded": {
+        "imag": 0.04600544864883084,
+        "real": 0.08014290969280549
+      },
+      "drive_schur_from_pair_z": {
+        "imag": 0.049895097389587306,
+        "real": 0.08217178896598344
+      },
+      "remote_remote_loaded": {
+        "imag": 0.04600529163571829,
+        "real": 0.08013909123702245
+      }
+    },
+    "direct_reference_admittance_s": {
+      "imag": -5.398895195756996,
+      "real": 8.891392138413615
+    },
+    "direct_reference_driving_impedance_ohm": {
+      "imag": 0.0498950973895913,
+      "real": 0.08217178896598124
+    },
+    "direct_reference_metrics": {
+      "passivity_min_hermitian_eigenvalue_s": -1.608737255165149e-14,
+      "reciprocity_relative": 4.792870102023767e-16,
+      "row_sum_max_abs": 6.355287432313019e-14
+    },
+    "frequency_hz": 2000000.0,
+    "network_diagnostics": {
+      "active_structural_component_count": null,
+      "maximum_factor_pivot_ratio": null,
+      "maximum_relative_residual": null,
+      "solve_identity_sha256": null,
+      "structural_component_count": null,
+      "termination_manifest_sha256": null
+    },
+    "network_solve": {
+      "error": {
+        "message": "layer-network Kron block is singular near ('P0', 'G0', 'P1', 'G1')",
+        "type": "LayerSurfaceNetworkError"
+      },
+      "status": "STOP"
+    },
+    "observed_driving_impedance_ohm": null,
+    "observed_effective_admittance_s": null,
+    "relative_response_error": null,
+    "remote_direct_reference_admittance_s": {
+      "imag": -5.387818291001006,
+      "real": 9.385330387859122
+    },
+    "remote_observed_effective_admittance_s": null,
+    "remote_relative_response_error": null,
+    "stamp_manifest": {
+      "base": {
+        "numeric_stamp_count": 1,
+        "owner_id": "synthetic:base-body"
+      },
+      "supplemental": {
+        "block_id": "surface-global-y",
+        "numeric_stamp_count": 1,
+        "owner_ids": [
+          "synthetic:surface-global-y"
+        ]
+      },
+      "termination": {
+        "manifest_sha256": "40a87567b9fc58f1aa67bbbd0457212183897232dbe87d035737f99fa6ce5faf",
+        "network_active_cluster_count": null,
+        "network_active_element_count": null,
+        "numeric_stamp_count": 1,
+        "source_owner_ids": [
+          "synthetic:rail",
+          "synthetic:termination"
+        ]
+      }
+    },
+    "terminals": [
+      "P0",
+      "G0",
+      "P1",
+      "G1"
+    ]
+  },
+  "program": "SPD Decap PI Evaluator",
+  "resources": {
+    "total_elapsed_s": 0.01600000000325963,
+    "within_requested_process_limit": true
+  },
+  "scope": "synthetic interface seam only; no production, source-connectivity, or PowerSI claim",
+  "status": "STOP",
+  "study": "Astra Surface Global-Y Interface Probe",
+  "version": "0.23.1"
+}

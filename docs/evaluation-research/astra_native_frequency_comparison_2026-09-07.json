@@ -1,0 +1,284 @@
+{
+  "program": "SPD Decap PI Evaluator v0.23.1",
+  "version": "0.23.1",
+  "inputs": {
+    "one": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_native_device_branch_2port_2026-09-07.json",
+      "sha256": "ca736c0c593f75def6dc309607b3a5d97bbf478ce2f23c0edeab5a27ffff2568"
+    },
+    "high": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_native_device_branch_high_frequency_2026-09-07.json",
+      "sha256": "adaae3dcb21b0cabee95a3eee158beac5a941e10bce23b409d336ee46eb3277d"
+    },
+    "ref_one": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_powersi_1mhz_reference_2026-09-07.json",
+      "sha256": "00fbcfe67f1c1e1a2193b4ea0425d9f766040a92938a574dce6daa1b7be4365d"
+    },
+    "ref_high": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_powersi_followup_reference_2026-09-07.json",
+      "sha256": "1b3ed4e716457db5cf76fdc337c3d8f70665e870815c36fbe5b57b652ee43caf"
+    },
+    "trace": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_native_trace_comparison_2026-09-07-02.json",
+      "sha256": "8900352ce9298766892661fea734476b007b35dc84632fe463be645caffbc236"
+    },
+    "pair_contract": {
+      "path": "D:\\SPD-Decap-PI-Evaluator-W6\\fb36288781dcc0b884950ef5a486c474090ceebd\\260729\\run_manifest.json",
+      "sha256": "2b14f90e762abc49833518137812e8fc97fcde0e9c145795b7384210cfd9f5de"
+    }
+  },
+  "comparison_code_sha256": "ebeb141f155d8fc3886094952d0cdf89c446c5ee385c175ae10176b1a6fa613c",
+  "status": "COMPLETED_SPARSE_NATIVE_ERROR_DIAGNOSTIC",
+  "rail_id": "ADC_VDD_180_VQPS_SYS_1_AON/0",
+  "state": "source_mounted_scenario_manifest",
+  "points": [
+    {
+      "frequency_hz": 1000000.0,
+      "status": "COMPARED_ACTUAL_MOUNTED_POINT",
+      "native_zdd_ohm": [
+        1.218516664300409,
+        -295.7561129768786
+      ],
+      "reference_zdd_ohm": [
+        0.9719243613796971,
+        -247.30129589796056
+      ],
+      "magnitude_error_db": 1.5541533919696349,
+      "complex_relative_error": 0.19593536764095762,
+      "complex_gap_ohm": 48.45544454357291,
+      "native_phase_deg": -89.76394243755888,
+      "reference_phase_deg": -89.77482173313578,
+      "phase_error_deg": 0.01087929557689554,
+      "native_admittance_s": [
+        1.3930177216363604e-05,
+        0.0033811068714075946
+      ],
+      "reference_admittance_s": [
+        1.58917957860918e-05,
+        0.004043588007679243
+      ],
+      "native_susceptance_over_omega_pf": 538.1198717064921,
+      "reference_susceptance_over_omega_pf": 643.5570192492604,
+      "branch_current_per_device_amp": [
+        -0.33333333338086757,
+        -2.5917403009046736e-10
+      ],
+      "constant_R_algebraic_shadow": {
+        "added_resistance_ohm": 0.00044462442577010127,
+        "delta_zdd_ohm": [
+          4.8353967195552614e-05,
+          2.5217652977147605e-07
+        ],
+        "absolute_delta_ohm": 4.835462476899956e-05,
+        "delta_to_existing_gap_ratio": 9.979193303142088e-07
+      },
+      "cancellation_ratio": 1290512.654627941,
+      "solver_diagnostics": {
+        "active_reduced_node_count": 756889,
+        "active_structural_component_count": 1,
+        "active_termination_cluster_count": 11050,
+        "active_termination_element_count": 11050,
+        "finite_via_link_count": 1692389,
+        "maximum_factor_pivot_ratio": 9031482.148991613,
+        "maximum_port_rhs_batch_size": 4,
+        "maximum_relative_residual": 2.1583849563396574e-21,
+        "maximum_termination_kron_relative_residual": 0.0,
+        "physical_surface_count": 812988,
+        "pruned_portless_node_count": 0,
+        "reduced_node_count": 756889,
+        "solve_identity_sha256": "eb63b6061ed84d68fcb4d5b0083a37e7dd9cbbedd35d369d3813c7dc3bf7724f",
+        "structural_component_count": 1,
+        "termination_manifest_sha256": "c753669eacf83d3bfcf5c657e14e343a8c9ab5a0a2464039069a9053a293af75",
+        "topology_only_link_count": 56888
+      }
+    },
+    {
+      "frequency_hz": 10000000.0,
+      "status": "COMPARED_ACTUAL_MOUNTED_POINT",
+      "native_zdd_ohm": [
+        0.12714922341752427,
+        -29.831902622309336
+      ],
+      "reference_zdd_ohm": [
+        0.11399988370808822,
+        -24.686706945219413
+      ],
+      "magnitude_error_db": 1.6443421062612227,
+      "complex_relative_error": 0.2084181430896019,
+      "complex_gap_ohm": 5.14521247964354,
+      "native_phase_deg": -89.75579600642705,
+      "reference_phase_deg": -89.73541769715759,
+      "phase_error_deg": -0.02037830926946007,
+      "native_admittance_s": [
+        0.0001428709449329672,
+        0.033520551696976965
+      ],
+      "reference_admittance_s": [
+        0.0001870547857750238,
+        0.0405067665766503
+      ],
+      "native_susceptance_over_omega_pf": 533.4961497741305,
+      "reference_susceptance_over_omega_pf": 644.6852129343465,
+      "branch_current_per_device_amp": [
+        -0.3333333333300304,
+        2.3361760715917493e-12
+      ],
+      "constant_R_algebraic_shadow": {
+        "added_resistance_ohm": 0.00044462442577010127,
+        "delta_zdd_ohm": [
+          4.9239132465137e-05,
+          3.933389762149387e-07
+        ],
+        "absolute_delta_ohm": 4.924070350299149e-05,
+        "delta_to_existing_gap_ratio": 9.570198256691408e-06
+      },
+      "cancellation_ratio": 50563.562565681845,
+      "solver_diagnostics": {
+        "active_reduced_node_count": 756889,
+        "active_structural_component_count": 1,
+        "active_termination_cluster_count": 11050,
+        "active_termination_element_count": 11050,
+        "finite_via_link_count": 1692389,
+        "maximum_factor_pivot_ratio": 210904.863961265,
+        "maximum_port_rhs_batch_size": 4,
+        "maximum_relative_residual": 2.704741413498383e-21,
+        "maximum_termination_kron_relative_residual": 0.0,
+        "physical_surface_count": 812988,
+        "pruned_portless_node_count": 0,
+        "reduced_node_count": 756889,
+        "solve_identity_sha256": "671ac7f8f184234f08f1a880a38787200af633f2f83096c832068ec76fa0d41e",
+        "structural_component_count": 1,
+        "termination_manifest_sha256": "c753669eacf83d3bfcf5c657e14e343a8c9ab5a0a2464039069a9053a293af75",
+        "topology_only_link_count": 56888
+      }
+    },
+    {
+      "frequency_hz": 100000000.0,
+      "status": "COMPARED_ACTUAL_MOUNTED_POINT",
+      "native_zdd_ohm": [
+        0.01783520440785204,
+        -2.646753986857179
+      ],
+      "reference_zdd_ohm": [
+        0.05939400549468876,
+        -2.043986139239798
+      ],
+      "magnitude_error_db": 2.2412443130180315,
+      "complex_relative_error": 0.2954735780782651,
+      "complex_gap_ohm": 0.6041988183280941,
+      "native_phase_deg": -89.61391709326493,
+      "reference_phase_deg": -88.33557162342208,
+      "phase_error_deg": -1.2783454698428491,
+      "native_admittance_s": [
+        0.002545840665912783,
+        0.37780413267600454
+      ],
+      "reference_admittance_s": [
+        0.014204311061704798,
+        0.4888273603667196
+      ],
+      "native_susceptance_over_omega_pf": 601.2939523593238,
+      "reference_susceptance_over_omega_pf": 777.9929072092668,
+      "branch_current_per_device_amp": [
+        -0.33333333333333126,
+        -6.296486837720181e-15
+      ],
+      "constant_R_algebraic_shadow": {
+        "added_resistance_ohm": 0.00044462442577010127,
+        "delta_zdd_ohm": [
+          4.940079854765589e-05,
+          4.6057264550817073e-08
+        ],
+        "absolute_delta_ohm": 4.940082001766467e-05,
+        "delta_to_existing_gap_ratio": 8.176252339315048e-05
+      },
+      "cancellation_ratio": 493.04454985178694,
+      "solver_diagnostics": {
+        "active_reduced_node_count": 756889,
+        "active_structural_component_count": 1,
+        "active_termination_cluster_count": 11050,
+        "active_termination_element_count": 11050,
+        "finite_via_link_count": 1692389,
+        "maximum_factor_pivot_ratio": 36413.22336157207,
+        "maximum_port_rhs_batch_size": 4,
+        "maximum_relative_residual": 4.0332973801359045e-19,
+        "maximum_termination_kron_relative_residual": 0.0,
+        "physical_surface_count": 812988,
+        "pruned_portless_node_count": 0,
+        "reduced_node_count": 756889,
+        "solve_identity_sha256": "44bba99344e42901f98bd8bcf8759fd4d0c3b0e1a870219d293f1d13ae830154",
+        "structural_component_count": 1,
+        "termination_manifest_sha256": "c753669eacf83d3bfcf5c657e14e343a8c9ab5a0a2464039069a9053a293af75",
+        "topology_only_link_count": 56888
+      }
+    },
+    {
+      "frequency_hz": 1000000000.0,
+      "status": "COMPARED_ACTUAL_MOUNTED_POINT",
+      "native_zdd_ohm": [
+        0.006937421887937759,
+        3.4051763856371506
+      ],
+      "reference_zdd_ohm": [
+        0.1662621799193209,
+        3.9043520066012003
+      ],
+      "magnitude_error_db": -1.196037308622158,
+      "complex_relative_error": 0.13408394846989224,
+      "complex_gap_ohm": 0.5239853806038899,
+      "native_phase_deg": 89.88327052700795,
+      "reference_phase_deg": 87.56160067505374,
+      "phase_error_deg": 2.321669851954216,
+      "native_admittance_s": [
+        0.0005982973478204465,
+        -0.2936693246132012
+      ],
+      "reference_admittance_s": [
+        0.0108870122349082,
+        -0.25566083691361524
+      ],
+      "native_susceptance_over_omega_pf": -46.73892464664938,
+      "reference_susceptance_over_omega_pf": -40.68968594981277,
+      "branch_current_per_device_amp": [
+        -0.3333333333333261,
+        1.5705068972352924e-17
+      ],
+      "constant_R_algebraic_shadow": {
+        "added_resistance_ohm": 0.00044462442577010127,
+        "delta_zdd_ohm": [
+          4.940269478738889e-05,
+          4.613612540608472e-09
+        ],
+        "absolute_delta_ohm": 4.9402695002816615e-05,
+        "delta_to_existing_gap_ratio": 9.428258274282446e-05
+      },
+      "cancellation_ratio": 76.21843197704938,
+      "solver_diagnostics": {
+        "active_reduced_node_count": 756889,
+        "active_structural_component_count": 1,
+        "active_termination_cluster_count": 11050,
+        "active_termination_element_count": 11050,
+        "finite_via_link_count": 1692389,
+        "maximum_factor_pivot_ratio": 36651.90856007403,
+        "maximum_port_rhs_batch_size": 4,
+        "maximum_relative_residual": 3.200035122208355e-18,
+        "maximum_termination_kron_relative_residual": 0.0,
+        "physical_surface_count": 812988,
+        "pruned_portless_node_count": 0,
+        "reduced_node_count": 756889,
+        "solve_identity_sha256": "0c87bd21925bf1b35d6c70f2d0b2a684b86d6c6aa4a67fda93a20e7c20077e38",
+        "structural_component_count": 1,
+        "termination_manifest_sha256": "c753669eacf83d3bfcf5c657e14e343a8c9ab5a0a2464039069a9053a293af75",
+        "topology_only_link_count": 56888
+      }
+    }
+  ],
+  "limitations": [
+    "Four diagnostic points on one rail are not broadband or unseen validation and do not locate a resonance precisely.",
+    "Susceptance divided by omega is an equivalent response indicator, may be negative for an inductive response, and is not a source material/capacitance parameter.",
+    "The constant-R shadow at high frequency is algebra only: it does not represent skin/proximity effects, external or mutual L, distributed return paths or actual AC trace physics.",
+    "Cancellation and solver residual/pivot diagnostics are retained; a tiny residual is not a forward error guarantee.",
+    "No PowerSI fitting or native physical parameter change occurred.",
+    "The historical run manifest is used only to bind the supplied SPD/Touchstone pair, not to claim that its old candidate solver is the current native model."
+  ]
+}

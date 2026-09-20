@@ -1,0 +1,85 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "ACCEPT_CONDITIONAL_ELECTRODE_SENSITIVITY_ONLY",
+  "inputs": {
+    "source": {
+      "file": "astra_l21_four_terminal_dc_2026-09-07.json",
+      "sha256": "76bbb152f89b0e8086128f34a489f06c77ba10b2dfae0b952fc245723881ce3b"
+    },
+    "pad175": {
+      "file": "astra_l21_triangle_boundary10_2026-09-07.json",
+      "sha256": "547f06c5c41d4f4a1d8ee19c70ba449d931546a5b3e6891efc4c74ed0c4c9b3d"
+    },
+    "core75": {
+      "file": "astra_l21_core75_sensitivity_2026-09-07.json",
+      "sha256": "45da3f5b8bb56e82559bdae7e5c759bfbc07738a65a8efd7e03e665a1f90833c"
+    },
+    "core75_boundary20": {
+      "file": "astra_l21_core75_boundary20_2026-09-07.json",
+      "sha256": "67f3dfee6bd4a5d90446b30241442389ca9b0db95a60357d13205b2ee0123997"
+    }
+  },
+  "source_core_drill_diameter_um": 150,
+  "source_core_pad_diameter_um": 350,
+  "relative_changes_core75": {
+    "resolution_10_to_5_max_pair_relative": 0.004076995681373798,
+    "circle_64_to_128_max_pair_relative": 0.00024579901692507413,
+    "outer_boundary_20_to_10_max_pair_relative": 3.901301048217898e-05
+  },
+  "core75_pair_r_ohm": [
+    0.0003558939098414712,
+    0.00040853664633029655,
+    0.0003506919143093403,
+    0.0007353809643623232,
+    0.0006801230949467104,
+    0.00034935340272944035
+  ],
+  "pair_increase_relative_to_pad175": [
+    0.8370666925498453,
+    0.5759993471272892,
+    0.6989785360272368,
+    0.6235715611537684,
+    0.6998353512860007,
+    0.09034555927056685
+  ],
+  "delta_balanced_r_eigenvalues_ohm": [
+    1.444600653705619e-05,
+    0.00015896547567858496,
+    0.00028234428888045457
+  ],
+  "frequency_hz": 1000000.0,
+  "local_2port_formula": "Zcore*ones + inverse(K inverse(Rsheet+diag(Zmicro)) K.T), K=[[1,0,0],[0,1,1]]",
+  "local_core75_z_ohm": [
+    [
+      [
+        0.0019565826753388613,
+        0.0026371631996173817
+      ],
+      [
+        0.0008466841848722547,
+        0.0024385191055553875
+      ]
+    ],
+    [
+      [
+        0.0008466841848722545,
+        0.0024385191055553875
+      ],
+      [
+        0.001508608413586261,
+        0.0025379286067725823
+      ]
+    ]
+  ],
+  "local_real_diagonal_increase_relative_to_pad175": [
+    0.09037109519592423,
+    0.10188560783396217
+  ],
+  "runtime_mesh_seconds": [
+    19.405999999988126,
+    8.375
+  ],
+  "scope": "Conditional core-electrode sensitivity only: replace the 175 um whole-pad equipotential core electrode by a 75 um nominal-drill-radius equipotential electrode; three microvia electrodes stay at 20 um. This is an assumed concentric electrode family, not source-certified core fill, plating thickness, 3D injection, AC behavior or a bound on actual core resistance. Source outer polygon/material and all original geometric guards stay fixed. Numerical refinement is sampled, not a rigorous error bound. No fifth artwork/G-C replacement, board current or PowerSI result.",
+  "decision": "Contact assumption sensitivity dominates sampled numerical changes. Preserve pad175 only as its declared conditional model; do not select a physical core injection radius from this experiment. Local circuit uses constant DC sheet R and unchanged native via RL; full AC/fifth G-C attachment and actual Device response remain missing."
+}

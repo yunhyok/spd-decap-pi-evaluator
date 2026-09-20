@@ -1,0 +1,57 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "source_record_sha256": "e4bbbc54e4f1708ad684605e41c5a17cb0dc7fcdd49c2794437196803c82ec01",
+  "status": "BOUNDARY_DIAGNOSTIC_ONLY",
+  "refined_triangle_failures": [
+    {
+      "vertices_m": [
+        [
+          -0.011466261408923529,
+          0.012222662604610784
+        ],
+        [
+          -0.01137803,
+          0.012139549999999999
+        ],
+        [
+          -0.011365535,
+          0.012152050000000001
+        ]
+      ],
+      "outside_area_m2": 0.0,
+      "max_vertex_distance_m": 0.0
+    },
+    {
+      "vertices_m": [
+        [
+          -0.011453766408923528,
+          0.012235162604610786
+        ],
+        [
+          -0.011365535,
+          0.012152050000000001
+        ],
+        [
+          -0.01135304,
+          0.012164550000000001
+        ]
+      ],
+      "outside_area_m2": 0.0,
+      "max_vertex_distance_m": 0.0
+    }
+  ],
+  "source_area_m2": 3.2636258359999914e-07,
+  "translation_anchor_um": [
+    -12060.0,
+    12577.970000000001
+  ],
+  "translation_roundtrip_hausdorff_m": 0.0,
+  "translated_refinement_1": {
+    "status": "STOP",
+    "error_code": "MESH_CROSSES_VOID",
+    "error": "MESH_CROSSES_VOID: refined triangle exits artwork"
+  },
+  "elapsed_s": 0.125,
+  "scope": "No product change, tolerance relaxation, clipping, buffer repair, or four-contact acceptance. Midpoint subdivision and strict boundary predicate are diagnosed on the actual small source polygon."
+}

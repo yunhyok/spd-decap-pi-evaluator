@@ -1,0 +1,23 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "ACCEPT_EXISTING_REFERENCE_POINT_ONLY",
+  "source_path": "D:\\S4LB002-2Para_260729_1_injected_073026_100913_33216_S.s92p",
+  "source_sha256": "c5fca21da6f3b1f1e097ac6fc4c2c4f40a44201617502a9e5bf864e2a5fe7a11",
+  "rail_id": "ADC_VDD_180_VQPS_SYS_1_AON/0",
+  "port_one_based": 44,
+  "port_header": "2nd_SITE0-ADC_VDD_180_VQPS_SYS_1_AON/0",
+  "frequency_hz": 1000000.0,
+  "source_frequency_index": 175,
+  "source_record_count": 826,
+  "reference_ohm": 1.0,
+  "full_matrix_ports": 92,
+  "reference_zdd_ohm": [
+    0.9719243613796971,
+    -247.30129589796056
+  ],
+  "s_to_z_condition": 372.7702551246192,
+  "s_to_z_relative_residual": 3.591201994947023e-16,
+  "elapsed_s": 18.59399999998277,
+  "scope": "Existing source-mounted PowerSI export; full 92-port S-to-Z at one exact frequency, all other port currents zero. No interpolation, fitting, new PowerSI run, source-SPD scan or candidate solve. A deliberately unloaded candidate is a different board state and must be labelled accordingly."
+}

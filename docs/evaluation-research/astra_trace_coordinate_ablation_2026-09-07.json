@@ -1,0 +1,39 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "COORDINATE_ABLATION_DIAGNOSTIC_ONLY",
+  "input_sha256": [
+    "3bb5027424488b17cb2c6f85c75f5edeb0ff9b041929c5b6c3087417b9c4554d",
+    "e997be26af4c75c45c2e473e9264237a748fb49516a1db1253056d340d4b84ca"
+  ],
+  "new_cells": [
+    {
+      "case": "original_float_um",
+      "status": "STOP",
+      "code": "MESH_CROSSES_VOID",
+      "detail": "MESH_CROSSES_VOID: refined triangle exits artwork"
+    },
+    {
+      "case": "inward_dyadic_rescaled_to_m",
+      "status": "STOP",
+      "code": "MESH_CROSSES_VOID",
+      "detail": "MESH_CROSSES_VOID: refined triangle exits artwork"
+    }
+  ],
+  "reused_original_m_level1": {
+    "level": 1,
+    "status": "STOP",
+    "code": "MESH_CROSSES_VOID",
+    "detail": "MESH_CROSSES_VOID: refined triangle exits artwork"
+  },
+  "reused_dyadic_um_level1": {
+    "circle_sides": 64,
+    "level": 1,
+    "nodes": 779,
+    "triangles": 1376,
+    "r_ohm": 0.00043257740445547314,
+    "operator_sha256": "98e3514c7dd40fc23f3629224976a7ea5301e1952b19dca7a75cb3ac70e9cde0"
+  },
+  "elapsed_s": 0.046999999991385266,
+  "scope": "Two additional one-level controls separate normalization from inward dyadic approximation for this source patch. Reuses frozen original-m STOP and dyadic-um PASS without rerunning them. No product edit or guard bypass; neither a general predicate diagnosis nor PowerSI validation."
+}

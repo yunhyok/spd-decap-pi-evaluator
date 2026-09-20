@@ -1,0 +1,176 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "DIAGNOSTIC_LOCAL_DC_SINGLE_MESH_ONLY",
+  "input_sha256": "76bbb152f89b0e8086128f34a489f06c77ba10b2dfae0b952fc245723881ce3b",
+  "source_bridge_sha256": "e4bbbc54e4f1708ad684605e41c5a17cb0dc7fcdd49c2794437196803c82ec01",
+  "source_asset_sha256": "b0ab5dda526415e8a5373683a3a9612985e3b6f7a2aaae6808fb3ad257beb7d1",
+  "coordinate_origin_um": [
+    -11700.0,
+    12403.0
+  ],
+  "dyadic_quantum_um": 9.5367431640625e-07,
+  "electrode_radii_um": [
+    175.0,
+    20.0,
+    20.0,
+    20.0
+  ],
+  "balanced_basis": [
+    [
+      -1.0,
+      -1.0,
+      -1.0
+    ],
+    [
+      1.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      1.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "sheet_rows": [
+    {
+      "circle_sides": 128,
+      "area_target_spacing_um": 5.0,
+      "nodes": 21084,
+      "triangles": 41766,
+      "contact_node_order": [
+        "Node2140546",
+        "Node2140547",
+        "Node2140578",
+        "Node2140579"
+      ],
+      "y_s": [
+        [
+          11803.728003583818,
+          -5161.428480539722,
+          -2773.896182274059,
+          -3868.403340770037
+        ],
+        [
+          -5161.428480539722,
+          5161.837989653866,
+          -0.020832540540385133,
+          -0.3886765736041811
+        ],
+        [
+          -2773.896182274059,
+          -0.020832540540385133,
+          4279.393960778666,
+          -1505.4769459640668
+        ],
+        [
+          -3868.403340770037,
+          -0.3886765736041811,
+          -1505.4769459640668,
+          5374.268963307708
+        ]
+      ],
+      "balanced_z_ohm": [
+        [
+          0.0001937294444914741,
+          6.514009059721071e-09,
+          1.5835602523371595e-08
+        ],
+        [
+          6.514009059707519e-09,
+          0.00025922386774777017,
+          7.261556165762827e-05
+        ],
+        [
+          1.5835602523351267e-08,
+          7.261556165762828e-05,
+          0.00020641338714576807
+        ]
+      ],
+      "pair_r_ohm": [
+        0.0001937294444914741,
+        0.00025922386774777017,
+        0.00020641338714576807,
+        0.0004529402842211248,
+        0.00040011116043219545,
+        0.00032040613157828166
+      ],
+      "operator_sha256": "8342581c2f425d41f0f4e2fc36a5577fb2d350ad43b83a8d87e0be1600df11bd"
+    }
+  ],
+  "triangulator_calls": [
+    {
+      "options": "pq20a12.5YYQzCS30000",
+      "input_vertices": 128,
+      "input_holes": 0,
+      "output_vertices": 5991,
+      "output_triangles": 11852,
+      "missing_boundary_edges": 0,
+      "native_elapsed_s": 0.0
+    },
+    {
+      "options": "pq20a12.5YYQzCS30000",
+      "input_vertices": 128,
+      "input_holes": 0,
+      "output_vertices": 258,
+      "output_triangles": 386,
+      "missing_boundary_edges": 0,
+      "native_elapsed_s": 0.0
+    },
+    {
+      "options": "pq20a12.5YYQzCS30000",
+      "input_vertices": 128,
+      "input_holes": 0,
+      "output_vertices": 258,
+      "output_triangles": 386,
+      "missing_boundary_edges": 0,
+      "native_elapsed_s": 0.0
+    },
+    {
+      "options": "pq20a12.5YYQzCS30000",
+      "input_vertices": 128,
+      "input_holes": 0,
+      "output_vertices": 256,
+      "output_triangles": 382,
+      "missing_boundary_edges": 0,
+      "native_elapsed_s": 0.0
+    },
+    {
+      "options": "pq20a12.5YYQzCS30000",
+      "input_vertices": 912,
+      "input_holes": 4,
+      "output_vertices": 14833,
+      "output_triangles": 28760,
+      "missing_boundary_edges": 0,
+      "native_elapsed_s": 0.030999999988125637
+    }
+  ],
+  "relative_changes": {},
+  "gate": 0.02,
+  "failure": null,
+  "elapsed_s": 8.187000000005355,
+  "algorithm": "Existing Triangle per-face PSLG, q20 and max area=spacing^2/2, YY forbids segment subdivision, S30000 caps Steiner points. Requested quality/area are meshing controls, not claimed achieved gates. Exact original boundary edges, triangle face containment and all original FEM/contact/coverage guards remain required. No uniform midpoint refinement.",
+  "backend_evidence": {
+    "package": "triangle",
+    "version": "20250106",
+    "wheel_sha256": "0327032a7984a7262180ef2ddd78b36dfdcdecbc79f0f9f173732ce7c670b8ed",
+    "verified_installed_payload_files": 75,
+    "site": "D:\\SPD-Decap-PI-Evaluator-W7\\e2f219e71d8c8a397009f72242cce10d78cfc7ab\\260903-d117-triangle-w0-research-pilot-01\\site",
+    "c1_input_or_runner_executed": false,
+    "new_dependency_installed": false,
+    "outer_segment_max_um": 10.0,
+    "outer_original_edges": 8,
+    "outer_subdivided_edges": 400,
+    "identical_domain": true,
+    "original_artwork_wkb_sha256": "dc9071365d5266f08d34ef6585c9eef756e055760861ef17f1ce623f53b7e01b",
+    "subdivided_artwork_wkb_sha256": "0c64baa0e66a9edd9e3811841c6c4ff268cdb4f3f0968738f9222600b8392076"
+  },
+  "reference": "https://www.cs.cmu.edu/~quake/triangle.switch.html",
+  "scope": "Full floating four-terminal DC sheet under three qualified filled-microvia barrel electrodes and a separately retained whole-core-pad equipotential approximation. The core is not classified as filled; its 175 um pad electrode is not a plating/current-injection certification. Nominal source copper is preserved through inward geometric approximation; original whole-pad tangency STOP remains. Full Y and balanced Z are retained with no chosen current split. Native fifth ideal artwork link and its G/C distribution are unresolved for AC replacement. No external/mutual L, source plane replacement, production promotion, board Zii or PowerSI comparison. Research-only triangulator substitution restored in finally. Grid-density convergence does not imply a production convergence attestation or a general mesher fix."
+}
