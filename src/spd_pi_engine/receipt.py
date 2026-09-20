@@ -142,7 +142,15 @@ def fit_dl(f, dIm, lo=2.9e4, hi=1.001e6):
 
 
 def ladder_gates(freq, Z, zr, fres_m, fres_r):
-    """`exp3/run3.ladder_gates` verbatim: G1-G5 and the frozen PASS rule (D3, CLAUDE.md §3)."""
+    """`exp3/run3.ladder_gates` with the D10 correction: G1-G5 and the frozen PASS rule
+    (D3, CLAUDE.md §3).
+
+    D10 (2026-09-20, owner): G4's f_res term compares the model's f_res with **this case's**
+    reference f_res (`fres_r`), not with the 1.585 MHz constant exp3 carried over from Port18
+    (`docs/research-claude/2026-09-15/DECISIONS.md` D10, `docs/engine/W14D_REPORT.md`).  The old
+    key stays in the receipt so engine receipts remain comparable with the research ones, but it
+    is no longer part of PASS.  `fres_r` None/non-finite/zero -> NaN and G4 False.
+    """
     w = 2 * np.pi * freq
     d = {}
     lo = (freq >= 1e3) & (freq <= 1.001e5)
@@ -155,12 +163,15 @@ def ladder_gates(freq, Z, zr, fres_m, fres_r):
     m4 = (freq >= 0.999e6) & (freq <= 1.001e7)
     d["G4_max_rel_err"] = float(np.max(np.abs(Z - zr)[m4] / np.abs(zr)[m4]))
     d["G4_f_res_model_Hz"] = fres_m
-    d["G4_f_res_rel_err_vs_1.585MHz"] = float(abs(fres_m - 1.585e6) / 1.585e6)
+    d["G4_f_res_ref_Hz"] = fres_r
+    usable = fres_r is not None and np.isfinite(fres_r) and fres_r != 0
+    d["G4_f_res_rel_err_vs_ref"] = float(abs(fres_m - fres_r) / fres_r) if usable else float("nan")
+    d["G4_f_res_rel_err_vs_1.585MHz"] = float(abs(fres_m - 1.585e6) / 1.585e6)   # D10: kept, not gated
     m5 = freq > 1.001e7
     d["G5_rel_err"] = [float(x) for x in (np.abs(Z - zr)[m5] / np.abs(zr)[m5])]
     d["PASS"] = dict(G1=bool(d["G1_max_abs_dRe_mOhm"] <= 0.05), G2=bool(max(abs(dl.min()), abs(dl.max())) <= 5.0),
                      G3=bool(d["G3_rel_err_1MHz"] < 0.10),
-                     G4=bool(d["G4_max_rel_err"] < 0.20 and d["G4_f_res_rel_err_vs_1.585MHz"] < 0.10))
+                     G4=bool(d["G4_max_rel_err"] < 0.20 and d["G4_f_res_rel_err_vs_ref"] < 0.10))
     return d
 
 
@@ -349,6 +360,9 @@ def demo() -> None:
     zr = 1e-3 + 1j * (2 * np.pi * f * 1e-9 - 1.0 / (2 * np.pi * f * 1e-5))
     g = ladder_gates(f, zr.copy(), zr, 1.585e6, 1.585e6)
     assert g["PASS"] == dict(G1=True, G2=True, G3=True, G4=True), g
+    g10 = ladder_gates(f, zr.copy(), zr, 3.0e6, 3.1e6)          # D10: the case's own reference
+    assert abs(g10["G4_f_res_rel_err_vs_ref"] - 0.0323) < 5e-4 and abs(
+        g10["G4_f_res_rel_err_vs_1.585MHz"] - 0.8927) < 5e-4, g10
     assert abs(g["G3_rel_err_1MHz"]) < 1e-15 and abs(fit_dl(f, np.zeros_like(f))) < 1e-9
     fr, _ = resonance(f, zr)
     assert 1e6 < fr < 3e6, fr

@@ -227,3 +227,4 @@ docs/handoff 스냅샷·accuracy_parse.py 수정 금지, 커밋은 내가 요청
 - 2026-09-19 소유자 지시: (1) microvia 구리 충전 가정(D9, 수치 변경 없음 — 모델은 이미 40 µm via를 충전 원기둥으로 계산), (2) 앱을 W12 API로 단순화해 검증, (3) 워크스테이션(Threadripper 32C/64T, 512 GB, RTX A6000) 대응 — 엔진 W13(하드웨어 프로파일·자동 병렬/청크 산정) 진행.
 - 2026-09-19 완료: D9 반영, 앱 v2(결과 동일), W13 하드웨어 프로파일(워크스테이션 대응, 실측은 장비에서). 표준 실행은 `python -m spd_pi_engine sweep --jobs auto`.
 - 2026-09-19 W11 제품 통합 완료(옵트인 프로파일, 기본값 불변). 엔진 계획 W1–W13 전부 완료. 다음 세션 진입점: `src/spd_pi_engine/README.md`, `docs/engine/ENGINE_PLAN_2026-09-18.md` 말미 상태.
+- **2026-09-20 소유자 결정 D10 — G4 게이트 정정**: 엔진 영수증의 G4 f_res 항이 상수 1.585 MHz(exp3에 박힌 260729 Port18의 참조값) 대신 **케이스별 참조 f_res**와 비교한다 → `DECISIONS.md` D10, 구현·검증 `docs/engine/W14D_REPORT.md`, 재판정한 통과 수 `docs/engine/W14B_REPORT.md` §10-6(G4 0/27 → 2/27). 수치는 불변이다(`numerics_id` 27d81996… 그대로). **연구 트리와 `results/expN`의 G4 수치는 상수 규칙으로 계산된 역사 기록이며 재판정하지 않는다.**

@@ -70,6 +70,21 @@ def test_receipt_demo(capsys):
     assert "DEMO PASS" in capsys.readouterr().out
 
 
+def test_g4_f_res_term_uses_the_case_reference():
+    """D10: G4's f_res term is |f_res_m - f_res_ref| / f_res_ref, not the 1.585 MHz constant."""
+    f = np.array([1e3, 1e4, 1e5, 1e6, 5e6, 1e7, 1e8])
+    zr = 1e-3 + 1j * (2 * np.pi * f * 1e-9 - 1.0 / (2 * np.pi * f * 1e-5))
+    fm = 4.0e6                                              # a rail whose reference f_res is 4 MHz
+    g = receipt.ladder_gates(f, zr.copy(), zr, fm, fm * 1.03)
+    assert g["G4_f_res_ref_Hz"] == fm * 1.03
+    assert abs(g["G4_f_res_rel_err_vs_ref"] - 0.03 / 1.03) < 1e-12 and g["PASS"]["G4"]
+    assert g["G4_f_res_rel_err_vs_1.585MHz"] > 1.5          # the old constant: far off, not gated
+    same = receipt.ladder_gates(f, zr.copy(), zr, 1.6e6, 1.585e6)
+    assert same["G4_f_res_rel_err_vs_ref"] == same["G4_f_res_rel_err_vs_1.585MHz"]
+    none = receipt.ladder_gates(f, zr.copy(), zr, fm, None)
+    assert np.isnan(none["G4_f_res_rel_err_vs_ref"]) and not none["PASS"]["G4"]
+
+
 def test_parser_api():
     """C16: the private `spd_decap_pi._core.io.spd` symbols the adapter calls still exist."""
     spd_source.check_parser_api()

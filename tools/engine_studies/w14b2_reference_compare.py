@@ -11,6 +11,7 @@ Z_ref 의 사다리 점 정렬은 **엔진의 `attach_reference`** 가 하는 �
 나온다.  케이스 목록·참조 npz 해석·경로는 `w14b_mesh_sensitivity` 를 그대로 import 해서 쓴다.
 
     python w14b2_reference_compare.py               # -> WORK_DIR/w14b/w14b2_summary.json + 그림
+    python w14b2_reference_compare.py --out w14b2_summary_d10.json --no-figures   # 새 이름으로
     python w14b2_reference_compare.py --self-check  # 데이터 없이 지표/판정 규칙 자기검사
 
 환경: `SPD_PI_DATA_DIR`(참조 npz), `SPD_PI_WORK_DIR`(영수증).
@@ -142,7 +143,7 @@ def figures(cases: dict) -> None:
     print(f"[w14b2] figure -> {FIGDIR / 'w14b2_ref_error.png'}")
 
 
-def compare() -> int:
+def compare(out_name: str = "w14b2_summary.json", figs: bool = True) -> int:
     cases = {f"{t}:{p}": case_entry(t, p) for t, p in CASES}
     v = verdict_of(cases)
     lf = {k: c.get("lf_spread_db") for k, c in cases.items()}
@@ -159,9 +160,10 @@ def compare() -> int:
                            all_invariant=all(c.get("lf_invariant", False) for c in cases.values())),
         missing={k: c["missing"] for k, c in cases.items() if c["missing"]},
         cases=cases)
-    out = work_dir() / "w14b2_summary.json"
+    out = work_dir() / out_name
     out.write_text(json.dumps(doc, indent=1, ensure_ascii=False), encoding="utf-8")
-    figures(cases)
+    if figs:
+        figures(cases)
     print(json.dumps({k: doc[k] for k in ("verdict", "lf_invariance", "missing")},
                      indent=1, ensure_ascii=False))
     for k, c in cases.items():
@@ -204,8 +206,11 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--self-check", action="store_true", help="규칙 자기검사만 하고 끝낸다")
+    ap.add_argument("--out", default="w14b2_summary.json",
+                    help="요약 JSON 이름(WORK_DIR/w14b 안). 기존 요약을 덮어쓰지 않으려면 새 이름을 준다")
+    ap.add_argument("--no-figures", action="store_true", help="그림을 다시 그리지 않는다")
     a = ap.parse_args(argv)
-    return self_check() if a.self_check else compare()
+    return self_check() if a.self_check else compare(a.out, not a.no_figures)
 
 
 if __name__ == "__main__":

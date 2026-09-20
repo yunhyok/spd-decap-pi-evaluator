@@ -27,3 +27,10 @@ EXP-33/34: 두 설계 모두 C·L은 맞는데 f_res(min|Z|)와 f0(Im Z 영교�
 
 ## D9. 패키지 microvia는 구리 충전(filled)으로 가정 (2026-09-19, 소유자)
 소유자 지시: PowerSI microvia 모델 정의(도금 두께 0의 의미)에 대한 GUI 확인 대신 **microvia 내부는 구리로 충전된 것으로 가정**하고 진행한다. 코드 확인: 제품 `via_model.classify_via_conductor`는 COPPER·드릴 ≤ 150 µm·인접 두 도체층 사이 유전체 1층·유전체 두께 ≤ 드릴(MLO 프로파일)이면 SOLID(충전 원기둥, 면적 πd²/4)로 분류하고, 그 외에는 도금 배럴 면적 `π·d·min(20 µm, d/4)`를 쓴다 — d ≤ 80 µm에서는 이 값이 충전 원기둥 면적과 같다. 따라서 260729/260804의 40 µm microvia(레일 via의 약 95 %)는 어느 분기에서든 **이미 충전 원기둥으로 계산**되고 있으며, D9는 수치를 바꾸지 않는다. 150 µm core PTH만 도금 배럴(HOLLOW)로 남는다(물리적으로 타당). 결론: 남은 패키지 R 결손(참조/모델 1.46)은 via 배럴 충전 여부로는 설명되지 않는다는 EXP-25/32의 판단이 유지되며, microvia 관련 미확정 항목은 길이 정의(EXP-32 q, 1/3 설명)뿐이다. 이 가정은 엔진 영수증 `validity` 문구에 명시한다.
+
+## D10. G4 f_res 항은 케이스별 참조 f_res와 비교 (2026-09-20, 소유자)
+결함: `src/spd_pi_engine/receipt.ladder_gates`는 케이스의 참조 공진 `fres_r`를 인자로 받고도 쓰지 않고, G4의 f_res 항을 `|f_res_model − 1.585 MHz| / 1.585 MHz`로 계산했다. 1.585 MHz는 `exp3/run3.py`가 260729 Port18 한 레일의 참조 f_res를 상수로 박아 둔 값이라(다른 레일의 참조 f_res는 1.5–7.2 MHz) 나머지 레일에서는 의미 없는 수이고, 그래서 G4가 **틀린 이유로** 어디서나 실패했다(W14-b §10-2에서 발견: 27영수증 G4 0/27).
+결정: 리뷰어 권고대로 정정한다. G4 PASS 규칙의 f_res 항은 `G4_f_res_rel_err_vs_ref = |f_res_model − f_res_ref| / f_res_ref < 0.10`이며, 진폭항(1–10 MHz 오차 < 20 %)과 D3의 게이트 정의(f_res ±10 %) 자체는 바뀌지 않는다. `fres_r`가 없거나 유한하지 않으면 NaN이고 G4는 False다.
+바뀌는 것: 이 커밋 **이후** 엔진이 쓰는 영수증의 `ladder_gates`. 새 키 `G4_f_res_ref_Hz`·`G4_f_res_rel_err_vs_ref`가 추가되고 PASS의 G4가 이 항으로 판정된다. 옛 키 `G4_f_res_rel_err_vs_1.585MHz`는 연구 영수증과의 비교를 위해 계속 기록하되 판정에는 쓰지 않는다. 이 커밋 이전 영수증에는 옛 키만 있다.
+바뀌지 않는 것: 수치(5개 수치 모듈 미수정, `numerics_id` 27d81996… 불변), D3·D8의 게이트 정의, 그리고 **연구 결과 전부**. `tools/research-claude/`와 `results/expN/`·`EXPn_REPORT.md`의 G4 통과 수는 상수 규칙으로 계산된 역사 기록으로 그대로 두고 **재판정하지 않는다**(읽기 전용 규칙). D8의 "f_res +5~14 % 편향" 결론은 EXP-33/34가 참조 f_res와 직접 비교해 얻은 것이지 이 게이트에서 나온 것이 아니므로 영향이 없다.
+재판정한 곳은 W14-b-2 부록 하나뿐이다(같은 영수증 27개, 새 풀이 없음): G4 PASS 0/27 → 2/27, `docs/engine/W14B_REPORT.md` §10-6. 구현·검증은 `docs/engine/W14D_REPORT.md`.
