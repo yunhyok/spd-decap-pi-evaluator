@@ -2094,7 +2094,7 @@ def test_evaluation_worker_receives_scenario_model_attachments(
             lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
         )
 
-        def run_through_preflight() -> None:
+        def run_through_preflight() -> object:
             captured.clear()
             window.run_evaluation()
             preflight_worker = captured["worker"]
@@ -2109,23 +2109,36 @@ def test_evaluation_worker_receives_scenario_model_attachments(
             window._pending_evaluation_launch = None
             captured.clear()
             window._launch_evaluation_after_preflight(request, manifest)
+            return manifest
 
-        run_through_preflight()
+        manifest = run_through_preflight()
 
         worker = captured["worker"]
         assert worker.kwargs["attachments"] == imported.attachments
         assert worker.kwargs["modal_max_index"] == 8
         assert worker.kwargs["solver_profile"] == "legacy_modal_v017"
         assert worker.function.__name__ == "evaluate_comparison_batch"
-        assert worker.args[1] == (
+        # W11-f: the synthetic `RAIL_SECOND` has no raw-SPD plane-pair proof, so
+        # the product preflight blocks it (`SOURCE_GRAPH_PROVENANCE_INVALID`) and
+        # only the proven rail reaches the worker.  The product gate is
+        # authoritative here (W11-e report 7-1, owner decision 2026-09-20).
+        assert worker.args[1] == (base.rails[0].rail_id,)
+        assert set(worker.args[0].baseline_captures) == {base.rails[0].rail_id}
+        assert captured["label"] == "Evaluating 1 PWR NET(s)..."
+        # ...but a selected rail is never silently dropped: the partial-run
+        # manifest still names the blocked rail, and the consent box answered by
+        # the `QMessageBox.exec` patch above shows exactly these lines.
+        assert manifest.selected_rail_ids == (
             base.rails[0].rail_id,
             "RAIL_SECOND",
         )
-        assert set(worker.args[0].baseline_captures) == {
-            base.rails[0].rail_id,
-            "RAIL_SECOND",
-        }
-        assert captured["label"] == "Evaluating 2 PWR NET(s)..."
+        assert manifest.runnable_rail_ids == (base.rails[0].rail_id,)
+        assert manifest.blocked_rail_ids == ("RAIL_SECOND",)
+        assert manifest.is_partial
+        assert (
+            "Blocked and NOT evaluated: 1 (RAIL_SECOND)."
+            in manifest.summary_lines()
+        )
 
         window.evaluation_modal_preset_combo.setCurrentIndex(
             window.evaluation_modal_preset_combo.findData(10)

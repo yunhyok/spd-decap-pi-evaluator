@@ -455,3 +455,116 @@ untracked Codex 파일이고 import 대상 모듈이 트리에 없어 `pytest te
 | `product_after_w11e_attempt1_hung.log` | deselect 없는 첫 전체 실행(행) |
 | `product_after_w11e.log` | **최종 전체 실행** (25 failed, 2 836 passed, 0 errors) |
 | `baseline_failed.txt` / `baseline_error.txt` / `after_failed.txt` | 노드 집합 비교 입력 |
+
+---
+
+## 9. W11-f 후속 (2026-09-20)
+
+소유자 결정(ENGINE_PLAN `결정 기록 E5`)에 따라 §7-1·§7-2만 처리했다. `src/`는
+**0줄**이다. 고친 파일은 `tests/test_spd_decap_gui.py`,
+`tests/test_spd_decap_distribution_gui.py` 둘뿐이다.
+
+### 9-1. 무엇을 바꿨나
+
+- **§7-1 — 옵션 (a)**: `test_evaluation_worker_receives_scenario_model_attachments`의
+  낡은 단언을 제품 게이트 기준으로 고쳤다. 워커에는 증명이 있는 레일 **1개**만
+  간다(`worker.args[1] == ('VDD_CORE/0',)`, `baseline_captures`도 1개,
+  라벨 `Evaluating 1 PWR NET(s)...`). 대신 "선택한 레일이 조용히 누락되지 않는다"는
+  원래 의도를 **부분 실행 manifest**로 옮겨 단언한다 — `run_through_preflight()`가
+  `_pending_evaluation_launch`의 manifest를 반환하고,
+  `selected_rail_ids == ('VDD_CORE/0', 'RAIL_SECOND')`,
+  `runnable_rail_ids == ('VDD_CORE/0',)`, `blocked_rail_ids == ('RAIL_SECOND',)`,
+  `is_partial`, 그리고 `summary_lines()`에
+  `Blocked and NOT evaluated: 1 (RAIL_SECOND).`가 들어 있는지를 본다.
+  차단 사유는 §3-3의 `SOURCE_GRAPH_PROVENANCE_INVALID` 그대로다.
+- **§7-2 — 세 테스트 안에서만**: 헬퍼 `_answer_blocking_modals(monkeypatch)`를
+  더하고 세 테스트에서만 호출한다. §3-2와 같은 `QMessageBox.exec` 패치에,
+  실제로 블록하던 **static `QMessageBox.critical`**(`main_window.py:4705`) 패치를
+  더했다. 패치는 모달 본문을 리스트에 모으고, 클릭 직후
+  `assert not import_errors, import_errors[0]`가 **행(hang) 대신 원인 문자열로**
+  실패하게 한다. format 5 실패 자체는 고치지 않았다(Codex 몫).
+
+세 노드 모두 같은 한 줄 원인이다.
+
+```
+The Distribution targets could not be imported.
+
+legacy Distribution workbook requires re-export as format 5 with
+source-proven target-layer transition metadata
+```
+
+### 9-2. 카운트 (W11-e vs W11-f)
+
+| 실행 | W11-e | W11-f |
+|---|---|---|
+| `tests/test_spd_decap_gui.py::test_evaluation_worker_...attachments` 단독 | 1 failed / 5.38 s | **1 passed / 2.52 s** |
+| `tests/test_spd_decap_gui.py` 단독 | 4 failed, 50 passed / 6.59 s | **3 failed, 51 passed / 6.88 s** |
+| §7-2 3노드 단독 | 영구 행(hang) | **3 failed / 3.59 s** (300 s 창 안) |
+| `tests/test_spd_decap_distribution_gui.py` 단독 | 2 failed, 48 passed, 3 deselected / 5.53 s | **5 failed, 48 passed, 0 deselected / 6.01 s** |
+| 제품 전체 | 25 failed, 2 836 passed, 5 skipped, 3 deselected, 0 errors / 403.06 s | **27 failed, 2 837 passed, 5 skipped, 0 deselected, 0 errors / 394.53 s** |
+
+노드 집합 차이는 정확히 예상과 같다(다른 편차 없음).
+
+```
+W11-e 25 − {tests/test_spd_decap_gui.py::test_evaluation_worker_receives_scenario_model_attachments}
+        + {distribution_gui 3건(구 행)}  =  W11-f 27
+```
+
+### 9-3. 새 게이트
+
+이제 제품 게이트는 **`27 FAILED + 0 deselected` 집합 동일**이다(`--deselect` 불필요,
+ERROR 0). 27 노드:
+
+```
+tests/test_benchmark_raw_spd_powersi_correlation.py::test_terminal_complete_capture_rejects_wrong_rail_provenance_and_array_drift
+tests/test_benchmark_raw_spd_powersi_correlation.py::test_terminal_complete_mode_12_to_10_reuses_exact_projection_and_recomputes_metrics
+tests/test_build_source_l29_l30_fastercap_input.py::test_production_receipts_materialize
+tests/test_distribution_gap_policy.py::test_workbook_policy_and_penalty_round_trip
+tests/test_research_av_bs1_boundary_schur_h2_p1.py::test_completed_pass_consumption_revalidates_full_result_and_resource
+tests/test_research_av_bs1_boundary_schur_h2_p1.py::test_finalizer_accepts_only_fully_bound_success_with_null_future_gates
+tests/test_research_av_bs1_boundary_schur_h2_p1.py::test_forged_completed_pass_is_consumed_and_demoted_to_failure[embedded_resource]
+tests/test_research_av_bs1_boundary_schur_h2_p1.py::test_forged_completed_pass_is_consumed_and_demoted_to_failure[numerical_lineage]
+tests/test_research_av_bs1_boundary_schur_h2_p1.py::test_h1_artifact_resource_operator_mode_and_tombstone_bindings
+tests/test_research_av_bs1_boundary_schur_h2_p1.py::test_h1_semantic_tamper_fails_after_rebinding_outer_hash
+tests/test_research_av_bs1_boundary_schur_h2_p1.py::test_h_to_h2_trend_is_signed_m9_non_gating_and_uses_h2_denominator
+tests/test_research_av_bs1_boundary_schur_h2_p1.py::test_mode_view_requires_exact_order_uniqueness_and_finiteness
+tests/test_research_av_bs1_boundary_schur_h2_p1.py::test_success_body_recomputes_operator_metrics_and_rejects_self_rehashed_tamper
+tests/test_research_av_bs1_boundary_schur_h2_p1.py::test_token_consumption_atomically_replaces_authorized_token_and_blocks_reuse
+tests/test_research_av_bs1_boundary_schur_h2_p1.py::test_token_consumption_preserves_finalizer_failure_code
+tests/test_research_av_bs1_boundary_schur_h2_p1.py::test_token_consumption_survives_malformed_failure_evidence
+tests/test_spd_decap_distribution_gui.py::test_applied_distribution_reloads_clear_into_layerwise_evaluation_workers
+tests/test_spd_decap_distribution_gui.py::test_current_target_import_restores_recorded_distance_mode
+tests/test_spd_decap_distribution_gui.py::test_detached_distribution_import_applies_targets_without_mutating_scenario
+tests/test_spd_decap_distribution_gui.py::test_distribution_tab_matches_the_target_matrix_and_resizable_sections
+tests/test_spd_decap_distribution_gui.py::test_legacy_target_import_refreshes_present_requires_distance_and_invalidates_preview
+tests/test_spd_decap_gui.py::test_background_evaluation_preflight_uses_original_and_tuned_gate
+tests/test_spd_decap_gui.py::test_combined_convergence_text_and_gate_reject_frequency_only_failure
+tests/test_spd_decap_gui.py::test_layerwise_baseline_consent_and_capture_cover_unselected_board_rails
+tests/test_spd_decap_spreadsheet_export.py::test_distribution_workbook_optionally_writes_candidate_audit_sheet
+tests/test_spd_decap_spreadsheet_export.py::test_failed_export_leaves_the_previous_workbook_intact
+tests/test_spd_decap_spreadsheet_export.py::test_writer_refuses_the_policy_penalty_pairings_the_loader_rejects
+```
+
+`tests/test_audit_source_l29_l30_port_window.py`(untracked)는 §7-4대로 계속
+`--ignore` 대상이다.
+
+### 9-4. 명령과 로그
+
+환경은 §1과 동일. 전체 실행은 §5-1에서 **`--deselect` 3개를 뺀** 명령이다.
+
+```
+python -u -m pytest tests -q --ignore=tests/engine \
+  --ignore=tests/test_audit_source_l29_l30_port_window.py \
+  -p no:cacheprovider -o faulthandler_timeout=300 -rfE
+```
+
+로그는 전부 `D:\Downloads\examples\analysis\claude-2026-09-15\work\engine_w11f\`:
+
+| 파일 | 내용 |
+|---|---|
+| `taskA_single.log` | §7-1 수정 노드 단독 (1 passed / 2.52 s) |
+| `gui_file_after_w11f.log` | `tests/test_spd_decap_gui.py` 단독 (3 failed, 51 passed) |
+| `taskB_three_nodes.log` | §7-2 3노드 단독 (3 failed / 3.59 s, format 5 원인 노출) |
+| `distgui_file_after_w11f.log` | `tests/test_spd_decap_distribution_gui.py` 단독 (5 failed, 48 passed, 행 없음) |
+| `product_after_w11f.log` | **최종 전체 실행** (27 failed, 2 837 passed, 0 errors, 0 deselected) |
+| `w11e_failed.txt` / `w11f_failed.txt` | 노드 집합 비교 입력 |

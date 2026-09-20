@@ -173,3 +173,25 @@ mdl.set_decaps({"C1234": None, "C1235": "GRM155R61A106M"}); res2 = mdl.solve(res
 - **W11-e 제품 테스트 위생(2026-09-20, `W11E_REPORT.md`)**: (a) provenance 기본값 2키(`status=source_engine_hybrid`, `validation_status=engine_validity_notes_bound`)를 GUI 폴백에서 어댑터 `evaluation_outcome`로 이동(W11B §7-6), (b) `test_evaluation_worker_receives_scenario_model_attachments`의 offscreen 동의 대화상자 행(hang)을 테스트 안의 `QMessageBox.exec` 패치로 제거(§7-2), (c) `test_research_av_bs1_boundary_schur_h4_p1.py`의 세션 스코프 autouse 쓰기 금지 픽스처를 module 스코프로 축소(§7-3).
 - **새 제품 테스트 기준선**: `25 failed, 2836 passed, 5 skipped, 3 deselected, 0 errors / 403.06 s`(W5 기준선 `31 failed / 2 556 passed / 1 skipped / 260 errors / 433.59 s`). ERROR **260 → 0**으로 §7-1의 `tmp_path` 고갈 가설이 확인됐고, 기준선 FAILED 13건이 통과로 전환, 가려져 있던 기존 실패 7건이 드러났다. 모달 대화상자로 영구 블록되는 `test_spd_decap_distribution_gui.py` 3건은 `--deselect`했다(소유자 판단 대기).
 - 이후 제품 게이트는 "W5 기준선 291노드 동일"이 아니라 **W11-e의 25 FAILED + 3 deselected 집합 동일**을 쓴다.
+
+## 결정 기록 E5 (2026-09-20, 소유자)
+- **Codex astra 라인은 보관만 한다.** 167 커밋(로컬 `main` = `e2f219e`)을
+  `origin/codex/astra-evaluation-resume-20260906`으로 아카이브했고 public main에는
+  **병합하지 않는다**. 근거: Claude의 결과를 신뢰하며, Codex는 문제를 해결하지 못했다.
+- **W11-e 후속 §7-1·§7-2를 권고대로 처리했다**(W11-f, `W11E_REPORT.md` §9).
+  §7-1은 옵션 (a) — 제품의 provenance 게이트가 권위이므로
+  `test_evaluation_worker_receives_scenario_model_attachments`는 레일 1개
+  (`('VDD_CORE/0',)`)를 기대하고, 차단된 합성 레일이 부분 실행 manifest
+  (`blocked_rail_ids`, `summary_lines()`)에 남는지를 새로 단언한다 — "선택한 레일이
+  조용히 누락되지 않는다"는 원래 의도는 그대로다. §7-2는 세 테스트 안에서만
+  `QMessageBox.exec`/`QMessageBox.critical`을 패치해 영구 행(hang)을 명시적 FAILED로
+  바꿨다. `src/`는 0줄이고 format 5 실패 자체는 고치지 않았다.
+- **Codex 몫으로 미룬 것**: §7-3에서 드러난 기존 실패 7건과 이번에 행에서 FAILED로
+  바뀐 3건(모두 Distribution workbook format 5 / target-layer transition 증명 요구),
+  그리고 untracked `tests/test_audit_source_l29_l30_port_window.py`의 collection 중단
+  (`ModuleNotFoundError: spd_decap_pi.source_plane_ownership_ir`).
+- **새 제품 게이트**: `--deselect` 없이 **27 FAILED + 0 deselected 집합 동일**
+  (W11-e의 25 FAILED − §7-1 1건 + 행 3건). 로그 `engine_w11f/product_after_w11f.log`.
+- `.venv`에 pytest를 설치 중이다(`pip install -e .[dev]`). CLAUDE.md §실행의
+  `pytest tests` 안내가 그대로 동작하게 하기 위함이며, W11-e·W11-f 실행은 여전히
+  시스템 Python 3.12(pytest 9.0.3)로 했다.

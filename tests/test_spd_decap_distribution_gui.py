@@ -78,6 +78,30 @@ def _window_with_scenario(scenario: ScenarioSpec) -> MainWindow:
     return window
 
 
+def _answer_blocking_modals(monkeypatch) -> list[str]:
+    """Answer the modals that block forever offscreen; collect error texts.
+
+    W11-f: `_import_distribution_targets` (`main_window.py:4705`) reports a
+    failed workbook import with the static `QMessageBox.critical`, which nobody
+    can close under `QT_QPA_PLATFORM=offscreen`, so the test hangs instead of
+    failing (W11-e report 5-2, 7-2).  Same `exec` patch as W11-e report 3-2.
+    Call this from a test only; the returned list carries the modal text so the
+    test can fail on the real cause instead of on a later stale assertion.
+    """
+
+    errors: list[str] = []
+
+    def _critical(_parent, _title, text, *_args, **_kwargs):
+        errors.append(text)
+        return QMessageBox.StandardButton.Ok
+
+    monkeypatch.setattr(
+        QMessageBox, "exec", lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes
+    )
+    monkeypatch.setattr(QMessageBox, "critical", _critical)
+    return errors
+
+
 def _rail_row(window: MainWindow, rail_id: str) -> int:
     for row in range(window.distribution_table.rowCount()):
         item = window.distribution_table.item(row, 0)
@@ -987,9 +1011,11 @@ def test_detached_distribution_import_applies_targets_without_mutating_scenario(
             "getOpenFileName",
             lambda *_args, **_kwargs: (str(path), "Excel workbook (*.xlsx)"),
         )
+        import_errors = _answer_blocking_modals(monkeypatch)
         dialog.import_targets_button.click()
         application.processEvents()
 
+        assert not import_errors, import_errors[0]
         assert window._distribution_targets[("R1", "M1")] == 1
         assert window._distribution_targets[("R2", "M1")] == 1
         assert window._distribution_plan is None
@@ -1217,9 +1243,11 @@ def test_legacy_target_import_refreshes_present_requires_distance_and_invalidate
             "getOpenFileName",
             lambda *_args, **_kwargs: (str(path), "Excel workbook (*.xlsx)"),
         )
+        import_errors = _answer_blocking_modals(monkeypatch)
 
         window.import_distribution_targets_button.click()
 
+        assert not import_errors, import_errors[0]
         assert window._distribution_plan is None
         assert window._distribution_preview_scenario is None
         assert window._distribution_power_projection is None
@@ -1294,8 +1322,10 @@ def test_current_target_import_restores_recorded_distance_mode(
             "getOpenFileName",
             lambda *_args, **_kwargs: (str(path), "Excel workbook (*.xlsx)"),
         )
+        import_errors = _answer_blocking_modals(monkeypatch)
         window.import_distribution_targets_button.click()
 
+        assert not import_errors, import_errors[0]
         assert window.distribution_distance_combo.currentData() == "FARTHEST"
         assert window.calculate_distribution_button.isEnabled()
         assert window._distribution_targets[("R1", "M1")] == 1
