@@ -25,6 +25,26 @@ def _write_json(path: Path, value: object) -> None:
     path.write_bytes(p1.canonical_bytes(value))
 
 
+def _synthetic_h1_trend_result() -> dict[str, object]:
+    return {
+        "numerical": {
+            "metrics": {
+                "Y_mode_floor_S": p1.H1_MODE_FLOOR_S,
+                "modes": [
+                    {"m": mode, "numeric_S": [float(abs(mode) + 1), 0.0]}
+                    for mode in p1.SIGNED_M9
+                ],
+            }
+        }
+    }
+
+
+def _require_h1_artifact() -> dict[str, object]:
+    if not p1.H1_ARTIFACT_PATH.is_file():
+        pytest.skip("external H1 result receipt is not tracked in this checkout")
+    return dict(p1._validate_h1_artifact(p1.H1_ARTIFACT_PATH))
+
+
 def _token() -> dict[str, object]:
     return {
         "schema": p1.TOKEN_SCHEMA,
@@ -414,7 +434,7 @@ def _success_attempt_evidence(tmp_path: Path) -> dict[str, object]:
     guard_path = tmp_path / "guard.json"
     _write_json(guard_path, _guard(token, token_path, claim_path, claim))
     p0_payload = p1._p0_manifest()
-    h1_result = p1._validate_h1_artifact(p1.H1_ARTIFACT_PATH)
+    h1_result = _synthetic_h1_trend_result()
     numerical = _success_numerical(
         token,
         token_path,
@@ -533,17 +553,18 @@ def test_executable_stages_are_token_blocked_before_physics(stage: str) -> None:
 
 
 def test_h1_artifact_resource_operator_mode_and_tombstone_bindings() -> None:
-    result = p1._validate_h1_artifact(p1.H1_ARTIFACT_PATH)
     tombstone = p1._validate_h1_tombstone(p1.H1_TOMBSTONE_PATH)
+    assert tombstone["consumed_review_token_sha256"] == p1.H1_CONSUMED_TOKEN_SHA256
+    result = _require_h1_artifact()
     assert result["status"] == p1.H1_STATUS
     assert result["resource_report_sha256"] == p1.H1_RESOURCE_SHA256
     assert result["numerical"]["operators"]["Y"]["sha256"] == p1.H1_OPERATOR_Y_SHA256
     assert result["numerical"]["operators"]["Y_reverse"]["sha256"] == p1.H1_OPERATOR_Y_REVERSE_SHA256
     assert p1._canonical_mode_view(result["numerical"]) == p1.H1_MODE_VIEW_SHA256
-    assert tombstone["consumed_review_token_sha256"] == p1.H1_CONSUMED_TOKEN_SHA256
 
 
 def test_h1_semantic_tamper_fails_after_rebinding_outer_hash(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _require_h1_artifact()
     wrapper = json.loads(p1.H1_ARTIFACT_PATH.read_text(encoding="utf-8"))
     wrapper["payload"]["resource"]["mandatory_resource_gate_pass"] = False
     wrapper["payload_sha256"] = p1._canonical_sha(wrapper["payload"])
@@ -556,18 +577,18 @@ def test_h1_semantic_tamper_fails_after_rebinding_outer_hash(tmp_path: Path, mon
 
 
 def test_mode_view_requires_exact_order_uniqueness_and_finiteness() -> None:
-    numerical = deepcopy(p1._validate_h1_artifact(p1.H1_ARTIFACT_PATH)["numerical"])
+    numerical = deepcopy(_synthetic_h1_trend_result()["numerical"])
     numerical["metrics"]["modes"][0], numerical["metrics"]["modes"][1] = numerical["metrics"]["modes"][1], numerical["metrics"]["modes"][0]
     with pytest.raises(p1.AvBsError, match="order mismatch"):
         p1._canonical_mode_view(numerical)
-    numerical = deepcopy(p1._validate_h1_artifact(p1.H1_ARTIFACT_PATH)["numerical"])
+    numerical = deepcopy(_synthetic_h1_trend_result()["numerical"])
     numerical["metrics"]["modes"][0]["numeric_S"][0] = float("nan")
     with pytest.raises(p1.AvBsError, match="non-finite"):
         p1._canonical_mode_view(numerical)
 
 
 def test_h_to_h2_trend_is_signed_m9_non_gating_and_uses_h2_denominator() -> None:
-    h1_result = p1._validate_h1_artifact(p1.H1_ARTIFACT_PATH)
+    h1_result = _synthetic_h1_trend_result()
     h2_modes = deepcopy(h1_result["numerical"]["metrics"]["modes"])
     h2_modes[4]["numeric_S"][0] += 1.0
     trend = p1._h_to_h2_trend(h1_result, h2_modes)
@@ -908,7 +929,7 @@ def test_finalizer_accepts_only_fully_bound_success_with_null_future_gates(
     bindings = p1._token_expected_bindings()
     guard_path = tmp_path / "guard.json"
     _write_json(guard_path, _guard(token, token_path, claim_path, claim))
-    h1_result = p1._validate_h1_artifact(p1.H1_ARTIFACT_PATH)
+    h1_result = _synthetic_h1_trend_result()
     numerical_payload = _success_numerical(
         token, token_path, claim_path, claim, guard_path,
         p0_payload, h1_result, "3" * 40,
@@ -952,7 +973,7 @@ def test_success_body_recomputes_operator_metrics_and_rejects_self_rehashed_tamp
     guard_path = tmp_path / "guard.json"
     _write_json(guard_path, _guard(token, token_path, claim_path, claim))
     p0_payload = p1._p0_manifest()
-    h1_result = p1._validate_h1_artifact(p1.H1_ARTIFACT_PATH)
+    h1_result = _synthetic_h1_trend_result()
     numerical = _success_numerical(
         token, token_path, claim_path, claim, guard_path,
         p0_payload, h1_result, "3" * 40,
@@ -1128,6 +1149,7 @@ def test_token_consumption_atomically_replaces_authorized_token_and_blocks_reuse
     monkeypatch.setattr(p1, "_validate_checkout", lambda current, path: "3" * 40)
     monkeypatch.setattr(p1, "_repo_root", lambda: tmp_path)
     monkeypatch.setattr(p1, "_p0_manifest", lambda: {})
+    monkeypatch.setattr(p1, "_validate_h1_artifact", lambda path: {})
     monkeypatch.setattr(p1, "_token_expected_bindings", lambda: bindings)
     tombstone = p1.consume_primary_h2_token(
         token_path, claim_path, guard_path, "abc", "runner_exception"
@@ -1163,6 +1185,7 @@ def test_token_consumption_survives_malformed_failure_evidence(
     monkeypatch.setattr(p1, "_validate_checkout", lambda current, path: "3" * 40)
     monkeypatch.setattr(p1, "_repo_root", lambda: tmp_path)
     monkeypatch.setattr(p1, "_p0_manifest", lambda: {})
+    monkeypatch.setattr(p1, "_validate_h1_artifact", lambda path: {})
     monkeypatch.setattr(p1, "_token_expected_bindings", lambda: bindings)
     tombstone = p1.consume_primary_h2_token(
         token_path,
@@ -1200,6 +1223,7 @@ def test_token_consumption_preserves_finalizer_failure_code(
     monkeypatch.setattr(p1, "_validate_checkout", lambda current, path: "3" * 40)
     monkeypatch.setattr(p1, "_repo_root", lambda: tmp_path)
     monkeypatch.setattr(p1, "_p0_manifest", lambda: {})
+    monkeypatch.setattr(p1, "_validate_h1_artifact", lambda path: {})
     monkeypatch.setattr(p1, "_token_expected_bindings", lambda: bindings)
     tombstone = p1.consume_primary_h2_token(
         token_path,

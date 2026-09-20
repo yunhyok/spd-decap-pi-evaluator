@@ -269,13 +269,18 @@ def test_incremental_plane_builder_yields_to_the_qt_event_loop_for_large_polygon
         "primitive_order": [("positive_polygon", 0)],
     }
     builder = _PlanePathBuilder(geometry, QColor("#2563EB"))
-    heartbeats: list[int] = []
+    heartbeat_render_counts: list[int] = []
     render_calls: list[int] = []
     loop = QEventLoop()
 
     heartbeat = QTimer()
-    heartbeat.setInterval(1)
-    heartbeat.timeout.connect(lambda: heartbeats.append(1))
+    # Count event-loop turns without depending on Windows timer granularity.
+    heartbeat.setInterval(0)
+    heartbeat.timeout.connect(
+        lambda: heartbeat_render_counts.append(len(render_calls))
+        if render_calls and not builder.done
+        else None
+    )
 
     def render_step() -> None:
         render_calls.append(1)
@@ -295,7 +300,7 @@ def test_incremental_plane_builder_yields_to_the_qt_event_loop_for_large_polygon
 
     assert builder.done
     assert len(render_calls) > 100
-    assert heartbeats
+    assert len(set(heartbeat_render_counts)) > 1
     assert builder.item() is not None
 
 
@@ -2215,6 +2220,7 @@ def test_layerwise_baseline_consent_and_capture_cover_unselected_board_rails(
             target_ohm=None,
             modal_max_index=8,
             solver_profile="layerwise_admittance_v1",
+            evaluation_policy="STRICT_EXACT",
             attachments=dict(imported.attachments),
         )
         manifest = _EvaluationRunManifest(
@@ -2301,7 +2307,7 @@ def test_background_evaluation_preflight_uses_original_and_tuned_gate(
         scenario,
         sentinel.rail_ids,
         "layerwise_admittance_v1",
-        imported.attachments,
+        attachments=imported.attachments,
         progress=lambda value, message: progress_events.append((value, message)),
         is_cancelled=lambda: False,
     )
@@ -3416,9 +3422,25 @@ def test_combined_convergence_text_and_gate_reject_frequency_only_failure() -> N
         "Not converged (frequency failed; budget exhausted, Δmax 0.420 dB; "
         "modal converged, Δmax 0.010 dB)"
     )
-    assert _rejected_comparison_convergence((comparison,)) == (
+    rejection = (
         "VCPU0 / Original: profile-specific convergence failed; frequency RMS N/A, "
-        "max 0.420 dB; modal RMS N/A, max 0.010 dB.",
+        "max 0.420 dB; modal RMS N/A, max 0.010 dB."
+    )
+    assert _rejected_comparison_convergence((comparison,)) == (rejection,)
+
+    comparison.baseline.view = SimpleNamespace(
+        solver_profile_key=RESEARCH_UNIFORM_ADMITTANCE_PROFILE.key,
+        convergence=failed_view.convergence,
+    )
+    assert _rejected_comparison_convergence((comparison,)) == (rejection,)
+
+    comparison.baseline.view = SimpleNamespace(
+        solver_profile_key=LAYERWISE_ADMITTANCE_PROFILE.key,
+        convergence=failed_view.convergence,
+    )
+    assert _rejected_comparison_convergence((comparison,)) == (
+        rejection
+        + " rectangular modal sweep N/A; external-input invariance passed.",
     )
 
     layerwise_view = SimpleNamespace(

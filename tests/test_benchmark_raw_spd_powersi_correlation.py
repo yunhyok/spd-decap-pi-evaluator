@@ -969,12 +969,17 @@ def _batch_board_fixture():
 
 
 def _batch_outcome(source, board_result, *, mode):
-    from spd_decap_pi._core.solver.evaluator import ConvergenceReport
+    from spd_decap_pi._core.solver.evaluator import (
+        CONVERGENCE_ALGORITHM_VERSION,
+        ConvergenceReport,
+    )
 
     port = source.substrate.port_by_rail_key[source.rail_id.casefold()]
     impedance = 1.0 / board_result.effective_admittance_by_port[port.port_id]
     convergence = ConvergenceReport(
         policy_version=module.CONVERGENCE_POLICY_VERSION,
+        start_mode_x=mode,
+        start_mode_y=mode,
         initial_frequency_points=2,
         final_frequency_points=2,
         refinement_iterations=0,
@@ -1000,6 +1005,10 @@ def _batch_outcome(source, board_result, *, mode):
         modal_max_delta_db=0.0,
         modal_peak_shift_percent=0.0,
         modal_converged=True,
+        ceiling_mode_x=mode,
+        ceiling_mode_y=mode,
+        modal_budget_exhausted=False,
+        algorithm_version=CONVERGENCE_ALGORITHM_VERSION,
         converged=True,
     )
     provenance = {
