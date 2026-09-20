@@ -7,7 +7,11 @@ from openpyxl import load_workbook
 import pytest
 
 import spd_decap_pi.distribution as distribution_module
-from spd_decap_pi.distribution_workbook import load_distribution_targets
+from spd_decap_pi.distribution_workbook import (
+    DISTRIBUTION_TOLERANCE_SEMANTICS,
+    DISTRIBUTION_VIA_PROJECTION_POLICY,
+    load_distribution_targets,
+)
 from spd_decap_pi.spreadsheet_export import write_distribution_workbook
 
 from spd_decap_pi.distribution import (
@@ -32,6 +36,12 @@ _FAR_ZERO_GAP_DISTANCE_UM = 281_164.628
 _REAL_DISTANCE_SAVING_UM = (
     _FAR_ZERO_GAP_DISTANCE_UM - _NEAR_GAP_DISTANCE_UM
 )
+_CURRENT_WORKBOOK_METADATA = {
+    "Format Version": 5,
+    "Signal Routing Protection": "OFF",
+    "Tolerance Semantics": DISTRIBUTION_TOLERANCE_SEMANTICS,
+    "Via Projection Policy": DISTRIBUTION_VIA_PROJECTION_POLICY,
+}
 
 
 def _gap_distance_tradeoff_scenario(
@@ -235,7 +245,7 @@ def test_workbook_policy_and_penalty_round_trip(tmp_path) -> None:
         ("PWR NET", "M1\nTarget"),
         (("V1 (R1)", 1),),
         metadata={
-            "Format Version": 3,
+            **_CURRENT_WORKBOOK_METADATA,
             "Optimization Policy": "BALANCED_CUSTOM",
             "Effective Gap Penalty (um)": 1234.5,
         },
@@ -275,7 +285,7 @@ def test_workbook_rejects_incomplete_or_contradictory_policy_metadata(
         ("PWR NET", "M1\nTarget"),
         (("V1 (R1)", 1),),
         metadata={
-            "Format Version": 3,
+            **_CURRENT_WORKBOOK_METADATA,
             "Optimization Policy": "BALANCED_CUSTOM",
             "Effective Gap Penalty (um)": 1.0,
         },

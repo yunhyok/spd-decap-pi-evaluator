@@ -31,12 +31,14 @@ from test_spd_decap_distribution import (
 )
 from test_spd_decap_evaluation import _scenario as _evaluation_scenario
 from spd_decap_pi._core.domain import TerminalKind
+from spd_decap_pi._core.io.spd import SpdPlaneGeometry
 from spd_decap_pi.distribution import (
     DISTRIBUTION_VIA_PROJECTION_POLICY,
     DistributionDiagnostic,
     DistributionDistanceMode,
     DistributionPlanStatus,
     apply_distribution_plan,
+    build_distribution_power_projection,
     compute_distribution_plan,
 )
 from spd_decap_pi.distribution_workbook import (
@@ -62,6 +64,14 @@ from spd_decap_pi.scenario import (
 )
 from spd_decap_pi.scenario_io import load_scenario, save_scenario
 from spd_decap_pi.spreadsheet_export import write_distribution_workbook
+
+
+_CURRENT_WORKBOOK_METADATA = {
+    "Format Version": 5,
+    "Signal Routing Protection": "OFF",
+    "Tolerance Semantics": DISTRIBUTION_TOLERANCE_SEMANTICS,
+    "Via Projection Policy": DISTRIBUTION_VIA_PROJECTION_POLICY,
+}
 
 
 def _application() -> QApplication:
@@ -191,8 +201,8 @@ def test_distribution_tab_matches_the_target_matrix_and_resizable_sections() -> 
         plane_note = window.findChild(QLabel, "alternatePwrPlaneRoutingNote")
         assert plane_note is not None
         assert "Vertical VIA projection" in plane_note.text()
-        assert "MLO transition/short-span evidence does not block" in plane_note.text()
-        assert "exact target-plane copper" in plane_note.text()
+        assert "MLO transition/short-span evidence does not override" in plane_note.text()
+        assert "exact target-layer endpoint copper" in plane_note.text()
         assert "does not certify" in plane_note.toolTip()
         assert window.distribution_table.selectionMode() == (
             window.distribution_table.SelectionMode.ExtendedSelection
@@ -993,7 +1003,7 @@ def test_detached_distribution_import_applies_targets_without_mutating_scenario(
         ("PWR NET", "M1\nPresent", "M1\nTarget", "M1\nTolerance (%)"),
         (("V1 (R1)", 2, 1, 0), ("V2 (R2)", 0, 1, 0)),
         metadata={
-            "Format Version": 2,
+            **_CURRENT_WORKBOOK_METADATA,
             "Source SPD SHA-256": scenario.source.sha256,
             "Distance Mode": "NEAREST",
         },
@@ -1231,6 +1241,7 @@ def test_legacy_target_import_refreshes_present_requires_distance_and_invalidate
             ("V1 (R1)", 1, 1, 0, 0),
             ("V2 (R2)", 0, 2, 0, 2),
         ),
+        metadata=_CURRENT_WORKBOOK_METADATA,
     )
     window = _window_with_scenario(scenario)
     try:
@@ -1309,7 +1320,7 @@ def test_current_target_import_restores_recorded_distance_mode(
             ("V2 (R2)", 0, 2, 0, 2, 2, 0),
         ),
         metadata={
-            "Format Version": 2,
+            **_CURRENT_WORKBOOK_METADATA,
             "Source SPD SHA-256": scenario.source.sha256,
             "Input Design Fingerprint": scenario.design_fingerprint,
             "Distance Mode": "FARTHEST",
@@ -2425,13 +2436,40 @@ def test_applied_distribution_reloads_clear_into_layerwise_evaluation_workers(
         }
     )
 
+    targets = {("RAIL_VDD", "M1"): 0, ("RAIL_ALT", "M1"): 1}
+    projection = build_distribution_power_projection(
+        scenario,
+        {},
+        plane_geometries=(
+            SpdPlaneGeometry(
+                layer="PWR1",
+                net="VDD_ALT",
+                positive_polygons_um=(
+                    (
+                        (0.0, 0.0),
+                        (10_000.0, 0.0),
+                        (10_000.0, 8_000.0),
+                        (0.0, 8_000.0),
+                    ),
+                ),
+                negative_polygons_um=(),
+                primitive_order=(("positive_polygon", 0),),
+            ),
+        ),
+        targets=targets,
+    )
+    assert projection is not None
+    alternate_eligibility = next(
+        item for item in projection.projected_decaps if item.refdes == "C1"
+    ).eligibility["RAIL_ALT"]
     plan = compute_distribution_plan(
         scenario,
-        {("RAIL_VDD", "M1"): 0, ("RAIL_ALT", "M1"): 1},
+        targets,
+        power_projection=projection,
     )
     assert plan.status == DistributionPlanStatus.FULL
     assert plan.assignment_map == {"C1": "RAIL_ALT"}
-    applied = apply_distribution_plan(scenario, plan)
+    applied = apply_distribution_plan(scenario, plan, power_projection=projection)
     saved_path = save_scenario(
         applied, tmp_path / "distributed-layerwise.spdpi"
     )

@@ -8,12 +8,24 @@ from openpyxl import load_workbook
 import pytest
 
 import spd_decap_pi.spreadsheet_export as spreadsheet_export
-from spd_decap_pi.distribution_workbook import load_distribution_targets
+from spd_decap_pi.distribution_workbook import (
+    DISTRIBUTION_TOLERANCE_SEMANTICS,
+    DISTRIBUTION_VIA_PROJECTION_POLICY,
+    load_distribution_targets,
+)
 from spd_decap_pi.spreadsheet_export import (
     CANDIDATE_AUDIT_HEADERS,
     EXCEL_MAX_DATA_ROWS,
     write_distribution_workbook,
 )
+
+
+_CURRENT_WORKBOOK_METADATA = {
+    "Format Version": 5,
+    "Signal Routing Protection": "OFF",
+    "Tolerance Semantics": DISTRIBUTION_TOLERANCE_SEMANTICS,
+    "Via Projection Policy": DISTRIBUTION_VIA_PROJECTION_POLICY,
+}
 
 
 def _column_widths(path: Path, sheet_part: str) -> dict[int, float]:
@@ -153,6 +165,7 @@ def test_distribution_workbook_optionally_writes_candidate_audit_sheet(
                 "component size 13 cannot be part of any zero-gap exact-count subset",
             ),
         ),
+        metadata=_CURRENT_WORKBOOK_METADATA,
     )
     workbook = load_workbook(path, data_only=False)
     try:
@@ -289,6 +302,7 @@ def test_writer_refuses_the_policy_penalty_pairings_the_loader_rejects(
         headers,
         rows,
         metadata={
+            **_CURRENT_WORKBOOK_METADATA,
             "Optimization Policy": "BALANCED_CUSTOM",
             "Effective Gap Penalty (um)": 120.0,
         },
@@ -309,6 +323,7 @@ def test_failed_export_leaves_the_previous_workbook_intact(tmp_path: Path) -> No
         (("M1", "C1", "V1", "V2", 1.0, 2.0),),
         ("PWR NET", "M1\nTarget"),
         (("V1 (R1)", 3),),
+        metadata=_CURRENT_WORKBOOK_METADATA,
     )
     original = path.read_bytes()
 

@@ -9803,7 +9803,8 @@ ConvertTo-Json -InputObject @($records) -Depth 4 -Compress
             "-File",
             str(harness_path),
             "-Python",
-            sys.executable,
+            # Windows venv launchers have a different PID from the marker-owning interpreter.
+            getattr(sys, "_base_executable", None) or sys.executable,
             "-Bootstrap",
             str(bootstrap_path),
             "-Target",

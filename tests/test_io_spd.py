@@ -1739,9 +1739,16 @@ def test_ground_reachability_tree_preserves_subnormal_legacy_distance_tie(
     source_x = -5.291516328261232e-157
     source_y = source_x
     target_coordinates = {
-        "NodeN000": (8.920401028942637e-155, 8.920401028942637e-155),
-        "NodeN006": (8.920401028942635e-155, 8.920401028942635e-155),
+        "NodeN000": (8.920401028942635e-155, 8.920401028942638e-155),
+        "NodeN006": (8.920401028942637e-155, 8.920401028942637e-155),
     }
+    assert sum(
+        (coordinate - source_x) ** 2
+        for coordinate in target_coordinates["NodeN000"]
+    ) == sum(
+        (coordinate - source_x) ** 2
+        for coordinate in target_coordinates["NodeN006"]
+    )
     target_coordinates.update(
         {
             f"NodeTarget{index:02d}": (10_000.0 + index, 2_000.0)

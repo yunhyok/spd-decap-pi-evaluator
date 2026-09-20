@@ -1434,19 +1434,12 @@ def _rejected_comparison_convergence(
                 )
                 rejected.append(
                     prefix
-                    + "rectangular modal sweep N/A; external-input invariance "
+                    + " rectangular modal sweep N/A; external-input invariance "
                     + invariance_state
                     + "."
                 )
             else:
-                rejected.append(
-                    prefix
-                    + "modal RMS "
-                    + _convergence_delta_text(values.get("modal_rms_delta_db"))
-                    + ", max "
-                    + _convergence_delta_text(values.get("modal_max_delta_db"))
-                    + "."
-                )
+                rejected.append(prefix)
     return tuple(rejected)
 
 
