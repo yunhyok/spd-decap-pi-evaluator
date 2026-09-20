@@ -22,8 +22,8 @@ __version__ = "0.1.0.dev0"
 
 from . import (api, cache, decaps, geometry, hardware, homogenise, model, receipt, reference,
                solver, spd_source)
-from .api import (LADDER, DecapSite, Design, Rail, find_site_pair, ladder_freqs, match_sites,
-                  unique_path)
+from .api import (LADDER, DecapSite, Design, MeshedRail, Rail, find_site_pair, ladder_freqs,
+                  match_sites, unique_path)
 from .backend import DEFAULT, Backend
 from .cache import CacheDir
 from .decaps import DecapBasis
@@ -37,7 +37,7 @@ from .spd_source import (SPD_PARSER_SYMBOLS, check_parser_api, extract, list_por
                          load_layer_shapes, prepare, sha256_of)
 
 __all__ = ["Backend", "CacheDir", "DEFAULT", "DecapBasis", "DecapSite", "Design",
-           "DesignConventions", "FLAGS", "HardwareProfile", "Plan",
+           "DesignConventions", "FLAGS", "HardwareProfile", "MeshedRail", "Plan",
            "FLAGS_LEGACY", "FLAGS_P", "FLAGS_PMK", "FLAGS_Q", "LADDER", "Model", "ModelOptions",
            "RECEIPT_VERSION", "Rail", "ReferenceSearch", "Result", "SPD_PARSER_SYMBOLS", "Sheet",
            "VALIDITY_NOTES", "api", "attach_mask", "attach_reference", "cache", "check_parser_api",

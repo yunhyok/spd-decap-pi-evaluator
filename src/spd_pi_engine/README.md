@@ -22,10 +22,14 @@ d.ports()                                              # SPD .Port 순서
 rail = d.rail("Port18_SITE0", cache_dir=r"D:\engine-cache")   # 추출 + 이웃 층(캐시 히트 약 1 s)
 opt  = ModelOptions(reference="powersi-compatible", flags=FLAGS_P,
                     h=200.0, fh=50.0, top_h=50.0, sub=(20, 10, 10), fringe=True)
-mdl  = rail.build(opt, Backend(solver="cudss", fast=True))    # A2000 있으면 GPU, 없으면 splu 폴백
-res  = mdl.solve([1e3, 1e4, 1e5, 1e6, 1e7, 1e8])
+mesh = rail.mesh(opt, Backend(solver="cudss", fast=True))     # 격자 단계만. A2000 있으면 GPU, 없으면 splu
+mesh.summary                                                  # h/fh/top_h/sub, 미지수, 시트별 셀 수
+res  = mesh.solve([1e3, 1e4, 1e5, 1e6, 1e7, 1e8])             # 풀이 단계(주파수별 조립 + LU)
 res.Z; res.breakdown(1e5); rec = res.receipt()                # 영수증 v1(dict)
+
+mdl  = rail.build(opt, Backend(solver="cudss", fast=True))    # 축약형 = rail.mesh(...).model (같은 경로)
 ```
+두 단계의 경계와 이유는 §11.
 CLI(`python -m spd_pi_engine …`, `docs/engine/W7_REPORT.md`):
 ```
 ports  --spd PATH                                   # 포트 이름 목록
@@ -177,3 +181,16 @@ A6000의 VRAM은 소유자 메모에 42 GB로 적혀 있지만 스펙은 48 GB�
 - **워커의 스레드 수는 마지막 비트를 움직인다**(W12-a §5, 2.7e-13). `sweep`은 워커 **서브프로세스의 환경**에만 `OPENBLAS/MKL/OMP_NUM_THREADS`를 넣는다(호출자 환경은 건드리지 않는다). 예전 영수증과 비트 단위로 맞춰야 하면 `--threads 0`으로 상속시킨다.
 - `decap_basis(workers=N)`은 `splu`에서만 동작하고(카드 1장, 프로세스당 cuDSS 컨텍스트 1개), 부모가 Y를 조립해 워커에 보내므로 **Y는 직렬 경로와 비트 동일**하다. 실측 Port14 workers=4, P18 workers=6 모두 기저 배열이 **비트 동일**(max rel 0.0)했다.
 - `Backend.host_nthreads` 기본값은 **4 그대로**다. `None`을 주면 워커 환경(`OMP_NUM_THREADS`) 또는 `plan_threads`에서 가져온다 — cuDSS 호스트 재배열 스레드 수는 인수분해를 움직일 수 있으므로 API 정돈을 위해 기본값을 바꾸지 않았다.
+
+## 11. 구조 — mesh 단계와 solve 단계 (W14-a)
+엔진은 처음부터 두 단계였고, W14-a는 그 경계를 API로 드러낸 것뿐이다. 수치는 바뀌지 않았다 — 5개 수치 모듈 미수정, `numerics_id` 불변(`27d81996e38f3180…`, `docs/engine/W14A_REPORT.md`).
+
+| 단계 | 하는 일 | API | `numerics_id` | 비용(260729 Port14, CPU splu, fast off) |
+|---|---|---|---|---|
+| mesh(격자) | 아트워크 래스터화(`geometry`) → 셀 균질화(`homogenise`, 서브타일 PCG) → 참조면 탐색(`reference`) → 소자·노드 맵과 조립 패턴(`model._build`) | `Rail.mesh(options, backend, log) -> MeshedRail` | **안에 있다**(mesh 설정 `h/fh/top_h/sub/fringe/max_layers`가 id의 입력) | 91 s |
+| solve(풀이) | 주파수마다 표면 임피던스 조립 + LU(`model.assemble`, `solver`) | `MeshedRail.solve(freqs, backend=None) -> Result` | 밖에 있다(백엔드 선택은 영수증의 `backend` 필드) | 0.3 s/점 |
+
+- `MeshedRail` 필드: `model`(빌드된 `Model`), `options`, `summary`(`h, fh, top_h, sub`, `unknowns`, `cells_per_sheet`). `solve`/`set_decaps`/`decap_basis`/`release_solver`는 `Model`에 위임한다. `Rail.build(...)`는 `Rail.mesh(...).model`을 돌려주는 얇은 래퍼라 두 표기가 **같은 코드 경로**를 탄다(게이트 `tests/engine/test_w14a.py`: Port14 두 경로 max |ΔZ| = 0, 비트 동일).
+- `solve(backend=…)`는 호출 단위가 아니라 모델의 백엔드를 바꿔 그대로 둔다(`mdl.backend = …` 대입과 같다). `Model.solve`에는 호출별 백엔드 인자가 없다.
+- **왜 나누나**(소유자 근거, `docs/engine/W14_PLAN_2026-09-20.md`): "엔진을 앱과 분리해 두는 이유는 앱 개발이 끝난 뒤에도 워크스테이션 자원으로 추가 검토를 하고 **엔진만 업그레이드**할 수 있게 하기 위함이다." 경계가 API로 드러나 있으면 앱은 격자를 한 번 만들어 두고 구성만 바꿔 여러 번 풀 수 있고(W8 `set_decaps`, W9 `decap_basis`와 같은 구조), 격자 수렴 검사(W14-b/c)는 `mesh`를 두 번 부르는 순수 오케스트레이션으로 끝난다 — 수치 모듈을 건드리지 않고.
+- **격자를 검증 경계 밖으로 빼는 것은 아니다.** 균질화는 MFDM 물리의 일부라서 mesh 단계는 `numerics_id` 안에 남는다(W14 계획 §배경: "엔진이 mesh를 만들 필요가 없다"는 계산 코어에 대해서만 맞는 말이다). 기본 격자 h=200 µm도 그대로이며 변경은 소유자 결정이다.

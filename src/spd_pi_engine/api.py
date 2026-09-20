@@ -33,6 +33,15 @@ Schur closure per configuration in milliseconds.
 
 On the GPU a model is either a basis model or a sweep model, not both in one process
 (`Model._gpu_solver`: cuDSS 0.8 allows one DirectSolver, and its RHS width is fixed at plan time).
+
+W14-a names the two stages the engine already had (plan `docs/engine/W14_PLAN_2026-09-20.md`):
+
+    mr = rail.mesh(opt, Backend())     # build stage only: raster + homogenise + reference + maps
+    mr.summary                         # h/fh/top_h/sub, unknowns, cells per sheet
+    res = mr.solve(freqs)              # solve stage: per-frequency assemble + LU
+
+`Rail.build(...)` is now `rail.mesh(...).model`, so both spellings run the same code.  No numerics
+moved: the five numeric modules are untouched and `numerics_id` is unchanged.
 """
 from __future__ import annotations
 
@@ -228,15 +237,64 @@ class Rail:
                     rail_layers=[g["layer"] for g in self.ex["rail_geoms"]],
                     prepare_seconds=round(self.prepare_seconds, 1))
 
-    # -------------------------------------------------- build
-    def build(self, options: ModelOptions | None = None, backend=DEFAULT, log=None) -> Model:
-        """`Model.build` on this rail.  `options.fine_box` defaults to the rail's own box."""
+    # -------------------------------------------------- build (mesh stage)
+    def mesh(self, options: ModelOptions | None = None, backend=DEFAULT, log=None) -> "MeshedRail":
+        """The build stage only (W14-a): rasterise, homogenise, find references, build the maps.
+
+        `options.fine_box` defaults to the rail's own box.  Nothing is solved -- `MeshedRail.solve`
+        is the second stage.
+        """
         opt = options or ModelOptions()
         if opt.fine_box is None:
             opt = dataclasses.replace(opt, fine_box=self.fine_box)
         mdl = Model.build(self.ex, self.shapes, opt, backend, log)
         mdl.rail = self  # the receipt's provenance (spd_path, sha256, port, prepare_seconds)
-        return mdl
+        summary = dict(h=opt.h, fh=opt.fh, top_h=opt.top_h, sub=tuple(opt.sub), unknowns=int(mdl.N),
+                       cells_per_sheet={L: int(len(sh.cells)) for L, sh in mdl.sheets.items()})
+        return MeshedRail(mdl, opt, summary)
+
+    def build(self, options: ModelOptions | None = None, backend=DEFAULT, log=None) -> Model:
+        """`Model.build` on this rail -- `self.mesh(...).model`, the shorthand for callers that do
+        not need the mesh stage as an object of its own."""
+        return self.mesh(options, backend, log).model
+
+
+@dataclass
+class MeshedRail:
+    """One rail meshed but not solved (W14-a, `docs/engine/W14_PLAN_2026-09-20.md`).
+
+    The mesh stage (geometry -> homogenise -> reference -> element/node maps) is inside
+    `numerics_id`; the solve stage (per-frequency assembly + LU) is not.  This class is the
+    boundary made visible, not a new stage: it holds the `Model` that `Rail.build` always
+    returned and delegates the solve-stage calls to it.
+    """
+
+    model: Model
+    options: ModelOptions
+    summary: dict
+
+    def __repr__(self):
+        s = self.summary
+        return (f"MeshedRail(h={s['h']}, fh={s['fh']}, top_h={s['top_h']}, sub={s['sub']}, "
+                f"unknowns={s['unknowns']})")
+
+    def solve(self, freqs, backend=None, **kw):
+        """`Model.solve` -- the solve stage.  `backend` is not per-call: it replaces this model's
+        backend (the `mdl.backend = ...` assignment the gate scripts already do) and stays."""
+        if backend is not None:
+            self.model.backend = backend
+        return self.model.solve(freqs, **kw)
+
+    def set_decaps(self, config: dict, replace: bool = False):
+        """`Model.set_decaps` -- no rebuild, so the mesh is untouched."""
+        self.model.set_decaps(config, replace)
+        return self
+
+    def decap_basis(self, freqs, **kw):
+        return self.model.decap_basis(freqs, **kw)
+
+    def release_solver(self):
+        return self.model.release_solver()
 
 
 # ---------------------------------------------------------------- util (W12-c, public now)
@@ -321,5 +379,5 @@ def match_sites(rail0, rail1, rule: str = "refdes-suffix") -> dict:
     return dict(mapping=mapping, unmatched=unmatched)
 
 
-__all__ = ["DecapSite", "Design", "LADDER", "Rail", "Result", "find_site_pair", "ladder_freqs",
-          "match_sites", "unique_path"]
+__all__ = ["DecapSite", "Design", "LADDER", "MeshedRail", "Rail", "Result", "find_site_pair",
+          "ladder_freqs", "match_sites", "unique_path"]
