@@ -1,0 +1,235 @@
+{
+  "checks": {
+    "active_links": 20,
+    "all_compiled_rows_owners_endpoints_exact": true,
+    "all_l02_splits_and_leg_sums_exact": true,
+    "all_native_fingerprints_exact": true,
+    "all_raw_via_and_bridge_rows_exact": true,
+    "all_source_paths_contiguous": true,
+    "composite_links": 20,
+    "excluded_l02_owners_in_composites": 40,
+    "link_summaries": [
+      {
+        "bridges": 0,
+        "ordinal": 30657,
+        "source_vias": 3,
+        "split": 2,
+        "status_counts": {
+          "EXACT": 3
+        }
+      },
+      {
+        "bridges": 1,
+        "ordinal": 186263,
+        "source_vias": 7,
+        "split": 6,
+        "status_counts": {
+          "EXACT": 7
+        }
+      },
+      {
+        "bridges": 0,
+        "ordinal": 388189,
+        "source_vias": 3,
+        "split": 2,
+        "status_counts": {
+          "EXACT": 3
+        }
+      },
+      {
+        "bridges": 0,
+        "ordinal": 395047,
+        "source_vias": 3,
+        "split": 2,
+        "status_counts": {
+          "EXACT": 3
+        }
+      },
+      {
+        "bridges": 0,
+        "ordinal": 466710,
+        "source_vias": 5,
+        "split": 4,
+        "status_counts": {
+          "EXACT": 5
+        }
+      },
+      {
+        "bridges": 0,
+        "ordinal": 510496,
+        "source_vias": 3,
+        "split": 2,
+        "status_counts": {
+          "EXACT": 3
+        }
+      },
+      {
+        "bridges": 0,
+        "ordinal": 551039,
+        "source_vias": 5,
+        "split": 4,
+        "status_counts": {
+          "EXACT": 5
+        }
+      },
+      {
+        "bridges": 2,
+        "ordinal": 754981,
+        "source_vias": 12,
+        "split": 11,
+        "status_counts": {
+          "EXACT": 11,
+          "OUT_OF_SCOPE": 1
+        }
+      },
+      {
+        "bridges": 0,
+        "ordinal": 779676,
+        "source_vias": 3,
+        "split": 2,
+        "status_counts": {
+          "EXACT": 3
+        }
+      },
+      {
+        "bridges": 0,
+        "ordinal": 1024973,
+        "source_vias": 5,
+        "split": 4,
+        "status_counts": {
+          "EXACT": 5
+        }
+      },
+      {
+        "bridges": 0,
+        "ordinal": 1235716,
+        "source_vias": 3,
+        "split": 2,
+        "status_counts": {
+          "EXACT": 3
+        }
+      },
+      {
+        "bridges": 0,
+        "ordinal": 1250218,
+        "source_vias": 3,
+        "split": 2,
+        "status_counts": {
+          "EXACT": 3
+        }
+      },
+      {
+        "bridges": 0,
+        "ordinal": 1254243,
+        "source_vias": 5,
+        "split": 4,
+        "status_counts": {
+          "EXACT": 5
+        }
+      },
+      {
+        "bridges": 0,
+        "ordinal": 1336715,
+        "source_vias": 5,
+        "split": 4,
+        "status_counts": {
+          "EXACT": 5
+        }
+      },
+      {
+        "bridges": 0,
+        "ordinal": 1392846,
+        "source_vias": 5,
+        "split": 4,
+        "status_counts": {
+          "EXACT": 5
+        }
+      },
+      {
+        "bridges": 0,
+        "ordinal": 1498455,
+        "source_vias": 3,
+        "split": 2,
+        "status_counts": {
+          "EXACT": 3
+        }
+      },
+      {
+        "bridges": 1,
+        "ordinal": 1521556,
+        "source_vias": 7,
+        "split": 6,
+        "status_counts": {
+          "EXACT": 7
+        }
+      },
+      {
+        "bridges": 0,
+        "ordinal": 1591596,
+        "source_vias": 3,
+        "split": 2,
+        "status_counts": {
+          "EXACT": 3
+        }
+      },
+      {
+        "bridges": 0,
+        "ordinal": 1670923,
+        "source_vias": 3,
+        "split": 2,
+        "status_counts": {
+          "EXACT": 3
+        }
+      },
+      {
+        "bridges": 1,
+        "ordinal": 1690188,
+        "source_vias": 7,
+        "split": 6,
+        "status_counts": {
+          "EXACT": 7
+        }
+      }
+    ],
+    "maximum_native_rl_sum_relative_error": 1.8425716648611206e-16,
+    "source_bridge_ordinals": [
+      309314,
+      311661,
+      311662,
+      454098,
+      455779
+    ],
+    "source_vias": 93,
+    "via_status_counts": {
+      "EXACT": 92,
+      "OUT_OF_SCOPE": 1
+    }
+  },
+  "findings": [],
+  "program": "SPD Decap PI Evaluator",
+  "reviewed": {
+    "compiled_db": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-step4-basis-01\\indexes\\compiled-topology.sqlite",
+      "sha256": "5a4fd917e0c415a50d75e1e52be22580d0c9c88423e6e93c5eb69f62f0aa849b"
+    },
+    "external_guard": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-composite-source-paths-03-guard\\external-budget.json",
+      "sha256": "d556581521e921968895810ed85a59ef7cb4ba4e6379f57a7ce3e902247e0e13"
+    },
+    "frozen_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-composite-source-paths-03\\driver-at-run.py",
+      "sha256": "a7aee1b1a2286e4def9b73888ff4217dedaa36cd479b08cc9f2ca9eec977594b"
+    },
+    "raw_db": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-step4-basis-01\\indexes\\raw-spatial.sqlite",
+      "sha256": "287c1850a113b23b89c97c38941502f866131d938773c1b346d0e4972733d3a7"
+    },
+    "result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-composite-source-paths-03\\result.json",
+      "sha256": "e534da4f465ecb081ae3ec0bcdf96a1ba5329bd4f5c1353b6dfa262ef4f858ff"
+    }
+  },
+  "scope": "Independent small-row replay of all 20 compiled links, 93 source via rows, five source ideal trace bridges, native ordered fingerprints, contiguous node paths, unique L02 splits, and leg/total R/L arithmetic. The frozen producer, not this review, checked the large raw-field endpoint and active-index arrays. This review does not split native links, add trace impedance, couple a sheet, build a mesh/operator, solve a field, or claim a unique return.",
+  "status": "ACCEPT_L02_COMPOSITE_SOURCE_PATH_RECOVERY_INDEPENDENT_REVIEW",
+  "version": "0.23.1"
+}

@@ -1,0 +1,92 @@
+{
+  "budget": {
+    "elapsed_s": 59.45299999997951,
+    "max_rss_bytes": 25769803776,
+    "max_runtime_s": 210.0,
+    "peak_rss_bytes": 12212903936
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-factor-01\\driver-at-run.py",
+    "sha256": "8ded2b0fdde86f32bb44c955abcb81942f237079a2d9b227131d942e122fcf7a",
+    "size_bytes": 12882
+  },
+  "external_limit": {
+    "memory_bytes": 25769803776,
+    "seconds": 240.0
+  },
+  "factor": {
+    "L_nnz": 11996422,
+    "SymmetricMode": true,
+    "U_nnz": 11996422,
+    "apply_seconds": 0.14010489999782294,
+    "budget": {
+      "elapsed_s": 59.45299999997951,
+      "max_rss_bytes": 25769803776,
+      "max_runtime_s": 210.0,
+      "peak_rss_bytes": 291917824
+    },
+    "diag_pivot_thresh": 0.0,
+    "factor_seconds": 57.41272950003622,
+    "ordinary_transpose_inverse_witness": 1.881909711859538e-14,
+    "permc_spec": "MMD_AT_PLUS_A",
+    "pivot_finite": true,
+    "pivot_max_abs": 1.0000000000000002,
+    "pivot_min_abs": 5.536190172972811e-08,
+    "pivot_nonzero": true,
+    "probe_gate_lte_2e_8": true,
+    "probe_relative_residual": 6.723703071595763e-09,
+    "transpose_apply_seconds": 0.18973949999781325,
+    "transpose_gate_lte_2e_8": true
+  },
+  "factor_diagnostic": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-factor-01\\factor-probe-diagnostic.json",
+    "sha256": "7992a73880c8e8ffea843ee8cfd49fc89134030856d11d57845ee44af95a2e20",
+    "size_bytes": 1510
+  },
+  "inputs": {
+    "base_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l02_conditional_hybrid_block_lgmres.py",
+      "sha256": "ae0fb71ea00d02381abf28bf440d9407191e45f1c43d774cae31da6e0fb8da5e",
+      "size_bytes": 35889
+    },
+    "budget": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\reconstruct_astra_native_loaded_field.py",
+      "sha256": "354d9e004b189cf8193c2922c8fa4dc1903b407bebb295a4576673200ce6b213",
+      "size_bytes": 33457
+    },
+    "guard": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_fmm3d_runtime.py",
+      "sha256": "2961d1606ec2d4583c37d990d238a6abc87a54d8e0b93f9d83397f3851536a25",
+      "size_bytes": 16465
+    },
+    "static_artifact": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-block-01\\native-l04-auxiliary-block.npz",
+      "sha256": "c9ddef8e180a337f9a8ac5b509a060776fed5e7e5e3d1a13380ec847c76126ad",
+      "size_bytes": 52261901
+    },
+    "static_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-block-01\\driver-at-run.py",
+      "sha256": "5836ba78aa01a818675a4bb4ce3175219a32f2a39b896d8aa2a47314a8d4ffde",
+      "size_bytes": 10283
+    },
+    "static_external": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-block-01\\external-budget.json",
+      "sha256": "94e12ebc2562da027d3421ba4b87ffa25b29bb13f8c1473b2b8dd0e24150796d",
+      "size_bytes": 1018
+    },
+    "static_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-block-01\\result.json",
+      "sha256": "ae45f21634d9bdc688639d37cdeaa5cc1752c6ca7df1a4a13a1d541a9be579de",
+      "size_bytes": 6050
+    }
+  },
+  "pre_factor_static": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-factor-01\\pre-factor-static-receipt.json",
+    "sha256": "11e862f6e458a51751565bdbd1d559c56ff6ac8b14b11396cff512c86075b147",
+    "size_bytes": 3912
+  },
+  "program": "SPD Decap PI Evaluator",
+  "scope": "One scaled complex-symmetric passive gauged auxiliary factor only. No base factors, NtD action, restart field, global solve, or residual-reduction claim.",
+  "status": "PASS_SHEET_AWARE_NATIVE_AUXILIARY_FACTOR",
+  "version": "0.23.1"
+}

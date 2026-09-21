@@ -1,0 +1,64 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "PASS_REAL_L02_RESTRICTED_HYBRID_CELLS_CONDITIONAL_ZERO_EXTERIOR_FLUX",
+  "driver_sha256": "31426b9bb52b71955443051c3f5071cc106541ae28e3d554b9d95a491357fbfa",
+  "inputs": {
+    "local_r_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\assemble_astra_l25_rt0_resistance.py",
+      "sha256": "ec299b76564463bcea09a54aea4391cb2659e5267375cb7b3b2175d1fe475010"
+    },
+    "budget_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\reconstruct_astra_native_loaded_field.py",
+      "sha256": "354d9e004b189cf8193c2922c8fa4dc1903b407bebb295a4576673200ce6b213"
+    },
+    "mesh": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-sheet-mesh-preflight-02\\mesh-stiffness.npz",
+      "sha256": "137b4952f739a75e7bf6f2e21684529a43c48558412df59faab0ad003ea10fb9"
+    },
+    "space": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-full-rt0-current-space-01\\l02-rt0-current-space.npz",
+      "sha256": "7cd77ee8b03fd0226596748a1913ee5a913381617498c9927ef12d8b080bc98f"
+    },
+    "full_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l02_hybrid_cell_geometry.py",
+      "sha256": "5f102d3a3f0a59919c7bacfb259cbf00a9959f50d01ed9913e7501acfcf6c9c2"
+    },
+    "full_geometry": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-hybrid-cell-geometry-02\\hybrid-cell-geometry.npz",
+      "sha256": "15f1f6f6ad0ffd45ada9a74bde80d0e79ce82517a3ab485095d57898fbd06834"
+    },
+    "boundary_law": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-boundary-01\\result.json",
+      "sha256": "f5b6874bcdf8edfbfefb7aad58d1feeee03e4bb2adb8813a3589b0b6e9f99e05"
+    }
+  },
+  "active_face_count_histogram": [
+    0,
+    94983,
+    627952,
+    860905
+  ],
+  "changed_boundary_cells": 722935,
+  "unchanged_full_face_cells": 860905,
+  "metrics": {
+    "rh_roundoff_ratio": 0.046880087093002246,
+    "rw_roundoff_ratio": 0.042029075808943904,
+    "rh_abs": 1.3603767001768574e-09,
+    "rw_abs_ohm": 1.8168799797990687e-13,
+    "weight_sum_roundoff_ratio": 0.12499999999999717,
+    "weight_sum_abs": 1.4210854715202004e-14,
+    "weight_abs": 1254.6666668674225
+  },
+  "artifact": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-restricted-hybrid-cell-geometry-02\\restricted-hybrid-cell-geometry.npz",
+    "sha256": "e03297ce292d082422585e71e47a05c3d3caed8ccfe0cd24e99d06ebeb7eac0b"
+  },
+  "budget": {
+    "elapsed_s": 6.797000000020489,
+    "peak_rss_bytes": 389345280,
+    "max_runtime_s": 120,
+    "max_rss_bytes": 4294967296
+  },
+  "scope": "Exact local RT0 flux restriction for the approved conditional2D lateral boundary. Interior k3 coefficients reused unchanged; k1/k2 geometric coefficients represent inverse of restricted R before cell elimination. All active contact and G/C terminals remain for the next coupled assembly. No global solve, magnetic action, or accuracy acceptance."
+}

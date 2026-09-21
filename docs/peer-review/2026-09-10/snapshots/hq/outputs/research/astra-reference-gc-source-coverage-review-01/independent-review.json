@@ -1,0 +1,96 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "ACCEPT_SAVED_ADJACENT_GC_SOURCE_COVERAGE_INDEPENDENT_REVIEW",
+  "reviewer_sha256": "1704712480e5cf130443604b967c2532ce6d773500babef946c769c9aec588c3",
+  "inputs": {
+    "producer": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-reference-gc-source-coverage-01\\audit.py",
+      "sha256": "eb249149510af4335e925a90efe583bd3ca841e958fd39144dca54cf6f9a27d5"
+    },
+    "result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-reference-gc-source-coverage-01\\result.json",
+      "sha256": "4545b8bcbb81b24553cf4ca596a429852a0b678114fbdd3bb22a3135e0c1f594"
+    },
+    "compiled": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-step4-basis-01\\indexes\\compiled-topology.sqlite",
+      "sha256": "5a4fd917e0c415a50d75e1e52be22580d0c9c88423e6e93c5eb69f62f0aa849b"
+    },
+    "raw": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-step4-basis-01\\indexes\\raw-spatial.sqlite",
+      "sha256": "287c1850a113b23b89c97c38941502f866131d938773c1b346d0e4972733d3a7"
+    },
+    "field": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\raw-field-snapshot.npz",
+      "sha256": "6eac098738598a78b2068ce4f80e46fd70e17010a89bfb5949ec8a68124df4a7"
+    },
+    "layerwise": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\src\\spd_decap_pi\\_core\\solver\\layerwise_network.py",
+      "sha256": "dde4d562b47cc0103037b1efc5ff350a560cddffd53d9f3aaebc2579ad702b2b"
+    },
+    "capacitance": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\src\\spd_decap_pi\\_core\\solver\\multilayer_capacitance.py",
+      "sha256": "56b01319194ed0e8253eb1d60efed3e4ba5dcae34e22c8a70c19cebad6fc30b2"
+    }
+  },
+  "counts": {
+    "physical_conductors": 48,
+    "physical_adjacent_gaps": 47,
+    "retained_artwork_layers": 42,
+    "retained_artwork_assets": 371,
+    "saved_adjacent_partials": 36,
+    "excluded_physical_adjacent_pairs": 11,
+    "same_net_edges_retained": 1790
+  },
+  "retained_layers_with_no_adjacent_partial": [
+    "Signal$L04(DGND)",
+    "Signal$L06(DGND)",
+    "Signal$L18(DGND)"
+  ],
+  "source_trace_counts_on_layers_without_retained_artwork": {
+    "Signal$L03(SIG1)": 14295,
+    "Signal$L05(SIG2)": 17981,
+    "Signal$L07(SIG3)": 14365,
+    "Signal$L17(SIG4)": 9036,
+    "Signal$L19(SIG5)": 9030,
+    "Signal$BOTTOM": 0
+  },
+  "metrics": {
+    "saved_csc_symmetry_max_abs_f": 0.0,
+    "saved_csc_row_sum_max_relative_to_entry": 9.718224306779822e-16
+  },
+  "gates": {
+    "producer_and_inputs_hash_bound": true,
+    "production_uses_island_resolved_sparse_extractor": true,
+    "sparse_extractor_is_adjacent_only": true,
+    "sparse_extractor_has_no_same_net_skip": true,
+    "physical_conductor_count_48": true,
+    "physical_gap_count_47": true,
+    "retained_artwork_layers_42": true,
+    "retained_artwork_assets_371": true,
+    "saved_partial_prefixes_36": true,
+    "saved_pairs_equal_all_retained_adjacent_pairs": true,
+    "excluded_physical_pairs_11": true,
+    "isolated_retained_layers_exact": true,
+    "saved_partial_rows_match_producer": true,
+    "same_net_edges_1790": true,
+    "producer_excluded_pairs_match": true,
+    "saved_csc_exactly_symmetric": true,
+    "saved_csc_maxwell_row_sum": true,
+    "missing_artwork_layer_trace_counts_independently_match": true
+  },
+  "findings": [],
+  "evidence": {
+    "actual_caller": "layerwise_network.py:4103-4132 uses island_resolved=True and extract_sparse_adjacent_gap_island_capacitance",
+    "sparse_contract": "multilayer_capacitance.py:578-607,696-938 retains every positive adjacent island overlap and rejects nonadjacent mode",
+    "retained_blocks": "layerwise_network.py:997-1019 forms contiguous retained-artwork conductor blocks"
+  },
+  "limitations": [
+    "No source geometry or capacitance was recomputed; this review checks saved CSC structure, metadata, hashes and the real production call contract.",
+    "No retained artwork on a layer does not prove absent copper or zero G/C.",
+    "The five omitted SIG artwork layers still contain 64,707 source trace rows in the pinned raw index; a reference rebuild must qualify trace/pad geometry rather than treat those layers as empty.",
+    "The production sparse model is adjacent-only and does not qualify nonadjacent openings, fringing, coplanar fields or missing artwork.",
+    "The 1,790 same-NET edges prove the production island-resolved path did not apply the dense bulk extractor's same-NET skip; they do not establish complete reference electrostatics."
+  ],
+  "elapsed_s": 5.204000000027008
+}

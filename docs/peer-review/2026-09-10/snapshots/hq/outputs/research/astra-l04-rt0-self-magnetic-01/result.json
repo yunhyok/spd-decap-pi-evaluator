@@ -1,0 +1,150 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "COMPLETED_L04_RT0_SELF_MAGNETIC",
+  "run_released": true,
+  "inputs": {
+    "stream_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\result.json",
+      "sha256": "3e5417fa1a2db0308208449896c2aa1650beff5051d2ee03b60a8b4a11fe2bf1",
+      "size_bytes": 8797
+    },
+    "stream_space": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\l04-fixed-contact-rt0-space.npz",
+      "sha256": "5d31b3c6183eb4f43723eb80d1a545953a42fb2c9320be425d3ebc034cb51bb6",
+      "size_bytes": 79222436
+    },
+    "mesh": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-conditional-sheet-mesh-02\\l04-conditional-sheet-mesh-before-stiffness.npz",
+      "sha256": "6f2f396fe2319d60ad4b1586fd7043960e42f1d85c29f28a1d9c082302a3a211",
+      "size_bytes": 19845932
+    },
+    "l25_self_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-rt0-self-magnetic-02\\result.json",
+      "sha256": "c930d29e7437c62aabc45efe58acbcfbde6fa2b9bd2646254711b1ea9a8dd7ed",
+      "size_bytes": 6002
+    },
+    "self_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\assemble_astra_l25_rt0_self_magnetic.py",
+      "sha256": "ec964ed1b08dd37a86f5dd4a8c2a36efb30dd2310c8bc454bce588e9c8326c33",
+      "size_bytes": 19307
+    },
+    "external_guard": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_fmm3d_runtime.py",
+      "sha256": "2961d1606ec2d4583c37d990d238a6abc87a54d8e0b93f9d83397f3851536a25",
+      "size_bytes": 16465
+    },
+    "resistance_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\assemble_astra_l25_rt0_resistance.py",
+      "sha256": "ec299b76564463bcea09a54aea4391cb2659e5267375cb7b3b2175d1fe475010",
+      "size_bytes": 18360
+    },
+    "triangle_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_rt0_self_inductance.py",
+      "sha256": "8766c96ec7a822aedc9e3c1229a2b3dcc0f700b52a58a9ff9b92b131ecff16fb",
+      "size_bytes": 7876
+    },
+    "closed_self_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-rt0-closed-self-inductance-01\\result.json",
+      "sha256": "614cfa2f18fe67dd0afce95c04b998cbec1e4526612f31f19547989feb2b763e",
+      "size_bytes": 6280
+    },
+    "stress_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-shape-kernel-stress-01\\result.json",
+      "sha256": "c4450535687d9d69e8215179e81a85355e67cb285c711b0c3cc87165bf765120",
+      "size_bytes": 8454
+    },
+    "sliver_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-sliver-kernel-refined-01\\result.json",
+      "sha256": "cb2751c17ed1233ca9ed5673011379ba83ec1e73c3b71301161faa91ea09200a",
+      "size_bytes": 3566
+    }
+  },
+  "counts": {
+    "free_triangles": 1589827,
+    "branches": 2272974,
+    "sparse_nnz": 8653590
+  },
+  "metrics": {
+    "minimum_local_eigenvalue_h": 5.3963892674036583e-20,
+    "maximum_local_eigenvalue_h": 2.5057637098995604e-08,
+    "sparse_symmetry_max_abs_h": 0.0,
+    "synthetic_probe_formula": "q[k]=exp(1j*(k+1)*1e-6)",
+    "synthetic_probe_transpose_energy_h_a2": [
+      4.035719022585558e-06,
+      -4.580626819940089e-06
+    ],
+    "synthetic_probe_hermitian_energy_h_a2": [
+      6.492954127407165e-05,
+      2.9140761455364137e-24
+    ],
+    "local_to_sparse_transpose_relative": 9.2556185538632e-15,
+    "local_to_sparse_hermitian_relative": 3.578320757756401e-15,
+    "scalar_helper_checks": [
+      {
+        "triangle_index": 456,
+        "relative": 0.0
+      },
+      {
+        "triangle_index": 800670,
+        "relative": 0.0
+      },
+      {
+        "triangle_index": 454,
+        "relative": 0.0
+      }
+    ]
+  },
+  "gates": {
+    "finite_local": true,
+    "finite_assembled": true,
+    "local_psd_diagnostic": true,
+    "assembled_symmetry": true,
+    "cursor_matches_entries": true,
+    "local_to_sparse_transpose_energy_consistency": true,
+    "local_to_sparse_hermitian_energy_consistency": true,
+    "worst_scalar_comparisons": true
+  },
+  "budget": {
+    "max_runtime_s": 90.0,
+    "max_rss_bytes": 8589934592,
+    "current_phase": "matrix checkpoint receipt serialization",
+    "peak_rss_bytes": 585793536,
+    "elapsed_s": 11.311999999999898
+  },
+  "geometry_approximation": {
+    "domain": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-conditional-sheet-mesh-02\\l04-coalesced-conductor-domain.wkb",
+      "sha256": "8dbfbb75d87efa7c9504b1ab521a78687ef97b45d1eb0e6a8d5ff6007658c674",
+      "size_bytes": 14024197
+    },
+    "max_vertex_displacement_um": 1.473493695890548e-10,
+    "method": "EXACT_TWO_SOURCE_VERTEX_COALESCENCE_L04_RING563",
+    "source_domain": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-pad-conductor-domain-01\\l04-pad-augmented-conductor-domain.wkb",
+      "sha256": "0eeaffc34a6b9759fd285f28d35ebd59042e6bcd909a697fad3f18a5d2eafa68",
+      "size_bytes": 14024197
+    },
+    "unchanged_source_geometry": false,
+    "witness_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-cdt-local-coalescence-witness-02\\result.json",
+      "sha256": "3e097e7086f6bd10e009afbcdb6b98ca8029f6555273f4e7b1f92c3059a216ce",
+      "size_bytes": 6819
+    }
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-rt0-self-magnetic-01\\driver-at-run.py",
+    "sha256": "31b4336b3450b198a65d9571574558cc8c2e168aa084fbc4a06f86941eade06b",
+    "size_bytes": 19415
+  },
+  "checkpoint": {
+    "file": "rt0-self-magnetic.npz",
+    "sha256": "20d2cfe73a5170b082cf5378e7e4c18c505f8667d808bb022c74d2828377c65c"
+  },
+  "phase_receipt": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-rt0-self-magnetic-01\\phase-self-l-assembly.json",
+    "sha256": "50c675881a620eb38b905e6833dd3314637b74a090d5539e7ae0a25e2e0ee9c5",
+    "size_bytes": 505
+  },
+  "scope": "Same-triangle zero-thickness L04 RT0 self partial inductance only. No mutual terms, solver, spectral clipping, or PowerSI/accuracy claim."
+}

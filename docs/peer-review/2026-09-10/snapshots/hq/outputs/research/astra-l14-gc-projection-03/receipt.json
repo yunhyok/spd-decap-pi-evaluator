@@ -1,0 +1,160 @@
+{
+  "elapsed_s": 45.9399398000096,
+  "frequency_hz": 1000000.0,
+  "geometry": [
+    {
+      "bundle_member": "attachments/geometry/0087-1c42beade69d1493.spdgeom.zlib",
+      "cached_input_path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-gc-projection-02\\source\\0087-1c42beade69d1493.spdgeom.zlib",
+      "compressed_sha256": "1c42beade69d1493eb00d6c6cb61bfd3c05320ef657571661f5873817ffc0d6a",
+      "compressed_size_bytes": 1650865,
+      "layer": "Signal$L13(DGND)",
+      "net": "DGND",
+      "saved_path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-gc-projection-03\\source\\0087-1c42beade69d1493.spdgeom.zlib",
+      "source_island_count": 57
+    },
+    {
+      "bundle_member": "attachments/geometry/0094-afdc81f0e97b2c79.spdgeom.zlib",
+      "cached_input_path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-gc-projection-02\\source\\0094-afdc81f0e97b2c79.spdgeom.zlib",
+      "compressed_sha256": "afdc81f0e97b2c797ac642552b1d0fb94789b6b0c6927477f5becdc64366f409",
+      "compressed_size_bytes": 278266,
+      "layer": "Signal$L15(MAIN_POWER5)",
+      "net": "ADC_VDD_050_VDDQ_DDRL/0",
+      "saved_path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-gc-projection-03\\source\\0094-afdc81f0e97b2c79.spdgeom.zlib",
+      "source_island_count": 32
+    },
+    {
+      "bundle_member": "attachments/geometry/0096-cc3f574f8acc8118.spdgeom.zlib",
+      "cached_input_path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-gc-projection-02\\source\\0096-cc3f574f8acc8118.spdgeom.zlib",
+      "compressed_sha256": "cc3f574f8acc811855ffa431aee80ec54c39563f7d2a6eb69b8f2fb9ad99cd94",
+      "compressed_size_bytes": 638425,
+      "layer": "Signal$L15(MAIN_POWER5)",
+      "net": "ADC_VDD_055_VTRIP/0",
+      "saved_path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-gc-projection-03\\source\\0096-cc3f574f8acc8118.spdgeom.zlib",
+      "source_island_count": 4
+    },
+    {
+      "bundle_member": "attachments/geometry/0090-eb5c10758ed3e08d.spdgeom.zlib",
+      "cached_input_path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-gc-projection-02\\source\\0090-eb5c10758ed3e08d.spdgeom.zlib",
+      "compressed_sha256": "eb5c10758ed3e08d19db505d10e3efe35d1c764145fbe29d457719075b2c7838",
+      "compressed_size_bytes": 538394,
+      "layer": "Signal$L14(MAIN_POWER4)",
+      "net": "adc_vdd_075_vtrip_sram/0",
+      "saved_path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-gc-projection-03\\source\\0090-eb5c10758ed3e08d.spdgeom.zlib",
+      "source_island_count": 110
+    }
+  ],
+  "input_sha256": {
+    "candidate": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-step6e-loaded-boundary-01\\loaded-sheet-candidate-final.json",
+      "sha256": "7367aed35e73b7f6d11f84476748ccdc86532f8c9104205827d9e07a1016a76d",
+      "size_bytes": 9060
+    },
+    "derived": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\derived-field-observation.npz",
+      "sha256": "be5a83dff88db545de4625414e46dcc360364eb0a29077c91848a6ac805cb6c0",
+      "size_bytes": 22990365
+    },
+    "inventory": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\l14-gc-projection-inventory.json",
+      "sha256": "4409cdccc3b3d488d8f3abdd2f1e8b09a488d3c18a5bace010c765a240bc397f",
+      "size_bytes": 604254
+    },
+    "ledger": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\l14-island-external-current-ledger.json",
+      "sha256": "8cf11e747532b87f2955fbfb65ec65fab12fd18bafa1da08e9b3ca47ee83bc5b",
+      "size_bytes": 467262
+    },
+    "mesh": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-sheet-mesh-preflight-05\\mesh-stiffness.npz",
+      "sha256": "a7a8234df9fb173a6fd88a5c613fc074321b984d5e7f0708842d66c8f0b9e779",
+      "size_bytes": 5430129
+    },
+    "mesh_receipt": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-sheet-mesh-preflight-05\\verified-mesh-checkpoint.json",
+      "sha256": "ab577767f16a6e0f51bfc3009c9fc91ff586218e23e4ecba3ee10c67bffa2f07",
+      "size_bytes": 1869
+    },
+    "raw": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-loaded-vtrip-field-02\\raw-field-snapshot.npz",
+      "sha256": "6eac098738598a78b2068ce4f80e46fd70e17010a89bfb5949ec8a68124df4a7",
+      "size_bytes": 145099492
+    }
+  },
+  "limitations": [
+    "This is the exact first-order GC current RHS at the saved native equipotential L14 voltage; it is not a finite-resistance coupled-network re-evaluation of the capacitive stamp.",
+    "Only original partial 06/07 source owners incident on the L14 candidate are projected; 336/412 nonincident edges and all external terminals remain untouched.",
+    "No sheet solve, native compile, raw SPD scan, Touchstone read, PowerSI fit, product replacement, or accuracy claim was performed."
+  ],
+  "output": {
+    "allow_pickle_required": false,
+    "gc_nodal_injection_dtype": "complex128",
+    "gc_nodal_injection_shape": [
+      171957
+    ],
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-gc-projection-03\\gc-nodal-injection.npz",
+    "sha256": "5d25cfd04533b2e92c5c82f0143801cf282b2b6f41f4e138295651ed1576bfa9",
+    "size_bytes": 1166976
+  },
+  "program": "SPD Decap PI Evaluator",
+  "projection": {
+    "current_by_partial_a": {
+      "6": [
+        -6.976072017542608e-06,
+        -1.0192579326545951e-06
+      ],
+      "7": [
+        -7.017391870943462e-06,
+        -1.0252937210720104e-06
+      ]
+    },
+    "current_sign": "positive into the L14 sheet",
+    "local_clip_whole_overlap_controls": {
+      "count": 96,
+      "maximum_area_abs_error_um2": 0.0,
+      "maximum_first_moment_abs_error_um3": 0.0,
+      "seen": 330756
+    },
+    "maximum_barycentric_range_error": 1.1218569331735826e-14,
+    "maximum_mesh_area_relative_error": 3.865108509131802e-14,
+    "maximum_source_area_relative_error": 1.4087479882458939e-14,
+    "mesh_node_count": 171957,
+    "mesh_node_order": "exact node_xy_um order from the verified mesh checkpoint",
+    "mesh_triangle_count": 214873,
+    "nodal_injection_sum_a": [
+      -1.3993463888486597e-05,
+      -2.044551653726682e-06
+    ],
+    "nodal_recollapse_abs_error_a": 5.374922968958015e-19,
+    "owner_current_sum_a": [
+      -1.3993463888486065e-05,
+      -2.044551653726605e-06
+    ],
+    "owner_to_saved_current_abs_error_a": 3.618526336874044e-21,
+    "owner_weight_sum_max_abs_error": 4.3298697960381105e-14,
+    "partial_owner_counts": {
+      "6": 110,
+      "7": 114
+    },
+    "retained_nonincident_owner_counts": {
+      "6": 336,
+      "7": 412
+    },
+    "saved_expected_current_sum_a": [
+      -1.3993463888486062e-05,
+      -2.0445516537266036e-06
+    ],
+    "source_owner_count": 224,
+    "total_positive_area_triangle_intersections": 330756
+  },
+  "rail_id": "ADC_VDD_075_VTRIP_SRAM/0",
+  "script_sha256": "b59a27204bd9346b6dba8a67f6e2f51d153cae7078f36a948af6607986ada6f9",
+  "source_geometry": {
+    "bundle_not_reopened": true,
+    "bundle_path_from_pinned_candidate": "D:\\SPD-Decap-PI-Evaluator-W7\\e2f219e71d8c8a397009f72242cce10d78cfc7ab\\260902-d115b-source-plane-ownership-materialization-04\\source_plane_ownership_candidate.spdpi",
+    "bundle_size_from_pinned_candidate": 925278361,
+    "cache_path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l14-gc-projection-02\\source",
+    "exact_cached_geometry_members_read": 4
+  },
+  "status": "COMPLETED_SOURCE_EXACT_L14_GC_P1_INJECTION",
+  "version": "0.23.1"
+}

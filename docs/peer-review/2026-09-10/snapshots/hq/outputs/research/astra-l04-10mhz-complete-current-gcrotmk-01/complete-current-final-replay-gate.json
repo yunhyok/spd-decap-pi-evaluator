@@ -1,0 +1,12 @@
+{
+  "artifact": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-complete-current-gcrotmk-01\\complete-current-final.npz",
+    "sha256": "85e8db88de6a07024a7076549d53e7fc4060789cffbca39f229e025ff4fdaa91",
+    "size_bytes": 534185159
+  },
+  "explicit_vs_algebraic": {
+    "absolute": 3.7822662863696776e-11,
+    "denominator": 0.9890762629723306,
+    "relative": 3.824039083703585e-11
+  }
+}

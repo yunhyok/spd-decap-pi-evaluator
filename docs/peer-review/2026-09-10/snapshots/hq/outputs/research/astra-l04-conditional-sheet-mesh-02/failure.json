@@ -1,0 +1,18 @@
+{
+  "budget": {
+    "elapsed_s": 773.375,
+    "max_rss_bytes": 8589934592,
+    "max_runtime_s": 1800.0,
+    "peak_rss_bytes": 4567928832
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-conditional-sheet-mesh-02\\driver-at-run.py",
+    "sha256": "816312674f846bf0b08d85222f962b58996c4b5b75b17276768d22a932da723a",
+    "size_bytes": 24194
+  },
+  "error": "stiffness entered twice",
+  "error_type": "ValueError",
+  "program": "SPD Decap PI Evaluator",
+  "status": "STOP_CONDITIONAL_L04_SHEET_MESH",
+  "version": "0.23.1"
+}

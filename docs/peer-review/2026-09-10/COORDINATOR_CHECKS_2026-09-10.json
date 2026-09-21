@@ -1,0 +1,71 @@
+{
+  "reviewed_commit": "3929d312a69778bee8e895fcda0a7dd09bdcab20",
+  "packet_commit": "215d7f5a69e3fec285c31778492f360e08e34851",
+  "scope": "Independent arithmetic on frozen JSON and source/document reads only; no solver or SPD parsing.",
+  "third_warm_z_ohm": [
+    0.0008425899016622036,
+    0.00015674764355620536
+  ],
+  "cycles": {
+    "real_h": {
+      "delta_from_third_ohm": [
+        -7.120044919633767e-08,
+        2.4383121902989005e-08
+      ],
+      "delta_from_third_abs_nanohm": 75.259820618284,
+      "contact_share_residual_squared": 0.999914095402708,
+      "original_rhs_relative": 988.007830580013
+    },
+    "diagonal_homega": {
+      "delta_from_third_ohm": [
+        -7.632521594293836e-08,
+        7.578138992749548e-08
+      ],
+      "delta_from_third_abs_nanohm": 107.55629989953768,
+      "contact_share_residual_squared": 0.9995960114173726,
+      "original_rhs_relative": 689.0729320236888
+    },
+    "forward_homega": {
+      "delta_from_third_ohm": [
+        -7.642298000052998e-08,
+        7.611993509311094e-08
+      ],
+      "delta_from_third_abs_nanohm": 107.86434253608014,
+      "contact_share_residual_squared": 0.9996000431622144,
+      "original_rhs_relative": 710.5207739477488
+    }
+  },
+  "diagonal_to_forward_abs_nanohm": 0.35237854662050083,
+  "fable_leff_arithmetic": {
+    "fitted_c_f": 0.00026280899576722265,
+    "low_frequency_fitted_l_h": -1.6111067239749006e-08,
+    "reference_leff_ph": {
+      "10000000": 14.907600300495169,
+      "100000000": 16.741594129546904,
+      "1000000000": 17.500334498692013
+    },
+    "interpretation": "Terminal equivalent diagnostic; does not uniquely identify physical loop inductance or missing-physics cause."
+  },
+  "dense_storage_lower_bound_gib": {
+    "2000": {
+      "real64_one_matrix": 0.029802322387695312,
+      "complex128_one_matrix": 0.059604644775390625
+    },
+    "40000": {
+      "real64_one_matrix": 11.920928955078125,
+      "complex128_one_matrix": 23.84185791015625
+    },
+    "100000": {
+      "real64_one_matrix": 74.50580596923828,
+      "complex128_one_matrix": 149.01161193847656
+    }
+  },
+  "storage_caveat": "One dense matrix only; factorization, workspace, copies, coupled blocks and geometry are additional. Not a runtime estimate or request to allocate.",
+  "red_team_delivery": {
+    "original_report_sha256": "f404d7c56cb7bc84900cd9f9f06690770f0b9cbd60ac94edc2f7cd1048166a0a",
+    "published_report_sha256": "6f25eae295bf7ee0bedf4952301639cc7a8e919f6df7c84adf27e8b4743832fe",
+    "original_evidence_sha256": "3bd176fe64bb7de1cf6d48c7002fd5baddaa0f338ecbbcad4008cb19ce7a4bdd",
+    "source_blob_hashes_independently_matched": 14,
+    "independent_arithmetic_matches_red_team": true
+  }
+}

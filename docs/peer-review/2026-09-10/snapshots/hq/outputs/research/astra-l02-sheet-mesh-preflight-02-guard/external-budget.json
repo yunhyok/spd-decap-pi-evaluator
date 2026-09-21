@@ -1,0 +1,28 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "STOP_NATIVE_WORKER_EXIT",
+  "owned_pid": 17564,
+  "exit_code": 4294967295,
+  "elapsed_s": 1729.625,
+  "sampled_peak_private_bytes": 5203247104,
+  "sampled_peak_working_set_bytes": 5014974464,
+  "max_runtime_s": 2400.0,
+  "max_memory_bytes": 25769803776,
+  "sampling_interval_s": 0.5,
+  "driver_sha256": "2961d1606ec2d4583c37d990d238a6abc87a54d8e0b93f9d83397f3851536a25",
+  "driver_sha256_role": "guard helper, custom worker bound separately by its frozen driver and result",
+  "worker_command": [
+    "C:\\Users\\User\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+    "-B",
+    "tools\\research\\preflight_astra_l02_sheet_mesh.py",
+    "--source-result",
+    "outputs/research/astra-l02-pad-conductor-domain-01/result.json",
+    "--source-sha256",
+    "91e16302f7b7c6b5a43067a6208331f1aa1acee75440aa48ba035c02f1350a9d",
+    "--source-review-sha256",
+    "ac4f8ba26c1ad976d843fc0177e449f24523382498b21f7c65ad5cf5a5cae7f6",
+    "--output",
+    "outputs/research/astra-l02-sheet-mesh-preflight-02"
+  ]
+}

@@ -1,0 +1,1911 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "COMPLETED_CONDITIONAL_L04_CACHED_PATH_SERIES_SPLIT_QUALIFICATION",
+  "inputs": {
+    "paths": {
+      "path": "astra-l02-composite-source-paths-03/result.json",
+      "sha256": "e534da4f465ecb081ae3ec0bcdf96a1ba5329bd4f5c1353b6dfa262ef4f858ff"
+    },
+    "paths_review": {
+      "path": "astra-l02-composite-source-paths-03/independent-review.json",
+      "sha256": "3ae31ad5e917cd6d207e90fdf654918fc8dfb51f31f1c20113529df4ed4c98be"
+    },
+    "inventory": {
+      "path": "astra-l04-source-inventory-root-02/result.json",
+      "sha256": "c86cf3410188e5386bfa8b5f4b57faddc6c219456e59a4ba8ac1d8e9b5f041d1"
+    },
+    "inventory_review": {
+      "path": "astra-l04-source-inventory-root-02/independent-review-final.json",
+      "sha256": "1759b05d10147e4571bb3d9589782295ad808aa9b924ba16529079489b2e921f"
+    }
+  },
+  "script_sha256": "88193895a287987d70ed1bb52d61b0e35148bb78dbfe312ae2497cfefd3aa762",
+  "paths": [
+    {
+      "original_active_finite_index": 30657,
+      "original_active_endpoints": [
+        71610,
+        2656
+      ],
+      "l02_contact_ordinal": 38849,
+      "l04_node_id_fold": "node2736591",
+      "x_pm": -12421900000,
+      "y_pm": -22720600000,
+      "l04_touching_via_ids": [
+        "via1792808"
+      ],
+      "old_l02_legs": [
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1792808",
+            "via1792809"
+          ],
+          "source_record_sha256": [
+            "6cd0ed93bb03d08af006ed69bb380760cefd8d6512c5970fe5528481aaa49516",
+            "21a30f87a47074121d8669e44aff2b8eaf03d281ef58b201bf1cdbaadecec46f"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1792810"
+          ],
+          "source_record_sha256": [
+            "a8d6070c23dbbfba90f93edc5e4a2a8da81218a85308156891112513564006bb"
+          ]
+        }
+      ],
+      "ideal_trace_bridge_ids": [],
+      "action": "REMAP_EXISTING_L02_FIRST_LEG_L04_ENDPOINT",
+      "new_two_legs": [
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1792808",
+            "via1792809"
+          ],
+          "source_record_sha256": [
+            "6cd0ed93bb03d08af006ed69bb380760cefd8d6512c5970fe5528481aaa49516",
+            "21a30f87a47074121d8669e44aff2b8eaf03d281ef58b201bf1cdbaadecec46f"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1792810"
+          ],
+          "source_record_sha256": [
+            "a8d6070c23dbbfba90f93edc5e4a2a8da81218a85308156891112513564006bb"
+          ]
+        }
+      ]
+    },
+    {
+      "original_active_finite_index": 186263,
+      "original_active_endpoints": [
+        398531,
+        2656
+      ],
+      "l02_contact_ordinal": 38838,
+      "l04_node_id_fold": "node2556771",
+      "x_pm": -7437000000,
+      "y_pm": 10458700000,
+      "l04_touching_via_ids": [
+        "via1484705",
+        "via1484706"
+      ],
+      "old_l02_legs": [
+        {
+          "resistance_ohm": 0.004006249616342389,
+          "inductance_h": 1.5656627474604608e-10,
+          "via_ids": [
+            "via1484702",
+            "via1484703",
+            "via1484704",
+            "via1484705",
+            "via1484706",
+            "via1484707"
+          ],
+          "source_record_sha256": [
+            "e477c0bd537ca878079d0b9c9b8a11c8e9734321d91c4d710a17d2d9e63b9ff7",
+            "956626a584cf162c2ddcd6ff73776d7a110d0dfc53037f40aec249103fa613a1",
+            "96eca16830448cd6a7a01f2856db80ff8be9ddd3ce55c118db27d362c60041ef",
+            "df38a8a4eb53c71468670d00122aaf34d3af3844dfd63b7295c1d455d41a8e5b",
+            "a051e11c5078ac90c11ca59b395223af317b0e2fd296a75bc7a0c6606444f8a8",
+            "45d7b189c459fd8084c6f23d06b3227f43498a97d24e456e839aaba365160d85"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1484708"
+          ],
+          "source_record_sha256": [
+            "2d73755f40b421e862d524a8b711ca6be9579dab8118ba22c5936970424589a6"
+          ]
+        }
+      ],
+      "ideal_trace_bridge_ids": [
+        "trace1278386"
+      ],
+      "action": "REPLACE_EXISTING_L02_FIRST_LEG_WITH_TWO_SERIES_LEGS",
+      "l04_split_after_source_via_count": 4,
+      "new_three_legs": [
+        {
+          "resistance_ohm": 0.002670833077561593,
+          "inductance_h": 1.0437751649736405e-10,
+          "via_ids": [
+            "via1484702",
+            "via1484703",
+            "via1484704",
+            "via1484705"
+          ],
+          "source_record_sha256": [
+            "e477c0bd537ca878079d0b9c9b8a11c8e9734321d91c4d710a17d2d9e63b9ff7",
+            "956626a584cf162c2ddcd6ff73776d7a110d0dfc53037f40aec249103fa613a1",
+            "96eca16830448cd6a7a01f2856db80ff8be9ddd3ce55c118db27d362c60041ef",
+            "df38a8a4eb53c71468670d00122aaf34d3af3844dfd63b7295c1d455d41a8e5b"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1484706",
+            "via1484707"
+          ],
+          "source_record_sha256": [
+            "a051e11c5078ac90c11ca59b395223af317b0e2fd296a75bc7a0c6606444f8a8",
+            "45d7b189c459fd8084c6f23d06b3227f43498a97d24e456e839aaba365160d85"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1484708"
+          ],
+          "source_record_sha256": [
+            "2d73755f40b421e862d524a8b711ca6be9579dab8118ba22c5936970424589a6"
+          ]
+        }
+      ],
+      "floating_midpoint_schur_coupon": [
+        {
+          "frequency_hz": 1000.0,
+          "schur_relative_error": 2.826652646209827e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 10000.0,
+          "schur_relative_error": 2.826667913325429e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 100000.0,
+          "schur_relative_error": 7.671995208800805e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 1000000.0,
+          "schur_relative_error": 8.132715668785253e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 10000000.0,
+          "schur_relative_error": 3.232166278106258e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 100000000.0,
+          "schur_relative_error": 2.572569243171956e-17,
+          "row_sum_relative_error": 0.0
+        }
+      ]
+    },
+    {
+      "original_active_finite_index": 388189,
+      "original_active_endpoints": [
+        71610,
+        2656
+      ],
+      "l02_contact_ordinal": 38839,
+      "l04_node_id_fold": "node2562596",
+      "x_pm": -12421900000,
+      "y_pm": 9885300000,
+      "l04_touching_via_ids": [
+        "via1491647"
+      ],
+      "old_l02_legs": [
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1491647",
+            "via1491648"
+          ],
+          "source_record_sha256": [
+            "05fb6650f1b84d8e3b71184834ec0b9bf911207f37c27e682b0883498c7f238a",
+            "5d9669ec9619cd9d761037250f47fe85995090279e2dccd94e167e3c25c18e2e"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1491649"
+          ],
+          "source_record_sha256": [
+            "a6f0e7eb25879c5fb5d05a6556917c21087587b0797897cd38226d0fb9bce04f"
+          ]
+        }
+      ],
+      "ideal_trace_bridge_ids": [],
+      "action": "REMAP_EXISTING_L02_FIRST_LEG_L04_ENDPOINT",
+      "new_two_legs": [
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1491647",
+            "via1491648"
+          ],
+          "source_record_sha256": [
+            "05fb6650f1b84d8e3b71184834ec0b9bf911207f37c27e682b0883498c7f238a",
+            "5d9669ec9619cd9d761037250f47fe85995090279e2dccd94e167e3c25c18e2e"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1491649"
+          ],
+          "source_record_sha256": [
+            "a6f0e7eb25879c5fb5d05a6556917c21087587b0797897cd38226d0fb9bce04f"
+          ]
+        }
+      ]
+    },
+    {
+      "original_active_finite_index": 395047,
+      "original_active_endpoints": [
+        71610,
+        2656
+      ],
+      "l02_contact_ordinal": 38844,
+      "l04_node_id_fold": "node2567397",
+      "x_pm": -11836900000,
+      "y_pm": 8871900000,
+      "l04_touching_via_ids": [
+        "via1497456"
+      ],
+      "old_l02_legs": [
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1497456",
+            "via1497457"
+          ],
+          "source_record_sha256": [
+            "dacd015aa14d647c51bdaff127b96350cda25d2aba78ab2c3487955b5e08ff89",
+            "db36c17f846812098b68c7728af03c4d9887b75f1e3ac8fd935989f2d667b05a"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1497458"
+          ],
+          "source_record_sha256": [
+            "1de8f526af1da9f5c445aaada6f4aec96608ff0028b08b21c407f01a370c1e36"
+          ]
+        }
+      ],
+      "ideal_trace_bridge_ids": [],
+      "action": "REMAP_EXISTING_L02_FIRST_LEG_L04_ENDPOINT",
+      "new_two_legs": [
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1497456",
+            "via1497457"
+          ],
+          "source_record_sha256": [
+            "dacd015aa14d647c51bdaff127b96350cda25d2aba78ab2c3487955b5e08ff89",
+            "db36c17f846812098b68c7728af03c4d9887b75f1e3ac8fd935989f2d667b05a"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1497458"
+          ],
+          "source_record_sha256": [
+            "1de8f526af1da9f5c445aaada6f4aec96608ff0028b08b21c407f01a370c1e36"
+          ]
+        }
+      ]
+    },
+    {
+      "original_active_finite_index": 466710,
+      "original_active_endpoints": [
+        715373,
+        2656
+      ],
+      "l02_contact_ordinal": 38840,
+      "l04_node_id_fold": "node2564979",
+      "x_pm": -12096900000,
+      "y_pm": 9097100000,
+      "l04_touching_via_ids": [
+        "via1494556",
+        "via1494557"
+      ],
+      "old_l02_legs": [
+        {
+          "resistance_ohm": 0.002670833077561593,
+          "inductance_h": 1.0437751649736405e-10,
+          "via_ids": [
+            "via1494555",
+            "via1494556",
+            "via1494557",
+            "via1494558"
+          ],
+          "source_record_sha256": [
+            "d9f21331c07282a5af624ff4d840740584f068d7c40fbf66cf76820dc7c09f51",
+            "7dedf46be2e2fce77c4058c0c150684b0699353c7504836130ca9ecfe954a0c7",
+            "9ec8b12c029f72356d233b4e91b0b997a457a0e0296799f579dbb8d7e2ff058b",
+            "3aeb7f2827dc3265b2a89d2451c0a57e78c874d8d7c93d3ec6beebddb515ba74"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1494559"
+          ],
+          "source_record_sha256": [
+            "b74dc5e21948740fc5ecd7ed9c09a93e5e7f408917b404952b46970f2b9e05f7"
+          ]
+        }
+      ],
+      "ideal_trace_bridge_ids": [],
+      "action": "REPLACE_EXISTING_L02_FIRST_LEG_WITH_TWO_SERIES_LEGS",
+      "l04_split_after_source_via_count": 2,
+      "new_three_legs": [
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1494555",
+            "via1494556"
+          ],
+          "source_record_sha256": [
+            "d9f21331c07282a5af624ff4d840740584f068d7c40fbf66cf76820dc7c09f51",
+            "7dedf46be2e2fce77c4058c0c150684b0699353c7504836130ca9ecfe954a0c7"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1494557",
+            "via1494558"
+          ],
+          "source_record_sha256": [
+            "9ec8b12c029f72356d233b4e91b0b997a457a0e0296799f579dbb8d7e2ff058b",
+            "3aeb7f2827dc3265b2a89d2451c0a57e78c874d8d7c93d3ec6beebddb515ba74"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1494559"
+          ],
+          "source_record_sha256": [
+            "b74dc5e21948740fc5ecd7ed9c09a93e5e7f408917b404952b46970f2b9e05f7"
+          ]
+        }
+      ],
+      "floating_midpoint_schur_coupon": [
+        {
+          "frequency_hz": 1000.0,
+          "schur_relative_error": 7.928374709688726e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 10000.0,
+          "schur_relative_error": 3.150432379532732e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 100000.0,
+          "schur_relative_error": 7.934715966107695e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 1000000.0,
+          "schur_relative_error": 8.11773547656907e-18,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 10000000.0,
+          "schur_relative_error": 2.4455402104204143e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 100000000.0,
+          "schur_relative_error": 1.1366322846367028e-16,
+          "row_sum_relative_error": 0.0
+        }
+      ]
+    },
+    {
+      "original_active_finite_index": 510496,
+      "original_active_endpoints": [
+        71610,
+        2656
+      ],
+      "l02_contact_ordinal": 38845,
+      "l04_node_id_fold": "node2567461",
+      "x_pm": -12226900000,
+      "y_pm": 8871900000,
+      "l04_touching_via_ids": [
+        "via1497532"
+      ],
+      "old_l02_legs": [
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1497532",
+            "via1497533"
+          ],
+          "source_record_sha256": [
+            "fe7c88aa807eca210ea81f48fe118ccfa40e8664f6391f6e4074de16e0d99569",
+            "d915c8a797e039591902210fbd0db27748c1ff2c1a6c83a818e92da89ff33a98"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1497534"
+          ],
+          "source_record_sha256": [
+            "6c4087c471dc94f98532e027b06edb4fc516700dc9a19204656a07fca47fc0e5"
+          ]
+        }
+      ],
+      "ideal_trace_bridge_ids": [],
+      "action": "REMAP_EXISTING_L02_FIRST_LEG_L04_ENDPOINT",
+      "new_two_legs": [
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1497532",
+            "via1497533"
+          ],
+          "source_record_sha256": [
+            "fe7c88aa807eca210ea81f48fe118ccfa40e8664f6391f6e4074de16e0d99569",
+            "d915c8a797e039591902210fbd0db27748c1ff2c1a6c83a818e92da89ff33a98"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1497534"
+          ],
+          "source_record_sha256": [
+            "6c4087c471dc94f98532e027b06edb4fc516700dc9a19204656a07fca47fc0e5"
+          ]
+        }
+      ]
+    },
+    {
+      "original_active_finite_index": 551039,
+      "original_active_endpoints": [
+        441606,
+        2656
+      ],
+      "l02_contact_ordinal": 38837,
+      "l04_node_id_fold": "node2553526",
+      "x_pm": 12190600000,
+      "y_pm": 10549800000,
+      "l04_touching_via_ids": [
+        "via1480822",
+        "via1480823"
+      ],
+      "old_l02_legs": [
+        {
+          "resistance_ohm": 0.002670833077561593,
+          "inductance_h": 1.0437751649736405e-10,
+          "via_ids": [
+            "via1480821",
+            "via1480822",
+            "via1480823",
+            "via1480824"
+          ],
+          "source_record_sha256": [
+            "89ff76215fa3713fc0b944e78bf7a77a33b467712fe23f181e90ae1cbf34f9ee",
+            "7d0ef2ea6c8dec7622a8dc4970573197210016b5bc1bbf00ac8481f2d8fc6067",
+            "217133e261e4fe0cf82c0635c395affa3a24ff54b5e01304e1d92ccc7ddbc8a9",
+            "cfe64ea464fb3d8d7e6a919d0ef16de4ca37138c902040de3320a9e732608f9f"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1480825"
+          ],
+          "source_record_sha256": [
+            "4df0aeb1c60392337d68ce419ed76d48e8f47c963cbf2739f952067cdfbca0a6"
+          ]
+        }
+      ],
+      "ideal_trace_bridge_ids": [],
+      "action": "REPLACE_EXISTING_L02_FIRST_LEG_WITH_TWO_SERIES_LEGS",
+      "l04_split_after_source_via_count": 2,
+      "new_three_legs": [
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1480821",
+            "via1480822"
+          ],
+          "source_record_sha256": [
+            "89ff76215fa3713fc0b944e78bf7a77a33b467712fe23f181e90ae1cbf34f9ee",
+            "7d0ef2ea6c8dec7622a8dc4970573197210016b5bc1bbf00ac8481f2d8fc6067"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1480823",
+            "via1480824"
+          ],
+          "source_record_sha256": [
+            "217133e261e4fe0cf82c0635c395affa3a24ff54b5e01304e1d92ccc7ddbc8a9",
+            "cfe64ea464fb3d8d7e6a919d0ef16de4ca37138c902040de3320a9e732608f9f"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1480825"
+          ],
+          "source_record_sha256": [
+            "4df0aeb1c60392337d68ce419ed76d48e8f47c963cbf2739f952067cdfbca0a6"
+          ]
+        }
+      ],
+      "floating_midpoint_schur_coupon": [
+        {
+          "frequency_hz": 1000.0,
+          "schur_relative_error": 7.928374709688726e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 10000.0,
+          "schur_relative_error": 3.150432379532732e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 100000.0,
+          "schur_relative_error": 7.934715966107695e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 1000000.0,
+          "schur_relative_error": 8.11773547656907e-18,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 10000000.0,
+          "schur_relative_error": 2.4455402104204143e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 100000000.0,
+          "schur_relative_error": 1.1366322846367028e-16,
+          "row_sum_relative_error": 0.0
+        }
+      ]
+    },
+    {
+      "original_active_finite_index": 754981,
+      "original_active_endpoints": [
+        210280,
+        2656
+      ],
+      "l02_contact_ordinal": 38843,
+      "l04_node_id_fold": "node2567283",
+      "x_pm": -10211900000,
+      "y_pm": 8984500000,
+      "l04_touching_via_ids": [
+        "via1497317",
+        "via1497318"
+      ],
+      "old_l02_legs": [
+        {
+          "resistance_ohm": 0.007344790963294381,
+          "inductance_h": 2.8703817036775115e-10,
+          "via_ids": [
+            "via1497309",
+            "via1497311",
+            "via1497310",
+            "via1497312",
+            "via1497313",
+            "via1497314",
+            "via1497315",
+            "via1497316",
+            "via1497317",
+            "via1497318",
+            "via1497319"
+          ],
+          "source_record_sha256": [
+            "7bd879b2d8a44349773cd292a950347502f49010bcde5a3fadacdbf275b9b2a9",
+            "ace2b525f3b32d7ec2725409f06a19cccd196abdc2041d9846ab5dc4bd909004",
+            "1e502d116d46c2dafe0a408c217cd83f9669afac48fb217d4323d76e5458b5b6",
+            "94dee271d660e6a1216b462af46d2d44abd603948d0a517441d5fac79beb23b1",
+            "40f82c97fbae8bdb92bae8f0d208bc48f1c754800cfdc95e66be646ba58b52f5",
+            "e2de23136884cb06d8747857c5432dc92482a01251bcd7982fd004230a15c081",
+            "9a4c5b98b9e94bf101c2ffe04d25e71c299e848e2f35669eb247d1fdbf3d532e",
+            "f4512e516f6c7225e6a49bfc7b8089f9a304d53144d3e4da5052ae243170791b",
+            "542da8a67a3e1e7e8c57057be70b90c94c4b402a574f57ee75544ae1a9a11678",
+            "5dff3df19cfb0dd153de825f3c7758b64e22c766262f322b753a7874424e107d",
+            "3387d09eaa44bfb9afc2e885782c6fc260445d37e7b918a1b391faf9d6744e42"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1497320"
+          ],
+          "source_record_sha256": [
+            "5efff4fad1bc720029595f191a89d0228c47fea3caf48b4780c8a351cc886973"
+          ]
+        }
+      ],
+      "ideal_trace_bridge_ids": [
+        "trace1280498",
+        "trace1280499"
+      ],
+      "action": "REPLACE_EXISTING_L02_FIRST_LEG_WITH_TWO_SERIES_LEGS",
+      "l04_split_after_source_via_count": 9,
+      "new_three_legs": [
+        {
+          "resistance_ohm": 0.0060093744245135845,
+          "inductance_h": 2.348494121190691e-10,
+          "via_ids": [
+            "via1497309",
+            "via1497311",
+            "via1497310",
+            "via1497312",
+            "via1497313",
+            "via1497314",
+            "via1497315",
+            "via1497316",
+            "via1497317"
+          ],
+          "source_record_sha256": [
+            "7bd879b2d8a44349773cd292a950347502f49010bcde5a3fadacdbf275b9b2a9",
+            "ace2b525f3b32d7ec2725409f06a19cccd196abdc2041d9846ab5dc4bd909004",
+            "1e502d116d46c2dafe0a408c217cd83f9669afac48fb217d4323d76e5458b5b6",
+            "94dee271d660e6a1216b462af46d2d44abd603948d0a517441d5fac79beb23b1",
+            "40f82c97fbae8bdb92bae8f0d208bc48f1c754800cfdc95e66be646ba58b52f5",
+            "e2de23136884cb06d8747857c5432dc92482a01251bcd7982fd004230a15c081",
+            "9a4c5b98b9e94bf101c2ffe04d25e71c299e848e2f35669eb247d1fdbf3d532e",
+            "f4512e516f6c7225e6a49bfc7b8089f9a304d53144d3e4da5052ae243170791b",
+            "542da8a67a3e1e7e8c57057be70b90c94c4b402a574f57ee75544ae1a9a11678"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1497318",
+            "via1497319"
+          ],
+          "source_record_sha256": [
+            "5dff3df19cfb0dd153de825f3c7758b64e22c766262f322b753a7874424e107d",
+            "3387d09eaa44bfb9afc2e885782c6fc260445d37e7b918a1b391faf9d6744e42"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1497320"
+          ],
+          "source_record_sha256": [
+            "5efff4fad1bc720029595f191a89d0228c47fea3caf48b4780c8a351cc886973"
+          ]
+        }
+      ],
+      "floating_midpoint_schur_coupon": [
+        {
+          "frequency_hz": 1000.0,
+          "schur_relative_error": 7.813553220117897e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 10000.0,
+          "schur_relative_error": 7.873467211553151e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 100000.0,
+          "schur_relative_error": 7.87974692581901e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 1000000.0,
+          "schur_relative_error": 3.531923927277215e-18,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 10000000.0,
+          "schur_relative_error": 2.805953647817026e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 100000000.0,
+          "schur_relative_error": 6.202916552866229e-17,
+          "row_sum_relative_error": 0.0
+        }
+      ]
+    },
+    {
+      "original_active_finite_index": 779676,
+      "original_active_endpoints": [
+        71610,
+        2656
+      ],
+      "l02_contact_ordinal": 38855,
+      "l04_node_id_fold": "node2741422",
+      "x_pm": -12226900000,
+      "y_pm": -23734000000,
+      "l04_touching_via_ids": [
+        "via1798655"
+      ],
+      "old_l02_legs": [
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1798655",
+            "via1798656"
+          ],
+          "source_record_sha256": [
+            "1ac00a30d3b443e3834f31c4ca9d8833022329c33f8bbb36dd0771226eb4aaf2",
+            "8965e8da1f69e84b521535c0635ca119c57b1b9e259ebd2f129f6e268a3a2d7c"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1798657"
+          ],
+          "source_record_sha256": [
+            "083dea1a4b389d0cecc6dd990186b0d1444410c88e4e18b6303db082f8014eb6"
+          ]
+        }
+      ],
+      "ideal_trace_bridge_ids": [],
+      "action": "REMAP_EXISTING_L02_FIRST_LEG_L04_ENDPOINT",
+      "new_two_legs": [
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1798655",
+            "via1798656"
+          ],
+          "source_record_sha256": [
+            "1ac00a30d3b443e3834f31c4ca9d8833022329c33f8bbb36dd0771226eb4aaf2",
+            "8965e8da1f69e84b521535c0635ca119c57b1b9e259ebd2f129f6e268a3a2d7c"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1798657"
+          ],
+          "source_record_sha256": [
+            "083dea1a4b389d0cecc6dd990186b0d1444410c88e4e18b6303db082f8014eb6"
+          ]
+        }
+      ]
+    },
+    {
+      "original_active_finite_index": 1024973,
+      "original_active_endpoints": [
+        715373,
+        2656
+      ],
+      "l02_contact_ordinal": 38853,
+      "l04_node_id_fold": "node2741205",
+      "x_pm": -8911900000,
+      "y_pm": -23621400000,
+      "l04_touching_via_ids": [
+        "via1798388",
+        "via1798389"
+      ],
+      "old_l02_legs": [
+        {
+          "resistance_ohm": 0.002670833077561593,
+          "inductance_h": 1.0437751649736405e-10,
+          "via_ids": [
+            "via1798387",
+            "via1798388",
+            "via1798389",
+            "via1798390"
+          ],
+          "source_record_sha256": [
+            "a5c7d92d2f2261c29b99a60168d4eee11c9c3d6e04aab3a1624844b26ebd9649",
+            "31e9c54feaba223edeca4bc0b4d78607d265e1d77bd1f1990b2c823955b0c44b",
+            "1100b006bc4443ea4ffa31e61474afc3b51a817259f4822d1dfaee1f21271a16",
+            "adc0c9830e97864f3b50b5846f119dac5df07a92f7604e5c6750a381828bbf5d"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1798391"
+          ],
+          "source_record_sha256": [
+            "615394eadd483a722812f01a837710ac5479f1f33ca576674e3dc4d5464d76ae"
+          ]
+        }
+      ],
+      "ideal_trace_bridge_ids": [],
+      "action": "REPLACE_EXISTING_L02_FIRST_LEG_WITH_TWO_SERIES_LEGS",
+      "l04_split_after_source_via_count": 2,
+      "new_three_legs": [
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1798387",
+            "via1798388"
+          ],
+          "source_record_sha256": [
+            "a5c7d92d2f2261c29b99a60168d4eee11c9c3d6e04aab3a1624844b26ebd9649",
+            "31e9c54feaba223edeca4bc0b4d78607d265e1d77bd1f1990b2c823955b0c44b"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1798389",
+            "via1798390"
+          ],
+          "source_record_sha256": [
+            "1100b006bc4443ea4ffa31e61474afc3b51a817259f4822d1dfaee1f21271a16",
+            "adc0c9830e97864f3b50b5846f119dac5df07a92f7604e5c6750a381828bbf5d"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1798391"
+          ],
+          "source_record_sha256": [
+            "615394eadd483a722812f01a837710ac5479f1f33ca576674e3dc4d5464d76ae"
+          ]
+        }
+      ],
+      "floating_midpoint_schur_coupon": [
+        {
+          "frequency_hz": 1000.0,
+          "schur_relative_error": 7.928374709688726e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 10000.0,
+          "schur_relative_error": 3.150432379532732e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 100000.0,
+          "schur_relative_error": 7.934715966107695e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 1000000.0,
+          "schur_relative_error": 8.11773547656907e-18,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 10000000.0,
+          "schur_relative_error": 2.4455402104204143e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 100000000.0,
+          "schur_relative_error": 1.1366322846367028e-16,
+          "row_sum_relative_error": 0.0
+        }
+      ]
+    },
+    {
+      "original_active_finite_index": 1235716,
+      "original_active_endpoints": [
+        71610,
+        2656
+      ],
+      "l02_contact_ordinal": 38852,
+      "l04_node_id_fold": "node2739295",
+      "x_pm": 11515000000,
+      "y_pm": -23876100000,
+      "l04_touching_via_ids": [
+        "via1796103"
+      ],
+      "old_l02_legs": [
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1796103",
+            "via1796104"
+          ],
+          "source_record_sha256": [
+            "b8473402b55f150b6b0558b8604864aa74769ce2fd14a02252728ed00362509d",
+            "537acd7cdb21d0916fcbf4bf0a338203eb9ffaf13b06a9a43d8b65df52c55f2b"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1796105"
+          ],
+          "source_record_sha256": [
+            "b5e957d5aa6ea99b6a7ed3fb5ef085ecc45d048aeb31c79d8f2683bad357e269"
+          ]
+        }
+      ],
+      "ideal_trace_bridge_ids": [],
+      "action": "REMAP_EXISTING_L02_FIRST_LEG_L04_ENDPOINT",
+      "new_two_legs": [
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1796103",
+            "via1796104"
+          ],
+          "source_record_sha256": [
+            "b8473402b55f150b6b0558b8604864aa74769ce2fd14a02252728ed00362509d",
+            "537acd7cdb21d0916fcbf4bf0a338203eb9ffaf13b06a9a43d8b65df52c55f2b"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1796105"
+          ],
+          "source_record_sha256": [
+            "b5e957d5aa6ea99b6a7ed3fb5ef085ecc45d048aeb31c79d8f2683bad357e269"
+          ]
+        }
+      ]
+    },
+    {
+      "original_active_finite_index": 1250218,
+      "original_active_endpoints": [
+        71610,
+        2656
+      ],
+      "l02_contact_ordinal": 38841,
+      "l04_node_id_fold": "node2565171",
+      "x_pm": 11515000000,
+      "y_pm": 8729800000,
+      "l04_touching_via_ids": [
+        "via1494785"
+      ],
+      "old_l02_legs": [
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1494785",
+            "via1494786"
+          ],
+          "source_record_sha256": [
+            "5311e88f9409b8e7b0114f31d4b12dc8774b8a6d903d71c02d823a60c766a3e9",
+            "d681c58d383ba5189fc1532090fd83bcbe66ffde1888e16a28281d817f9eae88"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1494787"
+          ],
+          "source_record_sha256": [
+            "3350d6377866dc030a80d64d814c04ba1f23b48c64692b64f7cc50a384334bfa"
+          ]
+        }
+      ],
+      "ideal_trace_bridge_ids": [],
+      "action": "REMAP_EXISTING_L02_FIRST_LEG_L04_ENDPOINT",
+      "new_two_legs": [
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1494785",
+            "via1494786"
+          ],
+          "source_record_sha256": [
+            "5311e88f9409b8e7b0114f31d4b12dc8774b8a6d903d71c02d823a60c766a3e9",
+            "d681c58d383ba5189fc1532090fd83bcbe66ffde1888e16a28281d817f9eae88"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1494787"
+          ],
+          "source_record_sha256": [
+            "3350d6377866dc030a80d64d814c04ba1f23b48c64692b64f7cc50a384334bfa"
+          ]
+        }
+      ]
+    },
+    {
+      "original_active_finite_index": 1254243,
+      "original_active_endpoints": [
+        715373,
+        2656
+      ],
+      "l02_contact_ordinal": 38851,
+      "l04_node_id_fold": "node2739103",
+      "x_pm": -12096900000,
+      "y_pm": -23508800000,
+      "l04_touching_via_ids": [
+        "via1795874",
+        "via1795875"
+      ],
+      "old_l02_legs": [
+        {
+          "resistance_ohm": 0.002670833077561593,
+          "inductance_h": 1.0437751649736405e-10,
+          "via_ids": [
+            "via1795873",
+            "via1795874",
+            "via1795875",
+            "via1795876"
+          ],
+          "source_record_sha256": [
+            "e0881aff3c5edfd901e8077c87d97cbc0fc315fc65c7c069b69c905654fd2558",
+            "7cb366843aaa4720b1165cdcd76df1fe61d5fc6459c5f36476b96ae1245d93b3",
+            "8f02c6daac8dd52162929f564ffac7f44d82d17822e967f2b718624ceb61b1fe",
+            "fd2087ada8e96a40e80341b9ef2fad4a0793f5c0306ae619fb1e6b26368d9b4c"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1795877"
+          ],
+          "source_record_sha256": [
+            "fd7436a15db366c3c433e4ffd9d61c7c22ea73afaa23ed4032940c909dcfa686"
+          ]
+        }
+      ],
+      "ideal_trace_bridge_ids": [],
+      "action": "REPLACE_EXISTING_L02_FIRST_LEG_WITH_TWO_SERIES_LEGS",
+      "l04_split_after_source_via_count": 2,
+      "new_three_legs": [
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1795873",
+            "via1795874"
+          ],
+          "source_record_sha256": [
+            "e0881aff3c5edfd901e8077c87d97cbc0fc315fc65c7c069b69c905654fd2558",
+            "7cb366843aaa4720b1165cdcd76df1fe61d5fc6459c5f36476b96ae1245d93b3"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1795875",
+            "via1795876"
+          ],
+          "source_record_sha256": [
+            "8f02c6daac8dd52162929f564ffac7f44d82d17822e967f2b718624ceb61b1fe",
+            "fd2087ada8e96a40e80341b9ef2fad4a0793f5c0306ae619fb1e6b26368d9b4c"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1795877"
+          ],
+          "source_record_sha256": [
+            "fd7436a15db366c3c433e4ffd9d61c7c22ea73afaa23ed4032940c909dcfa686"
+          ]
+        }
+      ],
+      "floating_midpoint_schur_coupon": [
+        {
+          "frequency_hz": 1000.0,
+          "schur_relative_error": 7.928374709688726e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 10000.0,
+          "schur_relative_error": 3.150432379532732e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 100000.0,
+          "schur_relative_error": 7.934715966107695e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 1000000.0,
+          "schur_relative_error": 8.11773547656907e-18,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 10000000.0,
+          "schur_relative_error": 2.4455402104204143e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 100000000.0,
+          "schur_relative_error": 1.1366322846367028e-16,
+          "row_sum_relative_error": 0.0
+        }
+      ]
+    },
+    {
+      "original_active_finite_index": 1336715,
+      "original_active_endpoints": [
+        50553,
+        2656
+      ],
+      "l02_contact_ordinal": 38847,
+      "l04_node_id_fold": "node2727888",
+      "x_pm": 12190600000,
+      "y_pm": -22056100000,
+      "l04_touching_via_ids": [
+        "via1782420",
+        "via1782421"
+      ],
+      "old_l02_legs": [
+        {
+          "resistance_ohm": 0.002670833077561593,
+          "inductance_h": 1.0437751649736405e-10,
+          "via_ids": [
+            "via1782419",
+            "via1782420",
+            "via1782421",
+            "via1782422"
+          ],
+          "source_record_sha256": [
+            "f2e3358d09480a23531c47699d684f392b183eff2bacd1b0ff7d052523cb71ec",
+            "76b9c2e715aab646e7c1d687fb0f638f49e3c9d6db0117a03cac92088528f7fc",
+            "443e1fb7742300cc9cfb6408fcdadc1bf687747f10e6063388bf9f2a7da9e118",
+            "c3808e513951ffc9ab497cbd5b9ee6407c3489f4b704ab3bd4ec5da732b1313e"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1782423"
+          ],
+          "source_record_sha256": [
+            "e8ceeceab9cf6fbe88bcdbe131ed5d8f8b25c3c04cde2c15509e525c9cceca1a"
+          ]
+        }
+      ],
+      "ideal_trace_bridge_ids": [],
+      "action": "REPLACE_EXISTING_L02_FIRST_LEG_WITH_TWO_SERIES_LEGS",
+      "l04_split_after_source_via_count": 2,
+      "new_three_legs": [
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1782419",
+            "via1782420"
+          ],
+          "source_record_sha256": [
+            "f2e3358d09480a23531c47699d684f392b183eff2bacd1b0ff7d052523cb71ec",
+            "76b9c2e715aab646e7c1d687fb0f638f49e3c9d6db0117a03cac92088528f7fc"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1782421",
+            "via1782422"
+          ],
+          "source_record_sha256": [
+            "443e1fb7742300cc9cfb6408fcdadc1bf687747f10e6063388bf9f2a7da9e118",
+            "c3808e513951ffc9ab497cbd5b9ee6407c3489f4b704ab3bd4ec5da732b1313e"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1782423"
+          ],
+          "source_record_sha256": [
+            "e8ceeceab9cf6fbe88bcdbe131ed5d8f8b25c3c04cde2c15509e525c9cceca1a"
+          ]
+        }
+      ],
+      "floating_midpoint_schur_coupon": [
+        {
+          "frequency_hz": 1000.0,
+          "schur_relative_error": 7.928374709688726e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 10000.0,
+          "schur_relative_error": 3.150432379532732e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 100000.0,
+          "schur_relative_error": 7.934715966107695e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 1000000.0,
+          "schur_relative_error": 8.11773547656907e-18,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 10000000.0,
+          "schur_relative_error": 2.4455402104204143e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 100000000.0,
+          "schur_relative_error": 1.1366322846367028e-16,
+          "row_sum_relative_error": 0.0
+        }
+      ]
+    },
+    {
+      "original_active_finite_index": 1392846,
+      "original_active_endpoints": [
+        715373,
+        2656
+      ],
+      "l02_contact_ordinal": 38842,
+      "l04_node_id_fold": "node2567081",
+      "x_pm": -8911900000,
+      "y_pm": 8984500000,
+      "l04_touching_via_ids": [
+        "via1497070",
+        "via1497071"
+      ],
+      "old_l02_legs": [
+        {
+          "resistance_ohm": 0.002670833077561593,
+          "inductance_h": 1.0437751649736405e-10,
+          "via_ids": [
+            "via1497069",
+            "via1497070",
+            "via1497071",
+            "via1497072"
+          ],
+          "source_record_sha256": [
+            "b9dcf618453b48603759820ba67af2697a23208f5adb2d32d2ca2870156ed5f0",
+            "0f393082a7238a38477a0f0dbead7d40489785e0740bb64065e8271288db6490",
+            "d991cf9c377243791ef1cf85a62cf2215382cd9b187d91778d94447af9d8c795",
+            "675627232d83402ab47f6102af326e88c00591457df8535d207f5b5a67afebd5"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1497073"
+          ],
+          "source_record_sha256": [
+            "d70667ee0847f72acfb47ab9bc7896b30813dbb3c34cf955e1c8e92758b7e316"
+          ]
+        }
+      ],
+      "ideal_trace_bridge_ids": [],
+      "action": "REPLACE_EXISTING_L02_FIRST_LEG_WITH_TWO_SERIES_LEGS",
+      "l04_split_after_source_via_count": 2,
+      "new_three_legs": [
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1497069",
+            "via1497070"
+          ],
+          "source_record_sha256": [
+            "b9dcf618453b48603759820ba67af2697a23208f5adb2d32d2ca2870156ed5f0",
+            "0f393082a7238a38477a0f0dbead7d40489785e0740bb64065e8271288db6490"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1497071",
+            "via1497072"
+          ],
+          "source_record_sha256": [
+            "d991cf9c377243791ef1cf85a62cf2215382cd9b187d91778d94447af9d8c795",
+            "675627232d83402ab47f6102af326e88c00591457df8535d207f5b5a67afebd5"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1497073"
+          ],
+          "source_record_sha256": [
+            "d70667ee0847f72acfb47ab9bc7896b30813dbb3c34cf955e1c8e92758b7e316"
+          ]
+        }
+      ],
+      "floating_midpoint_schur_coupon": [
+        {
+          "frequency_hz": 1000.0,
+          "schur_relative_error": 7.928374709688726e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 10000.0,
+          "schur_relative_error": 3.150432379532732e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 100000.0,
+          "schur_relative_error": 7.934715966107695e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 1000000.0,
+          "schur_relative_error": 8.11773547656907e-18,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 10000000.0,
+          "schur_relative_error": 2.4455402104204143e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 100000000.0,
+          "schur_relative_error": 1.1366322846367028e-16,
+          "row_sum_relative_error": 0.0
+        }
+      ]
+    },
+    {
+      "original_active_finite_index": 1498455,
+      "original_active_endpoints": [
+        71610,
+        2656
+      ],
+      "l02_contact_ordinal": 38836,
+      "l04_node_id_fold": "node2410468",
+      "x_pm": -12356900000,
+      "y_pm": 9097100000,
+      "l04_touching_via_ids": [
+        "via1309389"
+      ],
+      "old_l02_legs": [
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1309389",
+            "via1309388"
+          ],
+          "source_record_sha256": [
+            "80b549a9dd0781508d0421f9df2d8617dde4fd1201ccb7832c7d803c7e66c52d",
+            "9b22c22843cbd4c1d00294e671a0cb74c2f4f0f5c3e8b709ad88ed3685bd5abc"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1309387"
+          ],
+          "source_record_sha256": [
+            "4cbd76f77a407a38749c3515073d1395331f78e57ea55e7056ebc1c6ee88fa62"
+          ]
+        }
+      ],
+      "ideal_trace_bridge_ids": [],
+      "action": "REMAP_EXISTING_L02_FIRST_LEG_L04_ENDPOINT",
+      "new_two_legs": [
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1309389",
+            "via1309388"
+          ],
+          "source_record_sha256": [
+            "80b549a9dd0781508d0421f9df2d8617dde4fd1201ccb7832c7d803c7e66c52d",
+            "9b22c22843cbd4c1d00294e671a0cb74c2f4f0f5c3e8b709ad88ed3685bd5abc"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1309387"
+          ],
+          "source_record_sha256": [
+            "4cbd76f77a407a38749c3515073d1395331f78e57ea55e7056ebc1c6ee88fa62"
+          ]
+        }
+      ]
+    },
+    {
+      "original_active_finite_index": 1521556,
+      "original_active_endpoints": [
+        398531,
+        2656
+      ],
+      "l02_contact_ordinal": 38850,
+      "l04_node_id_fold": "node2738684",
+      "x_pm": -10211900000,
+      "y_pm": -23621400000,
+      "l04_touching_via_ids": [
+        "via1795375",
+        "via1795376"
+      ],
+      "old_l02_legs": [
+        {
+          "resistance_ohm": 0.004006249616342389,
+          "inductance_h": 1.5656627474604608e-10,
+          "via_ids": [
+            "via1795372",
+            "via1795373",
+            "via1795374",
+            "via1795375",
+            "via1795376",
+            "via1795377"
+          ],
+          "source_record_sha256": [
+            "17e526f4bd15167b79a334007ec9694f81d703c4fa56b75e78b51b5c9903f644",
+            "3e1794e0464e24ec725721de07c891488ec64695522cfe60b4ae0a2339988b1f",
+            "7a5eda27b74ba742583e0dabf86e2a30d87828fc3af9695d184537781a5a7820",
+            "d4030e9b49aff2e1fc095ade509761b964217a8a21ed592a841ebdb1f6695b32",
+            "11011ac58b77746c61f7079d419741d10df9cd085b83ae42ba95ca0e9250371a",
+            "82b9665c2f860c4453d4ebcef34e1551b9320297b85378041bca24c32f5b12b8"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1795378"
+          ],
+          "source_record_sha256": [
+            "17596375f9f1d5a35e28c160e5dc762bf0a55368b394b0c36e126716040e050e"
+          ]
+        }
+      ],
+      "ideal_trace_bridge_ids": [
+        "trace1410202"
+      ],
+      "action": "REPLACE_EXISTING_L02_FIRST_LEG_WITH_TWO_SERIES_LEGS",
+      "l04_split_after_source_via_count": 4,
+      "new_three_legs": [
+        {
+          "resistance_ohm": 0.002670833077561593,
+          "inductance_h": 1.0437751649736405e-10,
+          "via_ids": [
+            "via1795372",
+            "via1795373",
+            "via1795374",
+            "via1795375"
+          ],
+          "source_record_sha256": [
+            "17e526f4bd15167b79a334007ec9694f81d703c4fa56b75e78b51b5c9903f644",
+            "3e1794e0464e24ec725721de07c891488ec64695522cfe60b4ae0a2339988b1f",
+            "7a5eda27b74ba742583e0dabf86e2a30d87828fc3af9695d184537781a5a7820",
+            "d4030e9b49aff2e1fc095ade509761b964217a8a21ed592a841ebdb1f6695b32"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1795376",
+            "via1795377"
+          ],
+          "source_record_sha256": [
+            "11011ac58b77746c61f7079d419741d10df9cd085b83ae42ba95ca0e9250371a",
+            "82b9665c2f860c4453d4ebcef34e1551b9320297b85378041bca24c32f5b12b8"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1795378"
+          ],
+          "source_record_sha256": [
+            "17596375f9f1d5a35e28c160e5dc762bf0a55368b394b0c36e126716040e050e"
+          ]
+        }
+      ],
+      "floating_midpoint_schur_coupon": [
+        {
+          "frequency_hz": 1000.0,
+          "schur_relative_error": 2.826652646209827e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 10000.0,
+          "schur_relative_error": 2.826667913325429e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 100000.0,
+          "schur_relative_error": 7.671995208800805e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 1000000.0,
+          "schur_relative_error": 8.132715668785253e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 10000000.0,
+          "schur_relative_error": 3.232166278106258e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 100000000.0,
+          "schur_relative_error": 2.572569243171956e-17,
+          "row_sum_relative_error": 0.0
+        }
+      ]
+    },
+    {
+      "original_active_finite_index": 1591596,
+      "original_active_endpoints": [
+        71610,
+        2656
+      ],
+      "l02_contact_ordinal": 38846,
+      "l04_node_id_fold": "node2584429",
+      "x_pm": -12356900000,
+      "y_pm": -23508800000,
+      "l04_touching_via_ids": [
+        "via1610512"
+      ],
+      "old_l02_legs": [
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1610512",
+            "via1610511"
+          ],
+          "source_record_sha256": [
+            "8eccdbddf2e1a17fca87a2a2523c0f7718b56cbd02384bfe0a87bf0d24352af1",
+            "08480e9128632796df2dea959601dcf57629712910b5a795f761dda3b538d5a3"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1610510"
+          ],
+          "source_record_sha256": [
+            "3f18392b3e4a8b5c8dd7c228a5a2917182a1e4fe456746a08a24228d928778b3"
+          ]
+        }
+      ],
+      "ideal_trace_bridge_ids": [],
+      "action": "REMAP_EXISTING_L02_FIRST_LEG_L04_ENDPOINT",
+      "new_two_legs": [
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1610512",
+            "via1610511"
+          ],
+          "source_record_sha256": [
+            "8eccdbddf2e1a17fca87a2a2523c0f7718b56cbd02384bfe0a87bf0d24352af1",
+            "08480e9128632796df2dea959601dcf57629712910b5a795f761dda3b538d5a3"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1610510"
+          ],
+          "source_record_sha256": [
+            "3f18392b3e4a8b5c8dd7c228a5a2917182a1e4fe456746a08a24228d928778b3"
+          ]
+        }
+      ]
+    },
+    {
+      "original_active_finite_index": 1670923,
+      "original_active_endpoints": [
+        71610,
+        2656
+      ],
+      "l02_contact_ordinal": 38854,
+      "l04_node_id_fold": "node2741390",
+      "x_pm": -11836900000,
+      "y_pm": -23734000000,
+      "l04_touching_via_ids": [
+        "via1798617"
+      ],
+      "old_l02_legs": [
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1798617",
+            "via1798618"
+          ],
+          "source_record_sha256": [
+            "b20490d6bff4ff6750c1a7239882805414e1de77696067ca19402239b3ecb40a",
+            "7c9e1d08cf8a954f3e405b50eeda0a82ffe83b04c193e3ae654f8cfda8f5238c"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1798619"
+          ],
+          "source_record_sha256": [
+            "6eb5fc7d57663404f7f02825756bf3cbb7ec0f6c4591ce80ff450932d1e123e7"
+          ]
+        }
+      ],
+      "ideal_trace_bridge_ids": [],
+      "action": "REMAP_EXISTING_L02_FIRST_LEG_L04_ENDPOINT",
+      "new_two_legs": [
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1798617",
+            "via1798618"
+          ],
+          "source_record_sha256": [
+            "b20490d6bff4ff6750c1a7239882805414e1de77696067ca19402239b3ecb40a",
+            "7c9e1d08cf8a954f3e405b50eeda0a82ffe83b04c193e3ae654f8cfda8f5238c"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1798619"
+          ],
+          "source_record_sha256": [
+            "6eb5fc7d57663404f7f02825756bf3cbb7ec0f6c4591ce80ff450932d1e123e7"
+          ]
+        }
+      ]
+    },
+    {
+      "original_active_finite_index": 1690188,
+      "original_active_endpoints": [
+        398531,
+        2656
+      ],
+      "l02_contact_ordinal": 38848,
+      "l04_node_id_fold": "node2731133",
+      "x_pm": -7437000000,
+      "y_pm": -22147200000,
+      "l04_touching_via_ids": [
+        "via1786303",
+        "via1786304"
+      ],
+      "old_l02_legs": [
+        {
+          "resistance_ohm": 0.004006249616342389,
+          "inductance_h": 1.5656627474604608e-10,
+          "via_ids": [
+            "via1786300",
+            "via1786301",
+            "via1786302",
+            "via1786303",
+            "via1786304",
+            "via1786305"
+          ],
+          "source_record_sha256": [
+            "4515b0062d1640e977da5476c14683d8c6499c2a74f70bb777d37affa78353fb",
+            "ea3577b7125b39f7320ddfd6b399bbe26a8584bbe7f58b194428ff2608135d76",
+            "f1a330bef8287be249df25b647411a7b474754759ac110f0ce1fa75b0acf0855",
+            "93f76d4a9529bd6da690c319ecc29dcc58001e9e183dc93b1cffe8e496072b4c",
+            "4333b8e2dc70ffab2a082128f5ba26adc206945f41a51188ba7095f52c7a045d",
+            "6a013f9807d7c1e483b681617056f49a408b992e706d431ad3d3f33788460c23"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1786306"
+          ],
+          "source_record_sha256": [
+            "af901639bce8721f318fa3a837cc1890659bcb2597472c9ebc7d0551543d5e2c"
+          ]
+        }
+      ],
+      "ideal_trace_bridge_ids": [
+        "trace1408691"
+      ],
+      "action": "REPLACE_EXISTING_L02_FIRST_LEG_WITH_TWO_SERIES_LEGS",
+      "l04_split_after_source_via_count": 4,
+      "new_three_legs": [
+        {
+          "resistance_ohm": 0.002670833077561593,
+          "inductance_h": 1.0437751649736405e-10,
+          "via_ids": [
+            "via1786300",
+            "via1786301",
+            "via1786302",
+            "via1786303"
+          ],
+          "source_record_sha256": [
+            "4515b0062d1640e977da5476c14683d8c6499c2a74f70bb777d37affa78353fb",
+            "ea3577b7125b39f7320ddfd6b399bbe26a8584bbe7f58b194428ff2608135d76",
+            "f1a330bef8287be249df25b647411a7b474754759ac110f0ce1fa75b0acf0855",
+            "93f76d4a9529bd6da690c319ecc29dcc58001e9e183dc93b1cffe8e496072b4c"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0013354165387807965,
+          "inductance_h": 5.2188758248682025e-11,
+          "via_ids": [
+            "via1786304",
+            "via1786305"
+          ],
+          "source_record_sha256": [
+            "4333b8e2dc70ffab2a082128f5ba26adc206945f41a51188ba7095f52c7a045d",
+            "6a013f9807d7c1e483b681617056f49a408b992e706d431ad3d3f33788460c23"
+          ]
+        },
+        {
+          "resistance_ohm": 0.0007010936828599181,
+          "inductance_h": 2.7911394804337096e-11,
+          "via_ids": [
+            "via1786306"
+          ],
+          "source_record_sha256": [
+            "af901639bce8721f318fa3a837cc1890659bcb2597472c9ebc7d0551543d5e2c"
+          ]
+        }
+      ],
+      "floating_midpoint_schur_coupon": [
+        {
+          "frequency_hz": 1000.0,
+          "schur_relative_error": 2.826652646209827e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 10000.0,
+          "schur_relative_error": 2.826667913325429e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 100000.0,
+          "schur_relative_error": 7.671995208800805e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 1000000.0,
+          "schur_relative_error": 8.132715668785253e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 10000000.0,
+          "schur_relative_error": 3.232166278106258e-17,
+          "row_sum_relative_error": 0.0
+        },
+        {
+          "frequency_hz": 100000000.0,
+          "schur_relative_error": 2.572569243171956e-17,
+          "row_sum_relative_error": 0.0
+        }
+      ]
+    }
+  ],
+  "endpoint_remap_count": 10,
+  "first_leg_split_count": 10,
+  "original_composite_count": 20,
+  "accepted_l02_leg_count": 40,
+  "prospective_joint_leg_count": 50,
+  "source_via_owner_count": 93,
+  "ideal_trace_bridge_count": 5,
+  "inherited_out_of_scope_source_records": [
+    {
+      "classification": "SOLID_COPPER_FILLED_MICROVIA",
+      "end_layer_id": "Signal$L12(MAIN_POWER3)",
+      "end_layer_id_fold": "signal$l12(main_power3)",
+      "end_node_id": "Node2567277",
+      "end_node_id_fold": "node2567277",
+      "end_x_pm": -10211900000,
+      "end_y_pm": 8984500000,
+      "inductance_h": 2.6094379124341013e-11,
+      "length_um": 50.0,
+      "net_fold": "dgnd",
+      "net_name": "DGND",
+      "ordinal": 552565,
+      "owner_id": "via:dgnd:via1497311",
+      "owner_id_fold": "via:dgnd:via1497311",
+      "padstack_id": "DR-1112_60",
+      "padstack_id_fold": "dr-1112_60",
+      "padstack_source_row_sha256": "cd07d17d771a770e655df0719e2c952cc99d0c0d636db7af250ac081e609c145",
+      "resistance_ohm": 0.0006677082693903983,
+      "rotation_microdegrees": 0,
+      "source_record_sha256": "ace2b525f3b32d7ec2725409f06a19cccd196abdc2041d9846ab5dc4bd909004",
+      "start_layer_id": "Signal$L11(MAIN_POWER2)",
+      "start_layer_id_fold": "signal$l11(main_power2)",
+      "start_node_id": "Node2567278",
+      "start_node_id_fold": "node2567278",
+      "start_x_pm": -10211900000,
+      "start_y_pm": 8984500000,
+      "status": "OUT_OF_SCOPE",
+      "via_id": "Via1497311",
+      "via_id_fold": "via1497311"
+    }
+  ],
+  "max_schur_relative_error": 1.1366322846367028e-16,
+  "max_row_sum_relative_error": 0.0,
+  "elapsed_s": 0.0,
+  "scope": "Cached source series parameters and ordered endpoint identity only. Floating midpoint elimination restores the accepted L02 first leg. Attaching hidden L04 midpoints to a conducting sheet changes topology and still requires conductor/contact/pad geometry qualification. No board solve, source DB scan, raw SPD read, new physical parameter, or PowerSI fitting. Five inherited ideal trace bridges remain ideal."
+}

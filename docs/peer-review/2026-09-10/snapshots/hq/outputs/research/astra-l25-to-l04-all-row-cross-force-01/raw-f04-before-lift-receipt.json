@@ -1,0 +1,336 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "RAW_L25_TO_L04_FORCE_BEFORE_L04_H",
+  "artifact": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-to-l04-all-row-cross-force-01\\raw-f04-before-lift.npz",
+    "sha256": "f2a764aafaab56ff2f293a3a1f934a236e4bad8d368213c81141e58ced569bcf",
+    "size_bytes": 35067441
+  },
+  "units": "Wb",
+  "source_order": "pinned L25 branch order",
+  "target_order": "pinned L04 branch order",
+  "provenance": {
+    "magnetic_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\apply_astra_l25_rt0_magnetic.py",
+      "sha256": "2c880f428b18f40ee9fabca98154be9f7c7c6f6b91a6dfc74a2bb09810a8daa2",
+      "size_bytes": 17168
+    },
+    "ntd_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l04_contact_ntd_action.py",
+      "sha256": "e9108a481308335d3f442a53652468ec9b8507204537c6d96d6f730de2bfbde8",
+      "size_bytes": 28847
+    },
+    "guard_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_fmm3d_runtime.py",
+      "sha256": "2961d1606ec2d4583c37d990d238a6abc87a54d8e0b93f9d83397f3851536a25",
+      "size_bytes": 16465
+    },
+    "l25_self_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-rt0-self-magnetic-02\\result.json",
+      "sha256": "c930d29e7437c62aabc45efe58acbcfbde6fa2b9bd2646254711b1ea9a8dd7ed",
+      "size_bytes": 6002
+    },
+    "l25_mesh": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-adaptive-longest-pair-01\\step-06\\mesh.npz",
+      "sha256": "20b52d26783bf98197524c56f22d9872aee3b67b7e526ff20a02e396f39e89cb",
+      "size_bytes": 6565241
+    },
+    "l25_topology": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-adaptive-longest-pair-01\\step-06\\topology.npz",
+      "sha256": "d70ceb1b38cede682247967495c6ef83d08ef2b0ef63e3543df908ba13412a4d",
+      "size_bytes": 7985409
+    },
+    "recovery_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-l25-magnetic-checkpoint-recovery-01\\result.json",
+      "sha256": "8824a89b08d18970f65799241b9b5b8a2309395886c546f9e1f8c7e01719c394",
+      "size_bytes": 12993
+    },
+    "recovery_guard": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-l25-magnetic-checkpoint-recovery-01\\external-budget.json",
+      "sha256": "2cad57b4504627775bed45a0aca07ec91d1f30056c808907629a1896e2902fa5",
+      "size_bytes": 494
+    },
+    "recovery_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-l25-magnetic-checkpoint-recovery-01\\driver-at-run.py",
+      "sha256": "783d526bb18610c46385c56504fae6a6098a490bb76feac6fa3ec0859edb6ef4",
+      "size_bytes": 16871
+    },
+    "recovery_field": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-l25-magnetic-checkpoint-recovery-01\\recovered-unvalidated-full-contact-l04-10mhz-field.npz",
+      "sha256": "f5def3cb8846f94e2bfc18a6992690eef1e9c54bc1402b86421a3271ffca2ba8",
+      "size_bytes": 159874740
+    },
+    "stream_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\result.json",
+      "sha256": "3e5417fa1a2db0308208449896c2aa1650beff5051d2ee03b60a8b4a11fe2bf1",
+      "size_bytes": 8797
+    },
+    "stream_space": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01\\l04-fixed-contact-rt0-space.npz",
+      "sha256": "5d31b3c6183eb4f43723eb80d1a545953a42fb2c9320be425d3ebc034cb51bb6",
+      "size_bytes": 79222436
+    },
+    "l04_mesh": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-conditional-sheet-mesh-02\\l04-conditional-sheet-mesh-before-stiffness.npz",
+      "sha256": "6f2f396fe2319d60ad4b1586fd7043960e42f1d85c29f28a1d9c082302a3a211",
+      "size_bytes": 19845932
+    },
+    "stack_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-3d-source-domain-inventory-01\\result.json",
+      "sha256": "daed9082c027fb36706fb8a2eb9a00d094272f7bc7dfaf4b7d378e3a2fe6e663",
+      "size_bytes": 72957
+    },
+    "lift_source": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_l04_complete_current_lift_adjoint.py",
+      "sha256": "85ac6bdcb2dca9c2ecfccb2709b548fef9f61de49af2feb1e8323aeb80e4722a",
+      "size_bytes": 9222
+    },
+    "lift_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-complete-current-lift-adjoint-01\\result.json",
+      "sha256": "16a44e85b1f0836e795d6ad8ef5aabd683f93ef0458c40c58b7714163400afdd",
+      "size_bytes": 7071
+    },
+    "lift_guard": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-complete-current-lift-adjoint-01\\external-budget.json",
+      "sha256": "4e38473b9da688a86c693977f175acae5f7f9ae4990dee90786dcf7465e50aec",
+      "size_bytes": 1026
+    }
+  },
+  "fmm": {
+    "target_centroid_indices": [
+      0,
+      105988,
+      211976,
+      317965,
+      423953,
+      529942,
+      635930,
+      741918,
+      847907,
+      953895,
+      1059884,
+      1165872,
+      1271860,
+      1377849,
+      1483837,
+      1589826
+    ],
+    "direct_chunk_sources": 50000,
+    "scalar_channels": [
+      "jx_real",
+      "jx_imag",
+      "jy_real",
+      "jy_imag"
+    ],
+    "call_count": 4,
+    "calls": [
+      {
+        "phase": "L25-to-L04 scalar FMM channel 1/4",
+        "component": "x",
+        "part": "real",
+        "elapsed_s": 15.622714300000098,
+        "ier": 0
+      },
+      {
+        "phase": "L25-to-L04 scalar FMM channel 2/4",
+        "component": "x",
+        "part": "imag",
+        "elapsed_s": 17.936152700000093,
+        "ier": 0
+      },
+      {
+        "phase": "L25-to-L04 scalar FMM channel 3/4",
+        "component": "y",
+        "part": "real",
+        "elapsed_s": 15.249023099999931,
+        "ier": 0
+      },
+      {
+        "phase": "L25-to-L04 scalar FMM channel 4/4",
+        "component": "y",
+        "part": "imag",
+        "elapsed_s": 18.125455599999896,
+        "ier": 0
+      }
+    ],
+    "sampled_fmm_values": [
+      [
+        0.00015034435433481521,
+        0.00024068206357566034,
+        0.000237907333798706,
+        0.0002405266139013821,
+        0.00022806910462997977,
+        0.00036914848966612327,
+        0.0003860770318521549,
+        0.00023932959659945607,
+        0.0006373226455958716,
+        0.0003842025063836724,
+        0.0003082342068255451,
+        0.0003063890199006392,
+        0.00027584590632870744,
+        0.0003266282555783328,
+        0.0008605905264249124,
+        0.0003968325190987423
+      ],
+      [
+        -3.7090665821841406e-05,
+        -3.690966428084929e-05,
+        -6.110344498321086e-05,
+        -6.39740725718342e-05,
+        -6.604069546287869e-05,
+        0.00012790397670707417,
+        0.00010336336961911248,
+        -7.536704365267628e-05,
+        0.0005380678181381365,
+        -0.00011582037997493193,
+        -0.00010424275946544361,
+        -0.00010762096204321914,
+        -9.826862323383545e-05,
+        -0.00012284779021165898,
+        -0.000527627462869859,
+        -0.00011838385742549286
+      ],
+      [
+        -1.2561360720483825e-05,
+        -1.982743123489469e-05,
+        -2.9324473683096208e-05,
+        -2.9593217489215256e-05,
+        -2.6503839741558472e-05,
+        -0.00011823866936528014,
+        -0.00010202213610616176,
+        -2.7532428322277443e-05,
+        -0.00031699075550491987,
+        4.2111296164479053e-05,
+        -4.006343324695885e-05,
+        -3.849466896104444e-05,
+        -3.1456136147920864e-05,
+        -4.022513261039304e-05,
+        -0.00017289804527593672,
+        -0.00014109034051415715
+      ],
+      [
+        6.0374929022017074e-06,
+        7.547284870919302e-06,
+        1.499072889865086e-05,
+        1.5195430947404104e-05,
+        1.3501290230858496e-05,
+        5.537265978660716e-05,
+        4.247546338319939e-05,
+        1.3965092701674946e-05,
+        6.862847374211145e-05,
+        -3.5280272701167516e-05,
+        2.130613558507105e-05,
+        2.00025369027318e-05,
+        1.5449266955251637e-05,
+        2.02230122832418e-05,
+        4.03307540354799e-05,
+        3.096201696087444e-05
+      ]
+    ],
+    "direct_values": [
+      [
+        0.00015034435970311347,
+        0.00024068206832715615,
+        0.00023790733143695702,
+        0.00024052661153793807,
+        0.00022806910245957643,
+        0.00036914848966344523,
+        0.0003860770286192609,
+        0.00023932959442435372,
+        0.0006373226419955571,
+        0.00038420250095860527,
+        0.0003082342046674787,
+        0.00030638901761820524,
+        0.00027584590407020925,
+        0.0003266282528062046,
+        0.0008605905235010103,
+        0.0003968325128784695
+      ],
+      [
+        -3.709066616013367e-05,
+        -3.69096694055641e-05,
+        -6.110344215444182e-05,
+        -6.397406912300434e-05,
+        -6.604068955515629e-05,
+        0.00012790397990944586,
+        0.00010336336779403219,
+        -7.536703787787605e-05,
+        0.0005380678124770648,
+        -0.00011582037915063577,
+        -0.00010424275843306656,
+        -0.00010762096162129829,
+        -9.826862429146312e-05,
+        -0.00012284779082556938,
+        -0.0005276274748836796,
+        -0.00011838385798950619
+      ],
+      [
+        -1.2561360357308267e-05,
+        -1.9827425831205087e-05,
+        -2.93244747581451e-05,
+        -2.959321879770136e-05,
+        -2.6503842395460825e-05,
+        -0.0001182386697928269,
+        -0.00010202213772061045,
+        -2.7532429072410282e-05,
+        -0.00031699075970488083,
+        4.2111290731671685e-05,
+        -4.0063431496282836e-05,
+        -3.8494665673665876e-05,
+        -3.145612906713647e-05,
+        -4.0225127594446085e-05,
+        -0.000172898023912059,
+        -0.00014109033124325382
+      ],
+      [
+        6.037493431934045e-06,
+        7.547283422450179e-06,
+        1.4990729083305109e-05,
+        1.5195431150089942e-05,
+        1.3501290692778718e-05,
+        5.537265898995818e-05,
+        4.247546343918683e-05,
+        1.3965093207311343e-05,
+        6.862847546215495e-05,
+        -3.528027103164085e-05,
+        2.130613473922779e-05,
+        2.0002535642790054e-05,
+        1.5449264623514738e-05,
+        2.0223010619274797e-05,
+        4.033075007179189e-05,
+        3.096201463652034e-05
+      ]
+    ],
+    "absolute_l2_errors": [
+      1.3954901458908044e-11,
+      1.7556354525464446e-11,
+      2.6856725520401697e-11,
+      6.397552754567255e-12
+    ],
+    "absolute_max_errors": [
+      6.220272777759939e-12,
+      1.2013820602403691e-11,
+      2.136387773502349e-11,
+      3.963688006828649e-12
+    ],
+    "actual_relative_to_direct_diagnostic": [
+      8.983277407107607e-09,
+      2.1132560737798695e-08,
+      6.229143853247446e-08,
+      5.0834902873084895e-08
+    ],
+    "cancellation_safe_scaled_errors": [
+      1.6684180153227916e-10,
+      6.488876816542991e-10,
+      4.2514982144469694e-10,
+      3.786276752650963e-10
+    ],
+    "direct_tolerance": 5e-05,
+    "normalization": "absolute L2 error divided by max(direct L2, direct max, sum(abs(charge))/(4*pi*minimum_slab_clearance), tiny)",
+    "gates": {
+      "exactly_four_scalar_calls": true,
+      "cancellation_safe_direct_check": true
+    }
+  }
+}

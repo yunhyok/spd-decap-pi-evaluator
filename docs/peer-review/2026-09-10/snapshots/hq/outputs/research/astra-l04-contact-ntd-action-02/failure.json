@@ -1,0 +1,19 @@
+{
+  "budget": {
+    "elapsed_s": 5.8439999999827705,
+    "max_rss_bytes": 8589934592,
+    "max_runtime_s": 300.0,
+    "peak_rss_bytes": 2950041600
+  },
+  "diagnostics": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-contact-ntd-action-02\\saved-rhs-replay-diagnostics.json",
+    "sha256": "4d20a2542666f5b8e122712d4849307d7ce4132f64cc6ca8f51476adfca0d02e",
+    "size_bytes": 1831
+  },
+  "error": "NtD replay equations",
+  "error_type": "AssertionError",
+  "program": "SPD Decap PI Evaluator",
+  "status": "STOP_EXACT_SAVED_L04_CONTACT_NTD_ACTION",
+  "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l04_contact_ntd_action.py\", line 415, in worker\n    require(replay.metrics[\"independent_constraint_max_a\"] < 1e-10\n  File \"C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l04_contact_ntd_action.py\", line 72, in require\n    raise AssertionError(message)\nAssertionError: NtD replay equations\n",
+  "version": "0.23.1"
+}

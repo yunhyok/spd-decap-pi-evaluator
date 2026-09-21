@@ -1,0 +1,22 @@
+{
+  "artifact": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-closed-magnetic-gcrotmk-paired-01\\gcrot-captures-before-final.npz",
+    "sha256": "3a4e2f68ff5120ff180c9959b9ae4fa2d4cc59482f8be89e1b476b5d595063bf",
+    "size_bytes": 365661593
+  },
+  "metrics": {
+    "rank": 2,
+    "column_count": 2,
+    "normalized_condition": 18.92460177551897,
+    "correction_replay_relative": 7.706213343078361e-14,
+    "singular_values": [
+      1.4122433039758036,
+      0.07462473032339809
+    ],
+    "column_norms": [
+      22.572001452312122,
+      6.812862043691475
+    ],
+    "gate": true
+  }
+}

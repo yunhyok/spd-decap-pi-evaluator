@@ -1,0 +1,139 @@
+{
+  "artifact": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-joint-native-l14-factor-cache-01\\compact-factor-probe.npz",
+    "sha256": "ca7c87045bb40356cb355e4d7fa037b61a1153fb36710bfc25d51f075cd103a8",
+    "size_bytes": 606305652
+  },
+  "budget": {
+    "elapsed_s": 132.375,
+    "max_rss_bytes": 25769803776,
+    "max_runtime_s": 210.0,
+    "peak_rss_bytes": 1855299584
+  },
+  "diagnostic": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-joint-native-l14-factor-cache-01\\compact-factor-diagnostic.json",
+    "sha256": "735f554ab103ba4944ecad4a50997d1d47ca455f563d7df04e92b937ccb96f58",
+    "size_bytes": 5965
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-joint-native-l14-factor-cache-01\\driver-at-run.py",
+    "sha256": "76d5bca218c9e3c48974781efa342aae33acffdd356093ca809fff9942d65b21",
+    "size_bytes": 17048
+  },
+  "frequency_hz": 10000000.0,
+  "inputs": {
+    "base_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l02_conditional_hybrid_block_lgmres.py",
+      "sha256": "ae0fb71ea00d02381abf28bf440d9407191e45f1c43d774cae31da6e0fb8da5e",
+      "size_bytes": 35889
+    },
+    "budget_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\reconstruct_astra_native_loaded_field.py",
+      "sha256": "354d9e004b189cf8193c2922c8fa4dc1903b407bebb295a4576673200ce6b213",
+      "size_bytes": 33457
+    },
+    "compact_factor_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_l04_sheet_aware_native_compact_factor.py",
+      "sha256": "eed904035db4aa0dbcca7c2b85ff8b5d2c0e9b61acfd86527b9d0725e3786acf",
+      "size_bytes": 12897
+    },
+    "correction_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\astra_fixed_residual_correction.py",
+      "sha256": "349abe08fbacbf1ad5b64061abb2514ec78ffb0b6f4f3673a9a358f23697a101",
+      "size_bytes": 971
+    },
+    "external_guard": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_fmm3d_runtime.py",
+      "sha256": "2961d1606ec2d4583c37d990d238a6abc87a54d8e0b93f9d83397f3851536a25",
+      "size_bytes": 16465
+    },
+    "static": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-joint-native-l14-auxiliary-10mhz-01\\joint-native-l14-l04-hybrid-aux-block.npz",
+      "sha256": "babe65c41ad7e33eb6752e96f5209994adb348105c6d7552793abbe88d26c4b6",
+      "size_bytes": 62963594
+    },
+    "static_driver": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-joint-native-l14-auxiliary-10mhz-01\\driver-at-run.py",
+      "sha256": "1e15c3d4dd873c0179143c4926cc8c11fc3a9fecd8f0fa7d745e29793ec2b166",
+      "size_bytes": 18324
+    },
+    "static_external": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-joint-native-l14-auxiliary-10mhz-01\\external-budget.json",
+      "sha256": "a905f3ef630905329bbd117d3e2ebf9a4781aa70b9be5ec315b82936e37e18c7",
+      "size_bytes": 436
+    },
+    "static_hq_check": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-joint-native-l14-auxiliary-10mhz-01\\hq-block-check.json",
+      "sha256": "91b766a2ddbb60c65530009f151730734ab60965a12a48db45be8abe1a01cb10",
+      "size_bytes": 434
+    },
+    "static_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-joint-native-l14-auxiliary-10mhz-01\\result.json",
+      "sha256": "20aa09b4a62e4c06d28e3d7ec8e37fc34217e0b2bce3f77ea56df354c86cb835",
+      "size_bytes": 11774
+    }
+  },
+  "metrics": {
+    "L_nnz": 15423748,
+    "L_storage_bytes": 318885944,
+    "U_nnz": 15423748,
+    "U_storage_bytes": 318885944,
+    "factor_live_max_private_or_working_bytes": 16986697728,
+    "factor_seconds": 81.71958780003479,
+    "fixed_residual_corrections": 1,
+    "n_parity_gate_lte_2e_8": true,
+    "n_residual_gate_lte_2e_8": true,
+    "normal_parity_relative": 4.8103537478446533e-11,
+    "normal_scaled_residual_relative": 1.2081374095072512e-09,
+    "ordinary_transpose_parity_relative": 8.140912906271965e-11,
+    "ordinary_transpose_scaled_residual_relative": 1.1586436695925547e-09,
+    "permutation_storage_bytes": 20821960,
+    "physical_operator_replacement_accepted": false,
+    "pivot_finite": true,
+    "pivot_nonzero": true,
+    "policy": {
+      "SymmetricMode": true,
+      "diag_pivot_thresh": 0.0,
+      "permc_spec": "MMD_AT_PLUS_A"
+    },
+    "post_delete_delta_bytes": -15465844736,
+    "post_delete_max_private_or_working_bytes": 1520852992,
+    "preconditioner_candidate_only": true,
+    "public_normal_seconds": 3.96455060003791,
+    "public_transpose_seconds": 4.241827100049704,
+    "raw_inverse_before_fixed_correction": {
+      "n_parity_relative": 1.8456208848749396e-15,
+      "n_residual_gate_lte_2e_8": false,
+      "public_normal_relative_residual": 6.102770760816139e-08,
+      "public_normal_seconds": 2.013433799962513,
+      "public_transpose_relative_residual": 6.091786390460966e-08,
+      "public_transpose_seconds": 2.4610549000208266,
+      "reference_normal_relative_residual": 6.102423577705634e-08,
+      "reference_normal_seconds": 0.28747219999786466,
+      "reference_transpose_relative_residual": 6.097461656170484e-08,
+      "reference_transpose_seconds": 0.37057369999820367,
+      "t_parity_relative": 7.421961587833979e-15,
+      "t_residual_gate_lte_2e_8": false
+    },
+    "reference_normal_seconds": 0.7324733000132255,
+    "reference_transpose_seconds": 0.8638347999658436,
+    "rhs_count": 2,
+    "t_parity_gate_lte_2e_8": true,
+    "t_residual_gate_lte_2e_8": true
+  },
+  "physical_operator_replacement_accepted": false,
+  "preconditioner_candidate_only": true,
+  "preserved_failed_gates": [
+    "raw_hlambda_minus_direct_relative"
+  ],
+  "program": "SPD Decap PI Evaluator",
+  "public_factor_cache": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-joint-native-l14-factor-cache-01\\qualified-public-factors.npz",
+    "sha256": "b95162dc946a2d757f630bcc08b3d1311b36d334b97b515eca1aa8239e58a762",
+    "size_bytes": 686651870
+  },
+  "scope": "One fixed residual correction B1=2B-BAB, with original 2e-8 gates. Auxiliary-only 10MHz native+L14+L04 hybrid factor; physical trace equivalence remains failed. Exact ContactNtD remains the true operator; no global solve, field, new Z, or accuracy claim.",
+  "source_current_a": 1.0,
+  "status": "PASS_CACHED_10MHZ_JOINT_NATIVE_L14_L04_FIXED_CORRECTION_FACTOR",
+  "version": "0.23.1"
+}

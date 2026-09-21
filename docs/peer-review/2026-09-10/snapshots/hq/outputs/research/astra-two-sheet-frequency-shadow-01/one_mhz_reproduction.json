@@ -1,0 +1,22 @@
+{
+  "l14_gc": {
+    "difference_nnz": 702877,
+    "maximum_abs_difference_s": 5.204280717510103e-18,
+    "reference_maximum_abs_s": 0.011515575985137583,
+    "relative_maximum_difference": 4.519340347566579e-16
+  },
+  "l25_gc": {
+    "difference_nnz": 2536028,
+    "maximum_abs_difference_s": 4.337338053226252e-19,
+    "reference_maximum_abs_s": 0.003878901645148396,
+    "relative_maximum_difference": 1.1181871699818048e-16
+  },
+  "lu_repeated": false,
+  "matrix": {
+    "difference_nnz": 4866965,
+    "maximum_abs_difference_s": 4.656612873077393e-10,
+    "reference_maximum_abs_s": 147135081.85488778,
+    "relative_maximum_difference": 3.1648555968929182e-18
+  },
+  "physical_residual_max_a": 1.6474404817133085e-10
+}

@@ -1,0 +1,14 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "UNVALIDATED_L04_RT0_SELF_MAGNETIC_MATRIX_CHECKPOINT",
+  "artifact": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-rt0-self-magnetic-01\\rt0-self-magnetic.npz",
+    "sha256": "20d2cfe73a5170b082cf5378e7e4c18c505f8667d808bb022c74d2828377c65c",
+    "size_bytes": 149304156
+  },
+  "counts": {
+    "free_triangles": 1589827,
+    "branches": 2272974
+  }
+}

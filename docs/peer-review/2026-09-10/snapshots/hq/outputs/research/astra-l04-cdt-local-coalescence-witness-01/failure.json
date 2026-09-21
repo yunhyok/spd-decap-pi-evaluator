@@ -1,0 +1,18 @@
+{
+  "budget": {
+    "elapsed_s": 110.68699999997625,
+    "max_rss_bytes": 4294967296,
+    "max_runtime_s": 60.0,
+    "peak_rss_bytes": 2988023808
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-cdt-local-coalescence-witness-01\\driver-at-run.py",
+    "sha256": "79c75cf72e46f2ad98e1e4ef7cc2e531e5ff79e81ee9e4e7ee583feb6297f26e",
+    "size_bytes": 13109
+  },
+  "error": "runtime budget exceeded after saved contacts/current identity controls: 110.687s",
+  "error_type": "ReconstructionError",
+  "program": "SPD Decap PI Evaluator",
+  "status": "STOP_L04_CONDITIONAL_LOCAL_COALESCENCE_WITNESS",
+  "version": "0.23.1"
+}

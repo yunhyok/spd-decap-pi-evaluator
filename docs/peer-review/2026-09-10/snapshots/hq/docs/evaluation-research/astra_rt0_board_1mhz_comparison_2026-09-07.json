@@ -1,0 +1,71 @@
+{
+  "actual_field_z_reproduction_ohm": 0.0,
+  "device_active_indices": [
+    2699,
+    2656
+  ],
+  "driver_sha256": "c98cafb9d5cb1f5f6ed2623c9b33c5d83e231c3bfd2a5a7b5f823c79d1c8faba",
+  "errors": {
+    "native_vs_reference": {
+      "complex_gap_ohm": 0.0006180322719598752,
+      "complex_relative_error": 0.7610323044211814,
+      "magnitude_error_db": -2.428670003508578,
+      "phase_error_deg": -48.97890346256608
+    },
+    "p1_vs_reference": {
+      "complex_gap_ohm": 0.00023866697355944,
+      "complex_relative_error": 0.29388963184913114,
+      "magnitude_error_db": -0.3663985855593993,
+      "phase_error_deg": -17.09013811230245
+    },
+    "rt0_vs_reference": {
+      "complex_gap_ohm": 0.00021492977803100452,
+      "complex_relative_error": 0.26466013456703086,
+      "magnitude_error_db": -0.057321571224598834,
+      "phase_error_deg": -15.254341292751285
+    }
+  },
+  "frequency_hz": 1000000.0,
+  "inputs": {
+    "actual": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l25-rt0-board-1mhz-01\\result.json",
+      "sha256": "61a48c10c054e65accc32203429d6b1c49b215693e12d439493a106d7c9e1752"
+    },
+    "errors_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\compare_astra_loaded_development_points.py",
+      "sha256": "0e12464d1297caa9964404a2a0777d22964d6817069f752641b2d7945c8f4f4f"
+    },
+    "primary": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\docs\\evaluation-research\\astra_primary_band_comparison_2026-09-07.json",
+      "sha256": "ac08d7ea36a09989fb83e9113af399db41f698bf68e061e3c75020f4c41a5f8d"
+    }
+  },
+  "limitations": [
+    "One development point, conditional changed L25 mesh/RT0/P0 G/C basis while L14 and other native physics remain fixed. Not an isolated magnetic change or a converged-board claim.",
+    "The10.99298% single DC-pair bracket does not bound this AC Device response; no dense-band or holdout result. Actual-field independent review remains separate."
+  ],
+  "program": "SPD Decap PI Evaluator",
+  "rail_id": "ADC_VDD_075_VTRIP_SRAM/0",
+  "reference_port_one_based": 18,
+  "remaining_p1_reference_gap_reduction_fraction": 0.09945739527519393,
+  "status": "COMPLETED_CONDITIONAL_RT0_BOARD_1MHZ_COMPARISON",
+  "version": "0.23.1",
+  "zdd_ohm": {
+    "native": [
+      0.00010031137009881143,
+      -0.0006057593380320584
+    ],
+    "p1_board": [
+      0.0005137583675450426,
+      -0.0005849760442531394
+    ],
+    "reference": [
+      0.0006915479466520245,
+      -0.0004257504501139287
+    ],
+    "rt0_board": [
+      0.0005515144327164612,
+      -0.0005888008241071069
+    ]
+  }
+}

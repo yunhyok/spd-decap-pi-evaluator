@@ -1,0 +1,99 @@
+{
+  "budget": {
+    "max_rss_bytes": 8589934592,
+    "max_runtime_s": 180.0,
+    "peak_rss_bytes": 1555042304
+  },
+  "candidate_limitation": "Any positive GEOS source residue is preserved in mapping arrays and prevents strict-coverage qualification; it is not repaired, snapped, deleted or recomputed.",
+  "component_count": 1,
+  "component_island_counts": {
+    "0": 289
+  },
+  "component_trace_counts": {
+    "0": 36755
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-flat-conductor-domain-01\\driver-at-run.py",
+    "sha256": "74d58460fbcfd684cde2937a05c971c5c46aebfd350d0fa1cda7607de0399c54",
+    "size_bytes": 12965
+  },
+  "elapsed_s": 154.76500000001397,
+  "mapping": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-flat-conductor-domain-01\\source-component-map.npz",
+    "sha256": "c2313ddff4d4442507ffe810f3d3bf081ac32a282250084e05d1fd6c6824967e",
+    "size_bytes": 69139
+  },
+  "positive_island_residue_count": 12,
+  "positive_trace_residue_count": 765,
+  "preflight": {
+    "cost": {
+      "cooperative_memory_bytes": 8589934592,
+      "cooperative_runtime_s": 180.0,
+      "external_memory_bytes": 25769803776,
+      "external_runtime_s": 240.0,
+      "island_wkb_bytes": 13313165,
+      "source_island_count": 289,
+      "source_trace_count": 36755,
+      "strtree_source_membership_queries": 37044,
+      "trace_endpoint_coordinate_count": 147020,
+      "union_input_geometry_count": 37044
+    },
+    "inputs": {
+      "budget": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\reconstruct_astra_native_loaded_field.py",
+        "sha256": "354d9e004b189cf8193c2922c8fa4dc1903b407bebb295a4576673200ce6b213",
+        "size_bytes": 33457
+      },
+      "flat_method": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l02_flat_conductor_domain.py",
+        "sha256": "d7d5674cebfeb77d12adfaa5da7c9c9d890d95f9f47306a7885662412e7f7b3c",
+        "size_bytes": 6952
+      },
+      "guard": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_fmm3d_runtime.py",
+        "sha256": "2961d1606ec2d4583c37d990d238a6abc87a54d8e0b93f9d83397f3851536a25",
+        "size_bytes": 16465
+      },
+      "islands": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-hidden-pad-trace-artwork-01\\l04-source-islands.npz",
+        "sha256": "e8536def5005b9f3664ad8c006cb06d4bca39b6c3631f364bf5ba761f6dc573c",
+        "size_bytes": 3905750
+      },
+      "persistence": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\project_astra_l14_gc_mass.py",
+        "sha256": "f2c668fd090db5c4606eec27558c9bdbbdde6552d2f82c3b64b8837bd7350dc3",
+        "size_bytes": 61282
+      },
+      "trace_driver": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-trace-inputs-01\\driver-at-run.py",
+        "sha256": "8b94971eaaf6d00b39ec289d8307141998cedba82637ba2e8338c8c2bd433ad9",
+        "size_bytes": 11129
+      },
+      "trace_result": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-trace-inputs-01\\result.json",
+        "sha256": "50a68b54c589f3742df2101caea3a0f479cb2c194d79c62ef4d38401ba1e5eae",
+        "size_bytes": 4200
+      },
+      "traces": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-trace-inputs-01\\source-trace-inputs.npz",
+        "sha256": "55048499a6a6e732806fb6e0cf1c69644a74942b5976b70ed5d24c904b1803f2",
+        "size_bytes": 4778179
+      }
+    },
+    "program": "SPD Decap PI Evaluator",
+    "run_released": true,
+    "scope": "Released candidate preflight. The worker unions every supplied whole-layer trace with selected island artwork, but does not infer circuit ownership from the DGND net; trace-to-island ownership remains a later chain/geometry task. No pad/drill union, snap, repair, CDT, mesh, action or solve.",
+    "status": "PASS_L04_FLAT_DOMAIN_RELEASED_PREFLIGHT",
+    "version": "0.23.1"
+  },
+  "program": "SPD Decap PI Evaluator",
+  "raw_union": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-flat-conductor-domain-01\\l04-artwork-flat-trace-domain.wkb",
+    "sha256": "52d6e2eff60d24a69555aa71a30581d95610acef6644364d31352ffce6f55aec",
+    "size_bytes": 13951157
+  },
+  "scope": "Whole-layer trace geometry is preserved separately from circuit ownership. No trace is admitted to the selected circuit merely by net name; no pad/drill union, snap, repair, CDT, mesh, action or solve.",
+  "status": "COMPLETED_L04_FLAT_TRACE_ISLAND_DOMAIN_CANDIDATE",
+  "trace_only_component_count": 0,
+  "version": "0.23.1"
+}

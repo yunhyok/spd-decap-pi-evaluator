@@ -1,0 +1,794 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "observed_kst": "2026-09-10T15:08:22.334264+09:00",
+  "hq_root": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator",
+  "scope": "Static source and small completed JSON only. No solver, FMM, SPD parsing, NPZ loading or hashing, or HQ modifications.",
+  "reference_z_10mhz_ohm": [
+    0.0013351332705258876,
+    0.0008761129830389292
+  ],
+  "experiments": {
+    "real_h": {
+      "status": "UNVALIDATED_COMPLETE_CURRENT_GCROTMK",
+      "raw_gcrotmk_info": 1,
+      "original_numerical_gate": false,
+      "metrics": {
+        "norms": {
+          "initial_potential": 0.0008985575275356106,
+          "initial_l25": 0.009963267804509478,
+          "initial_contact": 1.39632066065522,
+          "initial_original_nonclosed": 1.3963564951270893,
+          "initial_closed": 0.010015741384083478,
+          "initial_full": 1.3963924149604572,
+          "candidate_potential": 0.000898549639362623,
+          "candidate_l25": 0.0068715701825847325,
+          "candidate_contact": 0.9890337789608873,
+          "candidate_original_nonclosed": 0.9890580578479116,
+          "candidate_closed": 0.00600101503460951,
+          "candidate_full": 0.9890762629723306
+        },
+        "ratios": {
+          "potential": 0.9999912212932996,
+          "l25": 0.6896904025278322,
+          "contact": 0.7083142195266133,
+          "original_nonclosed": 0.7083134294855645,
+          "closed": 0.5991583452969369,
+          "full": 0.7083082465757586
+        },
+        "performance_gates": {
+          "full_lte_80_percent": true,
+          "closed_lte_80_percent": true,
+          "original_nonclosed_lte_110_percent": true,
+          "potential_lte_200_percent": true,
+          "l25_lte_200_percent": true
+        },
+        "original_rhs_norm": 0.00100108140073312,
+        "warm_relative_to_original_rhs": 1394.8839863949522,
+        "final_relative_to_original_rhs": 988.007830580013
+      },
+      "raw_z_unvalidated": [
+        0.0008425187012130073,
+        0.00015677202667810835
+      ],
+      "stationary_j_unvalidated": [
+        0.0009306550438622471,
+        0.0002502773891032221
+      ],
+      "stationary_raw_gap_ohm": 0.00012849617775574531,
+      "progress_gates": {
+        "full_residual_lte_cap": true,
+        "stationary_gap_lte_cap": true
+      },
+      "positive_progress_screen": true,
+      "explicit_vs_algebraic_replay": {
+        "absolute": 3.7822662863696776e-11,
+        "denominator": 0.9890762629723306,
+        "relative": 3.824039083703585e-11
+      },
+      "counts": {
+        "M": 2,
+        "A": 3,
+        "B1": 13,
+        "Q": 11,
+        "R": 2,
+        "fmm": 12
+      },
+      "scope": "Two-step public flexible GCROT discriminator on the conditional complete-current model; no convergence, physical, accuracy, PSD, error-bound, or PowerSI acceptance.",
+      "folder": "astra-l04-10mhz-complete-current-gcrotmk-01",
+      "elapsed_s": 979.9539999999997,
+      "peak_private_bytes": 23798046720,
+      "exit_code": 0,
+      "driver_sha256": "c84e6475deee8374b4af0a3ba50df32d1f40b59a2bc5193904a9d348b90573b9",
+      "final_array_receipt_claim": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-complete-current-gcrotmk-01\\complete-current-final.npz",
+        "sha256": "85e8db88de6a07024a7076549d53e7fc4060789cffbca39f229e025ff4fdaa91",
+        "size_bytes": 534185159
+      },
+      "same_start_inputs": {
+        "third_arrays": {
+          "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-three-direction-complete-current-01\\three-direction-fit-before-gates.npz",
+          "sha256": "79c3ff3f9ab87591c5c762851f3baff1b4d76a2143e433fcb456989c123987de",
+          "size_bytes": 364637579
+        },
+        "frequency_operator": {
+          "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-full-contact-frequency-operators-02\\frequency-10000000-conditional-operator.npz",
+          "sha256": "7d528de4ced4e24e6fbf1c0ba437276ce8ccc706684e36028f63494685171701",
+          "size_bytes": 101909646
+        },
+        "frequency_bridge": {
+          "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-partial-inputs-01\\frequency-10000000-partial-inputs.npz",
+          "sha256": "f5fff0c74c667d8243852b709ed07238585eec427a878bb074519d995f5f680a",
+          "size_bytes": 391933
+        },
+        "prior_initial": {
+          "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-closed-current-direction-01\\initial-complete-model-residual.npz",
+          "sha256": "16fd56e355f950b6ac5127a979758d4135343713d9a5b432fa2d2c57b664dd1b",
+          "size_bytes": 195512060
+        }
+      },
+      "recomputed": {
+        "error_percent": 54.595639475905166,
+        "phase_error_deg": -22.73205645553075,
+        "magnitude_error_db": -5.406248707660093,
+        "original_rhs_relative": 988.007830580013,
+        "j_minus_z_ohm": [
+          8.813634264923987e-05,
+          9.350536242511376e-05
+        ],
+        "gap_ohm": 0.00012849617775574531,
+        "replay_absolute_over_solver_atol": 37.7818055914316
+      },
+      "fmm_seconds": 766.8445227000029,
+      "driver_hash_matches": true
+    },
+    "diagonal_homega": {
+      "status": "UNVALIDATED_COMPLETE_CURRENT_GCROTMK",
+      "raw_gcrotmk_info": 1,
+      "original_numerical_gate": false,
+      "metrics": {
+        "norms": {
+          "initial_potential": 0.0008985575275356106,
+          "initial_l25": 0.009963267804509478,
+          "initial_contact": 1.39632066065522,
+          "initial_original_nonclosed": 1.3963564951270893,
+          "initial_closed": 0.010015741384083478,
+          "initial_full": 1.3963924149604572,
+          "candidate_potential": 0.0008984581123671976,
+          "candidate_l25": 0.009763764527418931,
+          "candidate_contact": 0.6896787426043994,
+          "candidate_original_nonclosed": 0.6897484369863488,
+          "candidate_closed": 0.009803022012451233,
+          "candidate_full": 0.6898180959975525
+        },
+        "ratios": {
+          "potential": 0.9998893613760205,
+          "l25": 0.9799761201841579,
+          "contact": 0.49392575934582916,
+          "original_nonclosed": 0.49396299540510347,
+          "closed": 0.9787614951829439,
+          "full": 0.49400017402492596
+        },
+        "performance_gates": {
+          "full_lte_80_percent": true,
+          "closed_lte_80_percent": false,
+          "original_nonclosed_lte_110_percent": true,
+          "potential_lte_200_percent": true,
+          "l25_lte_200_percent": true
+        },
+        "original_rhs_norm": 0.00100108140073312,
+        "warm_relative_to_original_rhs": 1394.8839863949522,
+        "final_relative_to_original_rhs": 689.0729320236888
+      },
+      "raw_z_unvalidated": [
+        0.0008425135764462607,
+        0.00015682342494613286
+      ],
+      "stationary_j_unvalidated": [
+        0.0010705443639005023,
+        0.00021971144088153317
+      ],
+      "stationary_raw_gap_ohm": 0.00023654374347103894,
+      "progress_gates": {
+        "full_residual_lte_cap": true,
+        "stationary_gap_lte_cap": false
+      },
+      "positive_progress_screen": false,
+      "explicit_vs_algebraic_replay": {
+        "absolute": 4.686760273035612e-11,
+        "denominator": 0.6898180959975525,
+        "relative": 6.794197340181462e-11
+      },
+      "counts": {
+        "M": 2,
+        "A": 3,
+        "B1": 12,
+        "Q": 10,
+        "R": 2,
+        "fmm": 12
+      },
+      "scope": "Two-step public flexible GCROT discriminator on the conditional complete-current model; no convergence, physical, accuracy, PSD, error-bound, or PowerSI acceptance.",
+      "folder": "astra-l04-10mhz-closed-magnetic-gcrotmk-paired-01",
+      "elapsed_s": 1030.4689999999973,
+      "peak_private_bytes": 23798583296,
+      "exit_code": 0,
+      "driver_sha256": "c3db59964538be2c2c5bed5e789f201245f8fd7c4c52206610d5cb1ff6032dff",
+      "final_array_receipt_claim": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-closed-magnetic-gcrotmk-paired-01\\complete-current-final.npz",
+        "sha256": "db4a1c4a1d1b1a1279616419900b2a98380c4ac2d8a3a25727f97fb108dc07f1",
+        "size_bytes": 534399095
+      },
+      "same_start_inputs": {
+        "third_arrays": {
+          "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-three-direction-complete-current-01\\three-direction-fit-before-gates.npz",
+          "sha256": "79c3ff3f9ab87591c5c762851f3baff1b4d76a2143e433fcb456989c123987de",
+          "size_bytes": 364637579
+        },
+        "frequency_operator": {
+          "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-full-contact-frequency-operators-02\\frequency-10000000-conditional-operator.npz",
+          "sha256": "7d528de4ced4e24e6fbf1c0ba437276ce8ccc706684e36028f63494685171701",
+          "size_bytes": 101909646
+        },
+        "frequency_bridge": {
+          "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-partial-inputs-01\\frequency-10000000-partial-inputs.npz",
+          "sha256": "f5fff0c74c667d8243852b709ed07238585eec427a878bb074519d995f5f680a",
+          "size_bytes": 391933
+        },
+        "prior_initial": {
+          "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-closed-current-direction-01\\initial-complete-model-residual.npz",
+          "sha256": "16fd56e355f950b6ac5127a979758d4135343713d9a5b432fa2d2c57b664dd1b",
+          "size_bytes": 195512060
+        }
+      },
+      "recomputed": {
+        "error_percent": 54.593165264094736,
+        "phase_error_deg": -22.728615409983234,
+        "magnitude_error_db": -5.4062044581594195,
+        "original_rhs_relative": 689.0729320236888,
+        "j_minus_z_ohm": [
+          0.00022803078745424162,
+          6.288801593540031e-05
+        ],
+        "gap_ohm": 0.00023654374347103894,
+        "replay_absolute_over_solver_atol": 46.81697481946388
+      },
+      "fmm_seconds": 812.7748460000039,
+      "driver_hash_matches": true
+    },
+    "forward_homega": {
+      "status": "UNVALIDATED_COMPLETE_CURRENT_GCROTMK",
+      "raw_gcrotmk_info": 1,
+      "original_numerical_gate": false,
+      "metrics": {
+        "norms": {
+          "initial_potential": 0.0008985575275356106,
+          "initial_l25": 0.009963267804509478,
+          "initial_contact": 1.39632066065522,
+          "initial_original_nonclosed": 1.3963564951270893,
+          "initial_closed": 0.010015741384083478,
+          "initial_full": 1.3963924149604572,
+          "candidate_potential": 0.0008984161322114156,
+          "candidate_l25": 0.009989406195432635,
+          "candidate_contact": 0.7111468749321156,
+          "candidate_original_nonclosed": 0.7112175989902103,
+          "candidate_closed": 0.010087401383655015,
+          "candidate_full": 0.711289131633593
+        },
+        "ratios": {
+          "potential": 0.9998426418789426,
+          "l25": 1.0026234756945234,
+          "contact": 0.5093005460496528,
+          "original_nonclosed": 0.5093381249503043,
+          "closed": 1.0071547374101946,
+          "full": 0.5093762498371456
+        },
+        "performance_gates": {
+          "full_lte_80_percent": true,
+          "closed_lte_80_percent": false,
+          "original_nonclosed_lte_110_percent": true,
+          "potential_lte_200_percent": true,
+          "l25_lte_200_percent": true
+        },
+        "original_rhs_norm": 0.00100108140073312,
+        "warm_relative_to_original_rhs": 1394.8839863949522,
+        "final_relative_to_original_rhs": 710.5207739477488
+      },
+      "raw_z_unvalidated": [
+        0.0008425134786822031,
+        0.00015682376349129848
+      ],
+      "stationary_j_unvalidated": [
+        0.001081215730469185,
+        0.00021205365073239594
+      ],
+      "stationary_raw_gap_ohm": 0.00024500837833192586,
+      "progress_gates": {
+        "full_residual_lte_cap": false,
+        "stationary_gap_lte_cap": false
+      },
+      "positive_progress_screen": false,
+      "explicit_vs_algebraic_replay": {
+        "absolute": 4.647726534523472e-11,
+        "denominator": 0.711289131633593,
+        "relative": 6.534229651237887e-11
+      },
+      "counts": {
+        "M": 2,
+        "A": 3,
+        "B1": 12,
+        "Q": 10,
+        "R": 2,
+        "fmm": 12
+      },
+      "scope": "Two-step public flexible GCROT discriminator on the conditional complete-current model; no convergence, physical, accuracy, PSD, error-bound, or PowerSI acceptance.",
+      "folder": "astra-l04-10mhz-forward-closed-gcrotmk-01",
+      "elapsed_s": 1075.4689999999973,
+      "peak_private_bytes": 23798689792,
+      "exit_code": 0,
+      "driver_sha256": "466cd9ef7e10d1d39b3821040c79899690170e5bc17e7d217023565e4683a087",
+      "final_array_receipt_claim": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-forward-closed-gcrotmk-01\\complete-current-final.npz",
+        "sha256": "f971eacc2f05b8cc4508960dc56b219a0de9ab9fb03e1d19bf0252d73b5ea2f2",
+        "size_bytes": 534452095
+      },
+      "same_start_inputs": {
+        "third_arrays": {
+          "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-three-direction-complete-current-01\\three-direction-fit-before-gates.npz",
+          "sha256": "79c3ff3f9ab87591c5c762851f3baff1b4d76a2143e433fcb456989c123987de",
+          "size_bytes": 364637579
+        },
+        "frequency_operator": {
+          "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-full-contact-frequency-operators-02\\frequency-10000000-conditional-operator.npz",
+          "sha256": "7d528de4ced4e24e6fbf1c0ba437276ce8ccc706684e36028f63494685171701",
+          "size_bytes": 101909646
+        },
+        "frequency_bridge": {
+          "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-partial-inputs-01\\frequency-10000000-partial-inputs.npz",
+          "sha256": "f5fff0c74c667d8243852b709ed07238585eec427a878bb074519d995f5f680a",
+          "size_bytes": 391933
+        },
+        "prior_initial": {
+          "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-closed-current-direction-01\\initial-complete-model-residual.npz",
+          "sha256": "16fd56e355f950b6ac5127a979758d4135343713d9a5b432fa2d2c57b664dd1b",
+          "size_bytes": 195512060
+        }
+      },
+      "recomputed": {
+        "error_percent": 54.59315123234427,
+        "phase_error_deg": -22.728591961832976,
+        "magnitude_error_db": -5.406204804397705,
+        "original_rhs_relative": 710.5207739477488,
+        "j_minus_z_ohm": [
+          0.00023870225178698203,
+          5.522988724109747e-05
+        ],
+        "gap_ohm": 0.00024500837833192586,
+        "replay_absolute_over_solver_atol": 46.42705908949873
+      },
+      "fmm_seconds": 829.7945710999993,
+      "driver_hash_matches": true
+    }
+  },
+  "sources": [
+    {
+      "relative_path": "outputs/research/astra-l04-10mhz-complete-current-gcrotmk-01/result.json",
+      "sha256": "17eec05e5f710020703a40ec62916d3a01c563fa895d3cde1463979e1a2c4f25",
+      "bytes": 42353,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "outputs/research/astra-l04-10mhz-complete-current-gcrotmk-01/external-budget.json",
+      "sha256": "19ade392a5e26be674e0b26bd580a7c5bda112e4c8440ad4221e544da4492fb7",
+      "bytes": 1088,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "outputs/research/astra-l04-10mhz-complete-current-gcrotmk-01/driver-at-run.py",
+      "sha256": "c84e6475deee8374b4af0a3ba50df32d1f40b59a2bc5193904a9d348b90573b9",
+      "bytes": 28068,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "outputs/research/astra-l04-10mhz-complete-current-gcrotmk-01/hq-saved-gcrotmk-verification.json",
+      "sha256": "fea1cfcdf282746b274c84285a262633697f49877c6a06ea1e3afe2bce14ebc3",
+      "bytes": 1479,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "outputs/research/astra-l04-10mhz-complete-current-gcrotmk-01/hq-cost-and-loaded-reference.json",
+      "sha256": "61d785a3cef6440825a2813c151df2b5d42d208b540221ade33f58fd716d3e58",
+      "bytes": 560,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "outputs/research/astra-l04-10mhz-complete-current-gcrotmk-01/final-worker-budget.json",
+      "sha256": "47cb1878450c7be88c5cbfc31571faff2c5758af4a77f7dfe3e2dee674b221b1",
+      "bytes": 807,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "outputs/research/astra-l04-10mhz-closed-magnetic-gcrotmk-paired-01/result.json",
+      "sha256": "ef23ddf9c0a81f5ef0e234932592ea6403685f022c7e3dc1c04bd4517c488f03",
+      "bytes": 44540,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "outputs/research/astra-l04-10mhz-closed-magnetic-gcrotmk-paired-01/external-budget.json",
+      "sha256": "1d87f15f23219a26f2e690f26ae8ad12b4bbdbd006f8d08155aef4e63bb1c111",
+      "bytes": 1093,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "outputs/research/astra-l04-10mhz-closed-magnetic-gcrotmk-paired-01/driver-at-run.py",
+      "sha256": "c3db59964538be2c2c5bed5e789f201245f8fd7c4c52206610d5cb1ff6032dff",
+      "bytes": 30320,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "outputs/research/astra-l04-10mhz-closed-magnetic-gcrotmk-paired-01/hq-saved-gcrotmk-verification.json",
+      "sha256": "556c4a7328f2b33f312a53bf765c77ae931992ba8da390c7120048eeea58cc17",
+      "bytes": 1803,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "outputs/research/astra-l04-10mhz-closed-magnetic-gcrotmk-paired-01/hq-cost-and-loaded-reference.json",
+      "sha256": "ecb2e08798b8150c3c1e13b47b11e37037a320ddee3cd26955902705e3766462",
+      "bytes": 526,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "outputs/research/astra-l04-10mhz-closed-magnetic-gcrotmk-paired-01/final-worker-budget.json",
+      "sha256": "bb2fca662aa02bd81e3400029aa24d7cf93b8ad663a5970da62deecd7064a959",
+      "bytes": 820,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "outputs/research/astra-l04-10mhz-forward-closed-gcrotmk-01/result.json",
+      "sha256": "30045d8ac4540b096f9b26c75238c5d9e98e1375efc3fb1c5f4b888141fd2128",
+      "bytes": 46567,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "outputs/research/astra-l04-10mhz-forward-closed-gcrotmk-01/external-budget.json",
+      "sha256": "cd46d1aaee838830d2061c18993ad293494ed58c3fc8f03b535fbef995bcbc90",
+      "bytes": 1084,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "outputs/research/astra-l04-10mhz-forward-closed-gcrotmk-01/driver-at-run.py",
+      "sha256": "466cd9ef7e10d1d39b3821040c79899690170e5bc17e7d217023565e4683a087",
+      "bytes": 33201,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "outputs/research/astra-l04-10mhz-forward-closed-gcrotmk-01/hq-saved-gcrotmk-verification.json",
+      "sha256": "ae7995b9db74b54ea7d16f5815ba94c44cf12dbe4d89f05aec08d78e9ce8aded",
+      "bytes": 2000,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "outputs/research/astra-l04-10mhz-forward-closed-gcrotmk-01/hq-cost-and-loaded-reference.json",
+      "sha256": "c8eb5ff82eeb11990692478a4af0e8b6931a998c789aa31bc6c342511ddfa37c",
+      "bytes": 515,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "outputs/research/astra-l04-10mhz-forward-closed-gcrotmk-01/final-worker-budget.json",
+      "sha256": "5bd2650acf0a7742817e203a62c01ac801f5adafadd5de26b7149c1ca5a5eb1b",
+      "bytes": 803,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "outputs/research/astra-l04-10mhz-three-direction-complete-current-01/result.json",
+      "sha256": "3e5704ef3bf96592fd52b62de2c198fcc960da4dbbde1e98f2f505d8af1de590",
+      "bytes": 7803,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "outputs/research/astra-l04-10mhz-forward-closed-gcrotmk-01/hq-saved-stationary-blocks.json",
+      "sha256": "716024c7a07f3564a55571d582770b23129956ed0a7372006762ef38c813c920",
+      "bytes": 5311,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "outputs/research/astra-l04-saved-gcrotmk-union-01/result.json",
+      "sha256": "f2d89a98e651e2a664182cdf91adca25f542b44470db2d5a1889d6cbed7a6983",
+      "bytes": 11752,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "outputs/research/astra-l04-saved-gcrotmk-union-01/external-budget.json",
+      "sha256": "5c194949214ca4db371e6a36b14ea25b5807a225e584eb5bbdbe22369372647a",
+      "bytes": 1326,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "outputs/research/astra-l04-forward-closed-magnetic-qualifier-01/result.json",
+      "sha256": "4b617a1f5159d8e011585e65c72887e9886b421553456f3787df03787fc0ead5",
+      "bytes": 40914,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "outputs/research/astra-l04-forward-closed-magnetic-qualifier-01/external-budget.json",
+      "sha256": "f926c9c9d6de6aae27ae2ebd2d9b5f2038ce7bc7d225e7bfb6181162cf4e42bc",
+      "bytes": 1028,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "outputs/research/astra-l04-10mhz-closed-magnetic-auxiliary-01/result.json",
+      "sha256": "8dcab2dd118a7711dadd37e38f0f936986f842d57ab826fe5f0674f9f5f958c4",
+      "bytes": 10153,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "outputs/research/astra-l04-10mhz-closed-magnetic-auxiliary-01/external-budget.json",
+      "sha256": "16492f5db2639fa54a5077c104c4fc1d98595ee628b4a31d2fdf6f859b11871f",
+      "bytes": 990,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "outputs/research/astra-full-contact-frequency-operators-02/result.json",
+      "sha256": "7efcd3d999162b27311136a462ef5335071c00e371c6bbe6ac1333d7a98f6555",
+      "bytes": 8113,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "outputs/research/astra-l04-frequency-partial-inputs-01/result.json",
+      "sha256": "a0117fe7cfe66646ac09d2450ed2be283e7754bce728dc8c33d9916c4b2d2958",
+      "bytes": 5699,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "docs/evaluation-research/astra_hybrid_r_gc_1mhz_comparison_2026-09-09.json",
+      "sha256": "2049cf1033a94250098987f47ed0e3d18ff2cd0dba61a90b2916e730b897584e",
+      "bytes": 2484,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "docs/evaluation-research/ASTRA_STEP5_SUPERVISION_2026-09-07.md",
+      "sha256": "fbad40dbf7aa255aa97929f526355fc9a7e6dbdcb0a3fc166a938c12758e2a8a",
+      "bytes": 383648,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "outputs/research/HQ_REBOOT_CHECKPOINT_20260910.md",
+      "sha256": "08f3bf740b7c89bb5365da3fa1e39f66442db3d17ba26802f3ec95baa274aae7",
+      "bytes": 22028,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "tools/research/solve_astra_l04_full_contact_coupled.py",
+      "sha256": "6f9b6ce6dc22cefdbb5980b47b30b0c06c8e5ab04a4a0840e7738b014d642430",
+      "bytes": 26880,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "tools/research/probe_astra_l04_10mhz_three_direction_complete_current.py",
+      "sha256": "991a1f488f6aa520bb9b909774e8030da12f81ab4e84a56f6698124883ed8f0c",
+      "bytes": 21479,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "tools/research/probe_astra_l04_10mhz_two_direction_complete_current.py",
+      "sha256": "6e7466c04d38c4db2d49bfbe6a73e07edb4e418fa582f58b3b192c47aa5c42b0",
+      "bytes": 30473,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "tools/research/probe_astra_l25_l04_joint_magnetic_action.py",
+      "sha256": "caf5ba8fd0a1a156f987069be4d14e12d5ae8268e613716d120fb6edf2ab6a5e",
+      "bytes": 18767,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "tools/research/qualify_astra_l04_10mhz_closed_magnetic_auxiliary.py",
+      "sha256": "f49ceb023a1b1ce5aaaec6f329b7623f2f79dd3d3301dc8f64ac054ce2e35e0f",
+      "bytes": 20103,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "tools/research/qualify_astra_l04_forward_closed_magnetic.py",
+      "sha256": "1e0c4afff1b34cba0cb973e9b22fc9b664bbf5aea3f830439ec8562cfc4c7780",
+      "bytes": 9586,
+      "verification": "file bytes read and SHA256 recomputed"
+    },
+    {
+      "relative_path": "tools/research/audit_astra_l04_saved_stationary_blocks.py",
+      "sha256": "eac29770c2e584f909d5980de0507217494edc6a273110438e8784d1f22a909a",
+      "bytes": 4292,
+      "verification": "file bytes read and SHA256 recomputed"
+    }
+  ],
+  "a_apply_ast_identical": true,
+  "load_warm_and_scales_ast_identical": true,
+  "same_start_input_receipts_match": true,
+  "stationary_block_audit": {
+    "program": "SPD Decap PI Evaluator",
+    "version": "0.23.1",
+    "runs": {
+      "real_h": {
+        "result_sha256": "17eec05e5f710020703a40ec62916d3a01c563fa895d3cde1463979e1a2c4f25",
+        "final_sha256": "85e8db88de6a07024a7076549d53e7fc4060789cffbca39f229e025ff4fdaa91",
+        "blocks": {
+          "potential": {
+            "bilinear_ohm": [
+              4.217363557507573e-05,
+              -6.922864901147809e-05
+            ],
+            "absolute_ohm": 8.106307039320507e-05,
+            "residual_norm": 0.000898549639362623,
+            "residual_squared_share": 8.253242195589782e-07
+          },
+          "l25": {
+            "bilinear_ohm": [
+              1.3647459082288853e-05,
+              0.0001555803612388438
+            ],
+            "absolute_ohm": 0.00015617778953043186,
+            "residual_norm": 0.0068715701825847325,
+            "residual_squared_share": 4.826723428902674e-05
+          },
+          "contact": {
+            "bilinear_ohm": [
+              -2.5469606497610393e-05,
+              4.2864398423493025e-06
+            ],
+            "absolute_ohm": 2.5827783909294213e-05,
+            "residual_norm": 0.9890337789608873,
+            "residual_squared_share": 0.9999140954026937
+          },
+          "closed": {
+            "bilinear_ohm": [
+              5.77848544894858e-05,
+              2.867210355399984e-06
+            ],
+            "absolute_ohm": 5.785594441017414e-05,
+            "residual_norm": 0.00600101503460951,
+            "residual_squared_share": 3.681203880012448e-05
+          }
+        },
+        "total_j_minus_z_ohm": [
+          8.813634264924e-05,
+          9.350536242511499e-05
+        ],
+        "gap_ohm": 0.0001284961777557463,
+        "sum_absolute_terms_over_gap": 2.4975419023991448
+      },
+      "diagonal_homega": {
+        "result_sha256": "ef23ddf9c0a81f5ef0e234932592ea6403685f022c7e3dc1c04bd4517c488f03",
+        "final_sha256": "db4a1c4a1d1b1a1279616419900b2a98380c4ac2d8a3a25727f97fb108dc07f1",
+        "blocks": {
+          "potential": {
+            "bilinear_ohm": [
+              4.228737299448828e-05,
+              -6.909771712868144e-05
+            ],
+            "absolute_ohm": 8.101059453658054e-05,
+            "residual_norm": 0.0008984581123671976,
+            "residual_squared_share": 1.6963931210044252e-06
+          },
+          "l25": {
+            "bilinear_ohm": [
+              9.736538041559983e-07,
+              0.00015712579104510026
+            ],
+            "absolute_ohm": 0.0001571288077129043,
+            "residual_norm": 0.009763764527418931,
+            "residual_squared_share": 0.00020033896599942473
+          },
+          "contact": {
+            "bilinear_ohm": [
+              -2.25392878019805e-05,
+              6.715797472848182e-06
+            ],
+            "absolute_ohm": 2.3518533762052875e-05,
+            "residual_norm": 0.6896787426043994,
+            "residual_squared_share": 0.999596011417376
+          },
+          "closed": {
+            "bilinear_ohm": [
+              0.00020730904845757782,
+              -3.185585545386642e-05
+            ],
+            "absolute_ohm": 0.00020974231117989518,
+            "residual_norm": 0.009803022012451233,
+            "residual_squared_share": 0.00020195322350702639
+          }
+        },
+        "total_j_minus_z_ohm": [
+          0.0002280307874542416,
+          6.288801593540058e-05
+        ],
+        "gap_ohm": 0.000236543743471039,
+        "sum_absolute_terms_over_gap": 1.9928671131779407
+      },
+      "forward_homega": {
+        "result_sha256": "30045d8ac4540b096f9b26c75238c5d9e98e1375efc3fb1c5f4b888141fd2128",
+        "final_sha256": "f971eacc2f05b8cc4508960dc56b219a0de9ab9fb03e1d19bf0252d73b5ea2f2",
+        "blocks": {
+          "potential": {
+            "bilinear_ohm": [
+              4.22818455252661e-05,
+              -6.909308625363674e-05
+            ],
+            "absolute_ohm": 8.100375935149524e-05,
+            "residual_norm": 0.0008984161322114156,
+            "residual_squared_share": 1.5953748361988367e-06
+          },
+          "l25": {
+            "bilinear_ohm": [
+              6.732523788470344e-07,
+              0.0001570593518998547
+            ],
+            "absolute_ohm": 0.00015706079487882397,
+            "residual_norm": 0.009989406195432635,
+            "residual_squared_share": 0.00019723636973663857
+          },
+          "contact": {
+            "bilinear_ohm": [
+              -2.295183661009687e-05,
+              7.449480279091509e-06
+            ],
+            "absolute_ohm": 2.4130510981020613e-05,
+            "residual_norm": 0.7111468749321156,
+            "residual_squared_share": 0.999600043162212
+          },
+          "closed": {
+            "bilinear_ohm": [
+              0.0002186989904929654,
+              -4.0185858684210714e-05
+            ],
+            "absolute_ohm": 0.00022236040942764414,
+            "residual_norm": 0.010087401383655015,
+            "residual_squared_share": 0.00020112509321717502
+          }
+        },
+        "total_j_minus_z_ohm": [
+          0.00023870225178698165,
+          5.522988724109874e-05
+        ],
+        "gap_ohm": 0.00024500837833192575,
+        "sum_absolute_terms_over_gap": 1.977709815223262
+      }
+    },
+    "status": "PASS_SAVED_BILINEAR_ATTRIBUTION",
+    "elapsed_s": 3.7018486999986635,
+    "scope": "Algebraic attribution only; no causal isolation, physical acceptance, or accuracy claim. No new H/FMM/full A."
+  },
+  "three_full_cycles_seconds": 3085.8919999999944,
+  "extra_qualifiers_union_seconds": 45.09299999999712,
+  "analytical_gap_counterexample": {
+    "A": "2x2 identity",
+    "b": [
+      1,
+      0
+    ],
+    "x": [
+      0.5,
+      0.5
+    ],
+    "exact_Z": 1,
+    "raw_Z": 0.5,
+    "J": 0.5,
+    "abs_J_minus_Z": 0,
+    "meaning": "zero stationary gap does not bound port forward error"
+  },
+  "external_source_files": [
+    {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\a7e9\\SPD Decap PI Evaluator\\outputs\\research\\pi-literature-method-review-20260908.md",
+      "sha256": "767a76ef3783c637e9b5606568b941e5364e3246371405ce25fa2eacd7ffc648",
+      "verification": "small document/JSON hash recomputed"
+    },
+    {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\1f13\\SPD Decap PI Evaluator\\outputs\\red-team\\evidence-20260910-1201.json",
+      "sha256": "d8b6a849b2b5b6f9bb2a3598ec5ec0a229ea65caf5cc11870b7f588e80a90ab0",
+      "verification": "small document/JSON hash recomputed"
+    }
+  ],
+  "stop_evidence": {
+    "checkpoint_path": "outputs/research/HQ_REBOOT_CHECKPOINT_20260910.md",
+    "checkpoint_heading_kst": "2026-09-10 15:01",
+    "hq_public_task_complete_kst": "2026-09-10T15:03:45.434+09:00",
+    "hq_log_line": 71847,
+    "meaning": "Latest public HQ record confirms work stopped; this review does not restart it."
+  },
+  "report_path": "20260910-peer-review.md",
+  "document_validation": {
+    "utf8_readback": true,
+    "rectangular_tables": 14,
+    "local_links_checked": 27,
+    "small_source_hashes_reverified": 38,
+    "counterexample_scalar_check": true,
+    "same_start_and_a_ast_verified": true,
+    "scope": "No new solver, FMM, array loading, source modifications or delegation.",
+    "adaptive_mesh_scope_added": true,
+    "final_readback_after_narrow_document_correction": true
+  },
+  "final_report_sha256": "e78f3452293122c2ece92f75b13038d3533f35649c53972d777ccfa6dd4a45cb",
+  "delivery": {
+    "recipient_thread_id": "01a07696-742c-7020-bf48-8b9ae43ce684",
+    "initial_report_sent_kst": "2026-09-10T15:27:04+09:00",
+    "initial_report_sha256": "2719a5b442ada3d41bc0f7266f0d838cf23f8df8325d312804c172ffe5e93ec7",
+    "final_version_note": "Table and acronym already corrected; added adaptive mesh scope after coordinator request. Same report path. No HQ message or research restart."
+  }
+}

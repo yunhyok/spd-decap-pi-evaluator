@@ -1,0 +1,29 @@
+{
+  "adapted_from_coupled_source_sha256": "6f9b6ce6dc22cefdbb5980b47b30b0c06c8e5ab04a4a0840e7738b014d642430",
+  "driver_sha256": "bc2f8bfe7abdc6fc068b6de3b38521196be51e1e81042e3979e59e7802f5c139",
+  "elapsed_s": 86.78200000000652,
+  "exit_code": 1,
+  "max_memory_bytes": 34359738368,
+  "max_runtime_s": 300.0,
+  "memory_at_launch": {
+    "available_commit_bytes": 43206676480,
+    "available_physical_bytes": 39115415552,
+    "total_physical_bytes": 68374552576
+  },
+  "owned_pid": 39924,
+  "program": "SPD Decap PI Evaluator",
+  "reference_guard_sha256": "2961d1606ec2d4583c37d990d238a6abc87a54d8e0b93f9d83397f3851536a25",
+  "sampled_peak_private_bytes": 35398475776,
+  "sampled_peak_working_set_bytes": 7537979392,
+  "sampling_interval_s": 0.5,
+  "status": "STOP_EXTERNAL_MEMORY_BUDGET",
+  "version": "0.23.1",
+  "worker_command": [
+    "C:\\Users\\User\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+    "-B",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\preflight_astra_l04_sheet_aware_native_preconditioner.py",
+    "--native-worker",
+    "--output",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-sheet-aware-native-preflight-01"
+  ]
+}

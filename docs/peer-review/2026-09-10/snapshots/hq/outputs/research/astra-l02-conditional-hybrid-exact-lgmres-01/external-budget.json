@@ -1,0 +1,23 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "STOP_EXTERNAL_MEMORY_BUDGET",
+  "owned_pid": 42928,
+  "exit_code": 1,
+  "elapsed_s": 65.84399999998277,
+  "sampled_peak_private_bytes": 25770201088,
+  "sampled_peak_working_set_bytes": 8027262976,
+  "max_runtime_s": 600.0,
+  "max_memory_bytes": 25769803776,
+  "sampling_interval_s": 0.5,
+  "driver_sha256": "2961d1606ec2d4583c37d990d238a6abc87a54d8e0b93f9d83397f3851536a25",
+  "driver_sha256_role": "guard helper, custom worker bound separately by its frozen driver and result",
+  "worker_command": [
+    "C:\\Users\\User\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+    "-B",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l02_conditional_hybrid_exact_lgmres.py",
+    "--run",
+    "--output",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-exact-lgmres-01"
+  ]
+}

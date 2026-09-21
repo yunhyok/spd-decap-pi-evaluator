@@ -1,0 +1,67 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "OWNED_POST_RESULT_WORKER_TERMINATED",
+  "owned_pid": 17564,
+  "owned_start_time": "2026-09-07T18:51:52.8486965Z",
+  "observed_at_utc": "2026-09-07T19:20:42.4028524Z",
+  "observed_cpu_s": 1432.359375,
+  "earlier_cpu_s": 1432.359375,
+  "earlier_observed_utc": "2026-09-07T19:18:24Z",
+  "process_path": "C:\\Users\\User\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+  "threads": [
+    {
+      "Id": 33340,
+      "ThreadState": 5,
+      "WaitReason": 6,
+      "TotalProcessorTime": {
+        "Ticks": 14322968750,
+        "Days": 0,
+        "Hours": 0,
+        "Milliseconds": 296,
+        "Microseconds": 875,
+        "Nanoseconds": 0,
+        "Minutes": 23,
+        "Seconds": 52,
+        "TotalDays": 0.016577510127314815,
+        "TotalHours": 0.39786024305555556,
+        "TotalMilliseconds": 1432296.875,
+        "TotalMicroseconds": 1432296875.0,
+        "TotalNanoseconds": 1432296875000.0,
+        "TotalMinutes": 23.871614583333333,
+        "TotalSeconds": 1432.296875
+      }
+    },
+    {
+      "Id": 27504,
+      "ThreadState": 5,
+      "WaitReason": 10,
+      "TotalProcessorTime": {
+        "Ticks": 468750,
+        "Days": 0,
+        "Hours": 0,
+        "Milliseconds": 46,
+        "Microseconds": 875,
+        "Nanoseconds": 0,
+        "Minutes": 0,
+        "Seconds": 0,
+        "TotalDays": 5.425347222222222E-07,
+        "TotalHours": 1.3020833333333334E-05,
+        "TotalMilliseconds": 46.875,
+        "TotalMicroseconds": 46875.0,
+        "TotalNanoseconds": 46875000.0,
+        "TotalMinutes": 0.00078125,
+        "TotalSeconds": 0.046875
+      }
+    }
+  ],
+  "driver_sha256": "176ae7bd1aa0d9727cc905b4f805fa613a04988bd2a3fce58268351a2ad70a9c",
+  "result_sha256": "2ff4183b727373d8f6d9dbd32a39fcfc55a92b19bc55328b7e79082e766bfe59",
+  "snapshot_sha256": "137b4952f739a75e7bf6f2e21684529a43c48558412df59faab0ad003ea10fb9",
+  "snapshot_bytes": 54863370,
+  "result_saved_at_utc": "2026-09-07T19:15:50.9531848Z",
+  "scope": "Post-result wait with unchanged CPU; exact blocked call unconfirmed. Terminate only owned worker and recover saved artifacts through independent numerical review. Preserve nonclean guard.",
+  "terminated_at_utc": "2026-09-07T19:20:42.4738641Z",
+  "has_exited": true,
+  "exit_code": null
+}

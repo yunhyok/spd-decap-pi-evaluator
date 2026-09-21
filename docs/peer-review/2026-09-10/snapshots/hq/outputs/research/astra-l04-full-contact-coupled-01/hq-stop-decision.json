@@ -1,0 +1,116 @@
+{
+  "status": "STOP_HQ_CONTACT_PRECONDITIONER_STAGNATION",
+  "time_utc": "2026-09-09T10:35:17.548072+00:00",
+  "owned_pid": 43892,
+  "source_sha256": "6f9b6ce6dc22cefdbb5980b47b30b0c06c8e5ab04a4a0840e7738b014d642430",
+  "last_completed_restart": {
+    "calls": {
+      "operator": 76,
+      "preconditioner": 75
+    },
+    "cycle": 5,
+    "elapsed_s": 380.33034909999697,
+    "event": "gmres_restart",
+    "scaled_residual_relative": 220.00464640919415,
+    "scaled_residual_squared_norms": {
+      "l02": 4.182554067654735e-09,
+      "l04_contact": 0.018560868859116085,
+      "l14": 3.661784029952761e-18,
+      "l25": 1.3169047065708412e-23,
+      "l25_current": 1.666123197036697e-33,
+      "native": 1.0580939236041691e-07
+    },
+    "scope": "Top residuals belong to the eliminated MNA potential equations; full physical KCL is checked separately.",
+    "solve_seconds": 321.94180839997716,
+    "top_physical_potential_row_indices": [
+      71610,
+      2656,
+      751579,
+      581824,
+      324023,
+      653063,
+      577793,
+      285355,
+      160766,
+      196021,
+      567186,
+      131486,
+      462308,
+      696867,
+      687738,
+      557244
+    ],
+    "top_physical_potential_row_residuals_a": [
+      [
+        0.026828479110406533,
+        0.006727158637964692
+      ],
+      [
+        0.020676094247144793,
+        0.0061312437415213935
+      ],
+      [
+        -0.010831143316476853,
+        -0.0004714063643359032
+      ],
+      [
+        -0.010818221326478307,
+        -0.00041467903019239225
+      ],
+      [
+        -0.010635693096173546,
+        -0.0004469350247385635
+      ],
+      [
+        -0.010623276397279068,
+        -0.0003945394770275313
+      ],
+      [
+        -0.010592753559877568,
+        -0.000450803426586168
+      ],
+      [
+        -0.010583222882274186,
+        -0.0003996358983061063
+      ],
+      [
+        -0.01049083263417586,
+        -0.0004588847839201455
+      ],
+      [
+        -0.010479427708181265,
+        -0.0004109287497159851
+      ],
+      [
+        -0.010465817834538652,
+        -0.00044640651115138846
+      ],
+      [
+        -0.010453360867925112,
+        -0.00043253906862297364
+      ],
+      [
+        -0.010453373857200337,
+        -0.0003988831503085009
+      ],
+      [
+        -0.010438817673878423,
+        -0.0003854744337152098
+      ],
+      [
+        -0.010382064970186549,
+        -0.00043552420853391893
+      ],
+      [
+        -0.010370212189089971,
+        -0.00039026864300521855
+      ]
+    ]
+  },
+  "checkpoint": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-full-contact-coupled-01\\latest-unvalidated-restart-field.npz",
+    "sha256": "1d7114ad421d0a2001eda9635c8be4c322d9d4a9a79e962d429781af5f437dad",
+    "size_bytes": 44787463
+  },
+  "reason": "Repeated restarted-GMRES contact residual stagnation. Stop the owned worker after its saved restart rather than spend the remaining iteration budget. No physical validation or accuracy acceptance. A sheet-aware preconditioner needs independent review before another global solve."
+}

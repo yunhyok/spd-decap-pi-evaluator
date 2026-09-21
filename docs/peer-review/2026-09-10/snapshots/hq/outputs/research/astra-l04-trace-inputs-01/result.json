@@ -1,0 +1,86 @@
+{
+  "budget": {
+    "cooperative_checks": true,
+    "elapsed_s": 2.5630000000237487,
+    "max_rss_bytes": 4294967296,
+    "max_runtime_s": 60.0,
+    "peak_rss_bytes": 111153152
+  },
+  "db_size_bytes": 2752458752,
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-trace-inputs-01\\driver-at-run.py",
+    "sha256": "8b94971eaaf6d00b39ec289d8307141998cedba82637ba2e8338c8c2bd433ad9",
+    "size_bytes": 11129
+  },
+  "layer": "Signal$L04(DGND)",
+  "net": "DGND",
+  "output": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-trace-inputs-01\\source-trace-inputs.npz",
+    "sha256": "55048499a6a6e732806fb6e0cf1c69644a74942b5976b70ed5d24c904b1803f2",
+    "size_bytes": 4778179
+  },
+  "pins": {
+    "budget_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\census_astra_l02_l14_l25_fft_grid_cost.py",
+      "sha256": "1e22d85e55ea22995ffa042c332a54fb0023e8946edeb0a67067cb691163898a",
+      "size_bytes": 14055
+    },
+    "inventory": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-source-inventory-root-02\\result.json",
+      "sha256": "c86cf3410188e5386bfa8b5f4b57faddc6c219456e59a4ba8ac1d8e9b5f041d1",
+      "size_bytes": 94375
+    },
+    "islands": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-hidden-pad-trace-artwork-01\\l04-source-islands.npz",
+      "sha256": "e8536def5005b9f3664ad8c006cb06d4bca39b6c3631f364bf5ba761f6dc573c",
+      "size_bytes": 3905750
+    },
+    "l02_trace_pattern": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l02_trace_inputs.py",
+      "sha256": "442c4bae0567b2cbc8fa6727eeeec55fd6cf802322a4ff2ac859c8d8a2710aeb",
+      "size_bytes": 5186
+    }
+  },
+  "program": "SPD Decap PI Evaluator",
+  "raw_source_meta": {
+    "adjacent_conductor_gap_count": "47",
+    "adjacent_conductor_gap_sha256": "dd752a61bd43e8d3a364f898f45b472b325ca4936920b5787c1ceaff836bd95c",
+    "certificate_evidence_sha256": "a149542975eb237456dddb8ac78d1bed8d8121545a037600500a16b2a5edb7d1",
+    "compiled_topology_identity_sha256": "0e242c069a55707b554eb632ea7a0747a29b6ad1451453c6496e8dd4cc1ac8cf",
+    "compiler_id": "raw-spd-finite-via-spatial-contact-v3",
+    "geometry_identity_sha256": "1593dcbe3e59c1eac48173a348a9b893862e99bcd3e66b14e69057197660cb4e",
+    "layers_count": "95",
+    "logical_rows_sha256": "a49f447e34a48b220bfa5107ac8a520a5a4906745f1b715c91d584c0752b09bf",
+    "nodes_count": "2751337",
+    "pad_shapes_count": "186",
+    "padstacks_count": "98",
+    "payload_schema": "spd-raw-spatial-contact-sqlite-v3",
+    "plane_sheet_dielectric_points_count": "301",
+    "plane_sheet_payload_sha256": "8124951c18011994e480fbd5a0d2ea78f7018d8e4cabe5dd4b12e7dc62fda800",
+    "plane_sheet_plane_circles_count": "57279",
+    "plane_sheet_plane_primitives_count": "339162",
+    "plane_sheet_plane_vertices_count": "11968968",
+    "plane_sheet_stackup_layers_count": "95",
+    "project_binding_sha256": "a20f131070142ecb4c332d9a8339454c13021eb6787c51944cc628f19449616e",
+    "section_coverage_count": "3",
+    "source_coverage_count": "1",
+    "source_sha256": "40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2",
+    "surfaces_count": "371",
+    "traces_count": "1412611",
+    "vias_count": "1810200"
+  },
+  "run_released": true,
+  "scope": "Exact whole-layer L04 DGND trace rows and selected island IDs only. Trace-to-island ownership remains unassigned and must use chains/geometry, never endpoint-only admission; no union, CDT, mesh, action or solve.",
+  "selected_component_evidence_sha256": "f012924eacbc6682cbfaf6f24af1760faff757f756bb7deebde276c48b4e2135",
+  "selected_island_count": 289,
+  "status": "COMPLETED_L04_EXACT_SOURCE_TRACE_INPUTS_UNOWNED",
+  "total_centerline_length_um": 5333698.804192249,
+  "trace_count": 36755,
+  "unique_source_endpoint_node_count": 62698,
+  "version": "0.23.1",
+  "width_um_counts": {
+    "25.0": 28474,
+    "60.0": 2481,
+    "100.0": 5800
+  }
+}

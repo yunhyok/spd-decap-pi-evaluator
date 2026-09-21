@@ -1,0 +1,38 @@
+{
+  "contact_count": 38278,
+  "contact_nodes_per_contact": 16,
+  "contact_triangles_per_contact": 14,
+  "domain": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-conditional-sheet-mesh-02\\l04-coalesced-conductor-domain.wkb",
+    "sha256": "8dbfbb75d87efa7c9504b1ab521a78687ef97b45d1eb0e6a8d5ff6007658c674",
+    "size_bytes": 14024197
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-conditional-sheet-mesh-02\\driver-at-run.py",
+    "sha256": "816312674f846bf0b08d85222f962b58996c4b5b75b17276768d22a932da723a",
+    "size_bytes": 24194
+  },
+  "patched_raw_cdt": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-conditional-sheet-mesh-02\\unvalidated-l04-large-face-cdt.wkb",
+    "sha256": "4ce405dd9fa48b7bb7569fb3a5abbd129ea41da66d393ef3466c2e5543d172b3",
+    "size_bytes": 122416688
+  },
+  "program": "SPD Decap PI Evaluator",
+  "snapshot": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-conditional-sheet-mesh-02\\l04-conditional-sheet-mesh-before-stiffness.npz",
+    "sha256": "6f2f396fe2319d60ad4b1586fd7043960e42f1d85c29f28a1d9c082302a3a211",
+    "size_bytes": 19845932
+  },
+  "source_result": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-pad-conductor-domain-01\\result.json",
+    "sha256": "bde2eb7c636276da737d0e6c91b0309603d9570899ccf5bbbfc2acffe7a74f96",
+    "size_bytes": 428850
+  },
+  "status": "VALIDATED_L04_MESH_BEFORE_UNCHANGED_STIFFNESS",
+  "version": "0.23.1",
+  "witness_result": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-cdt-local-coalescence-witness-02\\result.json",
+    "sha256": "3e097e7086f6bd10e009afbcdb6b98ca8029f6555273f4e7b1f92c3059a216ce",
+    "size_bytes": 6819
+  }
+}

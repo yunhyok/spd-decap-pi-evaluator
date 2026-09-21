@@ -1,0 +1,93 @@
+{
+  "budget": {
+    "elapsed_s": 0.6720000000204891,
+    "max_rss_bytes": 2147483648,
+    "max_runtime_s": 45,
+    "peak_rss_bytes": 1611841536
+  },
+  "budget_kind": "cooperative in-process elapsed/RSS check; not an external guard",
+  "checks": {
+    "all_40_final_rows_unique": true,
+    "all_composites_are_saved_native_ground_outside_rows": true,
+    "all_native_composites_recompose_saved_rl_exactly": true,
+    "all_port_incident_rows_are_leg_1_with_negative_outward_sign": true,
+    "each_native_composite_has_two_final_legs": true,
+    "source_via_ownership_exact_once": true
+  },
+  "counts": {
+    "final_legs": 40,
+    "native_composites": 20,
+    "source_vias": 93
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-full-return-composite-sources-03\\driver-at-run.py",
+    "sha256": "10cf6b18518c47f867984fe79b20bbfb688e17103f3250142c88ff762c63a5d6",
+    "size_bytes": 18441
+  },
+  "inherited_source_owner_statuses": {
+    "DERIVED_SINGLE_VIA_ENDPOINT_COMPLEMENT": 22765,
+    "EXISTING_SPLIT_COMPOSITE_LEG_SOURCE_PENDING": 20,
+    "UNRESOLVED_SOURCE_ENDPOINT_JOIN": 4005
+  },
+  "inputs": {
+    "circuit_binding": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-circuit-contact-binding-01\\circuit-contact-binding.npz",
+      "sha256": "61ed51f68ae0cc39cdd5ee07e919e105fd15aee5a6b4c8374b063f7d72221020",
+      "size_bytes": 2182451
+    },
+    "circuit_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-circuit-contact-binding-01\\result.json",
+      "sha256": "1ef00f9c88553faf71f6cd87b4899c23d4a1be598a18a08c19b8776148690efc",
+      "size_bytes": 155267
+    },
+    "combined_map": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-assembly-map-02\\combined-assembly-map.npz",
+      "sha256": "a6ccff514fe788396eb9d7620ebc828f966efbea3f7899e7a73991c17f8a2469",
+      "size_bytes": 16919703
+    },
+    "combined_map_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-assembly-map-02\\result.json",
+      "sha256": "cdbb80f3412732f614c1d482a3cc8288c5c6134b5dfb1de2376711309039ae81",
+      "size_bytes": 9732
+    },
+    "inventory_ledger": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-full-return-source-owners-04\\source-owner-inventory.json",
+      "sha256": "4cdca3e08018ed552d987a0d23489499d03fc4365d6d5d37cfb498c9478caa82",
+      "size_bytes": 77810742
+    },
+    "inventory_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-full-return-source-owners-04\\result.json",
+      "sha256": "1f423c564ae922bcf9ec066cfba7881b915723cf33af2ef7cf17865c20931e01",
+      "size_bytes": 11274
+    },
+    "native_selected_map": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-selected-first-via-map-02\\selected-native-first-vias.npz",
+      "sha256": "aa8349094aae8a27c5f2f05cda41e69bb40171ff76911f3507b499673efe8500",
+      "size_bytes": 81525
+    },
+    "native_selected_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-selected-first-via-map-02\\result.json",
+      "sha256": "509f52f940ea43c7869256f4b36eb12adeb7c70dea9ea41e9cb5c56894b17308",
+      "size_bytes": 4134
+    },
+    "source_paths_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-composite-source-paths-03\\result.json",
+      "sha256": "e534da4f465ecb081ae3ec0bcdf96a1ba5329bd4f5c1353b6dfa262ef4f858ff",
+      "size_bytes": 184783
+    },
+    "source_paths_review": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-composite-source-paths-03\\independent-review.json",
+      "sha256": "3ae31ad5e917cd6d207e90fdf654918fc8dfb51f31f1c20113529df4ed4c98be",
+      "size_bytes": 6306
+    }
+  },
+  "output": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-full-return-composite-sources-03\\composite-source-segment-delta.npz",
+    "sha256": "b47b6031c901e50e41c7dc12519a5fcadb7699e236d461df4d159189cd625faa",
+    "size_bytes": 4021
+  },
+  "program": "SPD Decap PI Evaluator",
+  "scope": "Preserves the qualified ordered source Via/ideal-trace ownership behind the 20 native composites and their 40 already-assembled final legs. It does not reopen the 42 excluded boundary owners, bind the 4005 direct contacts, identify DUT pads, build a mesh, read currents, solve a field, evaluate Green/FMM, or claim magnetic or board accuracy.",
+  "status": "COMPLETED_QUALIFIED_FULL_RETURN_COMPOSITE_SOURCE_DELTA",
+  "version": "0.23.1"
+}

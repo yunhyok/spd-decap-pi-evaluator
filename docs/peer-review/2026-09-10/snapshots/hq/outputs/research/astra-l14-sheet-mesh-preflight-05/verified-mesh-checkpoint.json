@@ -1,0 +1,37 @@
+{
+  "actual_mesh_checkpoint_elapsed_s": 161.46899999998277,
+  "clean_process_completion": false,
+  "conductivity_s_per_m": 59590000.0,
+  "connected_components": 1,
+  "contact_count": 1660,
+  "coordinate_units": "um",
+  "direct_element_formula_relative_difference": 4.1770335716357345e-16,
+  "input_sha256": {
+    "driver-at-run.py": "bbfe2aeeb14374614e85bf5cef0c1f610887a21f72eacb1196e456717e63ac48",
+    "mesh-stiffness.npz": "a7a8234df9fb173a6fd88a5c613fc074321b984d5e7f0708842d66c8f0b9e779",
+    "progress.jsonl": "dfe679d4b2d6f797b44a2b713a0c7000c5045f9545d8d89c80aa927d4aec5ad6",
+    "stack-samples.log": "39d72812df1444a243b520fe58c184acb0d3e3707fe1abe94449f85b61d38b43"
+  },
+  "limitations": [
+    "Original full coverage/contact/degeneracy guards reached mesh_compile_done; this audit does not repeat all geometric predicates.",
+    "No mesh convergence, physical electrode acceptance, G/C spatial projection, global response or PowerSI accuracy claim.",
+    "Small teardown control exited0 and did not reproduce the original shutdown failure."
+  ],
+  "max_recorded_private_bytes": 565362688,
+  "minimum_triangle_area_um2": 0.6615124324065995,
+  "missing_original_final_receipt": true,
+  "node_count": 171957,
+  "observed_process_exit_code": 1,
+  "program": "SPD Decap PI Evaluator v0.23.1",
+  "relative_domain_area_difference": 8.58855552999119e-14,
+  "relative_row_sum": 2.610645982272334e-16,
+  "relative_symmetry_difference": 0.0,
+  "status": "VERIFIED_SAVED_L14_MESH_CHECKPOINT",
+  "stiffness_nnz": 941831,
+  "stiffness_units": "dimensionless; physical DC admittance = conductivity_s_per_m * thickness_m * stiffness",
+  "termination_cause": "unconfirmed",
+  "thickness_m": 2e-05,
+  "triangle_count": 214873,
+  "verification_code_sha256": "4336476eae6e3d581a67de9c38e68c5ef9197f3fc3a5273e19c3e19230901128",
+  "verification_elapsed_s": 0.23399999999674037
+}

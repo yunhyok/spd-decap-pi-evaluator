@@ -1,0 +1,33 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "COMPLETED_NATIVE_WORKER",
+  "owned_pid": 3364,
+  "exit_code": 0,
+  "elapsed_s": 41.54700000002049,
+  "sampled_peak_private_bytes": 3684175872,
+  "sampled_peak_working_set_bytes": 1226358784,
+  "max_runtime_s": 300.0,
+  "max_memory_bytes": 25769803776,
+  "sampling_interval_s": 0.5,
+  "driver_sha256": "2961d1606ec2d4583c37d990d238a6abc87a54d8e0b93f9d83397f3851536a25",
+  "driver_sha256_role": "guard helper, custom worker bound separately by its frozen driver and result",
+  "worker_command": [
+    "C:\\Users\\User\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+    "-B",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\solve_astra_l04_fixed_contact_stream.py",
+    "--native-worker",
+    "--mesh-result",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-saved-mesh-qualification-01\\result.json",
+    "--mesh-sha256",
+    "b0bfb67985d123600c892d3d34cd39d56254e2a1fb9bcdc95622da8be990ca4d",
+    "--mesh-guard-sha256",
+    "1749c8d8ca63fc53a351a08d3514beb9b58815d574a191f79727f2ed0cd2f8a4",
+    "--source-result",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-currents-01\\result.json",
+    "--source-sha256",
+    "6c03c997c724da002e12bef0845a08cdae409f76d33428ab1bfba2f875a3a46f",
+    "--output",
+    "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-fixed-contact-stream-01"
+  ]
+}

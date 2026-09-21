@@ -1,0 +1,62 @@
+{
+  "elapsed_s": 3.1709999999729916,
+  "inputs": {
+    "inventory": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-source-inventory-02\\result.json",
+      "sha256": "0af954600a5070f8f2fa27a81ba941889b46ac9f26ac2b76d8669f4ce3af93f2"
+    },
+    "persistence_helper_sha256": "f2c668fd090db5c4606eec27558c9bdbbdde6552d2f82c3b64b8837bd7350dc3",
+    "raw_db": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-step4-basis-01\\indexes\\raw-spatial.sqlite",
+      "sha256": "287c1850a113b23b89c97c38941502f866131d938773c1b346d0e4972733d3a7"
+    }
+  },
+  "layer": "Signal$L02(DGND)",
+  "net": "DGND",
+  "output": {
+    "bytes": 4989622,
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-trace-inputs-01\\source-trace-inputs.npz",
+    "sha256": "d1f7c1ed9cb1b1c404c704417b260d596109827e344ae831229b95f2078a6cf5"
+  },
+  "program": "SPD Decap PI Evaluator",
+  "raw_index_meta": {
+    "adjacent_conductor_gap_count": "47",
+    "adjacent_conductor_gap_sha256": "dd752a61bd43e8d3a364f898f45b472b325ca4936920b5787c1ceaff836bd95c",
+    "certificate_evidence_sha256": "a149542975eb237456dddb8ac78d1bed8d8121545a037600500a16b2a5edb7d1",
+    "compiled_topology_identity_sha256": "0e242c069a55707b554eb632ea7a0747a29b6ad1451453c6496e8dd4cc1ac8cf",
+    "compiler_id": "raw-spd-finite-via-spatial-contact-v3",
+    "geometry_identity_sha256": "1593dcbe3e59c1eac48173a348a9b893862e99bcd3e66b14e69057197660cb4e",
+    "layers_count": "95",
+    "logical_rows_sha256": "a49f447e34a48b220bfa5107ac8a520a5a4906745f1b715c91d584c0752b09bf",
+    "nodes_count": "2751337",
+    "pad_shapes_count": "186",
+    "padstacks_count": "98",
+    "payload_schema": "spd-raw-spatial-contact-sqlite-v3",
+    "plane_sheet_dielectric_points_count": "301",
+    "plane_sheet_payload_sha256": "8124951c18011994e480fbd5a0d2ea78f7018d8e4cabe5dd4b12e7dc62fda800",
+    "plane_sheet_plane_circles_count": "57279",
+    "plane_sheet_plane_primitives_count": "339162",
+    "plane_sheet_plane_vertices_count": "11968968",
+    "plane_sheet_stackup_layers_count": "95",
+    "project_binding_sha256": "a20f131070142ecb4c332d9a8339454c13021eb6787c51944cc628f19449616e",
+    "section_coverage_count": "3",
+    "source_coverage_count": "1",
+    "source_sha256": "40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2",
+    "surfaces_count": "371",
+    "traces_count": "1412611",
+    "vias_count": "1810200"
+  },
+  "scope": "Exact saved source trace inputs and endpoint identities only, sorted by source trace ordinal. No artwork membership, trace interior/width contact, endcap semantics, pad union, conductor R/L, mesh or board replacement is certified. Whole-layer traces are not automatically all incident to one native surface node.",
+  "script_sha256": "442c4bae0567b2cbc8fa6727eeeec55fd6cf802322a4ff2ac859c8d8a2710aeb",
+  "status": "COMPLETED_L02_EXACT_SOURCE_TRACE_INPUTS",
+  "total_centerline_length_um": 5547768.711013945,
+  "trace_count": 38662,
+  "unique_source_endpoint_node_count": 63308,
+  "version": "0.23.1",
+  "width_and_geometry_status": "EXACT",
+  "width_um_counts": {
+    "25.0": 30626,
+    "60.0": 2283,
+    "100.0": 5753
+  }
+}

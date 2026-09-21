@@ -1,0 +1,46 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "PASS_REAL_L02_FULL_FACE_HYBRID_CELL_GEOMETRY_NO_BOUNDARY_CLOSURE",
+  "driver_sha256": "5f102d3a3f0a59919c7bacfb259cbf00a9959f50d01ed9913e7501acfcf6c9c2",
+  "inputs": {
+    "local_r_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\assemble_astra_l25_rt0_resistance.py",
+      "sha256": "ec299b76564463bcea09a54aea4391cb2659e5267375cb7b3b2175d1fe475010"
+    },
+    "budget_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\reconstruct_astra_native_loaded_field.py",
+      "sha256": "354d9e004b189cf8193c2922c8fa4dc1903b407bebb295a4576673200ce6b213"
+    },
+    "mesh": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-sheet-mesh-preflight-02\\mesh-stiffness.npz",
+      "sha256": "137b4952f739a75e7bf6f2e21684529a43c48558412df59faab0ad003ea10fb9"
+    },
+    "space": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-full-rt0-current-space-01\\l02-rt0-current-space.npz",
+      "sha256": "7cd77ee8b03fd0226596748a1913ee5a913381617498c9927ef12d8b080bc98f"
+    }
+  },
+  "free_cells": 1583840,
+  "retained_exterior_faces": 817918,
+  "conductance_s": 1191.8000000000002,
+  "metrics": {
+    "rh_identity_abs": 5.564248195533139e-08,
+    "rh_roundoff_ratio": 0.7968749999999978,
+    "unit_divergence_identity_abs_ohm": 6.106226635438361e-16,
+    "unit_divergence_roundoff_ratio": 0.0293368496011703,
+    "h_row_sum_roundoff_ratio": 0.02260682616087563
+  },
+  "roundoff_envelope": "gamma_64 with epsilon=float64 epsilon; RH uses |R|@|H|+|P|, unit divergence uses |R|1/3+rho, row sums use 4*g*A*|grad_i| dot sum_j|grad_j| before dot-product cancellation. Local arithmetic only.",
+  "artifact": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-hybrid-cell-geometry-02\\hybrid-cell-geometry.npz",
+    "sha256": "15f1f6f6ad0ffd45ada9a74bde80d0e79ce82517a3ab485095d57898fbd06834"
+  },
+  "budget": {
+    "elapsed_s": 7.282000000006519,
+    "peak_rss_bytes": 320045056,
+    "max_runtime_s": 120,
+    "max_rss_bytes": 4294967296
+  },
+  "scope": "All source free triangles and all three outward facets retained. Exact isotropic constant-sheet RT0/P0 local coefficients H=4*g*A*grad(bary)*grad(bary)^T, w=1/3, rho=sum|vertex-centroid|^2/(48*g*A). No exterior q=0 or grounded trace, contact classification, assembled global operator, new field, magnetic action or accuracy claim. Restricted-flux cells require different coefficients."
+}

@@ -1,0 +1,24 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "STOP_NATIVE_WORKER_EXIT",
+  "owned_pid": 32220,
+  "exit_code": 1,
+  "elapsed_s": 162.70300000003772,
+  "sampled_peak_private_bytes": 3029082112,
+  "sampled_peak_working_set_bytes": 2931998720,
+  "max_runtime_s": 660.0,
+  "max_memory_bytes": 25769803776,
+  "sampling_interval_s": 0.5,
+  "driver_sha256": "2961d1606ec2d4583c37d990d238a6abc87a54d8e0b93f9d83397f3851536a25",
+  "driver_sha256_role": "guard helper, custom worker bound separately by its frozen driver and result",
+  "worker_command": [
+    "C:\\Users\\User\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+    "-B",
+    "tools/research/prepare_astra_l02_pad_conductor_domain.py",
+    "--output",
+    "outputs/research/astra-l02-pad-conductor-domain-01",
+    "--max-seconds",
+    "600"
+  ]
+}

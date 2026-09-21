@@ -1,0 +1,25 @@
+{
+  "artifact": {
+    "external_guard_sha256": "bf34f48344551974c7b1285929e7201c8a570d21e39043dfa2c6744fe1be0156",
+    "frozen_driver_sha256": "4f029256756bccca74f92889fb8089ef1d9456982cddb037e9ca996eb1c3b537",
+    "result_sha256": "5e18de3bba96b07870175058852aacd5ac2c937c8ffe946bd95518899e337587"
+  },
+  "checks": {
+    "direct_whole_domain_intersections": 84,
+    "flat_positive_pad_rows": 42,
+    "max_direct_drill_area_difference_um2": 4.547473508864641e-13,
+    "max_direct_pad_area_difference_um2": 3.183231456205249e-12,
+    "original_artwork_supported_pad_and_drill_rows": 2,
+    "original_supported_via_ids": [
+      "Via1312784",
+      "Via1612214"
+    ],
+    "trace_body_dependent_drill_rows": 0,
+    "trace_body_dependent_pad_only_rows": 40
+  },
+  "findings": [],
+  "program": "SPD Decap PI Evaluator",
+  "scope": "Conditional flat artwork/trace domain geometry only. The40 pad-only witnesses do not authorize splitting20 native composites or assigning circuit orientation/current; the two leaf witnesses do not prove magnetic irrelevance.",
+  "status": "ACCEPTED_INDEPENDENT_L02_EXCLUDED_VIA_FLAT_DOMAIN_DIAGNOSTIC",
+  "version": "0.23.1"
+}

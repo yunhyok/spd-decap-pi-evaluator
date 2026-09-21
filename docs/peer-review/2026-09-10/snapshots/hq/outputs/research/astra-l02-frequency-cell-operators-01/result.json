@@ -1,0 +1,90 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "ASSEMBLED_L02_FREQUENCY_CELL_OPERATORS_NO_BOARD_SOLVE",
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-frequency-cell-operators-01\\driver-at-run.py",
+    "sha256": "fadcb7e20f1eb47ac3207d837fe438a359b42fab0d684d042487dc850d5065d0",
+    "size_bytes": 7395
+  },
+  "inputs": {
+    "cell_assembler": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\assemble_astra_l02_conditional_hybrid_operator.py",
+      "sha256": "79ab74ff53bef21347038a8ab0c243260049cd97dfea5e707320f84de19210d3",
+      "size_bytes": 29539
+    },
+    "frequency_inputs": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-frequency-gc-inputs-01\\result.json",
+      "sha256": "1381d9c8463cf69889da68f0042517f019c0ffccdedd9bd36db16bfb0297f2fe",
+      "size_bytes": 3849
+    },
+    "frequency_guard": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-frequency-gc-inputs-01\\external-budget.json",
+      "sha256": "38b7347d8ff4c6629f45ac634ea2cf5245a9f999509ce938ca112fce92104eaf",
+      "size_bytes": 435
+    },
+    "restricted": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-restricted-hybrid-cell-geometry-02\\restricted-hybrid-cell-geometry.npz",
+      "sha256": "e03297ce292d082422585e71e47a05c3d3caed8ccfe0cd24e99d06ebeb7eac0b",
+      "size_bytes": 37066801
+    }
+  },
+  "points": [
+    {
+      "frequency_hz": 10000000.0,
+      "cell_pack": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-frequency-gc-inputs-01\\frequency-10000000-l02-cell-pack.npz",
+        "sha256": "3adae825cf5be0691997044bcc98f01eed9430f7cc1a6f4147de0e8c037c6b9e",
+        "size_bytes": 12574486
+      },
+      "artifact": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-frequency-cell-operators-01\\frequency-10000000-l02-cell-operators.npz",
+        "sha256": "0f9b143c0a890c360877de0ea4782d280eae44f4cdbc8977f2d0e7a0bfad21ee",
+        "size_bytes": 56682845
+      },
+      "metrics": {
+        "cell_coo_entries": 15453815,
+        "cell_csc_nnz": 9699599,
+        "cell_block_row_sum_formula_roundoff_ratio": 0.0067399848010339545,
+        "cell_block_expected_row_sum_abs_max_s": 1.8524588085711002e-08,
+        "cell_reconstruction_relative_error": 4.973498452839779e-16,
+        "cell_coo_vs_direct_scatter_relative_error": 1.393699487196764e-16
+      },
+      "cell_nnz": 9699599,
+      "contact_nnz": 61183,
+      "elapsed_seconds": 8.405999999959022
+    },
+    {
+      "frequency_hz": 100000000.0,
+      "cell_pack": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-frequency-gc-inputs-01\\frequency-100000000-l02-cell-pack.npz",
+        "sha256": "e6bb1cb7e03a4defe85aec871e6543fc0c6f5ef2638d4c73d63a083e13d78dd6",
+        "size_bytes": 12579100
+      },
+      "artifact": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-frequency-cell-operators-01\\frequency-100000000-l02-cell-operators.npz",
+        "sha256": "cdd3c40761b0c262d8b167a4c93e215954c256a0f122b9772692af2826c15f7a",
+        "size_bytes": 56722337
+      },
+      "metrics": {
+        "cell_coo_entries": 15453815,
+        "cell_csc_nnz": 9699599,
+        "cell_block_row_sum_formula_roundoff_ratio": 0.007100004417201245,
+        "cell_block_expected_row_sum_abs_max_s": 1.8524588085711002e-08,
+        "cell_reconstruction_relative_error": 5.26204200371858e-16,
+        "cell_coo_vs_direct_scatter_relative_error": 1.3333626047919994e-16
+      },
+      "cell_nnz": 9699599,
+      "contact_nnz": 61183,
+      "elapsed_seconds": 8.09299999999348
+    }
+  ],
+  "elapsed_seconds": 16.65700000000652,
+  "budget": {
+    "elapsed_s": 16.65700000000652,
+    "peak_rss_bytes": 1336147968,
+    "max_runtime_s": 135.0,
+    "max_rss_bytes": 4294967296
+  },
+  "scope": "Unchanged qualified restricted RT0 cell assembly with actual frequency-specific partial0 GC and unchanged topology/R geometry. Cell algebra checks apply only to these blocks. Native/L14/L25 categories and finite/termination terms still require composition; no complete Y, board response or acceptance."
+}

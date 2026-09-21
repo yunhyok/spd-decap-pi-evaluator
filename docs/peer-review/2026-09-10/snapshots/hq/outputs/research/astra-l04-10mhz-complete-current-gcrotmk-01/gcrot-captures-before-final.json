@@ -1,0 +1,22 @@
+{
+  "artifact": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-10mhz-complete-current-gcrotmk-01\\gcrot-captures-before-final.npz",
+    "sha256": "a78176ec07d136e57d325e46faf10bc6aa0aefbb5bfe27c41d7b16f21f374df8",
+    "size_bytes": 364499557
+  },
+  "metrics": {
+    "rank": 2,
+    "column_count": 2,
+    "normalized_condition": 2.713844805977201,
+    "correction_replay_relative": 1.0013597711786365e-14,
+    "singular_values": [
+      1.3269917943131966,
+      0.488971142119298
+    ],
+    "column_norms": [
+      156.99588031122858,
+      9.601909270447445
+    ],
+    "gate": true
+  }
+}

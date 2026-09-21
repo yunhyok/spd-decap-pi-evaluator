@@ -1,0 +1,41 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "PASS_CONDITIONAL_L02_RT0_SPARSE_CURRENT_SPACE_WITH_EXTERIOR_SUPPORTS",
+  "driver_sha256": "a5b8ecc5998a7ec9f5685a89eefaaa06cdc9c7382eb40de042ebac5a9b487d5e",
+  "input_sha256": {
+    "tools/research/assemble_astra_l25_rt0_resistance.py": "ec299b76564463bcea09a54aea4391cb2659e5267375cb7b3b2175d1fe475010",
+    "outputs/research/astra-l02-sheet-mesh-preflight-02/mesh-stiffness.npz": "137b4952f739a75e7bf6f2e21684529a43c48558412df59faab0ad003ea10fb9",
+    "outputs/research/astra-l02-circuit-contact-binding-01/circuit-contact-binding.npz": "61ed51f68ae0cc39cdd5ee07e919e105fd15aee5a6b4c8374b063f7d72221020"
+  },
+  "elapsed_s": 28.29700000002049,
+  "budget": {
+    "elapsed_s": 28.29700000002049,
+    "peak_rss_bytes": 999473152,
+    "max_runtime_s": 120,
+    "max_rss_bytes": 4294967296
+  },
+  "counts": {
+    "free_cells": 1583840,
+    "current_branches": 3095567,
+    "contacts": 38856,
+    "retained_exterior_branches": 817918,
+    "distributional_rows": 2440614,
+    "connected_components": 1,
+    "resistance_nnz": 12598607
+  },
+  "metrics": {
+    "min_local_eigenvalue_ohm": 7.623910498727191e-09,
+    "max_local_condition": 1009384022.4956477,
+    "min_triangle_area_m2": 6.032676888298348e-15,
+    "max_triangle_area_m2": 8.553252749999997e-05,
+    "all_local_q2_matrix_relative": 8.578603417043014e-16,
+    "independent_global_joule_relative": 2.3235482487059076e-16
+  },
+  "material": {
+    "conductivity_s_m": 59590000.0,
+    "thickness_m": 2e-05
+  },
+  "artifact_sha256": "7cd77ee8b03fd0226596748a1913ee5a913381617498c9927ef12d8b080bc98f",
+  "scope": "The existing 2D source mesh and all38856 aggregate contact interiors are retained under their prior equipotential-contact approximation. Every free-cell facet is a current DOF, including exterior fluxes with separate distributional supports; no new zero-flux/ground condition is imposed. Contact interior current fields are outside this conditional free-sheet space. Sparse R/D/topology only: no charge Green/G-C transfer, circuit solution, magnetic action, 3D thickness convergence or board/PowerSI accuracy claim."
+}

@@ -1,0 +1,76 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "PREPARED_SOURCE_AREA_L02_FREQUENCY_GC_INPUTS_NO_OPERATOR_NO_SOLVE",
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-frequency-gc-inputs-01\\driver-at-run.py",
+    "sha256": "750df020db7889c63e691e4cfff776ff777c0223fde0addee2e39931434aa57c",
+    "size_bytes": 9728
+  },
+  "inputs": {
+    "pack": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-full-face-hybrid-operator-06\\hybrid-operator-pack.npz",
+      "sha256": "01ff4236af30621ca6cc4b87c4688c28ee23c22ed99b15aadd047f91a25c0b2c",
+      "size_bytes": 101366745
+    },
+    "gc": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-cell-gc-loads-01\\l02-cell-gc-loads.npz",
+      "sha256": "12ab38f5d692c442a18d6ec7df913c6d96108be73850f27c7014f6f26c9c2459",
+      "size_bytes": 172736695
+    },
+    "stamps": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-frequency-stamps-01\\frequency-stamps.npz",
+      "sha256": "bf2903c044423ea7429ce907567250528903c53eedddd9fffe3265a2669cba3b",
+      "size_bytes": 106629
+    },
+    "owner_map_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-l14-l25-combined-assembly-map-02\\result.json",
+      "sha256": "cdbb80f3412732f614c1d482a3cc8288c5c6134b5dfb1de2376711309039ae81",
+      "size_bytes": 9732
+    },
+    "source_recipe": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\assemble_astra_l02_full_face_hybrid_operator.py",
+      "sha256": "d87a757c6edfc56b0f2f7329528e1ddee4fd9829efcd6e52c00e8191d7afaa3a",
+      "size_bytes": 13506
+    }
+  },
+  "points": [
+    {
+      "frequency_hz": 1000000.0,
+      "artifact": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-frequency-gc-inputs-01\\frequency-1000000-l02-cell-pack.npz",
+        "sha256": "df05456e83c7e5a935586ffa0f4ded2ee65a21b4d2f637d961142915bbf760a6",
+        "size_bytes": 12560488
+      },
+      "partial_ordinal": 0
+    },
+    {
+      "frequency_hz": 10000000.0,
+      "artifact": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-frequency-gc-inputs-01\\frequency-10000000-l02-cell-pack.npz",
+        "sha256": "3adae825cf5be0691997044bcc98f01eed9430f7cc1a6f4147de0e8c037c6b9e",
+        "size_bytes": 12574486
+      },
+      "partial_ordinal": 0
+    },
+    {
+      "frequency_hz": 100000000.0,
+      "artifact": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-frequency-gc-inputs-01\\frequency-100000000-l02-cell-pack.npz",
+        "sha256": "e6bb1cb7e03a4defe85aec871e6543fc0c6f5ef2638d4c73d63a083e13d78dd6",
+        "size_bytes": 12579100
+      },
+      "partial_ordinal": 0
+    }
+  ],
+  "one_mhz_gc_bitwise_reproduced": true,
+  "remaining_action": "Call unchanged assemble_astra_l02_conditional_hybrid_operator.build_cell_operator with each frequency cell pack and original restricted geometry, then assemble the remaining frequency-dependent categories and run a new frequency solve.",
+  "scope": "Source owner area*density*actual partial0 frequency coefficient; no P1 load or 1MHz field reuse, no whole-cell-matrix scaling, no new board response or acceptance.",
+  "elapsed_seconds": 9.937999999965541,
+  "budget": {
+    "elapsed_s": 9.937999999965541,
+    "peak_rss_bytes": 622542848,
+    "max_runtime_s": 75.0,
+    "max_rss_bytes": 3221225472
+  }
+}

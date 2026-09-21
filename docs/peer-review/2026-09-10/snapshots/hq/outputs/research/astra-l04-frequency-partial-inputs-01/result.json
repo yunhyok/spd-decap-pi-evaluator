@@ -1,0 +1,112 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "PREPARED_PARTIAL_FREQUENCY_INPUTS_NO_SOLVE",
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-partial-inputs-01\\driver-at-run.py",
+    "sha256": "b32c738ba610319492be737d488c91bea77a3cc79a8063ab9d63bfac3256158f",
+    "size_bytes": 10485
+  },
+  "inputs": {
+    "bridge": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-full-contact-circuit-bridge-01\\l04-full-contact-circuit-bridge.npz",
+      "sha256": "02508f2e1588fe5e6ad4231b9c128a3324a88baf0229293d6a8b70ea10380e57",
+      "size_bytes": 1702061
+    },
+    "bridge_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-full-contact-circuit-bridge-01\\result.json",
+      "sha256": "1583612f90fca3c97f7b9fb4f8c3a0a004d6ae8d84ccc1f7bbc8f382247d266f",
+      "size_bytes": 8656
+    },
+    "bridge_source": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l04_full_contact_circuit_bridge.py",
+      "sha256": "4d283db3256201714011a0c059e91e295ddc9b96b58f59de07324d7a9de3ef0f",
+      "size_bytes": 17020
+    },
+    "stamps": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-frequency-stamps-01\\frequency-stamps.npz",
+      "sha256": "bf2903c044423ea7429ce907567250528903c53eedddd9fffe3265a2669cba3b",
+      "size_bytes": 106629
+    },
+    "stamp_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-native-frequency-stamps-01\\receipt.json",
+      "sha256": "4d93c4a89a02c7bc6295c27e8aa430ce3711edb2d2102576fbc7cf7535a52856",
+      "size_bytes": 21293
+    }
+  },
+  "points": [
+    {
+      "frequency_hz": 1000000.0,
+      "artifact": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-partial-inputs-01\\frequency-1000000-partial-inputs.npz",
+        "sha256": "b1999fd56860b3fc0ca71e26473fafc9b08eb5f69a7890714d1912cbedea33fa",
+        "size_bytes": 391918
+      },
+      "l04_u_nnz": 114441,
+      "l04_delta_nnz": 66,
+      "gc_ratio_spread_from_partial0": 1.1102372470297927e-16,
+      "termination_change_relative_norm": 0.0
+    },
+    {
+      "frequency_hz": 10000000.0,
+      "artifact": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-partial-inputs-01\\frequency-10000000-partial-inputs.npz",
+        "sha256": "f5fff0c74c667d8243852b709ed07238585eec427a878bb074519d995f5f680a",
+        "size_bytes": 391933
+      },
+      "l04_u_nnz": 114441,
+      "l04_delta_nnz": 66,
+      "gc_ratio_spread_from_partial0": 0.18564928952566098,
+      "termination_change_relative_norm": 6.059022927052013
+    },
+    {
+      "frequency_hz": 100000000.0,
+      "artifact": {
+        "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-frequency-partial-inputs-01\\frequency-100000000-partial-inputs.npz",
+        "sha256": "5e7e3018941a02a1ed04afcca27dd8d338bf8654deb39de2116b6ca6a2c4cc28",
+        "size_bytes": 391970
+      },
+      "l04_u_nnz": 114441,
+      "l04_delta_nnz": 66,
+      "gc_ratio_spread_from_partial0": 3.712967875132115,
+      "termination_change_relative_norm": 1.7439408363473219
+    }
+  ],
+  "geometry_approximation": {
+    "domain": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-conditional-sheet-mesh-02\\l04-coalesced-conductor-domain.wkb",
+      "sha256": "8dbfbb75d87efa7c9504b1ab521a78687ef97b45d1eb0e6a8d5ff6007658c674",
+      "size_bytes": 14024197
+    },
+    "max_vertex_displacement_um": 1.473493695890548e-10,
+    "method": "EXACT_TWO_SOURCE_VERTEX_COALESCENCE_L04_RING563",
+    "source_domain": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-pad-conductor-domain-01\\l04-pad-augmented-conductor-domain.wkb",
+      "sha256": "0eeaffc34a6b9759fd285f28d35ebd59042e6bcd909a697fad3f18a5d2eafa68",
+      "size_bytes": 14024197
+    },
+    "unchanged_source_geometry": false,
+    "witness_result": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-cdt-local-coalescence-witness-02\\result.json",
+      "sha256": "3e097e7086f6bd10e009afbcdb6b98ca8029f6555273f4e7b1f92c3059a216ce",
+      "size_bytes": 6819
+    }
+  },
+  "one_mhz_l04_u_diagonal_bitwise_reproduced": true,
+  "retained_original_numerical_gate": false,
+  "remaining_assembly": [
+    "L02 cell Schur and contact GC at partial0 coefficient",
+    "native finite and composite RL by owner mapping",
+    "retained partial GC and L14/L25 owner mass GC",
+    "actual termination stamping and complete Y assembly",
+    "frequency-specific preconditioner, solve and physical diagnostics"
+  ],
+  "scope": "Partial inputs only; preserve topology/source ownership through pinned bridge. Actual saved native dispersion/termination values, fixed source R/L. No complete frequency operator, board response, skin/proximity/mutual magnetic addition, solved-field extrapolation or accuracy acceptance.",
+  "elapsed_seconds": 0.46899999998277053,
+  "budget": {
+    "elapsed_s": 0.46899999998277053,
+    "peak_rss_bytes": 127131648,
+    "max_runtime_s": 45.0,
+    "max_rss_bytes": 2147483648
+  }
+}

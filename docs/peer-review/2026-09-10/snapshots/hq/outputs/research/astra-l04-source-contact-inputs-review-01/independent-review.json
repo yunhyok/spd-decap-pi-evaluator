@@ -1,0 +1,73 @@
+{
+  "binding_contact_ordinal_order": [
+    38849,
+    38838,
+    38839,
+    38844,
+    38840,
+    38845,
+    38837,
+    38843,
+    38855,
+    38853,
+    38852,
+    38841,
+    38851,
+    38847,
+    38842,
+    38836,
+    38850,
+    38846,
+    38854,
+    38848
+  ],
+  "counts": {
+    "binding_paths": 20,
+    "exception_source_rows_checked_against_db": 30,
+    "ordinary_keep_mappings": 76136,
+    "pad_definitions": 4,
+    "source_islands": 289,
+    "source_vias": 76166,
+    "source_vias_by_category": [
+      76136,
+      10,
+      20
+    ],
+    "unique_xy": 38278
+  },
+  "elapsed_s": 6.76600000000326,
+  "findings": [],
+  "program": "SPD Decap PI Evaluator",
+  "reviewed": {
+    "guard_sha256": "009b5fe5478785c5ec487972a1329bda1278a872ab662551f12826a515a6e5fa",
+    "npz_sha256": "6e5886f81a14c1f1fec43a4af64a175bca518486cfd74fbc7794c551bd74ec4a",
+    "producer_sha256": "ca3f25ed28fc1fc4c21bad26b5b480eb490c43bf351fe68987b9c8dc1333625c",
+    "result_sha256": "96c7396b9c4d8cba85677ca18e643bad1376e7f3047614c5a9b158071662861d"
+  },
+  "reviewer_sha256": "3fc839acc2af07b39cc7d377a504d566a3e3cf9f792676840ec8863fd2f331d0",
+  "scope": "Saved-artifact review only. Hashes and ZIP CRCs, saved array layout, actual keep-array remapping, binding-order path/contact indices, source endpoint/XY/hash records, pad definitions, coincident groups, and the cached 289-island identity were checked. No producer collect, geometry operation, mesh, circuit solve, or accuracy claim was repeated.",
+  "status": "ACCEPT_L04_SOURCE_CONTACT_INPUT_LEDGER_INDEPENDENT_REVIEW",
+  "verified_input_hashes": {
+    "binding_npz": "61ed51f68ae0cc39cdd5ee07e919e105fd15aee5a6b4c8374b063f7d72221020",
+    "binding_result": "1ef00f9c88553faf71f6cd87b4899c23d4a1be598a18a08c19b8776148690efc",
+    "binding_review": "be2dff54dfce3ab01933b391112972ac46ca9118b54195d505212a9489d29f6c",
+    "compiled": "5a4fd917e0c415a50d75e1e52be22580d0c9c88423e6e93c5eb69f62f0aa849b",
+    "geometry_review": "405a0b4c2a81e3d95f71e432c5f71901087a8278dc89518c768d99046cbf5b78",
+    "inventory": "c86cf3410188e5386bfa8b5f4b57faddc6c219456e59a4ba8ac1d8e9b5f041d1",
+    "inventory_review": "1759b05d10147e4571bb3d9589782295ad808aa9b924ba16529079489b2e921f",
+    "islands": "e8536def5005b9f3664ad8c006cb06d4bca39b6c3631f364bf5ba761f6dc573c",
+    "persistence": "f2c668fd090db5c4606eec27558c9bdbbdde6552d2f82c3b64b8837bd7350dc3",
+    "raw": "6eac098738598a78b2068ce4f80e46fd70e17010a89bfb5949ec8a68124df4a7",
+    "raw_db": "287c1850a113b23b89c97c38941502f866131d938773c1b346d0e4972733d3a7",
+    "source_helper": "282def7c0eff7a7e6b822766bbb104ee910945a2af95b49d800badcd89a4deb1",
+    "split_review": "79d4810633fc84655914be1c2a7abc5ed3e5ff6997e2b9a2b90a896967a83103",
+    "splits": "17ca350bbb4913283315812e746b547d3ee01c4fec85133d411fb0e8602fe48d"
+  },
+  "version": "0.23.1",
+  "zip_crc_member_counts": {
+    "binding": 18,
+    "islands": 3,
+    "ledger": 25,
+    "raw": 367
+  }
+}

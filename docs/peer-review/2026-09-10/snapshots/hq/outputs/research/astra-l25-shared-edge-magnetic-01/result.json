@@ -1,0 +1,77 @@
+{
+  "program": "SPD Decap PI Evaluator",
+  "version": "0.23.1",
+  "status": "COMPLETED_CONDITIONAL_SHARED_EDGE_CENTROID_CORRECTION",
+  "script_sha256": "b6f1c0a6b7a2414112aa47181f62a8138d94c0c8c7f2ab8edafbe6b17b01ad87",
+  "board_sha256": "61a48c10c054e65accc32203429d6b1c49b215693e12d439493a106d7c9e1752",
+  "step_artifacts": {
+    "drive": {
+      "bytes": 8539631,
+      "path": "drive.npz",
+      "sha256": "eb9b23ae52aba42ecfcefaf7d347491d925d382f41366c6c7c478c9b4d87c269"
+    },
+    "mesh": {
+      "bytes": 6565241,
+      "path": "mesh.npz",
+      "sha256": "20b52d26783bf98197524c56f22d9872aee3b67b7e526ff20a02e396f39e89cb"
+    },
+    "rt0": {
+      "bytes": 9968871,
+      "path": "rt0.npz",
+      "sha256": "b41e42f5b4c3d1788a4ab3dd4b2ef6f221d1dbbeb6a58c55b675613f17b9a5e4"
+    },
+    "topology": {
+      "bytes": 7985409,
+      "path": "topology.npz",
+      "sha256": "d70ceb1b38cede682247967495c6ef83d08ef2b0ef63e3543df908ba13412a4d"
+    }
+  },
+  "field": {
+    "bytes": 21430540,
+    "path": "field.npz",
+    "sha256": "be2a3515dca426a45a5fe8c0eb696e3aa59544ee32e2d93971917e19c32b5ce1"
+  },
+  "shared_edge_pairs": 601143,
+  "sparse_nnz": 3515127,
+  "order_counts": {
+    "16": 580031,
+    "32": 18958,
+    "64": 2154
+  },
+  "last_refinement_relative_quantiles": [
+    5.119606722524072e-07,
+    5.7052335497641e-05,
+    0.00019702297833513034,
+    0.0007530478940409428,
+    0.017697390908177863
+  ],
+  "pairs_still_over_1e_3_at_order64": 415,
+  "saved_q_order8_to_selected_directional_change_1mhz_ohm": [
+    4.224202831273229e-10,
+    4.902605042917835e-09
+  ],
+  "saved_q_correction_bilinear_j": [
+    -1.6242679963015763e-12,
+    1.1647278931154306e-13
+  ],
+  "saved_q_correction_hermitian_j": [
+    -1.6818910179957837e-12,
+    2.9030081312133234e-28
+  ],
+  "saved_q_correction_direction_1mhz_ohm": [
+    -7.318201184885108e-07,
+    -1.020557680928409e-05
+  ],
+  "correction": {
+    "path": "near-correction.npz",
+    "bytes": 15527794,
+    "sha256": "4afe4f4528ef0b156ee81322093c2e95075ee0ef67bf6967baff6269a2b81f0f"
+  },
+  "local_corrections": {
+    "path": "local-corrections.npz",
+    "bytes": 21214089,
+    "sha256": "55aec2b70ce99ed7d0f68165aa9b390de33c0cfe896fc5733694550837107421"
+  },
+  "elapsed_s": 182.60712859994965,
+  "scope": "One unordered shared-edge pair once, using directed exact-inner/Gauss-outer16 with adaptive32/64 and its analytic reciprocal transpose. This is an explicitly approximate reciprocal quadrature definition, not posthoc spectral repair or a claim that raw forward/reverse numerical integrals agree. Scalar point-centroid quadrature is subtracted once; self terms are excluded here. Only all shared-edge pairs are corrected: other geometric near neighbors remain approximate. Refinement differences are diagnostics, not certified error bounds. No full-source near qualification, PSD proof, new LU or finite Device result."
+}

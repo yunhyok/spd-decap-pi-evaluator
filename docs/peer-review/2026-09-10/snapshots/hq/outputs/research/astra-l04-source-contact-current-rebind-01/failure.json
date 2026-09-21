@@ -1,0 +1,18 @@
+{
+  "budget": {
+    "elapsed_s": 1.577999999979511,
+    "max_rss_bytes": 4294967296,
+    "max_runtime_s": 60,
+    "peak_rss_bytes": 1644400640
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l04-source-contact-current-rebind-01\\driver-at-run.py",
+    "sha256": "e881e1194203f1201694ad999fac8081be85d077856e39e1a8d92bbc70905ee3",
+    "size_bytes": 18401
+  },
+  "error": "'runtime'",
+  "error_type": "KeyError",
+  "program": "SPD Decap PI Evaluator",
+  "status": "STOP_L04_SAVED_SOURCE_CONTACT_CURRENT_REBIND",
+  "version": "0.23.1"
+}

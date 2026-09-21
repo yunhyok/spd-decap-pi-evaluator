@@ -1,0 +1,98 @@
+{
+  "budget": {
+    "max_rss_bytes": 25769803776,
+    "max_runtime_s": 240.0,
+    "peak_private_bytes": 4293550080,
+    "peak_working_set_bytes": 1096478720
+  },
+  "driver_sha256": "8ba3f885906dc4b23867012b5a2da707cfe08cbc7c041d27ba2d86eac82f0e31",
+  "elapsed_s": 110.01159879995976,
+  "helpers": {
+    "localizer": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\localize_astra_l25_rt0_p1_gap.py",
+      "sha256": "37d17daffd6abf99bd8b1aa5146a2d7bdf0ec754401067ef30e1a4b032e704c0"
+    },
+    "pair": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_l25_rt0_p1_refined_pair.py",
+      "sha256": "4e3f025b88b20633f5f64535c30c31c983d3e6344a231c07cc1cdeba06acbc33"
+    }
+  },
+  "history": [
+    {
+      "gap_over_p1": 0.40178560869475777,
+      "gap_ratio_to_previous": 0.6802086993040922,
+      "nodes": 535503,
+      "p1_ohm": 0.00036109418454289264,
+      "result_sha256": "78f1cc42a5a75b1854345a8c3520588cafb2fac3e45b7787d961bb8132cc4bc9",
+      "rt0_ohm": 0.0005061766312758527,
+      "step": 1,
+      "triangles": 542799
+    },
+    {
+      "gap_over_p1": 0.29418784532459397,
+      "gap_ratio_to_previous": 0.742454528535309,
+      "nodes": 536041,
+      "p1_ohm": 0.0003661508158803365,
+      "result_sha256": "2b82d781a00f667b834827d8f6977931240398b47315fca00550b54b34458410",
+      "rt0_ohm": 0.00047386793546825055,
+      "step": 2,
+      "triangles": 543875
+    },
+    {
+      "gap_over_p1": 0.22428810068459856,
+      "gap_ratio_to_previous": 0.7776646294696662,
+      "nodes": 537231,
+      "p1_ohm": 0.0003734830052776124,
+      "result_sha256": "fd4ac909510639bbb88228ab47130ec86009618de8f5ddf49247381784d650f0",
+      "rt0_ohm": 0.00045725079916958617,
+      "step": 3,
+      "triangles": 546255
+    },
+    {
+      "gap_over_p1": 0.18562097571155142,
+      "gap_ratio_to_previous": 0.8363044334885757,
+      "nodes": 539667,
+      "p1_ohm": 0.00037741088875668094,
+      "result_sha256": "d96cf3c431ccc623b5a1f4fb937135ac9e85db8139ac5bf83fb13641397caaf6",
+      "rt0_ohm": 0.0004474662661721242,
+      "step": 4,
+      "triangles": 551127
+    },
+    {
+      "gap_over_p1": 0.1427788501306187,
+      "gap_ratio_to_previous": 0.7848881460280519,
+      "nodes": 544743,
+      "p1_ohm": 0.00038511050655186396,
+      "result_sha256": "213d8030631d65d0765d6ce0f4264efa80fd9cf0ce3fb0c228894524cd2293d3",
+      "rt0_ohm": 0.0004400961418506601,
+      "step": 5,
+      "triangles": 561279
+    },
+    {
+      "gap_over_p1": 0.1099298434254942,
+      "gap_ratio_to_previous": 0.7838460089873528,
+      "nodes": 554965,
+      "p1_ohm": 0.000392070701071524,
+      "result_sha256": "9734d6b5222ad72488a07bea7a901874cb983c2a6710d862faaee07233865217",
+      "rt0_ohm": 0.0004351709718524301,
+      "step": 6,
+      "triangles": 581715
+    }
+  ],
+  "limitations": [
+    "Numerical DC primal/dual qualification for this fixed electrode pair and fixed source polygon only; not a rigorous roundoff-certified bound, other port, board, G/C or magnetic/PowerSI result. Source G/C must be exactly transferred again before frequency reuse.",
+    "Same domain means the intended exact midpoint subdivision. Stored float coordinates have bounded midpoint quantization; parents exceeding 1e-12 float-evaluated relative area change require exact-rational intended area/winding checks and half-ULP midpoint checks, with a 1e-10 float-evaluated stored-area ceiling. No area normalization or coordinate correction is applied."
+  ],
+  "policy": {
+    "gap_over_p1_target": 0.01,
+    "marked_cell_edge_rule": "longest",
+    "marking_fraction": 0.9,
+    "max_new_nodes": 20000,
+    "max_steps": 10,
+    "minimum_gap_reduction_per_step": 0.01,
+    "same_polygonal_domain": true
+  },
+  "prior_result_sha256": "3d744e4e125b805aeac197b4580fb029c7aa18993778919046b5fd6153c44047",
+  "program": "SPD Decap PI Evaluator v0.23.1",
+  "status": "STOP_MAX_NEW_NODES"
+}

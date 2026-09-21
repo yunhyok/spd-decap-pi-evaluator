@@ -1,0 +1,52 @@
+{
+  "budget": {
+    "elapsed_s": 12.421999999962281,
+    "max_rss_bytes": 25769803776,
+    "max_runtime_s": 180.0,
+    "peak_rss_bytes": 11743981568
+  },
+  "driver": {
+    "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\probe_astra_conditional_l02_exact_factor.py",
+    "sha256": "561175a0d899e5658cfaa8a63efc7eda5513c494f86e7591868ec79b6c90e81d",
+    "size_bytes": 4446
+  },
+  "factor": {
+    "L_nnz": 35226187,
+    "U_nnz": 42950578,
+    "factor_elapsed_s": 9.779059300024528,
+    "nnz": 7917807,
+    "pivot_max": 1.0503559815886199,
+    "pivot_min": 0.0003321788244853114,
+    "pivot_ratio": 3162.019683873815,
+    "probe_solve_relative_residual": 9.069395144957002e-14,
+    "size": 1694809
+  },
+  "inputs": {
+    "budget_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\reconstruct_astra_native_loaded_field.py",
+      "sha256": "354d9e004b189cf8193c2922c8fa4dc1903b407bebb295a4576673200ce6b213",
+      "size_bytes": 33457
+    },
+    "conditional_operator": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\outputs\\research\\astra-l02-conditional-hybrid-operator-02\\conditional-hybrid-operator.npz",
+      "sha256": "5ab5ba38aaf8c317aa05ae1d4f790c1d6447406ec25afe3c30e96536c714aa92",
+      "size_bytes": 115480771
+    },
+    "numerical_helper": {
+      "path": "C:\\Users\\User\\.codex\\worktrees\\5950\\SPD Decap PI Evaluator\\tools\\research\\prepare_astra_l02_conditional_hybrid_block_lgmres.py",
+      "sha256": "ae0fb71ea00d02381abf28bf440d9407191e45f1c43d774cae31da6e0fb8da5e",
+      "size_bytes": 35889
+    }
+  },
+  "inverse_transpose_symmetry_relative": 3.6117720996413333e-13,
+  "matrix_transpose_symmetry_relative": 5.1698788284564195e-26,
+  "nnz": 7917807,
+  "one_apply_elapsed_s": 0.2501322999596596,
+  "ordering": "COLAMD",
+  "program": "SPD Decap PI Evaluator",
+  "row_scaling": "exact gauge-kept Y+B mixed potential row norm",
+  "rows": 1694809,
+  "scope": "Only the conditional L02 principal block. No other factor, global iteration, field, physical validation, FMM or reference comparison. Different matrix from the earlier full mixed LU resource failure.",
+  "status": "PASS_ISOLATED_CONDITIONAL_L02_FACTOR_AND_COST_ONLY",
+  "version": "0.23.1"
+}
