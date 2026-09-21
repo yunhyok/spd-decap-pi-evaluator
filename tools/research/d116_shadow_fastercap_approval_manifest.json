@@ -1,0 +1,11 @@
+{
+  "schema_version": "d116-shadow-approval-v1",
+  "program": "SPD Decap PI Evaluator v0.23.1 D116-SHADOW",
+  "purpose": "narrow D116-SHADOW raw C-matrix approval",
+  "head": "e2f219e71d8c8a397009f72242cce10d78cfc7ab",
+  "branch": "main",
+  "output_root": "D:\\SPD-Decap-PI-Evaluator-W7\\e2f219e71d8c8a397009f72242cce10d78cfc7ab\\260903-d116-shadow-fastercap-raw-c-matrix-01",
+  "runner": {"path": "tools/research/run_d116_shadow_fastercap.py", "size_bytes": 50998, "sha256": "57ed814a19e8454d7e427f7efa64bb7602b9aaffd186620520547c1f16bbaf16"},
+  "tests": {"path": "tests/test_run_d116_shadow_fastercap.py", "size_bytes": 33043, "sha256": "dd6550a761367ed065fa5d7c61472eee2971816df1d912b4276ada25739a80af"},
+  "argv_tail": ["-a0.01", "-mc3", "-d1", "-f5", "-pj", "-e", "-i"]
+}

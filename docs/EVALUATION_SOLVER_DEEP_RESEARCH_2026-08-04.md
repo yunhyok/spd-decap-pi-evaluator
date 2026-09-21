@@ -15,6 +15,200 @@
   nonoverlapping ownership, numerical conditioning, and an independent
   validation path are all defined
 
+<a id="current-checkpoint-2026-09-06"></a>
+## Current checkpoint — 2026-09-06 (SPD Decap PI Evaluator v0.23.1)
+
+> Canonical current evidence for this historical record. It supplements, but
+> does not rewrite, the 2026-08-04 decision.
+
+- **Authority and objective.** The authoritative checkout is `main` at
+  `e2f219e71d8c8a397009f72242cce10d78cfc7ab`. The objective remains
+  source-derived algorithms that improve Evaluation Analysis agreement with
+  supplied PowerSI Touchstone data. Deterministic/non-regression evidence is
+  not an accuracy claim; De-cap Distribution remains secondary and out of
+  scope.
+- **Progress.** Conservative overall progress remains about **35–40%**.
+  Geometry/input-feasibility Stage2 is materially advanced: C0 passed only for
+  its frozen split-PSLG scope, WP3 production-03 closed its control-plane
+  defects but remains `PARTIAL / STOP_NOT_REPRESENTED`, and the native-source
+  WP2 census closed two of five blockers as `STOP_NOT_REPRESENTED`. Solver
+  candidate evaluation and PowerSI correlation/holdout remain unopened.
+- **Ledger boundary.** These D117 files are working ledgers, not current authority until synchronized:
+  `docs/evaluation-research/D117_FULL_DOMAIN_INPUT_DECISION_GATE.md`,
+  `docs/evaluation-research/D117_WP1_STATIC_RESOURCE_FEASIBILITY.md`, and
+  `docs/evaluation-research/D117_WP2_WP3_SOURCE_AUTHORITY_AUDIT.md`. This
+  canonical checkpoint intentionally does not link to them.
+
+### Reboot-safe pause and exact resume point
+
+All numerical and source-census work is stopped. The WP2 production census had
+already exited normally before the stop signal; no matching auditor process is
+running. The following completed roots are immutable and must not be rerun or
+reused.
+
+- **C1 `-07` (terminal `STOP`).** Root:
+  `D:\SPD-Decap-PI-Evaluator-W7\e2f219e71d8c8a397009f72242cce10d78cfc7ab\260906-d117-cell258-c1-single-call-07`.
+  The controller receipt is 42,554 bytes with SHA-256
+  `8d5bcabe2b9ab4e93c002f8fc3184eaadde7654bdeb7dda7079c2b11790c5288`;
+  the approval and attempt-token hashes are respectively
+  `08d2fc2cb940a0baafebfffd4805104f8bd9d5773a351c410076d45b30242f98`
+  and `cfaf19fd5247175b82796684fc1cd47d0def0c49f07f994c912d7ce021f23678`.
+  The single authorized call ended as `STOP_C1_TRIANGLE_SINGLE_CALL` because
+  the 1,800 s controller wall deadline elapsed (`1800.0620000000054` s in the
+  receipt). It produced no child receipt or mesh output, so Triangle
+  determinism and native feasibility remain `NOT_EVALUATED`; no retry is
+  authorized or useful from this root.
+- **WP3 production-03 (accepted control-plane evidence).** Root:
+  `D:\SPD-Decap-PI-Evaluator-W7\e2f219e71d8c8a397009f72242cce10d78cfc7ab\260906-d117-wp3-selected-pin-source-path-absence-production-03`.
+  Its controller receipt SHA-256 is
+  `11cc90e066b49a600287d288cbffcde00cd2e1182e7894e5ddeebf3d851576cd`.
+  It resolves the prior Unicode-argv and exact-set control-plane defects, but
+  the scientific result remains `PARTIAL / STOP_NOT_REPRESENTED`.
+- **WP2 native-source census production-01 (terminal
+  `STOP_NOT_REPRESENTED`).** Root:
+  `D:\SPD-Decap-PI-Evaluator-W7\e2f219e71d8c8a397009f72242cce10d78cfc7ab\260906-d117-wp2-src-xy-auth-00-production-01`.
+  Its sole receipt is 6,083 bytes with SHA-256
+  `6585a349929273f8524c206af95f54dc61581f066fe02b10c7d3d4f909deaae2`.
+  The bounded read-only scan covered all 9,873,038 lines of
+  `D:\S4LB002-2Para_260729_1_injected.spd` (1,116,717,287 bytes, SHA-256
+  `40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2`)
+  without issues: 48 Shape headers, 339,162 supported native primitives, zero
+  unsupported primitives, 95 stackup layers, 6 dielectric models, 1 metal
+  model, and 15 material-table rows. Native SPD records do not explicitly
+  represent `xy_dielectric_partitions` or `conductor_layer_void_fill`; both are
+  therefore `STOP_NOT_REPRESENTED`, not inferred. The other three blockers
+  (`reference_points_and_panel_sides`, `outer_truncation_and_closure`, and
+  `absolute_source_z_transform`) remain `STOP_UNSEALED`. WP2 remains `PARTIAL`,
+  promotion is `NONE`, and numerical execution is `STOP`.
+
+Resume from evidence acquisition and design choice, not another positive-
+inference parser or repetition of these runs. In parallel where independent:
+(1) locate source-authoritative external records or a documented assumption
+contract for the two facts absent from native SPD; (2) seal or explicitly stop
+the remaining three WP2 authority facts; and (3) assess a non-Triangle mesher
+or smaller nonnumerical feasibility decomposition for C1. Solver, FasterCap,
+PowerSI correlation, and any geometry/material inference remain closed until
+their prerequisite gates are independently reviewed.
+
+### Immutable artifact evidence
+
+The following roots and files are immutable evidence for the consumed attempts;
+they are not solver or PowerSI authorization.
+
+- **C0 exact-03 (consumed `STOP`).** Root:
+  `D:\SPD-Decap-PI-Evaluator-W7\e2f219e71d8c8a397009f72242cce10d78cfc7ab\260906-d117-cell258-boundary-clearance-exact-03`.
+  Files:
+  `D:\SPD-Decap-PI-Evaluator-W7\e2f219e71d8c8a397009f72242cce10d78cfc7ab\260906-d117-cell258-boundary-clearance-exact-03\d117_cell258_boundary_clearance_exact_attempt.json`,
+  `D:\SPD-Decap-PI-Evaluator-W7\e2f219e71d8c8a397009f72242cce10d78cfc7ab\260906-d117-cell258-boundary-clearance-exact-03\d117_cell258_boundary_clearance_exact_controller_receipt.json`, and
+  `D:\SPD-Decap-PI-Evaluator-W7\e2f219e71d8c8a397009f72242cce10d78cfc7ab\260906-d117-cell258-boundary-clearance-exact-03\d117_cell258_boundary_clearance_exact_hq_approval.json`; the expected
+  `D:\SPD-Decap-PI-Evaluator-W7\e2f219e71d8c8a397009f72242cce10d78cfc7ab\260906-d117-cell258-boundary-clearance-exact-03\d117_cell258_boundary_clearance_exact_receipt.json` is absent. The
+  census carried a stale embedded helper identity, so exact-03 is consumed and
+  cannot be reused.
+- **C0 exact-04 (`PASS_C0_FROZEN_PSLG_CLEARANCE_GT_2DELTA`).** Root:
+  `D:\SPD-Decap-PI-Evaluator-W7\e2f219e71d8c8a397009f72242cce10d78cfc7ab\260906-d117-cell258-boundary-clearance-exact-04`.
+  Files:
+  `D:\SPD-Decap-PI-Evaluator-W7\e2f219e71d8c8a397009f72242cce10d78cfc7ab\260906-d117-cell258-boundary-clearance-exact-04\d117_cell258_boundary_clearance_exact_attempt.json`,
+  `D:\SPD-Decap-PI-Evaluator-W7\e2f219e71d8c8a397009f72242cce10d78cfc7ab\260906-d117-cell258-boundary-clearance-exact-04\d117_cell258_boundary_clearance_exact_controller_receipt.json`,
+  `D:\SPD-Decap-PI-Evaluator-W7\e2f219e71d8c8a397009f72242cce10d78cfc7ab\260906-d117-cell258-boundary-clearance-exact-04\d117_cell258_boundary_clearance_exact_hq_approval.json`, and
+  `D:\SPD-Decap-PI-Evaluator-W7\e2f219e71d8c8a397009f72242cce10d78cfc7ab\260906-d117-cell258-boundary-clearance-exact-04\d117_cell258_boundary_clearance_exact_receipt.json`. It executed once:
+  153,246 segments, 242,165 records, 375,962 raw visits = 10,711 duplicate +
+  153,246 incident + 212,005 nonincident; 212,005 exact pair evaluations and
+  848,020 endpoint/exact evaluations; exact 10.904 s, outer 19 s, peak job
+  memory 745,152,512 bytes <= 1 GiB. Scope is frozen split PSLG only; raw-source
+  clearance, C1, solver, and PowerSI are not promoted.
+- **C1 `-04` (consumed `STOP`).** Root:
+  `D:\SPD-Decap-PI-Evaluator-W7\e2f219e71d8c8a397009f72242cce10d78cfc7ab\260906-d117-cell258-c1-single-call-04`.
+  Files:
+  `D:\SPD-Decap-PI-Evaluator-W7\e2f219e71d8c8a397009f72242cce10d78cfc7ab\260906-d117-cell258-c1-single-call-04\d117_cell258_c1_single_call_attempt_token.json`,
+  `D:\SPD-Decap-PI-Evaluator-W7\e2f219e71d8c8a397009f72242cce10d78cfc7ab\260906-d117-cell258-c1-single-call-04\d117_cell258_c1_single_call_controller_receipt.json`, and
+  `D:\SPD-Decap-PI-Evaluator-W7\e2f219e71d8c8a397009f72242cce10d78cfc7ab\260906-d117-cell258-c1-single-call-04\d117_cell258_c1_single_call_hq_approval.json`. It reached the accepted
+  certifier, which rejected the raw Triangle result; this is not a scientific
+  pass/fail claim.
+- **C1 `-06` (consumed `STOP`).** Root:
+  `D:\SPD-Decap-PI-Evaluator-W7\e2f219e71d8c8a397009f72242cce10d78cfc7ab\260906-d117-cell258-c1-single-call-06`.
+  Files:
+  `D:\SPD-Decap-PI-Evaluator-W7\e2f219e71d8c8a397009f72242cce10d78cfc7ab\260906-d117-cell258-c1-single-call-06\d117_cell258_c1_single_call_attempt_token.json` and
+  `D:\SPD-Decap-PI-Evaluator-W7\e2f219e71d8c8a397009f72242cce10d78cfc7ab\260906-d117-cell258-c1-single-call-06\d117_cell258_c1_single_call_hq_approval.json`; no
+  `D:\SPD-Decap-PI-Evaluator-W7\e2f219e71d8c8a397009f72242cce10d78cfc7ab\260906-d117-cell258-c1-single-call-06\d117_cell258_c1_single_call_controller_receipt.json` or
+  `D:\SPD-Decap-PI-Evaluator-W7\e2f219e71d8c8a397009f72242cce10d78cfc7ab\260906-d117-cell258-c1-single-call-06\d117_cell258_c1_single_call_exact_receipt.json` exist. No receipt exists: those two paths are absent.
+  HQ proves configured `wall_seconds=1800`; token + root inventory prove the one-shot was consumed.
+  The coordinator observed it reach the configured wall, but immutable artifacts do not prove exact elapsed or Triangle API entry.
+  Treat `1800` as configured wall only, not receipt-proven elapsed runtime. The
+  `-02`, `-03`, `-04`, and `-06` roots are immutable consumed
+  `STOP` attempts; `-05` is an empty tombstone and never reusable.
+- **WP3 production-02 (consumed `STOP`).** Root:
+  `D:\SPD-Decap-PI-Evaluator-W7\e2f219e71d8c8a397009f72242cce10d78cfc7ab\260906-d117-wp3-selected-pin-source-path-absence-production-02`.
+  Files:
+  `D:\SPD-Decap-PI-Evaluator-W7\e2f219e71d8c8a397009f72242cce10d78cfc7ab\260906-d117-wp3-selected-pin-source-path-absence-production-02\d117_wp3_selected_pin_source_path_absence_attempt.json`,
+  `D:\SPD-Decap-PI-Evaluator-W7\e2f219e71d8c8a397009f72242cce10d78cfc7ab\260906-d117-wp3-selected-pin-source-path-absence-production-02\d117_wp3_selected_pin_source_path_absence_certificate.json`,
+  `D:\SPD-Decap-PI-Evaluator-W7\e2f219e71d8c8a397009f72242cce10d78cfc7ab\260906-d117-wp3-selected-pin-source-path-absence-production-02\d117_wp3_selected_pin_source_path_absence_controller_receipt.json`, and
+  `D:\SPD-Decap-PI-Evaluator-W7\e2f219e71d8c8a397009f72242cce10d78cfc7ab\260906-d117-wp3-selected-pin-source-path-absence-production-02\d117_wp3_selected_pin_source_path_absence_hq_authorization.json`.
+  The certificate is `PARTIAL / STOP_NOT_REPRESENTED`, 52,161 bytes, SHA-256
+  `581ca0606b103b0ae6c3e4d25d410f31364f6fcfe659e0bcb82af7ba9ccb3310`; 2 pins,
+  44 nodes, 42 edges, 36 vias, 6 traces, 19 padstacks, logical ownership true,
+  physical nonconnection false, fallback false. production-01 is an
+  authorization tombstone. production-02 stopped because the certificate
+  emitted the exact four reversed trace IDs in an order different from the
+  wrapper expectation; exact-set-vs-order semantics remains open, not a
+  scientific failure or pass.
+
+### Earlier coordinator working-tree observations (2026-09-06 KST)
+
+The reboot-safe pause above supersedes this earlier snapshot wherever their
+statuses differ.
+
+- Repository: `C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator`, branch
+  `main`, HEAD `e2f219e71d8c8a397009f72242cce10d78cfc7ab`.
+- Current controller: `C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tools\research\run_d117_triangle_cell258_c1_single_call_exact_once.py`,
+  75,374 bytes, SHA-256
+  `a653800ef1f6c204c1ec5dfdcf1bb75e82f6764dcd718ad3ca0e3acbf1061260`.
+  Current focused test: `C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator\tests\test_d117_triangle_cell258_c1_single_call.py`,
+  48,826 bytes, SHA-256
+  `3a90e090e41093dbc2c5d2692c5133a2a11bfb457cf5590060e1c6b105cd2516`.
+- Exact command: `py -3.12 -m pytest -q tests/test_d117_triangle_cell258_c1_single_call.py tests/test_run_d117_wp3_selected_pin_source_path_absence_once.py`.
+  Result: 61 passed / 10 failed in 70.10 s; C1 42/42 pass and WP3 19/29 pass.
+  All ten fake-normal failures stopped before mutation at `HQ argv.sha256 mismatch` under the normal Windows pytest temp root containing non-ASCII text; causality/fix remains open. Prior ASCII-basetemp 29/29 is historical evidence only.
+- The current narrow nonnumerical C1 remediation makes the deadline predicate
+  PASS-only, records `elapsed_seconds`/`deadline_exceeded`, and emits bounded
+  ASCII stderr on publication failure. These 42/42 focused-test results are
+  control-plane evidence only and do not clear C1 numerical/certifier
+  feasibility. WP2 remains `PARTIAL` with exactly five `STOP_UNSEALED` blockers:
+  `xy_dielectric_partitions`, `conductor_layer_void_fill`,
+  `reference_points_and_panel_sides`, `outer_truncation_and_closure`, and
+  `absolute_source_z_transform`.
+
+### What this changes in the research decision
+
+The checkpoint materially advances geometry/input-feasibility evidence. WP3's
+control-plane closure is accepted, the full native-source census proves that
+two required WP2 facts are not represented, and C1 `-07` proves only that the
+current Triangle single-call path exceeded its wall deadline. It does not open
+solver candidate evaluation, FasterCap, or PowerSI correlation/holdout, and it
+does not promote the frozen split-PSLG C0 scope to raw-source clearance or a
+physical solver claim.
+
+### What this does not change
+
+The 2026-08-04 source-only method selection and promotion gates remain
+authoritative. C0/C1/WP3 deterministic, non-regression, and control-plane
+results cannot be presented as PowerSI accuracy. Distribution remains secondary
+and out of scope. No solver/FasterCap/PowerSI work is authorized or claimed;
+they remain unopened.
+
+### Next gate
+
+Do not rerun C1 `-07`, WP3 production-03, or the WP2 native-source census.
+Acquire or define source-authoritative evidence for the five WP2 facts as
+described in the reboot-safe resume point, while independently evaluating a
+non-Triangle mesher or a smaller nonnumerical C1 feasibility decomposition.
+Only an independently reviewed prerequisite package may authorize a new root.
+Aggregate 16-cell authority, solver candidates, and PowerSI correlation remain
+later gates. Poll any future long job at >=10 min unless a terminal, failure,
+or resource event occurs.
+
+This checkpoint authorizes or claims no runtime/code change, numerical execution,
+or release.
+
 ## Executive decision
 
 The current rectangular cavity-mode evaluator reproduces the overall PowerSI

@@ -13,6 +13,60 @@
   review of Claude commit
   [`26d7698`](https://github.com/yunhyok/probe-card-mlo-pdn/commit/26d76982ec6965c744f062dd6213e04a9fd94a51)
 
+## Current checkpoint — 2026-09-06 (SPD Decap PI Evaluator v0.23.1)
+
+> The canonical current checkpoint is the [2026-09-06 deep-research
+> checkpoint](EVALUATION_SOLVER_DEEP_RESEARCH_2026-08-04.md#current-checkpoint-2026-09-06).
+> This compact status does not rewrite the 2026-08-04 plan.
+
+- **Authority and objective.** `SPD Decap PI Evaluator v0.23.1` is on `main` at
+  `e2f219e71d8c8a397009f72242cce10d78cfc7ab`; the objective remains
+  source-derived algorithms for Evaluation Analysis agreement with supplied
+  PowerSI Touchstone data. Deterministic/non-regression evidence is not an
+  accuracy claim; Distribution remains secondary and out of scope.
+- **Phase/status.** Conservative progress is about **35–40%**: geometry/input-
+  feasibility Stage2 is materially advanced. C0 is a scoped
+  `PASS_C0_FROZEN_PSLG_CLEARANCE_GT_2DELTA` for frozen split PSLG only. C1
+  `-07` is a terminal one-call wall-deadline `STOP`; WP3 production-03 has
+  accepted control-plane evidence but remains `PARTIAL / STOP_NOT_REPRESENTED`.
+  WP2 remains `PARTIAL`: two blockers are now conclusively
+  `STOP_NOT_REPRESENTED` in native SPD and three remain `STOP_UNSEALED`.
+  Solver/PowerSI evaluation remains unopened.
+- **Next gate.** Do not repeat the completed C1/WP3/WP2 roots. Acquire or define
+  source-authoritative evidence for the five WP2 facts while independently
+  assessing a non-Triangle mesher or a smaller nonnumerical C1 feasibility
+  decomposition. Close aggregate 16-cell/WP2/WP3 authority before solver/
+  PowerSI correlation; consumed/tombstone roots are never rerun or reused.
+- **Workflow.** **Sol supervision -> Luna execution -> Sol independent review**;
+  parallelism is limited to disjoint prerequisites. Poll long jobs at >=10 min
+  unless a terminal, failure, or resource event occurs.
+
+This checkpoint authorizes or claims no runtime/code change, numerical execution,
+or release.
+
+### Reboot-safe resume point
+
+- C1 `-07` is frozen at
+  `D:\SPD-Decap-PI-Evaluator-W7\e2f219e71d8c8a397009f72242cce10d78cfc7ab\260906-d117-cell258-c1-single-call-07`;
+  controller receipt SHA-256
+  `8d5bcabe2b9ab4e93c002f8fc3184eaadde7654bdeb7dda7079c2b11790c5288`.
+  Triangle determinism was not evaluated and this root must not be retried.
+- WP3 production-03 is frozen at
+  `D:\SPD-Decap-PI-Evaluator-W7\e2f219e71d8c8a397009f72242cce10d78cfc7ab\260906-d117-wp3-selected-pin-source-path-absence-production-03`;
+  accepted controller receipt SHA-256
+  `11cc90e066b49a600287d288cbffcde00cd2e1182e7894e5ddeebf3d851576cd`.
+- WP2 production-01 is frozen at
+  `D:\SPD-Decap-PI-Evaluator-W7\e2f219e71d8c8a397009f72242cce10d78cfc7ab\260906-d117-wp2-src-xy-auth-00-production-01`;
+  receipt SHA-256
+  `6585a349929273f8524c206af95f54dc61581f066fe02b10c7d3d4f909deaae2`.
+  Its complete bounded scan found no explicit native-SPD representation for
+  XY dielectric partitions or conductor-layer void fill. Do not add an
+  inference path or rerun the scan; resume by obtaining authoritative evidence
+  and sealing the three remaining WP2 source facts.
+- No solver, FasterCap, PowerSI correlation, release, commit, or publication is
+  authorized by this pause checkpoint. The primary objective remains
+  source-derived Evaluation Analysis accuracy against supplied PowerSI data.
+
 ## 1. Delivery rule
 
 The current v0.17.0 modal solver remains the default and its scenario format
