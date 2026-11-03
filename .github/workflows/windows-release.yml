@@ -159,7 +159,7 @@ jobs:
             $attestation.import_save.frequency_solves_executed -ne 0 -or
             $attestation.import_save.touchstone_read -ne $false
           ) {
-            throw "Production import/save attestation is not the validated v0.23.0 run"
+            throw "Production import/save attestation does not match the required validation"
           }
           $atomic = $attestation.import_save.atomic_save_load_validation
           if (
@@ -209,10 +209,9 @@ jobs:
             throw "Validated application commit is not release ancestry"
           }
           $allowedReleaseOnlyChanges = @(
-            ".github/workflows/ci.yml"
             ".github/workflows/windows-release.yml"
             $attestationPath
-            "scripts/build_spd_decap_pi.ps1"
+            "scripts/test_installer_wizard.ps1"
             "tests/test_spd_decap_packaging.py"
           ) | Sort-Object
           $releaseOnlyChanges = @(
@@ -334,6 +333,28 @@ jobs:
           $installer = Get-Item -LiteralPath $env:SPD_DECAP_INSTALLER
           $hash = (Get-FileHash $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
           "$hash *$($installer.Name)" | Set-Content "$($installer.FullName).sha256" -Encoding ascii
+      - name: Verify path selection on a previous per-user installation
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $old = 'SPDDecapPIEvaluatorSetup-0.23.0.exe'
+          gh release download v0.23.0 --pattern $old --dir $env:RUNNER_TEMP
+          if ($LASTEXITCODE) { throw 'Previous installer download failed' }
+          $old = Join-Path $env:RUNNER_TEMP $old
+          if ((Get-FileHash $old).Hash -ne '44629fb2ed4977c0aa2333325c1b2a8c5c2bf7c72bb393cb9cf475027ed3b957') {
+            throw 'Previous production installer digest mismatch'
+          }
+          $previous = 'D:\SPD install path test\Old location'
+          $next = 'D:\SPD install path test\New location'
+          $args = @('/CURRENTUSER','/SP-','/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART')
+          $run = Start-Process $old -ArgumentList ($args + "/DIR=`"$previous`"") -Wait -PassThru
+          if ($run.ExitCode -or !(Test-Path "$previous\SPDDecapPIEvaluator.exe")) { throw 'Old install failed' }
+          & .\scripts\test_installer_wizard.ps1 -Setup $env:SPD_DECAP_INSTALLER -ExpectedDirectory $previous -Mode '/CURRENTUSER'
+          $run = Start-Process $env:SPD_DECAP_INSTALLER -ArgumentList ($args + "/DIR=`"$next`"") -Wait -PassThru
+          if ($run.ExitCode -or !(Test-Path "$next\SPDDecapPIEvaluator.exe")) { throw 'Changed installation path was not used' }
+          $run = Start-Process "$next\unins000.exe" -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART' -Wait -PassThru
+          if ($run.ExitCode -or (Test-Path "$next\SPDDecapPIEvaluator.exe")) { throw 'Uninstall failed' }
       - name: Stage exact release assets
         shell: pwsh
         run: |

@@ -161,8 +161,8 @@ def test_release_workflow_requires_tracked_production_attestation() -> None:
     assert "$evaluation.cancelled_after_entry_count -ne 92" in workflow
     assert workflow.index(tag_fetch) < workflow.index(tag_type_check)
     assert "Unable to fetch the annotated release tag object" in workflow
-    assert '".github/workflows/ci.yml"' in workflow
-    assert '"scripts/build_spd_decap_pi.ps1"' in workflow
+    assert '"scripts/test_installer_wizard.ps1"' in workflow
+    assert "Verify path selection on a previous per-user installation" in workflow
     assert '"tests/test_spd_decap_packaging.py"' in workflow
     assert "Validated application commit is not release ancestry" in workflow
     assert "Production attestation identity changed" in workflow
