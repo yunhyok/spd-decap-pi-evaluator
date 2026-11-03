@@ -15,6 +15,7 @@ AppVersion={#AppVersion}
 AppVerName={#AppName} v{#AppVersion}
 AppPublisher=Probe Card MLO PDN Team
 DefaultDirName={autopf}\SPD Decap PI Evaluator
+DisableDirPage=no
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 OutputDir={#RepoRoot}\installer-output
@@ -24,7 +25,8 @@ SolidCompression=yes
 WizardStyle=modern
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-PrivilegesRequired=lowest
+PrivilegesRequired=admin
+PrivilegesRequiredOverridesAllowed=dialog
 UninstallDisplayIcon={app}\{#AppExeName}
 
 [Files]
