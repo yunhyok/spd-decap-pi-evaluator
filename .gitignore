@@ -21,3 +21,7 @@ validation-output/
 # research-claude local fallbacks (tools/research-claude/common/paths.py)
 /data/
 /work/
+
+# Host-local notes and one-off accuracy inspection (preserve contents).
+/handoff.local.md
+/accuracy_parse.py
